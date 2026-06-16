@@ -1,0 +1,95 @@
+---
+name: twt-mockup-define
+category: mockup
+description: Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
+version: 1.2.1
+accepts_arguments: true
+inputs:
+  - Optional: which page(s) to (re)render; otherwise all layouts
+dependencies:
+  hard: []
+  soft: []
+reads:
+  - .twt-artifacts/design/layout/layouts/
+  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/design-system/tokens.css
+  - .twt-artifacts/pre-design/spec/specification.md
+  - .twt-artifacts/pre-design/curation/inventory.md
+  - .twt-artifacts/pre-design/curation/outlines/
+  - .twt-artifacts/design/design-read.md
+  - references/external-design-skills.md
+  - .twt-artifacts/design/mockup/validation-report.md
+writes:
+  - .twt-artifacts/design/mockup/pages/
+  - .twt-artifacts/design/mockup/index.html
+  - .twt-artifacts/design/mockup/styles.css
+  - .twt-artifacts/design/mockup/decisions.md
+  - .twt-artifacts/design/assets/manifest.md
+---
+
+# /twt-mockup-define
+
+## Intent
+
+**Purpose:** Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
+
+**Non-goals:**
+- Doesn't create production WordPress/Elementor output (Phase 3)
+- Doesn't introduce new colour/type/spacing primitives — those come from `tokens.css`
+- Doesn't use lorem/placeholder where real Phase-1 content exists
+
+**Success criteria:**
+- One `pages/<page-slug>.html` per layout, linking `../design-system/tokens.css` and `../styles.css` (relative to `pages/`)
+- All three breakpoints handled in CSS; real content from outlines/inventory
+- `index.html` links every page mockup
+- Idempotent: re-renders only requested pages, refines (reading `validation-report.md`) (rule 10)
+
+---
+
+## Step 1 — Dependency check
+Read `layouts/`, `components.md`, and `tokens.css`. If `layouts/` is empty, abort: "No layouts — run /twt-layout first." If `tokens.css` is missing, abort: "No design system — run /twt-design-system first."
+
+## Step 1b — Collect mode (CONVENTIONS rule 13)
+If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the page mockups (`index.html`, `pages/<page>.html`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/mockup/decisions.md` (use `templates/decisions.md`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. Then write the drafts and return the decisions block in your report. Do not loop on the user.
+
+If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
+
+## Step 2 — Detect state (idempotency, rule 10)
+**(Skipped in collect mode — see Step 1b.)** If `pages/` has files, read any `validation-report.md`; enter refinement mode (address findings / requested pages). Before overwriting an existing page, ask via the **AskUserQuestion** tool (single-select, header "Overwrite?"):
+- **Yes** — overwrite the existing page file
+- **No** — skip this page and leave it unchanged
+- **You decide** — I choose per page, defaulting to No (refine in place; never overwrite a user-edited file without confirmation)
+
+Record the choice and continue.
+
+## Step 3 — Prepare shared CSS
+Write/refresh `styles.css` with mockup-only **layout** rules (grids, section spacing, container widths, responsive breakpoints). Use `var(--…)` from `tokens.css` for all foundation values; introduce no new colour/type/spacing primitives. If `.twt-artifacts/pre-design/spec/specification.md` exists, read its **Motion & Animation** section and reflect that direction (transitions, micro-interaction feel, easing/timing via `var(--motion-*)`, and the stated **reduced-motion** stance via a `@media (prefers-reduced-motion: reduce)` block). Define the three breakpoints from the design-system grid. This shared file must be **complete before Step 4** — the parallel page agents only read it, never write it. Also resolve every Step 2 overwrite decision now, so Step 4 is non-interactive; the result is a final set of page slugs to (re)render.
+
+### Step 3′ — No-Figma anti-slop + motion polish
+When the design wasn't driven by a Figma/exported source, apply the external design skills (per `references/external-design-skills.md`; read `.twt-artifacts/design/design-read.md` for the Design Read + dials, and project-local auto-install the skills if missing). Bake these into `styles.css` and pass them to the page agents:
+- **`emil-design-eng` motion** — translate the spec's motion direction (or the dials' `MOTION_INTENSITY`) into real CSS: custom easing curves (`cubic-bezier(...)`, **never `ease-in`**), durations scaled by element type (<300ms for small UI), `:active` press feedback (e.g. `transform: scale(0.97)`, never `scale(0)`), hover/focus transitions on **transform/opacity only**, and a `@media (prefers-reduced-motion: reduce)` block that collapses motion. "Motion claimed = motion shown": if `MOTION_INTENSITY>4` the pages must actually move; if it can't be done cleanly, drop to static rather than ship half-built motion.
+- **`design-taste-frontend` anti-slop** — carry §4.3–4.11 + §9 into the page agents (next step): real images via the asset manifest (never div-based fake screenshots), one locked accent + one radius scale, hero fits the viewport, **eyebrow restraint**, **zigzag cap**, **no em-dashes** anywhere, no decorative status dots / version stamps / locale strips / scroll cues.
+
+## Step 4 — Render each page (in parallel)
+`styles.css` is now final and each page writes its own `pages/<page-slug>.html`, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to read `layouts/<page-slug>.md`, `components.md`, `tokens.css`, `styles.css`, and the page's `outlines/<page>.md` / `inventory.md`, then write `pages/<page-slug>.html`:
+- `<head>` links `../design-system/tokens.css` then `../styles.css`.
+- Build sections in the layout's order, composing the documented components.
+- Populate with **real content** pulled from `outlines/<page>.md` / `inventory.md` — never lorem where real content exists.
+- Ensure desktop/tablet/mobile all render correctly (responsive CSS in `styles.css`).
+- Basic a11y: `alt` on images, sensible heading order, landmark elements.
+- **Anti-slop (no-Figma):** follow the `design-taste-frontend` rules carried from Step 3′ — hero fits the viewport (headline ≤2 lines, CTA above the fold), ≤1 eyebrow per 3 sections, ≤4 distinct layout families reused across the page, real images from the asset manifest (no `<div>` fake screenshots, no hand-rolled decorative SVG), the locked single accent + one radius scale, full button contrast (WCAG AA), and **zero em-dashes** in any visible string.
+- Write **only** its own `pages/<page-slug>.html`. It must **not** edit the shared `styles.css`; if a page needs a layout rule that `styles.css` lacks, the agent reports it back in its summary so the parent can add it to `styles.css` after the batch (then, if needed, re-dispatch that page).
+
+Wait for all the page agents to finish before Step 5.
+
+### Step 4′ — Pre-flight self-check (no-Figma)
+Before writing `index.html`, run `design-taste-frontend` **§14 Pre-flight** across the rendered pages as a self-check (highest-signal items: zero em-dashes; one theme + one accent + one radius scale page-wide; hero fits viewport; eyebrow count ≤ ceil(sections/3); no three-equal-card rows; no fake div screenshots; motion-claimed = motion-shown; reduced-motion present; AA button/contrast). Fix any failure in the offending page before proceeding. If a failure can't be fixed here (e.g. needs a missing layout rule in `styles.css`), add the shared rule, then re-dispatch that page. Record any judgment calls in `decisions.md`.
+
+## Step 5 — Write `index.html`
+Write `index.html` (at the mockup root) linking every `pages/<page-slug>.html` with the page title, for review.
+
+## Step 6 — Asset manifest (sync)
+Scan the rendered mockups for referenced images/videos (`<img>`, `<video>`, CSS background images). Ensure each has a row in `.twt-artifacts/design/assets/manifest.md` (create from `templates/asset-manifest.md` if absent; append missing rows, dedupe by `filename`). Use the SAME `filename` in the mockup markup and the manifest row so develop and QA can reconcile them. Run this **serially in this parent** (not in the parallel Step-4 agents). Each row carries id/type/filename/placement/spec/alt/source/generation_prompt; plan only, mark client-supplied assets `source: provided`. Do not generate binaries.
+
+## Step 7 — Report
+List the pages rendered, the `index.html` path, the asset rows synced to the manifest, and what to run next (`/twt-mockup-validate` or `/twt-design`). Note these are throwaway visual references, not the production build.

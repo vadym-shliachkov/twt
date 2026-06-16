@@ -1,0 +1,60 @@
+---
+name: twt-positioning-define
+category: positioning
+description: Build or refine positioning.md — audience, value props, promotion priorities
+version: 1.0.1
+accepts_arguments: true
+inputs:
+  - Optional answers; otherwise interactive
+dependencies:
+  hard: []
+  soft:
+    - twt-brand-define
+    - twt-content-fetch
+reads:
+  - .twt-artifacts/pre-design/brand/brand-brief.md
+  - .twt-artifacts/pre-design/content-fetch/
+  - .twt-artifacts/pre-design/positioning/positioning.md
+  - .twt-artifacts/pre-design/positioning/validation-report.md
+writes:
+  - .twt-artifacts/pre-design/positioning/positioning.md
+  - .twt-artifacts/pre-design/positioning/decisions.md
+---
+
+# /twt-positioning-define
+
+## Intent
+
+**Purpose:** Produce the canonical `positioning.md` — who we speak to, the ranked value propositions, what to promote vs. downplay, and the market context — built from scratch or refined.
+
+**Non-goals:**
+- Doesn't define brand attributes (reads brand-brief.md as context only)
+- Doesn't define site structure (that's `/twt-ia-define`)
+- Doesn't critique itself (that's `/twt-positioning-validate`); never overwrites without consent
+
+**Success criteria:**
+- `positioning.md` has all canonical sections populated or marked TBD
+- Each value prop is tied to a specific audience need
+- Re-run enters refinement mode (rule 10) rather than starting over
+
+---
+
+## Step 1 — Detect mode (rule 10)
+If `positioning.md` exists → **refinement mode**: read it and any sibling `validation-report.md`; if findings exist, list them via the **AskUserQuestion** tool and ask which to address; only touch the chosen sections. Else → **from-scratch mode**.
+
+## Step 1b — Collect mode (CONVENTIONS rule 13)
+If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft `positioning.md` from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/pre-design/positioning/decisions.md` (use `templates/decisions.md`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. Then write the draft and return the decisions block in your report. Do not loop on the user.
+
+If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
+
+## Step 2 — Gather soft context
+**(Skipped in collect mode — see Step 1b.)** If present, read `brand-brief.md` (voice/audience signals) and `.twt-artifacts/pre-design/content-fetch/` (what the client actually emphasizes). Use as input; if absent, rely on interview (degrade gracefully).
+
+## Step 3 — Interview / refine
+Walk: Audience segments (+needs) → Value propositions (rank, tie each to a need) → Promotion priorities (elevate/de-emphasize) → Market context (alternatives, differentiation). Refinement mode touches only chosen sections.
+
+## Step 4 — Write
+Write/update `.twt-artifacts/pre-design/positioning/positioning.md` with the canonical sections. Mark unknowns TBD. Confirm before overwrite.
+
+## Step 5 — Report
+Sections written/changed, TBDs, suggest `/twt-positioning-validate`.

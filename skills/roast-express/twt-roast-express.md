@@ -1,0 +1,93 @@
+---
+name: twt-roast-express
+category: roast-express
+description: Phase 3 express — from a Figma link, build/update the design system and jump to development
+version: 1.3.1
+accepts_arguments: true
+inputs:
+  - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
+  - Optional first token `auto` — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)
+dependencies:
+  hard: []
+  soft:
+    - twt-design-system-define
+    - twt-elementor-theme-creator
+    - twt-elementor-block-creator
+    - twt-html-site-creator
+    - twt-html-block-creator
+    - figma-mcp
+reads:
+  - .twt-artifacts/design/design-system/tokens.css
+  - .twt-artifacts/elementor-theme/conventions.md
+  - .twt-artifacts/html-site/conventions.md
+writes:
+  - .twt-artifacts/roast-express-log.md
+---
+
+# /twt-roast-express
+
+## Intent
+
+**Purpose:** The short path. From a Figma link, create or update the cross-phase design-system spine, auto-scaffold the chosen target if needed, then jump straight to page/block development. Skips the full Phase-1/Phase-2 pipeline. Pure dispatcher; writes no artifact of its own. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
+
+**Non-goals:**
+- Doesn't run pre-design or design phases (use `/twt-pre-design` / `/twt-design` for those)
+- Doesn't reproduce design-system / scaffold / builder logic — dispatches each via the Agent tool (rule 5)
+- Doesn't replace an existing design system — extends it (tokens are never revalued)
+- Auto mode never grants destructive consents (in-place replacement, overwriting user-confirmed targets) — children write to artifacts and the scaffold only
+
+**Success criteria:**
+- Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged
+- Auto mode asks **nothing** (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting
+- `/twt-design-system-define` runs in analyse-existing mode from the Figma link (spine created or updated)
+- The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
+- The matching builder is dispatched to start page/block development
+
+---
+
+Arguments passed to this command: $ARGUMENTS
+
+## Step 0 — Mode
+If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat the rest as free-form context (Figma URL, target hints like "elementor"/"html", notes). In auto mode ask **nothing** — no AskUserQuestion, no plain-text prompts; decide from the context, the existing `.twt-artifacts/` state, and the defaults below, and log every auto-decision for the final report. Without the leading `auto`, run interactively as before.
+
+If `$ARGUMENTS` contains a Figma URL, use it; otherwise ask for one — **except in auto mode**, where a missing Figma URL aborts: "Auto mode needs the Figma URL in the arguments: /twt-roast-express auto <figma-url> [notes]".
+
+## Step 0a — Open the session log
+Start a session log at `.twt-artifacts/roast-express-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section from `templates/roast-log.md` — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 1), and the user's free-form Requested context. Then **keep the Timeline live for the rest of the run**: append one numbered entry for **every** question you ask (the question text + the user's answer, or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)`) and one for **every** skill you dispatch (`[step]` + the skill name + a **one-sentence** why). Surfaced child `decisions.md` questions and their answers are logged the same way. This logging is **not** skipped in auto mode — auto runs especially need the trail.
+
+## Step 1 — Target menu
+
+**Auto mode:** infer `<target>` and skip the menu — "elementor"/"wordpress" in the context or an existing `.twt-artifacts/elementor-theme/conventions.md` → **elementor**; an existing `.twt-artifacts/html-site/conventions.md` → **html**; otherwise default **html**. Record the inference and its reason.
+
+Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") What is the build target?:
+- **Static HTML/CSS** — dependency-free static site
+- **Elementor (WordPress)** — Hello Elementor child theme with widgets
+- **You decide** — I pick the best-fit target from the project context (existing `conventions.md` or hints; defaults to Static HTML/CSS)
+
+Record the choice as `<target>` and continue.
+
+## Step 2 — Design system from Figma
+
+Capture the Figma URL (from `$ARGUMENTS` or prompt). Dispatch `/twt-design-system-define` (Agent tool) in **analyse-existing** mode with `subagent-collect` (rule 13), passing the Figma URL as the design source, to create or update `.twt-artifacts/design/design-system/` (`tokens.md`, `tokens.css`, `preview.html`). Interactively, surface any returned `decisions.md` questions via AskUserQuestion; in auto mode, resolve them yourself — prefer answers derivable from the context, else accept the child's proposed assumption — and log each one.
+
+Pass through the priority rule: an existing project design system is the baseline; tokens are **extended, never replaced**; use refinement mode if `tokens.md` already exists.
+
+Wait for it to finish; confirm `.twt-artifacts/design/design-system/tokens.css` exists.
+
+## Step 3 — Ensure scaffold
+
+- `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool) first. If present, skip.
+- `<target>` = **html**: if `.twt-artifacts/html-site/conventions.md` is missing, dispatch `/twt-html-site-creator` (Agent tool) first. If present, skip.
+
+(Unlike the builders, this skill never bails on a missing scaffold — it creates it.)
+
+## Step 4 — Build
+
+Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding the Figma URL and any notes so it starts page/block development (in auto mode, resolve its open decisions the same way as Step 2):
+- `<target>` = **elementor** → `/twt-elementor-block-creator`
+- `<target>` = **html** → `/twt-html-block-creator`
+
+## Step 5 — Report & finalize the log
+First finalize the session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-express-log.md`.
+
+Then state to the user: target chosen, whether the spine was created or updated, whether a scaffold was run, what the builder produced (with paths), and **the log location** (`.twt-artifacts/roast-express-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-roast-express` for another block, or the builder directly).

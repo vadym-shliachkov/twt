@@ -1,0 +1,628 @@
+---
+name: twt-design-system-define
+category: design-system
+description: Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
+version: 1.4.1
+accepts_arguments: true
+inputs:
+  - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
+dependencies:
+  hard: []
+  soft:
+    - figma-mcp
+reads:
+  - .twt-artifacts/pre-design/brand/brand-brief.md
+  - .twt-artifacts/pre-design/spec/specification.md
+  - .twt-artifacts/design/design-read.md
+  - references/external-design-skills.md
+  - .twt-artifacts/design/design-system/tokens.md
+  - .twt-artifacts/design/design-system/validation-report.md
+writes:
+  - .twt-artifacts/design/design-system/tokens.md
+  - .twt-artifacts/design/design-system/tokens.md.bak-<timestamp>
+  - .twt-artifacts/design/design-system/tokens.css
+  - .twt-artifacts/design/design-system/preview.html
+  - .twt-artifacts/design/design-system/components.md
+  - .twt-artifacts/design/design-system/tokens.json
+  - .twt-artifacts/design/design-system/tailwind.config.js
+  - .twt-artifacts/design/design-system/decisions.md
+---
+
+# /twt-design-system-define
+
+## Intent
+
+**Purpose:** Produce the canonical, cross-phase design system. Two entry modes: **greenfield** (derive tokens from `brand-brief.md`) or **analyse-existing** (Figma / screenshots / exported HTML-CSS / live URL). Always writes `tokens.md`, the `tokens.css` export every HTML artifact links, and a `preview.html` foundations styleguide.
+
+**Non-goals:**
+- Doesn't generate page designs (Templates/Pages = the layout/mockup phases)
+- The preview renders **every** atom, molecule, and organism documented in Section 3 (one instance each, default state), organized by ascending atomic level — it shows **breadth + composition**. It is NOT the exhaustive **variant × state** catalog (button primary/secondary/ghost × hover/active/disabled, etc.), which is `/twt-component`'s `gallery.html` (**depth**)
+- Doesn't write to a WordPress theme (that's Phase 3)
+- Doesn't apply changes to the source design — read-only on Figma
+- Doesn't hallucinate tokens, components, or states not present in the sources/brand-brief
+
+**Success criteria:**
+- `.twt-artifacts/design/design-system/tokens.md` exists with the current token inventory
+- `tokens.css` exports every token as a CSS custom property; `preview.html` links `tokens.css` and renders the full **atomic evolution** — Subatomic particles (tokens) → Atoms → Molecules → Organisms — with **every** atom, molecule, and organism documented in Section 3 present (one instance each), each composed only from `var(--…)` tokens and the level below it
+- Greenfield mode derives the palette/type/spacing foundations from `brand-brief.md`; analyse-existing mode prefers Figma variables over visual estimation
+- This artifact is documented as the shared source of truth for later phases
+
+---
+
+Arguments passed to this command: $ARGUMENTS
+
+If `$ARGUMENTS` contains a Figma URL, screenshot path, or mode hint, use it as the starting context and skip or pre-fill questions where possible.
+
+---
+
+## Overview
+
+This skill:
+1. Accepts mixed design references (Figma, screenshots, PDFs, existing token files, HTML/CSS, Storybook)
+2. Extracts tokens (colors, typography, spacing, radius, shadows, motion, grid)
+3. Organizes UI into the **canonical atomic-design hierarchy** — Subatomic particles (tokens) → Atoms → Molecules → Organisms (Templates → Pages are the later layout/mockup phases)
+4. Detects inconsistencies, duplicate variants, and naming drift
+5. Produces implementation-ready exports (CSS variables, SCSS, Tailwind, JSON tokens, Style Dictionary)
+6. Writes `.twt-artifacts/design/design-system/tokens.md` and renders the atomic **evolution** (every documented atom, molecule, and organism — one instance each) into `preview.html`
+
+**Confidence-first.** Inferred patterns are marked separately from confirmed ones. The skill never hallucinates missing UI.
+
+---
+
+## Step 1 — Introduction
+
+Print on start:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║  TWT — Designer · Design System                         ║
+╠══════════════════════════════════════════════════════════╣
+║  Generates a scalable, implementation-ready design      ║
+║  system from designs and existing references.           ║
+║                                                         ║
+║  Accepts:                                               ║
+║    • Single or multiple Figma files                     ║
+║    • Screenshots, PDFs, exports                         ║
+║    • Existing token files / Storybook / HTML+CSS        ║
+║                                                         ║
+║  Produces:                                              ║
+║    • Token tables (color, type, space, radius, …)       ║
+║    • Atomic evolution: tokens → Atoms → Molecules →     ║
+║      Organisms (rendered in preview.html)               ║
+║    • Pattern + inconsistency analysis                   ║
+║    • CSS / SCSS / Tailwind / JSON exports               ║
+║                                                         ║
+║  Output:                                                ║
+║    .twt-artifacts/design/design-system/tokens.md      ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+---
+
+## Step 1a — Entry mode (greenfield vs analyse-existing)
+
+Decide how this run is seeded:
+
+- **Greenfield** — if `.twt-artifacts/pre-design/brand/brand-brief.md` exists and the user supplied no external design sources, read the brand-brief and derive the foundational tokens from it: palette → color tokens; typography preferences → type scale; brand personality → spacing rhythm, radius, and shadow character. Mark these as `inferred` until confirmed, and tell the user they came from the brand-brief. If `.twt-artifacts/pre-design/spec/specification.md` exists, read its **Visual Style** and **Motion & Animation** sections too and let that north-star direction shape the foundations — especially the **Motion** tokens (durations/easings) and the visual density/radius/shadow character.
+- **Analyse-existing** — if the user supplies Figma / screenshots / exported CSS / a live URL, extract tokens from those (Steps 2–9 below). Figma variables are the highest-confidence source.
+- **Both present** — ask which is authoritative; default to treating any existing `tokens.md` as the baseline (Step 1b) and the brand-brief as the greenfield seed for gaps.
+
+Record `<entry_mode>`. In greenfield mode, the source-collection menu (Step 3) is optional — proceed straight to extraction from the brand-brief, but still allow adding sources.
+
+### Step 1a′ — No-Figma anti-slop direction (greenfield only)
+When `<entry_mode>` is **greenfield** (no Figma/exported design), apply the external design skills per `references/external-design-skills.md`:
+- If `.twt-artifacts/design/design-read.md` exists, read it and honor its dials + direction. If it's absent (this skill was run standalone, not via `/twt-design`), ensure `design-taste-frontend`/`emil-design-eng` are installed (reference Step A; auto-install into the **project** `.claude/skills/` if missing) and produce the Design Read now (reference Step B), writing `design-read.md` from `templates/design-read.md`. **Visual-direction gate:** when run standalone, interactive (not collect mode), and the read is absent or `status: proposed`, present the proposed Design Read and run the same gate as `/twt-design` Step 1b (Approve / Adjust dials / Override / You decide), then write the read with `status: confirmed`. In collect mode, leave it `proposed` and record the open decision for the orchestrator to surface.
+- Apply `design-taste-frontend` discipline when deriving foundations: **§4.1 typography** — do not default to Inter; pick a brief-appropriate pairing (Inter only when the brief is neutral/Linear-style or accessibility-first). **§4.2 color** — one accent under ~80% saturation; **ban as defaults** the AI-purple glow and the beige+brass+espresso premium-consumer palette unless the brand-brief explicitly names those colors. **§6** — every text/surface pair meets WCAG AA. Let `VISUAL_DENSITY` drive spacing rhythm, radius, and shadow character.
+- Feed `emil-design-eng` into the **Motion** tokens (Step 5 → §2.6): custom easing curves (no `ease-in`), durations scaled by element type, and a stated `prefers-reduced-motion` posture.
+- A real brand-brief/spec decision always wins over these defaults — they fill gaps and prevent slop, never override a provided choice. Note in `decisions.md` any direction taken from the skills (not the brief) so the user can confirm.
+
+## Step 1b — Collect mode (CONVENTIONS rule 13)
+If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the design system (`tokens.md`, `tokens.css`, `preview.html`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/design-system/decisions.md` (use `templates/decisions.md`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. Then write the drafts and return the decisions block in your report. Do not loop on the user.
+
+If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
+
+## Step 1c — Detect Existing System
+
+Before asking any questions, check whether `.twt-artifacts/design/design-system/tokens.md` already exists.
+
+- **Exists:** Read it in full. Hold it in memory as `<existing_system>`. Capture (a) the token names + values, (b) the naming convention in use, (c) the section structure. Record `<existing_system_present> = true`.
+- **Does not exist:** Record `<existing_system_present> = false` and continue normally.
+
+If `<existing_system_present> = true`, print:
+
+```
+Existing design system detected:
+  .twt-artifacts/design/design-system/tokens.md
+
+It will be used as the priority baseline. New tokens
+are added only when truly missing; existing tokens
+are preserved unless you explicitly choose to adjust them.
+```
+
+This check influences Step 2 (mode selection wording), Step 3 (Figma-present branch), and Step 4 (skip the reconciliation question — answered already).
+
+---
+
+## Step 2 — Mode Selection
+
+**(Skipped in collect mode — see Step 1b.)** Ask via the **AskUserQuestion** tool (single-select, header "Analysis mode") which analysis mode to use:
+- **Single screen** — analyze a single screen (scoped extraction, partial hierarchy)
+- **Full Figma DS** — analyze full Figma design system (full extraction, full exports)
+- **Merge Figma files** — merge multiple Figma files (full extraction + conflict report)
+- **Reverse-engineer** — reverse-engineer existing product UI (full extraction, emphasis on patterns)
+- **Tokens only** — extract tokens only (skip atomic hierarchy)
+- **Full architecture** — generate full architecture (full extraction + full exports)
+- **Inconsistency compare** — compare design inconsistencies (emphasis on findings tables)
+- **Implementation guide** — generate implementation guidelines (emphasis on export section)
+- **You decide** — I pick the mode that fits the sources (greenfield/brand-brief → Full architecture; a single screenshot → Single screen; multiple Figma files → Merge)
+
+Record the choice as `<mode>`. Each mode tunes Steps 4–8:
+
+| Mode | Token extraction | Atomic hierarchy | Pattern report | Multi-file merge | Export section |
+|------|------------------|------------------|----------------|------------------|----------------|
+| 1 — Single screen | yes (scoped) | partial (visible) | flag visible-only | — | minimal |
+| 2 — Full Figma DS | full | full | full | — | full |
+| 3 — Merge multiple | full | full | full | **required** | full |
+| 4 — Reverse-engineer | full | full | **emphasized** | — | full |
+| 5 — Tokens only | full | skip | tokens-only | optional | full |
+| 6 — Full architecture | full | full | full | optional | full |
+| 7 — Inconsistency compare | partial | partial | **emphasized + tables** | optional | skip |
+| 8 — Implementation guide | full | full | partial | — | **emphasized** |
+
+---
+
+## Step 3 — Source Collection
+
+Ask the user to provide design references (Figma URL, local file path, or live site/Storybook URL), then ask via the **AskUserQuestion** tool (single-select, header "Add source?") whether to continue adding or start analysis:
+- **Add another** — add another design reference (loop back)
+- **Done** — all sources added, start analysis
+
+Loop until the user chooses "Done".
+
+For each source:
+- **Figma URL** — check whether `mcp__plugin_figma_figma__*` tools are available.
+  - **Available:** load the `figma:figma-use` skill, then use `get_design_context`, `get_variable_defs`, `get_metadata`, and `get_screenshot` to read the file. Figma variables are the highest-confidence token source.
+  - **Not available:** ask the user to install Figma MCP and restart, or provide screenshots / exports instead.
+- **Local file** — use Read (images, markdown, JSON, CSS, HTML). For PDFs, prefer page range.
+- **URL** — use WebFetch.
+
+Hold every source in memory tagged with origin (`figma://<file>`, `screenshot://<path>`, `url://<href>`). Tags are used later to attribute every token and to mark confidence.
+
+### Step 3b — Figma + Existing System Branch
+
+Run this only when **both** conditions are true:
+- `<existing_system_present> = true` (from Step 1b)
+- at least one Figma source was added in Step 3
+
+Otherwise skip to Step 4.
+
+Print a diff summary first — read variables / styles from the Figma source(s) and compare against `<existing_system>`:
+
+```
+Compared Figma to existing tokens.md:
+  • Tokens matching                : <n>
+  • Tokens new in Figma (missing)  : <n>
+  • Tokens with different values   : <n>
+  • Tokens only in existing system : <n>
+```
+
+Then ask via the **AskUserQuestion** tool (single-select, header "Apply Figma?") how the Figma file should be applied to the existing design system:
+- **Update** — add only the tokens missing in tokens.md (recommended; safest, preserves consistency)
+- **Adjust** — review each conflict and decide per-token (add / replace / skip)
+- **Regenerate** — discard the existing system and rebuild from Figma (destructive — confirms twice)
+- **No change** — keep tokens.md as-is, just use it as context for the current task
+- **You decide** — I apply the safest fit (defaults to Update; never Regenerate without explicit confirmation)
+
+Record the choice and continue. Record the choice as `<system_update_mode>`. Apply it in Step 5 and Step 10:
+
+| Choice | Step 5 behavior | Step 10 (write) behavior |
+|--------|-----------------|--------------------------|
+| **1 — Update** | Extract Figma tokens, drop any whose name+role already exists in `<existing_system>`. Keep only the missing ones. | Merge: existing sections preserved verbatim; new tokens appended into matching sections with `(added from <figma source>)` note. |
+| **2 — Adjust** | Build a conflict list (same name, different value) and an additions list. Walk through each conflict with the user: `keep existing / replace with Figma / skip`. | Apply per-token decisions. Log every change in the new Section 10 (Migration Recommendations) entry titled "Adjustments applied on <date>". |
+| **3 — Regenerate** | Ignore `<existing_system>`. Use Figma + other sources as the only basis. **Before writing**, ask once more: `Type REGENERATE to confirm destructive rewrite.` If anything else is typed, fall back to Update. | Back up the old file to `tokens.md.bak-<YYYYMMDD-HHMM>` first, then write fresh. |
+| **4 — No change** | Skip token extraction merge entirely. Use `<existing_system>` as-is for downstream work (component hierarchy, exports). | Do not modify `tokens.md`. Completion summary notes `Output file: unchanged`. |
+
+In **Adjust** mode, render the conflict walkthrough as a compact table the user can answer with a single line of letters, e.g.:
+
+```
+# Conflicts (existing vs Figma):
+1. color-primary       #0057FF → #1A5CFF    [k]eep / [r]eplace / [s]kip
+2. radius-card         12px    → 16px       [k]eep / [r]eplace / [s]kip
+3. space-4             16px    → 12px       [k]eep / [r]eplace / [s]kip
+
+Answer with one letter per line (e.g. "k r k") or "k all" / "r all".
+```
+
+---
+
+## Step 4 — Existing System Reconciliation
+
+**Skip this step entirely if `<existing_system_present> = true`** (Step 1b already loaded it and Step 3b already decided how to apply Figma to it).
+
+Otherwise, ask via the **AskUserQuestion** tool (single-select, header "Existing DS?") whether there is an existing design system to extend:
+- **Yes** — point to an existing system (tokens file, CSS, Storybook, or Figma) to use as the priority baseline
+- **No** — generate from the sources collected above
+- **You decide** — I detect whether an existing system is present and proceed accordingly (defaults to No when none is found)
+
+Record the choice and continue. If **Yes**, ask the user to provide the path/URL to the existing system, read it in full and treat it as the **priority baseline**:
+- Existing token names and values are preserved verbatim.
+- New tokens are added only where the analyzed designs introduce values with no equivalent.
+- Conflicts are logged in the Pattern Report (Step 7), never silently overwritten.
+
+If **No**, derive everything from the collected sources.
+
+---
+
+## Step 5 — Token Extraction
+
+For each token category, extract values from the sources, deduplicate, and normalize.
+
+### Output rules (apply to every category)
+
+- Every token has a name, a value, a semantic role, and a confidence level: **confirmed** (from Figma variables, existing token file, or repeated 3+ times) or **inferred** (visual estimation).
+- Mark inferred tokens with `(inferred)` in the table.
+- Use the naming convention defined in Step 9.
+- Do not invent values that aren't present in the sources.
+
+### Categories
+
+| Category | What to extract |
+|----------|-----------------|
+| **Colors** | Primary, Secondary, Accent, Neutral, Success, Warning, Danger, Info, Surface, Background, Border, Text, Overlay, Interactive states (hover/active/focus/disabled). Record HEX + RGB + HSL. |
+| **Typography** | Font families, scale (Display → Caption), weights, line heights, letter spacing, responsive scaling rules. |
+| **Spacing** | Base unit, full scale, layout rhythm, container spacing, component internal spacing, responsive deltas. |
+| **Radius** | Full scale + category mapping (button, card, input, modal, pill, …). |
+| **Shadows** | Elevation system (e1 … eN), overlay shadows, interactive shadows. |
+| **Motion** | Durations, easing curves, hover/focus/modal/page transition defaults. |
+| **Grid** | Desktop / tablet / mobile columns, gutters, container widths, breakpoints. |
+
+### Typography hierarchy
+
+Use this hierarchy (rename to project's naming if an existing system exists):
+
+```
+Display
+Heading XL
+Heading L
+Heading M
+Body L
+Body M
+Body S
+Caption
+Label
+Button
+```
+
+---
+
+## Step 6 — Atomic hierarchy (canonical levels)
+
+Skip this step in **mode 5** (tokens only).
+
+Organize every detected UI piece into the **canonical atomic-design hierarchy** — each level is built from the one below it:
+
+```
+Subatomic particles (tokens)  →  Atoms  →  Molecules  →  Organisms
+                                        (Templates → Pages = layout/mockup phases)
+```
+
+For each level, document what is required:
+
+| Level | Required documentation |
+|-------|------------------------|
+| **Subatomic particles** (the tokens themselves — color, type, space, radius, shadow, motion) | already inventoried in Section 2; the raw material every atom is built from |
+| **Atom** (button, input, label, icon, badge, avatar, checkbox, radio, divider, chip, tag) | the smallest functional UI unit · which tokens it consumes · variants · states · accessibility notes |
+| **Molecule** (search bar, form row, card header, nav item, media object, input-with-label) | which **atoms** it composes · composition logic · interaction rules · layout behavior |
+| **Organism** (site header, hero, pricing card, footer, feature section, complex form, modal, card) | which **molecules/atoms** it composes · structure · responsive adaptation · reusable arrangement rules (e.g. "hero pairs heading + body + CTA + media slot") |
+
+State each item's composition (which lower-level parts it's made of) so the **evolution** from token → atom → molecule → organism is explicit. Where a component is implied but not visible in the sources, list it under an **Inferred Components** section instead of inventing variants for it. (Templates and Pages — full layouts and real-content page builds — are produced later by `/twt-layout` and `/twt-mockup`, not here.)
+
+---
+
+## Step 7 — Pattern & Inconsistency Report
+
+Scan extracted tokens and components for:
+
+- inconsistent spacing
+- typography drift (same role, different size/weight)
+- duplicate button variants
+- mismatched radii
+- color misuse (semantic role conflicts with token meaning)
+- layout fragmentation
+- naming drift
+
+For each finding, record:
+- **What** (the inconsistency)
+- **Where** (source tag, screen, or component)
+- **Recommendation** (normalize to X, retire Y)
+- **Severity** (high / medium / low)
+
+In **mode 3** (multi-file merge) also produce:
+- conflict report (token name same, value different)
+- normalization recommendations
+- migration notes (which file's value wins and why)
+
+In **mode 7** (inconsistency compare) this section is the primary output.
+
+---
+
+## Step 8 — Multi-File Merge Logic
+
+Only run if more than one Figma source was provided, or **mode 3** was selected.
+
+Steps:
+1. Build a per-file token map.
+2. Group tokens by semantic role across files.
+3. Resolve conflicts using this order: existing-system value > most-frequent value > most-recent file > flagged for human review.
+4. Output a merged token set + a conflict table that shows every value that was *not* chosen and the file it came from.
+5. Preserve the scalable architecture — never collapse two distinct semantic roles into one even if the value matches.
+
+---
+
+## Step 9 — Naming Convention
+
+Normalize every token to a consistent convention. Default to kebab-case role-first naming:
+
+```
+button-primary
+button-secondary
+text-heading-xl
+space-4
+radius-card
+shadow-overlay
+color-surface-elevated
+motion-duration-fast
+```
+
+If the existing system (Step 4) uses a different convention, follow that instead and document the convention rule explicitly in the output.
+
+---
+
+## Step 10 — Generate Output
+
+Write `.twt-artifacts/design/design-system/tokens.md`. Create the parent directory if it doesn't exist. If the file already exists, read it first and merge — never silently overwrite custom additions.
+
+The file MUST include the following sections in this order:
+
+```md
+# Design System — <Project Name>
+
+## 1. Overview
+- design philosophy
+- visual language
+- UI consistency principles
+- spacing philosophy
+- interaction patterns
+- accessibility direction
+- responsive behavior assumptions
+- confidence summary (how many tokens confirmed vs inferred)
+
+## 2. Tokens
+### 2.1 Colors           (table: name · HEX · RGB · HSL · role · usage · confidence)
+### 2.2 Typography       (families · scale · weights · line-height · tracking · responsive)
+### 2.3 Spacing          (scale · rhythm · responsive deltas)
+### 2.4 Radius           (scale · category mapping)
+### 2.5 Shadows          (elevation system · overlay · interactive)
+### 2.6 Motion           (durations · easings · defaults)
+### 2.7 Grid             (breakpoints · columns · gutters · container widths)
+
+## 3. Component Architecture (atomic evolution)
+### 3.1 Subatomic particles      (the tokens — pointer back to Section 2)
+### 3.2 Atoms                    (each: tokens consumed · variants · states)
+### 3.3 Molecules                (each: which atoms it composes)
+### 3.4 Organisms                (each: which molecules/atoms it composes)
+### 3.5 Inferred Components       (only if any)
+
+## 4. Pattern & Inconsistency Report
+### 4.1 Findings table
+### 4.2 Normalization recommendations
+### 4.3 Conflict report           (multi-file merge only)
+
+## 5. Accessibility
+- contrast audit (token pairs · WCAG level)
+- focus states
+- keyboard navigation assumptions
+- minimum touch targets
+- typography scaling
+- dark mode readiness
+
+## 6. Responsive System
+- breakpoint logic
+- responsive typography rules
+- responsive spacing rules
+- adaptive layouts
+- mobile behavior changes
+
+## 7. Naming Convention
+- the rule
+- examples
+- migration notes for drift
+
+## 8. Token Exports
+### 8.1 CSS Variables
+### 8.2 SCSS
+### 8.3 Tailwind config
+### 8.4 JSON tokens
+### 8.5 Style Dictionary format
+
+## 9. Governance
+- maintenance workflow
+- how to add a component
+- token expansion rules
+- contribution workflow
+- scalability recommendations
+
+## 10. Migration Recommendations
+- prioritized cleanup
+- refactor recommendations
+- per-finding migration plan
+```
+
+### Formatting rules
+
+- Use tables for every token category.
+- Use ASCII anatomy diagrams for components where helpful.
+- Use hierarchy trees for the atomic structure.
+- Use variant matrices for element states.
+- Avoid vague wording or purely aesthetic commentary — every statement should be actionable.
+- Mark every assumption explicitly. Separate **confirmed** vs **inferred**.
+
+### Export examples (Section 8)
+
+CSS:
+
+```css
+:root {
+  --color-primary: #0057FF;
+  --color-surface: #FFFFFF;
+  --radius-card: 16px;
+  --space-4: 16px;
+  --motion-duration-fast: 120ms;
+}
+```
+
+JSON (Style Dictionary–compatible):
+
+```json
+{
+  "color": {
+    "primary": { "value": "#0057FF" },
+    "surface": { "value": "#FFFFFF" }
+  },
+  "radius": { "card": { "value": "16px" } },
+  "space":  { "4":    { "value": "16px" } }
+}
+```
+
+Tailwind:
+
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors:       { primary: '#0057FF', surface: '#FFFFFF' },
+      borderRadius: { card: '16px' },
+      spacing:      { 4: '16px' }
+    }
+  }
+}
+```
+
+---
+
+## Step 10a — Generate `tokens.css` (always)
+
+After writing `tokens.md`, write `.twt-artifacts/design/design-system/tokens.css` — a single `:root` block exporting **every** token as a CSS custom property. This is the one stylesheet every downstream HTML artifact (preview, gallery, mockups) links, so it must be complete and authoritative.
+
+Rules:
+- One custom property per token, named from the token's kebab-case name: `--color-primary`, `--space-4`, `--radius-card`, `--font-size-body-m`, `--font-family-base`, `--line-height-body-m`, `--shadow-e2`, `--motion-duration-fast`, etc.
+- Group with comments by category (Colors, Typography, Spacing, Radius, Shadows, Motion, Grid/Breakpoints).
+- Values are the confirmed/inferred values from `tokens.md`. Do not introduce values absent from `tokens.md`.
+
+Example shape:
+```css
+:root {
+  /* Colors */
+  --color-primary: #0057FF;
+  --color-surface: #FFFFFF;
+  --color-text: #0D1B2A;
+  /* Typography */
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --font-size-body-m: 1rem;
+  --line-height-body-m: 1.5;
+  /* Spacing */
+  --space-4: 16px;
+  /* Radius */
+  --radius-card: 16px;
+  /* Shadows */
+  --shadow-e2: 0 2px 8px rgba(13,27,42,.12);
+  /* Motion */
+  --motion-duration-fast: 120ms;
+}
+```
+
+## Step 10b — Generate `preview.html` (the atomic evolution, always)
+
+Write `.twt-artifacts/design/design-system/preview.html` — a styleguide that renders the **atomic evolution** entirely from `tokens.css` (so it can never drift from the tokens). It links `tokens.css` via `<link rel="stylesheet" href="tokens.css">` and uses `var(--…)` for **all** foundation values (color/type/space/radius/shadow/motion); only minimal structural layout CSS may be embedded. Lay it out as four ascending tiers, top to bottom, so a reader literally watches tokens grow into UI. **(In mode 5 — tokens only — render only Tier 1.)**
+
+Open with a one-line legend: `Subatomic particles → Atoms → Molecules → Organisms` and a note that each level is built only from the level above it and the tokens, and that **every** documented component appears here (one instance each); the exhaustive variant × state catalog lives in the component gallery.
+
+### Tier 1 — Subatomic particles (the tokens)
+One subsection per foundation category present in `tokens.md` (skip none):
+- **Color** — every color token as a labeled swatch (name · hex · role), grouped by semantic role; show WCAG contrast pairs for text-on-surface combinations.
+- **Typography** — each type-scale step as a live specimen in its font/size/weight/line-height/tracking, labeled with the token name.
+- **Spacing** — the scale as visual bars labeled token + value.
+- **Radius** — sample tiles per radius token.
+- **Shadows** — elevation cards per shadow token.
+- **Motion** — labeled durations/easings (animate a swatch on hover using the `--motion-*` tokens).
+- **Grid** — a breakpoint diagram (columns/gutters/container per breakpoint).
+
+### Tier 2 — Atoms
+Render **every atom** documented in Section 3.2 (at minimum: button — with its variants/states, input, label, badge, avatar, icon, divider, chip), one instance each. Each atom is built purely from `var(--…)`. Under each, print a small caption listing **the tokens it consumes** (e.g. `button → --color-primary · --radius-button · --space-3 · --font-button`). This makes the token→atom step visible.
+
+### Tier 3 — Molecules
+Render **every molecule** from Section 3.3 — one instance each — each one **visibly composing the atoms above** (e.g. *search bar* = input atom + button atom; *form row* = label atom + input atom; *card header* = avatar atom + title + action button). Caption each with **which atoms it composes**.
+
+### Tier 4 — Organisms
+Render **one instance of every organism** documented in Section 3.4 — each **composing molecules/atoms** (e.g. *site header* = logo + nav-item molecules + button atom; *hero* = heading + body + CTA button + media slot; *pricing card*; *footer*). Caption each with **which molecules/atoms it composes**. Render them all, default state — this tier is the project's organism inventory, not a single showcase. (Each component's full variant × state matrix is the component gallery's job, not the preview's.)
+
+### Closing cross-links
+- **Exhaustive catalog:** a note + link to `../component/gallery.html` — "This preview shows **breadth**: every component once, organized by atomic level (the evolution). For **depth** — each component with all its variants and states — see the component gallery." If that file doesn't exist yet, render the noted placeholder: "Run /twt-component to populate the exhaustive component gallery." (Pipeline order builds the design system before components.)
+- **Templates & Pages:** a note that the next atomic levels — full page templates and real-content pages — are produced by `/twt-layout` (`layout/`) and `/twt-mockup` (`mockup/`).
+
+## Step 11 — Optional Additional Outputs
+
+If the user asks for them (or if `<mode>` strongly implies them), also write:
+
+| File | When |
+|------|------|
+| `.twt-artifacts/design/design-system/components.md` | mode 2, 6 — full component documentation lifted from Section 3 |
+| `.twt-artifacts/design/design-system/patterns.md` | mode 6, 7 — patterns and recurring arrangements |
+| `.twt-artifacts/design/design-system/migration-plan.md` | mode 7, or when Section 10 has high-severity findings |
+| `.twt-artifacts/design/design-system/tailwind.config.js` | mode 8, or on request |
+| `.twt-artifacts/design/design-system/tokens.json` | mode 8, or on request |
+
+`tokens.md` is always generated. The others are opt-in.
+
+---
+
+## Step 12 — Completion
+
+Print a summary table:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║  ✓ Design system generated                              ║
+╠════════════════════╦═════════════════════════════════════╣
+║  Item              ║  Status                            ║
+╠════════════════════╬═════════════════════════════════════╣
+║  Mode              ║  <mode>                            ║
+║  Sources analyzed  ║  <n> (figma:<a>, screenshot:<b>)   ║
+║  Tokens extracted  ║  <n> confirmed · <n> inferred       ║
+║  Components        ║  <atoms> / <molecules> / <organisms>║
+║                    ║  (every one rendered in preview)   ║
+║  Findings          ║  <n> high · <n> med · <n> low      ║
+║  Output file       ║  ✓ tokens.md                       ║
+║  Preview + CSS     ║  ✓ preview.html · tokens.css        ║
+║  Optional files    ║  <list or "none">                  ║
+╚════════════════════╩═════════════════════════════════════╝
+
+Output: .twt-artifacts/design/design-system/tokens.md
+```
+
+Then tell the user what to read first:
+- Section 1 for the philosophy summary
+- Section 4 for inconsistency findings
+- Section 8 for ready-to-use code exports
+- Section 10 for the migration plan if any high-severity findings exist
+
+---
+
+## Constraints
+
+The skill MUST:
+- never hallucinate components, tokens, or states that aren't in the sources
+- mark every inferred value explicitly
+- preserve existing token names and values when an existing system is provided
+- prefer Figma variables over visual estimation when both exist
+- behave like a senior product designer + design-systems architect: scalability, maintainability, consistency, implementation realism

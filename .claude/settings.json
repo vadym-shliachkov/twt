@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_figma_figma__get_design_context",
+      "mcp__plugin_figma_figma__get_screenshot",
+      "mcp__plugin_figma_figma__get_metadata",
+      "mcp__plugin_figma_figma__whoami",
+      "Bash(where *)",
+      "Bash(powershell -NoProfile -File tools/check-skill.ps1 *)",
+      "Bash(powershell.exe -NoProfile -File tools/check-skill.ps1 *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(wc *)",
+      "Bash(pdfinfo *)",
+      "Bash(pdftotext *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "WebFetch(domain:xivic.com)",
+      "Read(.claude/hooks/**)",
+      "Edit(.claude/hooks/**)",
+      "Write(.claude/hooks/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-docs-on-skill-edit.js\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/record-skill-edit.js\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/bump-skill-versions.js\""
+          }
+        ]
+      }
+    ]
+  }
+}
