@@ -8,6 +8,6 @@ Per-page responsive layout specs (sections, component slots, content map)
 
 | command | description |
 |---------|-------------|
-| /twt-layout | Orchestrate layout define/validate with a bounded improvement loop |
+| /twt-layout | Orchestrate layout define/validate in a single define→validate pass |
 | /twt-layout-define | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | /twt-layout-validate | Read-only critique of per-page layout specs into validation-report.md |

@@ -2,7 +2,7 @@
 name: twt-design-system-define
 category: design-system
 description: Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
-version: 1.4.1
+version: 1.4.2
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -71,31 +71,7 @@ This skill:
 
 ## Step 1 — Introduction
 
-Print on start:
-
-```
-╔══════════════════════════════════════════════════════════╗
-║  TWT — Designer · Design System                         ║
-╠══════════════════════════════════════════════════════════╣
-║  Generates a scalable, implementation-ready design      ║
-║  system from designs and existing references.           ║
-║                                                         ║
-║  Accepts:                                               ║
-║    • Single or multiple Figma files                     ║
-║    • Screenshots, PDFs, exports                         ║
-║    • Existing token files / Storybook / HTML+CSS        ║
-║                                                         ║
-║  Produces:                                              ║
-║    • Token tables (color, type, space, radius, …)       ║
-║    • Atomic evolution: tokens → Atoms → Molecules →     ║
-║      Organisms (rendered in preview.html)               ║
-║    • Pattern + inconsistency analysis                   ║
-║    • CSS / SCSS / Tailwind / JSON exports               ║
-║                                                         ║
-║  Output:                                                ║
-║    .twt-artifacts/design/design-system/tokens.md      ║
-╚══════════════════════════════════════════════════════════╝
-```
+On start, print a brief plain-text orientation (no ASCII box): what this does (generate an implementation-ready design system from `brand-brief.md` or supplied design sources), what it accepts (Figma / screenshots / PDFs / exports / existing token files), and the output path `.twt-artifacts/design/design-system/tokens.md`.
 
 ---
 
@@ -588,27 +564,7 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 
 ## Step 12 — Completion
 
-Print a summary table:
-
-```
-╔══════════════════════════════════════════════════════════╗
-║  ✓ Design system generated                              ║
-╠════════════════════╦═════════════════════════════════════╣
-║  Item              ║  Status                            ║
-╠════════════════════╬═════════════════════════════════════╣
-║  Mode              ║  <mode>                            ║
-║  Sources analyzed  ║  <n> (figma:<a>, screenshot:<b>)   ║
-║  Tokens extracted  ║  <n> confirmed · <n> inferred       ║
-║  Components        ║  <atoms> / <molecules> / <organisms>║
-║                    ║  (every one rendered in preview)   ║
-║  Findings          ║  <n> high · <n> med · <n> low      ║
-║  Output file       ║  ✓ tokens.md                       ║
-║  Preview + CSS     ║  ✓ preview.html · tokens.css        ║
-║  Optional files    ║  <list or "none">                  ║
-╚════════════════════╩═════════════════════════════════════╝
-
-Output: .twt-artifacts/design/design-system/tokens.md
-```
+Print a concise plain-text summary (no ASCII box): mode · sources analyzed · tokens (confirmed/inferred) · component counts (atoms/molecules/organisms, all rendered in preview) · findings (high/med/low) · files written (`tokens.md`, `tokens.css`, `preview.html`, any optional). End with the output path `.twt-artifacts/design/design-system/tokens.md`.
 
 Then tell the user what to read first:
 - Section 1 for the philosophy summary

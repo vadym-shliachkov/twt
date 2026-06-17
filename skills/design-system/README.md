@@ -8,6 +8,6 @@ Cross-phase shared design system: tokens, CSS export, and foundations preview
 
 | command | description |
 |---------|-------------|
-| /twt-design-system | Orchestrate design-system define/validate with a bounded improvement loop |
+| /twt-design-system | Orchestrate design-system define/validate in a single define→validate pass |
 | /twt-design-system-define | Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview) |
 | /twt-design-system-validate | Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md |

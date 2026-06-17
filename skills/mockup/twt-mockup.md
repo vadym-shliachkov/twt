@@ -1,8 +1,8 @@
 ---
 name: twt-mockup
 category: mockup
-description: Orchestrate mockup define/validate with a bounded improvement loop
-version: 1.1.1
+description: Orchestrate mockup define/validate in a single define→validate pass
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to scope to
@@ -21,7 +21,7 @@ writes: []
 
 ## Intent
 
-**Purpose:** One-call mockup workflow: define → validate, then loop define→validate until the mockups are clean or the bounded loop stops.
+**Purpose:** One-call mockup workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -30,7 +30,7 @@ writes: []
 
 **Success criteria:**
 - Produces/refines `pages/<page>.html`, `index.html`, `styles.css` and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, Band-based stop + §13 decisions surfacing, no-progress break, report-and-stop on unresolved BLOCKERs
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -38,14 +38,14 @@ writes: []
 ## Step 1 — Detect state
 If `pages/` has files, ask via the **AskUserQuestion** tool (single-select, header "State") whether to **Use as-is**, **Refine** (address validation findings), **Rebuild** (start over), or **You decide** (I pick: Refine if a validation-report flags findings, else Use as-is); pass the choice to the dispatched -define skill. If empty, proceed to define.
 
-## Step 2 — Define → surface → validate loop (CONVENTIONS §9 + §13)
+## Step 2 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
 Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (dispatched by a parent orchestrator). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see sub-step 2).
 
-Initialize `iteration = 0`, `prevHealth = null`. Repeat up to 3 times:
-1. **Define (subagent):** dispatch `/twt-mockup-define` (Agent tool), **always including `subagent-collect`** (plus any user answers from last pass and the refine/rebuild choice from Step 1).
-2. **Surface (main thread only):** read `.twt-artifacts/design/mockup/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, feed them into the next Define dispatch (which finalizes → `status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
-3. **Validate (subagent):** dispatch `/twt-mockup-validate`; read the Scorecard **Band**, **Health**, BLOCKER count.
-4. `iteration += 1`. **Stop** when Band = Pass AND `decisions.md` resolved/empty. Break early if Health did not increase vs `prevHealth`. At `iteration == 3`, stop. Set `prevHealth = Health`.
+Run **one** define → validate cycle — no iteration loop (§9):
+1. **Define (subagent):** dispatch `/twt-mockup-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-mockup-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+2. **Surface (main thread only):** read `.twt-artifacts/design/mockup/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and re-dispatch define **once** to finalize (`status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
+3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-mockup-validate` once; read the Scorecard **Band**, **Health**, BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
+4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once.
 
 ## Step 3 — Report
 State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). If decisions remain unresolved or Band < Pass, present them and the human-decision options (re-render pages / accept and edit directly / defer) — never auto-fix.

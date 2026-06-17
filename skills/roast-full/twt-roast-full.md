@@ -2,7 +2,7 @@
 name: twt-roast-full
 category: roast-full
 description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.4.1
+version: 1.5.2
 accepts_arguments: true
 inputs:
   - Optional notes, a live URL, or a hint of which phase to start from
@@ -14,21 +14,24 @@ dependencies:
     - twt-design
     - twt-develop
     - twt-roast-express
+    - twt-content-approval-checklist
     - twt-qa
 reads:
   - .twt-artifacts/pre-design/pre-design-brief.md
   - .twt-artifacts/design/design-brief.md
+  - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/qa/qa-report.md
   - .twt-artifacts/qa/gaps.md
 writes:
   - .twt-artifacts/roast-full-log.md
+  - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
 # /twt-roast-full
 
 ## Intent
 
-**Purpose:** Run the entire twt pipeline — Pre-design → Design → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
+**Purpose:** Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
 
 **Non-goals:**
 - Doesn't reproduce any phase's logic — dispatches each phase wrapper via the Agent tool (rule 5)
@@ -40,6 +43,7 @@ writes:
 - Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
 - Figma-express target routes Development through `/twt-roast-express` and skips Pre-design + Design
+- When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 
 ---
@@ -74,7 +78,8 @@ If **Figma express** is chosen, tell the user Pre-design and Design will be skip
 For each phase still selected, in pipeline order, dispatch its wrapper via the Agent tool, then run the Step 4 pause before moving on:
 - **Pre-design** → `/twt-pre-design`
 - **Design** → `/twt-design`
-- **Development** → `/twt-develop` (forwarding the chosen `--target`) **or** `/twt-roast-express` (Figma express)
+- **Content approval checklist** → `/twt-content-approval-checklist` (whenever Development is selected; for Figma express, pass the Figma URL so current design copy, lorem/placeholder text, links, and media references are captured into the workbook before build)
+- **Development** → `/twt-develop` (forwarding the chosen `--target`; it builds with currently available content and leaves approval implementation for a later explicit call) **or** `/twt-roast-express` (Figma express; it reuses/refines the workbook and builds with current Figma content)
 - **QA** → `/twt-qa`
 
 Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward the free-form context as notes.
@@ -82,6 +87,8 @@ Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward the f
 **Visual-direction surfacing (interactive only, before Design).** When the Design phase is in the set, no Figma/exported design was provided, and this is **not** auto mode: after `/twt-design` returns, read `.twt-artifacts/design/decisions.md` for the open "Confirm site visual direction" decision and present it to the user via the **AskUserQuestion** tool (Approve / Adjust dials / Override / You decide — per `/twt-design` Step 1b). Then re-dispatch `/twt-design --only design-system … ` in refinement mode with the resolved direction so the confirmed `design-read.md` propagates before components/layouts/mockups bind to it. This is the rule-13 surfacing point — without it the visual direction silently stays inferred. **Auto mode skips this** (the proposed read is model-decided and logged in Step 5).
 
 Before dispatching a phase, check its prerequisite exists: Development (non-express) needs `.twt-artifacts/design/design-brief.md`; QA needs built output (`site/` or a theme). If a prerequisite is missing, raise it at the Step 4 pause instead of dispatching blindly (in auto mode: stop the pipeline there and report — never invent the missing input).
+
+For the **Content approval checklist** pseudo-phase, pass the design brief, layouts, mockups, design-system artifacts, asset manifest, and any user notes. If the target is **Figma express**, pass the Figma URL as the primary content source and instruct the child to extract the visible design copy into `current content`, including lorem ipsum, placeholder copy, draft links, image labels, video references, and SEO-looking text. If the workbook already exists, instruct the child to preserve approved content and fill only newly discovered scope. In interactive mode, surface this as the approval workspace before Development; the user may proceed with partial approvals, but unready rows will not be implemented.
 
 ## Step 4 — Approval pause (after each phase)
 Read the just-finished phase's output and count any **outstanding BLOCKERs**:
@@ -100,4 +107,4 @@ When BLOCKERs are present, the option descriptions should recommend Re-run or St
 ## Step 5 — Final summary & finalize the log
 First finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-full-log.md`.
 
-Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs the user chose to defer, and **the log location** (`.twt-artifacts/roast-full-log.md`). In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.
+Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/roast-full-log.md`). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.

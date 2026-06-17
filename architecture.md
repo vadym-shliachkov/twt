@@ -15,6 +15,8 @@ flowchart TB
     twt_component["/twt-component"]:::skill
     twt_component_define["/twt-component-define"]:::skill
     twt_component_validate["/twt-component-validate"]:::skill
+    twt_content_approval_checklist["/twt-content-approval-checklist"]:::skill
+    twt_content_approval_implement["/twt-content-approval-implement"]:::skill
     twt_content_fetch["/twt-content-fetch"]:::skill
     twt_content_fetch_doc["/twt-content-fetch-doc"]:::skill
     twt_content_fetch_pdf["/twt-content-fetch-pdf"]:::skill
@@ -65,17 +67,20 @@ flowchart TB
     twt_brand_validate -.-> twt_brand
     twt_brand_fetch -.-> twt_brand_define
     twt_content_fetch_pdf -.-> twt_brand_fetch
-    figma_mcp -.-> twt_brand_fetch
-    WebFetch -.-> twt_brand_fetch
     twt_brand_define --> twt_brand_validate
     twt_component_define -.-> twt_component
     twt_component_validate -.-> twt_component
+    twt_design_system_define -.-> twt_content_approval_checklist
+    twt_layout -.-> twt_content_approval_checklist
+    twt_mockup -.-> twt_content_approval_checklist
+    twt_content_approval_checklist --> twt_content_approval_implement
+    twt_html_block_creator -.-> twt_content_approval_implement
+    twt_elementor_block_creator -.-> twt_content_approval_implement
     twt_content_fetch_site -.-> twt_content_fetch
     twt_content_fetch_pdf -.-> twt_content_fetch
     twt_content_fetch_doc -.-> twt_content_fetch
     twt_content_fetch -.-> twt_content_fetch_doc
     twt_content_fetch -.-> twt_content_fetch_pdf
-    WebFetch -.-> twt_content_fetch_site
     twt_content_fetch -.-> twt_content_fetch_site
     twt_content_validate --> twt_content_optimize
     twt_content_fetch_site -.-> twt_content_validate
@@ -93,17 +98,15 @@ flowchart TB
     twt_mockup -.-> twt_design
     twt_design_system_define -.-> twt_design_system
     twt_design_system_validate -.-> twt_design_system
-    figma_mcp -.-> twt_design_system_define
     twt_html_site_creator -.-> twt_develop
     twt_html_block_creator -.-> twt_develop
     twt_elementor_theme_creator -.-> twt_develop
     twt_elementor_block_creator -.-> twt_develop
+    twt_content_approval_checklist -.-> twt_develop
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
-    figma_mcp -.-> twt_elementor_block_creator
     twt_html_site_creator --> twt_html_block_creator
     twt_design_system_define -.-> twt_html_block_creator
-    figma_mcp -.-> twt_html_block_creator
     twt_ia_define -.-> twt_ia
     twt_ia_validate -.-> twt_ia
     twt_positioning_define -.-> twt_ia_define
@@ -135,16 +138,15 @@ flowchart TB
     twt_elementor_block_creator -.-> twt_roast_express
     twt_html_site_creator -.-> twt_roast_express
     twt_html_block_creator -.-> twt_roast_express
-    figma_mcp -.-> twt_roast_express
+    twt_content_approval_checklist -.-> twt_roast_express
     twt_pre_design -.-> twt_roast_full
     twt_design -.-> twt_roast_full
     twt_develop -.-> twt_roast_full
     twt_roast_express -.-> twt_roast_full
+    twt_content_approval_checklist -.-> twt_roast_full
     twt_qa -.-> twt_roast_full
-    WebFetch -.-> twt_search_site
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
-    figma_mcp -.-> twt_spec_define
     twt_spec_define --> twt_spec_validate
 
     classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
@@ -154,125 +156,127 @@ flowchart TB
 
 ### brand
 
-- **/twt-brand** — Orchestrate the brand fetch/define/validate skills with a bounded improvement loop
-- **/twt-brand-define** — Build or refine the canonical brand-brief.md through guided dialogue
-- **/twt-brand-fetch** — Extract brand attributes from a brand book, Figma, or screenshots into raw notes
-- **/twt-brand-validate** — Critique brand-brief.md and write a validation-report.md (read-only critic)
+- /twt-brand - Orchestrate the brand fetch/define/validate skills in a single define→validate pass
+- /twt-brand-define - Build or refine the canonical brand-brief.md through guided dialogue
+- /twt-brand-fetch - Extract brand attributes from a brand book, Figma, or screenshots into raw notes
+- /twt-brand-validate - Critique brand-brief.md and write a validation-report.md (read-only critic)
 
 ### component
 
-- **/twt-component** — Orchestrate component define/validate with a bounded improvement loop
-- **/twt-component-define** — Define component specs (components.md) and render a token-driven gallery.html
-- **/twt-component-validate** — Read-only critique of components.md and gallery.html into validation-report.md
+- /twt-component - Orchestrate component define/validate in a single define→validate pass
+- /twt-component-define - Define component specs (components.md) and render a token-driven gallery.html
+- /twt-component-validate - Read-only critique of components.md and gallery.html into validation-report.md
 
 ### content
 
-- **/twt-content-fetch** — Detect provided sources and dispatch to the right content-fetch sub-skill
-- **/twt-content-fetch-doc** — Extract a Word/Google Doc's content and save as clean Markdown
-- **/twt-content-fetch-pdf** — Extract a PDF's text content and save as clean Markdown
-- **/twt-content-fetch-site** — Fetch a website's content and save as clean Markdown
-- **/twt-content-optimize** — Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
-- **/twt-content-validate** — Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
+- /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page
+- /twt-content-approval-implement - Apply ready approved XLSX content into the built site or development artifacts
+- /twt-content-fetch - Detect provided sources and dispatch to the right content-fetch sub-skill
+- /twt-content-fetch-doc - Extract a Word/Google Doc's content and save as clean Markdown
+- /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
+- /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
+- /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
+- /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 
 ### curation
 
-- **/twt-curation** — Orchestrate curation define/validate with a bounded improvement loop
-- **/twt-curation-define** — Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines
-- **/twt-curation-validate** — Critique curation against brand voice and IA; write validation-report.md
+- /twt-curation - Orchestrate curation define/validate in a single define→validate pass
+- /twt-curation-define - Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines
+- /twt-curation-validate - Critique curation against brand voice and IA; write validation-report.md
 
 ### design
 
-- **/twt-design** — Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+- /twt-design - Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
 
 ### design-system
 
-- **/twt-design-system** — Orchestrate design-system define/validate with a bounded improvement loop
-- **/twt-design-system-define** — Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
-- **/twt-design-system-validate** — Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
+- /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass
+- /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
+- /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
 
 ### develop
 
-- **/twt-develop** — Phase 3 full path — promote the Phase-2 design into the chosen build target
+- /twt-develop - Phase 3 full path — promote the Phase-2 design into the chosen build target
 
 ### elementor
 
-- **/twt-elementor-block-creator** — Build an Elementor widget or full-page template following project conventions
-- **/twt-elementor-theme-creator** — Scaffold a production-ready Hello Elementor child theme for a WordPress project
+- /twt-elementor-block-creator - Build an Elementor widget or full-page template following project conventions
+- /twt-elementor-theme-creator - Scaffold a production-ready Hello Elementor child theme for a WordPress project
 
 ### html
 
-- **/twt-html-block-creator** — Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
-- **/twt-html-site-creator** — Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md)
+- /twt-html-block-creator - Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
+- /twt-html-site-creator - Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md)
 
 ### ia
 
-- **/twt-ia** — Orchestrate IA define/validate with a bounded improvement loop
-- **/twt-ia-define** — Build or refine sitemap.md and functional-scope.md
-- **/twt-ia-validate** — Critique sitemap.md + functional-scope.md against positioning and content; write report
+- /twt-ia - Orchestrate IA define/validate in a single define→validate pass
+- /twt-ia-define - Build or refine sitemap.md and functional-scope.md
+- /twt-ia-validate - Critique sitemap.md + functional-scope.md against positioning and content; write report
 
 ### layout
 
-- **/twt-layout** — Orchestrate layout define/validate with a bounded improvement loop
-- **/twt-layout-define** — Define per-page layout specs (section order, component slots, content map, breakpoints)
-- **/twt-layout-validate** — Read-only critique of per-page layout specs into validation-report.md
+- /twt-layout - Orchestrate layout define/validate in a single define→validate pass
+- /twt-layout-define - Define per-page layout specs (section order, component slots, content map, breakpoints)
+- /twt-layout-validate - Read-only critique of per-page layout specs into validation-report.md
 
 ### meta
 
-- **/twt-marketplace-docs** — Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
+- /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
 
 ### mockup
 
-- **/twt-mockup** — Orchestrate mockup define/validate with a bounded improvement loop
-- **/twt-mockup-define** — Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
-- **/twt-mockup-validate** — Read-only critique of page mockups (token links, real content, responsiveness, a11y)
+- /twt-mockup - Orchestrate mockup define/validate in a single define→validate pass
+- /twt-mockup-define - Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
+- /twt-mockup-validate - Read-only critique of page mockups (token links, real content, responsiveness, a11y)
 
 ### positioning
 
-- **/twt-positioning** — Orchestrate positioning define/validate with a bounded improvement loop
-- **/twt-positioning-define** — Build or refine positioning.md — audience, value props, promotion priorities
-- **/twt-positioning-validate** — Critique positioning.md against brand and content signal; write validation-report.md
+- /twt-positioning - Orchestrate positioning define/validate in a single define→validate pass
+- /twt-positioning-define - Build or refine positioning.md — audience, value props, promotion priorities
+- /twt-positioning-validate - Critique positioning.md against brand and content signal; write validation-report.md
 
 ### pre-design
 
-- **/twt-pre-design** — Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+- /twt-pre-design - Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
 
 ### qa
 
-- **/twt-qa** — Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
-- **/twt-qa-a11y** — Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
-- **/twt-qa-content** — Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
-- **/twt-qa-design** — Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
-- **/twt-qa-elementor** — Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
-- **/twt-qa-links** — Audit built or served pages for link integrity and declared responsive tiers
+- /twt-qa - Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
+- /twt-qa-a11y - Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
+- /twt-qa-content - Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
+- /twt-qa-design - Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
+- /twt-qa-elementor - Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
+- /twt-qa-links - Audit built or served pages for link integrity and declared responsive tiers
 
 ### roast-express
 
-- **/twt-roast-express** — Phase 3 express — from a Figma link, build/update the design system and jump to development
+- /twt-roast-express - Phase 3 express — from a Figma link, build/update the design system and jump to development
 
 ### roast-full
 
-- **/twt-roast-full** — Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
+- /twt-roast-full - Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
 
 ### search
 
-- **/twt-search-site** — Search a website for an exact string; report page links with ±100 chars of context per match
+- /twt-search-site - Search a website for an exact string; report page links with ±100 chars of context per match
 
 ### spec
 
-- **/twt-spec** — Orchestrate the spec define/validate skills with a bounded improvement loop
-- **/twt-spec-define** — Interview the user (brainstorming-style) into a north-star specification.md
-- **/twt-spec-validate** — Critique specification.md and write a validation-report.md (read-only critic)
+- /twt-spec - Orchestrate the spec define/validate skills in a single define→validate pass
+- /twt-spec-define - Interview the user (brainstorming-style) into a north-star specification.md
+- /twt-spec-validate - Critique specification.md and write a validation-report.md (read-only critic)
 
 ### status
 
-- **/twt-status** — Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
+- /twt-status - Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
 
 ## Per-skill details
 
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -292,7 +296,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-brand-define
 
@@ -318,8 +321,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/brand/brand-brief.md | |
-| .twt-artifacts/pre-design/brand/decisions.md | |
+| .twt-artifacts/pre-design/brand/brand-brief.md |  |
+| .twt-artifacts/pre-design/brand/decisions.md |  |
 
 ### /twt-brand-fetch
 
@@ -335,7 +338,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-brand-define, twt-brand
+- Soft consumers: twt-brand, twt-brand-define
 
 **Reads:**
 - <brand source>
@@ -344,7 +347,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/brand/_fetched-brand.md | |
+| .twt-artifacts/pre-design/brand/_fetched-brand.md |  |
 
 ### /twt-brand-validate
 
@@ -368,12 +371,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/brand/validation-report.md | |
+| .twt-artifacts/pre-design/brand/validation-report.md |  |
 
 ### /twt-component
 
 **Category:** component
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional: which components to scope to
@@ -393,7 +396,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-component-define
 
@@ -423,9 +425,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/component/components.md | |
-| .twt-artifacts/design/component/gallery.html | |
-| .twt-artifacts/design/component/decisions.md | |
+| .twt-artifacts/design/component/components.md |  |
+| .twt-artifacts/design/component/gallery.html |  |
+| .twt-artifacts/design/component/decisions.md |  |
 
 ### /twt-component-validate
 
@@ -452,7 +454,69 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/component/validation-report.md | |
+| .twt-artifacts/design/component/validation-report.md |  |
+
+### /twt-content-approval-checklist
+
+**Category:** content
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-define, twt-layout, twt-mockup
+
+**Feeds into:**
+- Hard consumers: twt-content-approval-implement
+- Soft consumers: twt-develop, twt-roast-express, twt-roast-full
+
+**Reads:**
+- Figma URL or Figma design context supplied via $ARGUMENTS
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/components.md
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
+| .twt-artifacts/content-approval/content-approval-checklist-report.md |  |
+
+### /twt-content-approval-implement
+
+**Category:** content
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional path to content-approval-checklist.xlsx; optional --target html|elementor
+
+**Dependencies:**
+- Hard: twt-content-approval-checklist
+- Soft: twt-html-block-creator, twt-elementor-block-creator
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- site/
+- <THEME>/
+- .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/elementor-theme/conventions.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| site/ |  |
+| <THEME>/ |  |
+| .twt-artifacts/content-approval/content-approval-implementation-report.md |  |
 
 ### /twt-content-fetch
 
@@ -476,7 +540,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/_manifest.md | |
+| .twt-artifacts/pre-design/content-fetch/_manifest.md |  |
 
 ### /twt-content-fetch-doc
 
@@ -500,8 +564,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md | |
-| .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md | |
+| .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md |  |
+| .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md |  |
 
 ### /twt-content-fetch-pdf
 
@@ -525,8 +589,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md | |
-| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/_meta.md | |
+| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md |  |
+| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/_meta.md |  |
 
 ### /twt-content-fetch-site
 
@@ -550,9 +614,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md | |
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md | |
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md | |
+| .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md |  |
+| .twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md |  |
+| .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md |  |
 
 ### /twt-content-optimize
 
@@ -579,13 +643,13 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/content/subject/<subject-slug>.md | |
-| .twt-artifacts/content/optimized/<subject-slug>.md | |
-| .twt-artifacts/content/validation/<subject-slug>/validation-report-before.md | |
-| .twt-artifacts/content/validation/<subject-slug>/validation-report-after.md | |
-| .twt-artifacts/content/optimization-report.md | |
-| .twt-artifacts/content/content-config.md | |
-| the subject file in place (only with explicit user consent) | |
+| .twt-artifacts/content/subject/<subject-slug>.md |  |
+| .twt-artifacts/content/optimized/<subject-slug>.md |  |
+| .twt-artifacts/content/validation/<subject-slug>/validation-report-before.md |  |
+| .twt-artifacts/content/validation/<subject-slug>/validation-report-after.md |  |
+| .twt-artifacts/content/optimization-report.md |  |
+| .twt-artifacts/content/content-config.md |  |
+| the subject file in place (only with explicit user consent) |  |
 
 ### /twt-content-validate
 
@@ -610,12 +674,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/content/validation/<subject-slug>/validation-report.md | |
+| .twt-artifacts/content/validation/<subject-slug>/validation-report.md |  |
 
 ### /twt-curation
 
 **Category:** curation
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -637,7 +701,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-curation-define
 
@@ -665,9 +728,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/curation/inventory.md | |
-| .twt-artifacts/pre-design/curation/outlines/<page-slug>.md | |
-| .twt-artifacts/pre-design/curation/decisions.md | |
+| .twt-artifacts/pre-design/curation/inventory.md |  |
+| .twt-artifacts/pre-design/curation/outlines/<page-slug>.md |  |
+| .twt-artifacts/pre-design/curation/decisions.md |  |
 
 ### /twt-curation-validate
 
@@ -695,12 +758,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/curation/validation-report.md | |
+| .twt-artifacts/pre-design/curation/validation-report.md |  |
 
 ### /twt-design
 
 **Category:** design
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -730,14 +793,14 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/design-brief.md | |
-| .twt-artifacts/design/design-read.md | |
-| .twt-artifacts/design/decisions.md | |
+| .twt-artifacts/design/design-brief.md |  |
+| .twt-artifacts/design/design-read.md |  |
+| .twt-artifacts/design/decisions.md |  |
 
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -757,12 +820,11 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.4.1
+**Version:** 1.4.2
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -773,7 +835,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design-system, twt-elementor-block-creator, twt-html-block-creator, twt-roast-express
+- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-elementor-block-creator, twt-html-block-creator, twt-roast-express
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -786,14 +848,14 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/design-system/tokens.md | |
-| .twt-artifacts/design/design-system/tokens.md.bak-<timestamp> | |
-| .twt-artifacts/design/design-system/tokens.css | |
-| .twt-artifacts/design/design-system/preview.html | |
-| .twt-artifacts/design/design-system/components.md | |
-| .twt-artifacts/design/design-system/tokens.json | |
-| .twt-artifacts/design/design-system/tailwind.config.js | |
-| .twt-artifacts/design/design-system/decisions.md | |
+| .twt-artifacts/design/design-system/tokens.md |  |
+| .twt-artifacts/design/design-system/tokens.md.bak-<timestamp> |  |
+| .twt-artifacts/design/design-system/tokens.css |  |
+| .twt-artifacts/design/design-system/preview.html |  |
+| .twt-artifacts/design/design-system/components.md |  |
+| .twt-artifacts/design/design-system/tokens.json |  |
+| .twt-artifacts/design/design-system/tailwind.config.js |  |
+| .twt-artifacts/design/design-system/decisions.md |  |
 
 ### /twt-design-system-validate
 
@@ -820,19 +882,19 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/design-system/validation-report.md | |
+| .twt-artifacts/design/design-system/validation-report.md |  |
 
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.2.1
+**Version:** 1.3.1
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist
 
 **Feeds into:**
 - Hard consumers: none
@@ -846,14 +908,15 @@ flowchart TB
 - .twt-artifacts/design/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| site/assets/css/sections.css            # html target — merged section-CSS deltas (Step 4c) | |
-| site/assets/css/general.css             # html target — merged deltas | |
-| <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas | |
-| <THEME>/assets/css/design-system.css    # elementor target — merged token deltas | |
+| site/assets/css/sections.css            # html target — merged section-CSS deltas (Step 4c) |  |
+| site/assets/css/general.css             # html target — merged deltas |  |
+| <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas |  |
+| <THEME>/assets/css/design-system.css    # elementor target — merged token deltas |  |
 
 ### /twt-elementor-block-creator
 
@@ -871,7 +934,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-develop, twt-roast-express
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-roast-express
 
 **Reads:**
 - .twt-artifacts/elementor-theme/conventions.md
@@ -884,14 +947,14 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| <THEME>/inc/elementor/widgets/class-<slug>-<widget>.php | |
-| <THEME>/inc/elementor/class-<slug>-elementor.php | |
-| <THEME>/assets/css/widgets.css | |
-| <THEME>/assets/css/design-system.css | |
-| <THEME>/assets/js/<widget>.js | |
-| <THEME>/wpml-config.xml | |
-| <THEME>/import/<page-slug>/import.json | |
-| <THEME>/import/<page-slug>/assets/ | |
+| <THEME>/inc/elementor/widgets/class-<slug>-<widget>.php |  |
+| <THEME>/inc/elementor/class-<slug>-elementor.php |  |
+| <THEME>/assets/css/widgets.css |  |
+| <THEME>/assets/css/design-system.css |  |
+| <THEME>/assets/js/<widget>.js |  |
+| <THEME>/wpml-config.xml |  |
+| <THEME>/import/<page-slug>/import.json |  |
+| <THEME>/import/<page-slug>/assets/ |  |
 
 ### /twt-elementor-theme-creator
 
@@ -916,16 +979,16 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| wp-content/themes/hello-elementor-<slug>/style.css | |
-| wp-content/themes/hello-elementor-<slug>/functions.php | |
-| wp-content/themes/hello-elementor-<slug>/assets/css/design-system.css | |
-| wp-content/themes/hello-elementor-<slug>/assets/css/general.css | |
-| wp-content/themes/hello-elementor-<slug>/inc/elementor/class-<slug>-elementor.php | |
-| wp-content/themes/hello-elementor-<slug>/inc/elementor/class-skeleton-widget-base.php | |
-| wp-content/themes/hello-elementor-<slug>/inc/elementor/widgets/.gitkeep | |
-| wp-content/themes/hello-elementor-<slug>/assets/js/.gitkeep | |
-| wp-content/themes/hello-elementor-<slug>/wpml-config.xml | |
-| .twt-artifacts/elementor-theme/conventions.md | |
+| wp-content/themes/hello-elementor-<slug>/style.css |  |
+| wp-content/themes/hello-elementor-<slug>/functions.php |  |
+| wp-content/themes/hello-elementor-<slug>/assets/css/design-system.css |  |
+| wp-content/themes/hello-elementor-<slug>/assets/css/general.css |  |
+| wp-content/themes/hello-elementor-<slug>/inc/elementor/class-<slug>-elementor.php |  |
+| wp-content/themes/hello-elementor-<slug>/inc/elementor/class-skeleton-widget-base.php |  |
+| wp-content/themes/hello-elementor-<slug>/inc/elementor/widgets/.gitkeep |  |
+| wp-content/themes/hello-elementor-<slug>/assets/js/.gitkeep |  |
+| wp-content/themes/hello-elementor-<slug>/wpml-config.xml |  |
+| .twt-artifacts/elementor-theme/conventions.md |  |
 
 ### /twt-html-block-creator
 
@@ -941,7 +1004,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-develop, twt-roast-express
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-roast-express
 
 **Reads:**
 - .twt-artifacts/html-site/conventions.md
@@ -955,11 +1018,11 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| site/<page-slug>.html | |
-| site/assets/css/sections.css | |
-| site/assets/css/general.css | |
-| site/assets/js/<section-slug>.js | |
-| site/assets/img/ | |
+| site/<page-slug>.html |  |
+| site/assets/css/sections.css |  |
+| site/assets/css/general.css |  |
+| site/assets/js/<section-slug>.js |  |
+| site/assets/img/ |  |
 
 ### /twt-html-site-creator
 
@@ -984,21 +1047,21 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| site/index.html | |
-| site/partials/header.html | |
-| site/partials/footer.html | |
-| site/partials/nav.html | |
-| site/assets/css/tokens.css | |
-| site/assets/css/general.css | |
-| site/assets/css/sections.css | |
-| site/assets/js/.gitkeep | |
-| site/assets/img/.gitkeep | |
-| .twt-artifacts/html-site/conventions.md | |
+| site/index.html |  |
+| site/partials/header.html |  |
+| site/partials/footer.html |  |
+| site/partials/nav.html |  |
+| site/assets/css/tokens.css |  |
+| site/assets/css/general.css |  |
+| site/assets/css/sections.css |  |
+| site/assets/js/.gitkeep |  |
+| site/assets/img/.gitkeep |  |
+| .twt-artifacts/html-site/conventions.md |  |
 
 ### /twt-ia
 
 **Category:** ia
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1019,7 +1082,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-ia-define
 
@@ -1047,9 +1109,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/ia/sitemap.md | |
-| .twt-artifacts/pre-design/ia/functional-scope.md | |
-| .twt-artifacts/pre-design/ia/decisions.md | |
+| .twt-artifacts/pre-design/ia/sitemap.md |  |
+| .twt-artifacts/pre-design/ia/functional-scope.md |  |
+| .twt-artifacts/pre-design/ia/decisions.md |  |
 
 ### /twt-ia-validate
 
@@ -1076,12 +1138,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/ia/validation-report.md | |
+| .twt-artifacts/pre-design/ia/validation-report.md |  |
 
 ### /twt-layout
 
 **Category:** layout
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional: which page(s) to scope to
@@ -1092,7 +1154,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
@@ -1101,7 +1163,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-layout-define
 
@@ -1130,9 +1191,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/layout/layouts/ | |
-| .twt-artifacts/design/layout/decisions.md | |
-| .twt-artifacts/design/assets/manifest.md | |
+| .twt-artifacts/design/layout/layouts/ |  |
+| .twt-artifacts/design/layout/decisions.md |  |
+| .twt-artifacts/design/assets/manifest.md |  |
 
 ### /twt-layout-validate
 
@@ -1159,7 +1220,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/layout/validation-report.md | |
+| .twt-artifacts/design/layout/validation-report.md |  |
 
 ### /twt-marketplace-docs
 
@@ -1184,15 +1245,15 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| SKILLS.md | |
-| architecture.md | |
-| skills/*/README.md | |
-| README.md (marked block only) | |
+| SKILLS.md |  |
+| architecture.md |  |
+| skills/*/README.md |  |
+| README.md (marked block only) |  |
 
 ### /twt-mockup
 
 **Category:** mockup
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional: which page(s) to scope to
@@ -1203,7 +1264,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/design/mockup/pages/
@@ -1212,7 +1273,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-mockup-define
 
@@ -1244,11 +1304,11 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/mockup/pages/ | |
-| .twt-artifacts/design/mockup/index.html | |
-| .twt-artifacts/design/mockup/styles.css | |
-| .twt-artifacts/design/mockup/decisions.md | |
-| .twt-artifacts/design/assets/manifest.md | |
+| .twt-artifacts/design/mockup/pages/ |  |
+| .twt-artifacts/design/mockup/index.html |  |
+| .twt-artifacts/design/mockup/styles.css |  |
+| .twt-artifacts/design/mockup/decisions.md |  |
+| .twt-artifacts/design/assets/manifest.md |  |
 
 ### /twt-mockup-validate
 
@@ -1279,12 +1339,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/mockup/validation-report.md | |
+| .twt-artifacts/design/mockup/validation-report.md |  |
 
 ### /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1304,7 +1364,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-positioning-define
 
@@ -1331,8 +1390,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/positioning/positioning.md | |
-| .twt-artifacts/pre-design/positioning/decisions.md | |
+| .twt-artifacts/pre-design/positioning/positioning.md |  |
+| .twt-artifacts/pre-design/positioning/decisions.md |  |
 
 ### /twt-positioning-validate
 
@@ -1358,12 +1417,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/positioning/validation-report.md | |
+| .twt-artifacts/pre-design/positioning/validation-report.md |  |
 
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1393,7 +1452,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/pre-design-brief.md | |
+| .twt-artifacts/pre-design/pre-design-brief.md |  |
 
 ### /twt-qa
 
@@ -1421,8 +1480,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/qa-report.md | |
-| .twt-artifacts/qa/gaps.md | |
+| .twt-artifacts/qa/qa-report.md |  |
+| .twt-artifacts/qa/gaps.md |  |
 
 ### /twt-qa-a11y
 
@@ -1448,7 +1507,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/a11y-report.md | |
+| .twt-artifacts/qa/a11y-report.md |  |
 
 ### /twt-qa-content
 
@@ -1477,7 +1536,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/content-report.md | |
+| .twt-artifacts/qa/content-report.md |  |
 
 ### /twt-qa-design
 
@@ -1506,7 +1565,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/design-report.md | |
+| .twt-artifacts/qa/design-report.md |  |
 
 ### /twt-qa-elementor
 
@@ -1532,7 +1591,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/elementor-report.md | |
+| .twt-artifacts/qa/elementor-report.md |  |
 
 ### /twt-qa-links
 
@@ -1559,12 +1618,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/qa/links-report.md | |
+| .twt-artifacts/qa/links-report.md |  |
 
 ### /twt-roast-express
 
 **Category:** roast-express
-**Version:** 1.3.0
+**Version:** 1.4.1
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -1572,7 +1631,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, figma-mcp
+- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
 
 **Feeds into:**
 - Hard consumers: none
@@ -1580,18 +1639,20 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/roast-express-log.md | |
+| .twt-artifacts/roast-express-log.md |  |
+| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-roast-full
 
 **Category:** roast-full
-**Version:** 1.4.0
+**Version:** 1.5.2
 
 **Inputs:**
 - Optional notes, a live URL, or a hint of which phase to start from
@@ -1599,7 +1660,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-qa
+- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa
 
 **Feeds into:**
 - Hard consumers: none
@@ -1608,13 +1669,15 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/pre-design-brief.md
 - .twt-artifacts/design/design-brief.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/roast-full-log.md | |
+| .twt-artifacts/roast-full-log.md |  |
+| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-search-site
 
@@ -1639,12 +1702,12 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/search/<domain>/search-report-<query-slug>.md | |
+| .twt-artifacts/search/<domain>/search-report-<query-slug>.md |  |
 
 ### /twt-spec
 
 **Category:** spec
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
@@ -1664,7 +1727,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ### /twt-spec-define
 
@@ -1691,8 +1753,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/spec/specification.md | |
-| .twt-artifacts/pre-design/spec/decisions.md | |
+| .twt-artifacts/pre-design/spec/specification.md |  |
+| .twt-artifacts/pre-design/spec/decisions.md |  |
 
 ### /twt-spec-validate
 
@@ -1717,7 +1779,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/spec/validation-report.md | |
+| .twt-artifacts/pre-design/spec/validation-report.md |  |
 
 ### /twt-status
 
@@ -1743,7 +1805,6 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| (none) | |
 
 ## Cross-skill dependency table
 
@@ -1756,6 +1817,8 @@ flowchart TB
 | /twt-component | none | twt-component-define, twt-component-validate |
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
+| /twt-content-approval-checklist | none | twt-design-system-define, twt-layout, twt-mockup |
+| /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator |
 | /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc |
 | /twt-content-fetch-doc | none | twt-content-fetch |
 | /twt-content-fetch-pdf | none | twt-content-fetch |
@@ -1769,7 +1832,7 @@ flowchart TB
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
-| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator |
+| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
@@ -1794,8 +1857,8 @@ flowchart TB
 | /twt-qa-design | none | none |
 | /twt-qa-elementor | none | none |
 | /twt-qa-links | none | none |
-| /twt-roast-express | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, figma-mcp |
-| /twt-roast-full | none | twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-qa |
+| /twt-roast-express | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
+| /twt-roast-full | none | twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa |
 | /twt-search-site | none | WebFetch |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
@@ -1807,6 +1870,7 @@ flowchart TB
 ```
 .twt-artifacts/
   content/
+  content-approval/
   design/
   elementor-theme/
   html-site/

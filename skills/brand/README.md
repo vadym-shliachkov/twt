@@ -8,7 +8,7 @@ Skills for capturing or deriving brand identity (palette, voice, tone, values)
 
 | command | description |
 |---------|-------------|
-| /twt-brand | Orchestrate the brand fetch/define/validate skills with a bounded improvement loop |
+| /twt-brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-brand-define | Build or refine the canonical brand-brief.md through guided dialogue |
 | /twt-brand-fetch | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | /twt-brand-validate | Critique brand-brief.md and write a validation-report.md (read-only critic) |

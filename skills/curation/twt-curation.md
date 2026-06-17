@@ -1,8 +1,8 @@
 ---
 name: twt-curation
 category: curation
-description: Orchestrate curation define/validate with a bounded improvement loop
-version: 1.2.1
+description: Orchestrate curation define/validate in a single define→validate pass
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - Optional; runs define then the bounded validate loop
@@ -24,7 +24,7 @@ writes: []
 
 ## Intent
 
-**Purpose:** One-call curation workflow: define → validate, looping until clean or the bounded loop stops.
+**Purpose:** One-call curation workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Non-goals:**
 - Dispatches sub-skills (rule 5); no inline logic
@@ -32,7 +32,7 @@ writes: []
 
 **Success criteria:**
 - Produces/refines `inventory.md` + `outlines/` + current `validation-report.md`
-- Honors the bounded loop (§9 + §13): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -42,14 +42,14 @@ If `inventory.md` exists, ask via the **AskUserQuestion** tool (single-select, h
 
 If **Polish copy** was chosen, skip the Step-2 define loop: pick the outline pages to polish (multi-select if ≤4 pages, else a free-form plain-text list), dispatch `/twt-content-optimize <outlines/page>.md` per page with `subagent-collect`, surface each child's open decisions (level, apply-in-place) per §13 via AskUserQuestion, and re-dispatch with the answers so the optimizer applies approved changes to the outline file. Finish with one `/twt-curation-validate` pass to refresh the report, then go to Step 3.
 
-## Step 2 — Define → surface → validate loop (CONVENTIONS §9 + §13)
+## Step 2 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
 Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (dispatched by a parent orchestrator). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see sub-step 2).
 
-Initialize `iteration = 0`, `prevHealth = null`. Repeat up to 3 times:
-1. **Define (subagent):** dispatch `/twt-curation-define` (Agent tool), **always including `subagent-collect`** (plus any user answers from last pass and the refine/rebuild choice).
-2. **Surface (main thread only):** read `.twt-artifacts/pre-design/curation/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, feed them into the next Define dispatch (which finalizes → `status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
-3. **Validate (subagent):** dispatch `/twt-curation-validate`; read the Scorecard **Band**, **Health**, BLOCKER count.
-4. `iteration += 1`. **Stop** when Band = Pass AND `decisions.md` resolved/empty. Break early if Health did not increase vs `prevHealth`. At `iteration == 3`, stop. Set `prevHealth = Health`.
+Run **one** define → validate cycle — no iteration loop (§9):
+1. **Define (subagent):** dispatch `/twt-curation-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-curation-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+2. **Surface (main thread only):** read `.twt-artifacts/pre-design/curation/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and re-dispatch define **once** to finalize (`status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
+3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-curation-validate` once; read the Scorecard **Band**, **Health**, BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
+4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once.
 
 ## Step 3 — Report
 State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). If decisions remain unresolved or Band < Pass, present them and the human-decision options (answer the open questions / accept and edit directly / defer) — never auto-fix.

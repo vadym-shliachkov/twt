@@ -8,6 +8,8 @@ Skills for fetching and processing external content
 
 | command | description |
 |---------|-------------|
+| /twt-content-approval-checklist | Create a human-readable XLSX content approval checklist for every project page |
+| /twt-content-approval-implement | Apply ready approved XLSX content into the built site or development artifacts |
 | /twt-content-fetch | Detect provided sources and dispatch to the right content-fetch sub-skill |
 | /twt-content-fetch-doc | Extract a Word/Google Doc's content and save as clean Markdown |
 | /twt-content-fetch-pdf | Extract a PDF's text content and save as clean Markdown |

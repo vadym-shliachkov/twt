@@ -2,7 +2,7 @@
 name: twt-roast-express
 category: roast-express
 description: Phase 3 express — from a Figma link, build/update the design system and jump to development
-version: 1.3.1
+version: 1.4.1
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -15,20 +15,23 @@ dependencies:
     - twt-elementor-block-creator
     - twt-html-site-creator
     - twt-html-block-creator
+    - twt-content-approval-checklist
     - figma-mcp
 reads:
   - .twt-artifacts/design/design-system/tokens.css
+  - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/elementor-theme/conventions.md
   - .twt-artifacts/html-site/conventions.md
 writes:
   - .twt-artifacts/roast-express-log.md
+  - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
 # /twt-roast-express
 
 ## Intent
 
-**Purpose:** The short path. From a Figma link, create or update the cross-phase design-system spine, auto-scaffold the chosen target if needed, then jump straight to page/block development. Skips the full Phase-1/Phase-2 pipeline. Pure dispatcher; writes no artifact of its own. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
+**Purpose:** The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
 
 **Non-goals:**
 - Doesn't run pre-design or design phases (use `/twt-pre-design` / `/twt-design` for those)
@@ -40,8 +43,10 @@ writes:
 - Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged
 - Auto mode asks **nothing** (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting
 - `/twt-design-system-define` runs in analyse-existing mode from the Figma link (spine created or updated)
+- `/twt-content-approval-checklist` creates or reuses `.twt-artifacts/content-approval/content-approval-checklist.xlsx` before development
 - The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
 - The matching builder is dispatched to start page/block development
+- Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs `/twt-content-approval-implement` to update corresponding blocks/pages
 
 ---
 
@@ -74,6 +79,12 @@ Pass through the priority rule: an existing project design system is the baselin
 
 Wait for it to finish; confirm `.twt-artifacts/design/design-system/tokens.css` exists.
 
+## Step 2a — Content approval workbook
+
+Dispatch `/twt-content-approval-checklist` via the Agent tool with `subagent-collect`, passing the Figma URL, design-system output, page/screen names if known, and any notes. If `.twt-artifacts/content-approval/content-approval-checklist.xlsx` already exists, instruct the child to reuse/refine without overwriting existing approved content.
+
+In interactive mode, tell the user this workbook is the human approval surface for copy, links, images, videos, header/footer, and SEO. Development continues with the current Figma/design content; approved workbook rows are applied later only when `/twt-content-approval-implement` is explicitly called.
+
 ## Step 3 — Ensure scaffold
 
 - `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool) first. If present, skip.
@@ -90,4 +101,4 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 ## Step 5 — Report & finalize the log
 First finalize the session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-express-log.md`.
 
-Then state to the user: target chosen, whether the spine was created or updated, whether a scaffold was run, what the builder produced (with paths), and **the log location** (`.twt-artifacts/roast-express-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-roast-express` for another block, or the builder directly).
+Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), that approved workbook content was not auto-applied, and **the log location** (`.twt-artifacts/roast-express-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-roast-express` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).

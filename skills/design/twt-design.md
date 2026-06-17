@@ -2,7 +2,7 @@
 name: twt-design
 category: design
 description: Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.2.1
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -90,8 +90,8 @@ Dispatch `/twt-mockup` (Agent tool) **with `subagent-collect`**, then surface.
 
 **Surfacing protocol (CONVENTIONS rule 13):** After each sub-area returns, read its `.twt-artifacts/design/<area>/decisions.md`. If `status: open` and this wrapper is NOT in collect mode (no `subagent-collect` in its own `$ARGUMENTS`), present the open questions / proposed rules via the **AskUserQuestion** tool in the main thread, then re-dispatch that sub-area's define in refinement mode with the answers to finalize (`status: resolved`). If `/twt-design` was itself dispatched with `subagent-collect` (e.g. by `/twt-roast-full`), bubble the merged decisions upward instead of asking (nested-subagent bubbling).
 
-## Step 6 — Synthesize the brief
-Read the canonical artifacts that exist and write `.twt-artifacts/design/design-brief.md`:
+## Step 6 — Synthesize the brief (thin pointer-index)
+The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize tokens, components, layouts, or mockups. Phase 3 reads the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/design/design-brief.md`:
 ```
 ---
 generated: <YYYY-MM-DD>
@@ -100,25 +100,23 @@ phase: design
 
 # Design brief
 
+Thin index — canonical detail lives in the linked artifacts; this file is links + status, not a restatement.
+
 ## Source
 <pre-design-brief reference + which entry mode design-system used>
 
-## Design system
-<palette + type summary>  → [tokens](design-system/tokens.md) · [preview](design-system/preview.html)
-
-## Components
-<count + list>  → [components](component/components.md) · [gallery](component/gallery.html)
-
-## Layouts
-<page count>  → layout/layouts/
-
-## Mockups
-<page count, responsive>  → [index](mockup/index.html)
+## Artifacts
+| Area | Canonical file(s) | Band |
+|------|-------------------|------|
+| Design system | [tokens](design-system/tokens.md) · [preview](design-system/preview.html) | <Band, or — if no report> |
+| Components | [components](component/components.md) · [gallery](component/gallery.html) | <Band> |
+| Layouts | layout/layouts/ | <Band> |
+| Mockups | [index](mockup/index.html) | <Band> |
 
 ## Outstanding BLOCKERs
-<aggregate any unresolved BLOCKERs from each sub-area's validation-report.md>
+<aggregate unresolved BLOCKERs from each sub-area's validation-report.md, each linked to its source file — or "none">
 ```
-For each sub-area, if its `validation-report.md` still lists BLOCKERs, surface them under "Outstanding BLOCKERs" rather than masking them.
+Keep it short: the value is the link table + the aggregated BLOCKERs, never prose restating the artifacts. Never mask a sub-area's BLOCKERs.
 
 ## Step 7 — Report
 Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should resolve before Phase 3.

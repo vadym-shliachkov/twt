@@ -2,7 +2,7 @@
 name: twt-pre-design
 category: pre-design
 description: Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.1.1
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -76,8 +76,8 @@ Dispatch `/twt-curation`.
 
 (Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`.)
 
-## Step 7 — Synthesize the brief
-Read the canonical artifacts that exist and write `.twt-artifacts/pre-design/pre-design-brief.md`:
+## Step 7 — Synthesize the brief (thin pointer-index)
+The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize the artifacts. Downstream skills read the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/pre-design/pre-design-brief.md`:
 ```
 ---
 generated: <YYYY-MM-DD>
@@ -86,28 +86,24 @@ phase: pre-design
 
 # Pre-design brief
 
+Thin index — canonical detail lives in the linked artifacts; this file is links + status, not a restatement.
+
 ## Project
-<metadata: name, sources ingested>
+<name · sources ingested>
 
-## Brand
-<palette + top voice attributes>  → [brand-brief](brand/brand-brief.md)
-
-## Direction (north-star spec)
-<one-line vision + the visual-style and motion/animation headline>  → [specification](spec/specification.md)
-
-## Positioning
-<primary audience + top value props>  → [positioning](positioning/positioning.md)
-
-## Information architecture
-<page count + sitemap snapshot>  → [sitemap](ia/sitemap.md) · [functional-scope](ia/functional-scope.md)
-
-## Curation
-<kept/skipped/elevated counts + content-health note>  → [inventory](curation/inventory.md) · outlines/
+## Artifacts
+| Area | Canonical file(s) | Band |
+|------|-------------------|------|
+| Brand | [brand-brief](brand/brand-brief.md) | <Band, or — if no report> |
+| Direction (spec) | [specification](spec/specification.md) | <Band> |
+| Positioning | [positioning](positioning/positioning.md) | <Band> |
+| IA | [sitemap](ia/sitemap.md) · [functional-scope](ia/functional-scope.md) | <Band> |
+| Curation | [inventory](curation/inventory.md) · outlines/ | <Band> |
 
 ## Outstanding BLOCKERs
-<aggregate any unresolved BLOCKERs from each sub-area's validation-report.md>
+<aggregate unresolved BLOCKERs from each sub-area's validation-report.md, each linked to its source file — or "none">
 ```
-For each sub-area, if its `validation-report.md` still lists BLOCKERs, surface them under "Outstanding BLOCKERs" rather than masking them.
+Keep it short: the value is the link table + the aggregated BLOCKERs, never prose restating the artifacts. Never mask a sub-area's BLOCKERs.
 
 ## Step 8 — Report
 Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should resolve before Phase 2.

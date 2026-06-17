@@ -52,15 +52,15 @@ proceeds past BLOCKERs without your say-so.
     ├── /twt-content-fetch           ← A: dispatches site/pdf/doc fetchers
     ├── /twt-brand                   ← B: [fetch] → define → validate (bounded loop)
     ├── /twt-positioning             ← D: define → validate (bounded loop)
-    ├── /twt-ia                      ← E: define → validate (bounded loop)
-    └── /twt-curation                ← C: define → validate (bounded loop)
+    ├── /twt-ia                      ← E: define → validate (single pass)
+    └── /twt-curation                ← C: define → validate (single pass)
               │
               └── synthesizes → .twt-artifacts/pre-design/pre-design-brief.md
 ```
 
 Every skill is also callable standalone. To fix one area after validation, run its
 `*-define` skill (it reads the sibling `validation-report.md`), or run the bare
-`/twt-<area>` orchestrator to loop define→validate automatically (max 3 passes).
+`/twt-<area>` orchestrator to run one define→validate pass automatically (§9 single-pass).
 
 ## Phase 2 — Design (pre-design brief → Phase-3 build brief)
 
@@ -80,8 +80,8 @@ The design system is the cross-phase **shared source of truth** at `.twt-artifac
 greenfield (derive from the Phase-1 brand-brief) or analyse-existing (Figma/screenshots/live site).
 
 Every skill is callable standalone. To fix one area after validation, run its `*-define` skill (it reads the
-sibling `validation-report.md`), or run the bare `/twt-<area>` orchestrator to loop define→validate
-automatically (max 3 passes). All HTML artifacts link the single `tokens.css`.
+sibling `validation-report.md`), or run the bare `/twt-<area>` orchestrator to run one define→validate
+pass automatically (§9 single-pass). All HTML artifacts link the single `tokens.css`.
 
 ## Phase 3 — Development (design brief OR Figma → built site)
 

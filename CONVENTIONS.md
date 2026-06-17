@@ -106,9 +106,11 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 ## 9. Sub-area orchestrator pattern
 
-- The bare-name skill dispatches its sub-skills via the Agent tool (per rule 5) and runs the bounded validate loop
-- Sub-skills are declared in `dependencies.soft` (the orchestrator degrades gracefully if one is missing)
-- The loop is **bounded**: max 3 `define → validate` iterations. It **stops** when the validator's Band = Pass **and** the sibling `decisions.md` is resolved/empty. Otherwise it surfaces open decisions (rule 13) and re-runs `define`. No-progress break: stop early when the Health score does not increase between iterations. On unresolved BLOCKERs or a sub-Pass band after 3 passes, **report and stop** (never auto-fix, never loop unbounded).
+- The bare-name skill dispatches its sub-skills via the Agent tool (per rule 5) and runs a **single-pass** define → validate cycle — **not** an iterative loop. (Changed 2026-06-17: the former ≤3-iteration loop re-dispatched define+validate as fresh subagents each pass, burning tokens without materially improving the artifact. Quality comes from one good define plus one critique, not from self-revision laps.)
+- Sub-skills are declared in `dependencies.soft` (the orchestrator degrades gracefully if one is missing).
+- **Standalone** (user invoked the bare orchestrator directly — no `subagent-collect`): dispatch `define` once, then `validate` once; surface open decisions (rule 13) and report Band + Health + findings. If unresolved **BLOCKERs** remain, **report and stop** — present them with human-decision options (answer open questions / accept and edit directly / defer) and offer a manual re-run; never auto-loop.
+- **Orchestrated / collect mode** (`subagent-collect` present — dispatched by a phase wrapper or an `auto` run): dispatch `define` **once** and instruct it to **self-check against the sibling `/twt-<area>-validate` rubric** (§12), writing the sibling `validation-report.md` in the §12 format and recording Band/Health, any BLOCKER/WARNING, and open decisions in `decisions.md`. **Skip the separate `*-validate` dispatch** — the fold-in replaces it, roughly halving the dispatch count of a full pipeline run. Bubble decisions upward (rule 13); the level the user typed surfaces them.
+- **At most one** re-run of `define` is permitted, and only to (a) finalize decisions once the user has answered surfaced questions, or (b) fix unresolved **BLOCKERs** when new information makes them fixable. Never re-run on WARNING/SUGGESTION, never to chase a higher Health score, never more than once.
 
 ## 10. Define idempotency
 
@@ -118,6 +120,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 ## 11. Validator read-only
 
 - Every `*-validate` skill may write **only** its own sibling `validation-report.md` — no other side effects
+- **Fold-in exception (§9 collect mode):** when an orchestrator folds validation into `define` (orchestrated/collect runs), `define` performs the validator's §12 rubric self-check and writes that same `validation-report.md` in the validator's place — so downstream synthesis can still aggregate BLOCKERs. The standalone `*-validate` skill itself stays read-only.
 
 ## 12. Validation report format
 

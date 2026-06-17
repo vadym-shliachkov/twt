@@ -8,6 +8,6 @@ Skills for defining sitemap and functional scope (information architecture)
 
 | command | description |
 |---------|-------------|
-| /twt-ia | Orchestrate IA define/validate with a bounded improvement loop |
+| /twt-ia | Orchestrate IA define/validate in a single define→validate pass |
 | /twt-ia-define | Build or refine sitemap.md and functional-scope.md |
 | /twt-ia-validate | Critique sitemap.md + functional-scope.md against positioning and content; write report |

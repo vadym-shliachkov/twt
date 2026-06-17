@@ -1,8 +1,8 @@
 ---
 name: twt-brand
 category: brand
-description: Orchestrate the brand fetch/define/validate skills with a bounded improvement loop
-version: 1.1.1
+description: Orchestrate the brand fetch/define/validate skills in a single define→validate pass
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -22,7 +22,7 @@ writes: []
 
 ## Intent
 
-**Purpose:** One-call brand workflow: fetch (if a source is given) → define → validate, then loop define→validate until the brief is clean or the bounded loop stops.
+**Purpose:** One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -31,7 +31,7 @@ writes: []
 
 **Success criteria:**
 - Produces/refines `brand-brief.md` and a current `validation-report.md`
-- Honors the bounded loop (§9): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health, report-and-stop otherwise; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
 
 ---
@@ -42,15 +42,14 @@ If `brand-brief.md` exists, ask via the **AskUserQuestion** tool (single-select,
 ## Step 2 — Fetch (conditional)
 If the user provided a source (in `$ARGUMENTS` or when asked), dispatch `/twt-brand-fetch` with it (Agent tool). Otherwise skip.
 
-## Step 3 — Define → surface → validate loop (CONVENTIONS §9 + §13)
+## Step 3 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
 Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (i.e. it was itself dispatched by /twt-pre-design or /twt-roast-full). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see step 2 below).
 
-Initialize `iteration = 0`, `prevHealth = null`. Repeat up to 3 times:
-
-1. **Define (subagent):** dispatch `/twt-brand-define` (Agent tool), **always including `subagent-collect`** in the prompt (plus any user answers gathered last pass, and the refine/rebuild choice from Step 1).
-2. **Surface (main thread only):** read `.twt-artifacts/pre-design/brand/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and feed them into the next Define dispatch (which finalizes and sets `status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` into the brand `decisions.md` and return it upward for the parent orchestrator to surface (nested-subagent bubbling).
-3. **Validate (subagent):** dispatch `/twt-brand-validate` (Agent tool); read the Scorecard **Band**, **Health**, and BLOCKER count.
-4. `iteration += 1`. **Stop** when Band = Pass AND `decisions.md` is resolved/empty. Break early if Health did not increase vs `prevHealth` (no-progress). At `iteration == 3`, stop. Set `prevHealth = Health` before looping.
+Run **one** define → validate cycle — no iteration loop (§9):
+1. **Define (subagent):** dispatch `/twt-brand-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-brand-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+2. **Surface (main thread only):** read `.twt-artifacts/pre-design/brand/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and re-dispatch define **once** to finalize (`status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
+3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-brand-validate` (Agent tool) once; read the Scorecard **Band**, **Health**, and BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
+4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once.
 
 ## Step 5 — Report
 State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). If decisions remain unresolved or Band < Pass, present them and the human-decision options (provide a source / accept and edit directly / defer) — never auto-fix.

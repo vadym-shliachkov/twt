@@ -8,6 +8,6 @@ Skills for deciding keep/skip/elevate and building page outlines
 
 | command | description |
 |---------|-------------|
-| /twt-curation | Orchestrate curation define/validate with a bounded improvement loop |
+| /twt-curation | Orchestrate curation define/validate in a single define→validate pass |
 | /twt-curation-define | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
 | /twt-curation-validate | Critique curation against brand voice and IA; write validation-report.md |

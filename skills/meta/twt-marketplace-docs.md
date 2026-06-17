@@ -2,7 +2,7 @@
 name: twt-marketplace-docs
 category: meta
 description: Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
-version: 1.0.2
+version: 1.0.3
 accepts_arguments: false
 inputs: []
 dependencies:
@@ -39,6 +39,19 @@ writes:
 - Root `README.md` marked block (if present) is updated
 
 ---
+
+## Step 0 — Run the generator script (preferred)
+
+This regeneration is **deterministic**, so it is delegated to a script rather than done by hand — running it as a model wastes tokens and risks format drift. From the marketplace repo root:
+
+```bash
+node tools/gen-docs.mjs            # regenerate all derived docs
+node tools/gen-docs.mjs --check    # CI: exit 1 if any derived doc is stale
+```
+
+The script (`tools/gen-docs.mjs`, zero dependencies) parses every skill's frontmatter + Intent block and rewrites `SKILLS.md`, `architecture.md`, each `skills/<category>/README.md`, and the `README.md` marked block — preserving each file's existing line endings and printing the same skills-indexed / categories / validation-warnings summary described below. It only needs Node.
+
+If the script runs successfully, **you are done** — report its summary output (Step 8). Only fall back to the manual Steps 1–8 below if Node is unavailable or the script errors; they document the exact same output contract the script implements, so the two never diverge.
 
 ## Step 1 — Scan skills directory
 

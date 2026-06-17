@@ -8,6 +8,6 @@ Skills for capturing the north-star specification (vision, functional scope, vis
 
 | command | description |
 |---------|-------------|
-| /twt-spec | Orchestrate the spec define/validate skills with a bounded improvement loop |
+| /twt-spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-spec-define | Interview the user (brainstorming-style) into a north-star specification.md |
 | /twt-spec-validate | Critique specification.md and write a validation-report.md (read-only critic) |

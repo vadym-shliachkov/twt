@@ -8,24 +8,26 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 
 | command | category | description |
 |---------|----------|-------------|
-| [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills with a bounded improvement loop |
+| [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-brand-define](#twt-brand-define) | brand | Build or refine the canonical brand-brief.md through guided dialogue |
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | [/twt-brand-validate](#twt-brand-validate) | brand | Critique brand-brief.md and write a validation-report.md (read-only critic) |
-| [/twt-component](#twt-component) | component | Orchestrate component define/validate with a bounded improvement loop |
+| [/twt-component](#twt-component) | component | Orchestrate component define/validate in a single define→validate pass |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html |
 | [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
+| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page |
+| [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
 | [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
 | [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-content-validate](#twt-content-validate) | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| [/twt-curation](#twt-curation) | curation | Orchestrate curation define/validate with a bounded improvement loop |
+| [/twt-curation](#twt-curation) | curation | Orchestrate curation define/validate in a single define→validate pass |
 | [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
 | [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice and IA; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
-| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate with a bounded improvement loop |
+| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass |
 | [/twt-design-system-define](#twt-design-system-define) | design-system | Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview) |
 | [/twt-design-system-validate](#twt-design-system-validate) | design-system | Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
@@ -33,17 +35,17 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
-| [/twt-ia](#twt-ia) | ia | Orchestrate IA define/validate with a bounded improvement loop |
+| [/twt-ia](#twt-ia) | ia | Orchestrate IA define/validate in a single define→validate pass |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
-| [/twt-layout](#twt-layout) | layout | Orchestrate layout define/validate with a bounded improvement loop |
+| [/twt-layout](#twt-layout) | layout | Orchestrate layout define/validate in a single define→validate pass |
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter |
-| [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate with a bounded improvement loop |
+| [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate in a single define→validate pass |
 | [/twt-mockup-define](#twt-mockup-define) | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
 | [/twt-mockup-validate](#twt-mockup-validate) | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
-| [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate with a bounded improvement loop |
+| [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-positioning-define](#twt-positioning-define) | positioning | Build or refine positioning.md — audience, value props, promotion priorities |
 | [/twt-positioning-validate](#twt-positioning-validate) | positioning | Critique positioning.md against brand and content signal; write validation-report.md |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
@@ -56,20 +58,19 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-roast-express](#twt-roast-express) | roast-express | Phase 3 express — from a Figma link, build/update the design system and jump to development |
 | [/twt-roast-full](#twt-roast-full) | roast-full | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
-| [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills with a bounded improvement loop |
+| [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-spec-define](#twt-spec-define) | spec | Interview the user (brainstorming-style) into a north-star specification.md |
 | [/twt-spec-validate](#twt-spec-validate) | spec | Critique specification.md and write a validation-report.md (read-only critic) |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 
 ---
-
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call brand workflow: fetch (if a source is given) → define → validate, then loop define→validate until the brief is clean or the bounded loop stops.
+One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -92,7 +93,7 @@ One-call brand workflow: fetch (if a source is given) → define → validate, t
 
 **Success criteria:**
 - Produces/refines `brand-brief.md` and a current `validation-report.md`
-- Honors the bounded loop (§9): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health, report-and-stop otherwise; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
 
 ---
@@ -206,10 +207,10 @@ Act as a brand critic — read `brand-brief.md`, find consistency problems, miss
 ## /twt-component
 
 **Category:** component
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call component workflow: define → validate, then loop define→validate until the library is clean or the bounded loop stops.
+One-call component workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional: which components to scope to
@@ -232,7 +233,7 @@ One-call component workflow: define → validate, then loop define→validate un
 
 **Success criteria:**
 - Produces/refines `components.md` + `gallery.html` and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, Band-based stop, no-progress break, report-and-stop on unresolved BLOCKERs; surfaces open decisions per §13
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -314,6 +315,88 @@ Read-only critique of the component library — token-only styling, reuse/compos
 - Every finding has Where / Problem / Recommendation, with Problem citing evidence
 - Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
 - If `components.md` is missing, aborts pointing to `/twt-component-define`
+
+---
+
+## /twt-content-approval-checklist
+
+**Category:** content
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
+
+**Inputs:**
+- Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-define, twt-layout, twt-mockup
+
+**Reads:**
+- Figma URL or Figma design context supplied via $ARGUMENTS
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/components.md
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/
+
+**Writes:**
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/content-approval/content-approval-checklist-report.md
+
+**Non-goals:**
+- Does not write approved content into the site; use `/twt-content-approval-implement` for that.
+- Does not invent final approved content; inferred or recommended values stay in `recommended content` until the user approves them.
+- Does not create extra non-page worksheets; the workbook sheet count must match the project page count.
+
+**Success criteria:**
+- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has exactly one worksheet per project page.
+- Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
+- When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
+- Shared header/footer content, page body fields, text, links, images, videos, and SEO metadata rows are present and readable by a human reviewer.
+- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, and next steps.
+
+---
+
+## /twt-content-approval-implement
+
+**Category:** content
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
+
+**Inputs:**
+- Optional path to content-approval-checklist.xlsx; optional --target html|elementor
+
+**Dependencies:**
+- Hard: twt-content-approval-checklist
+- Soft: twt-html-block-creator, twt-elementor-block-creator
+
+**Reads:**
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- site/
+- <THEME>/
+- .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/elementor-theme/conventions.md
+
+**Writes:**
+- site/
+- <THEME>/
+- .twt-artifacts/content-approval/content-approval-implementation-report.md
+
+**Non-goals:**
+- Does not implement unapproved or not-ready rows.
+- Does not guess where ambiguous approved content belongs; ambiguous rows are reported and skipped.
+- Does not create the approval workbook; use `/twt-content-approval-checklist` first.
+
+**Success criteria:**
+- Approved ready rows from the workbook are applied to the corresponding blocks/pages, shared header/footer, media fields, links, video embeds, and SEO metadata.
+- Rows not marked ready remain untouched and are listed in the implementation report.
+- `.twt-artifacts/content-approval/content-approval-implementation-report.md` records applied, skipped, missing, and ambiguous items with worksheet/page context.
 
 ---
 
@@ -534,10 +617,10 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation
 
 **Category:** curation
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
-One-call curation workflow: define → validate, looping until clean or the bounded loop stops.
+One-call curation workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -561,7 +644,7 @@ One-call curation workflow: define → validate, looping until clean or the boun
 
 **Success criteria:**
 - Produces/refines `inventory.md` + `outlines/` + current `validation-report.md`
-- Honors the bounded loop (§9 + §13): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -649,7 +732,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -695,10 +778,10 @@ Drive the whole design phase end to end — design-system → component → layo
 ## /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate, then loop define→validate until clean or the bounded loop stops. This is the shared, cross-phase design-system spine.
+One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate in one pass (§9 — no iteration loop). This is the shared, cross-phase design-system spine.
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -721,7 +804,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 **Success criteria:**
 - Produces/refines `tokens.md`, `tokens.css`, `preview.html` and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, Band-based stop, no-progress break, report-and-stop on unresolved BLOCKERs; surfaces open decisions per §13
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -729,7 +812,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.4.1
+**Version:** 1.4.2
 **Accepts arguments:** yes
 
 Produce the canonical, cross-phase design system. Two entry modes: **greenfield** (derive tokens from `brand-brief.md`) or **analyse-existing** (Figma / screenshots / exported HTML-CSS / live URL). Always writes `tokens.md`, the `tokens.css` export every HTML artifact links, and a `preview.html` foundations styleguide.
@@ -815,17 +898,17 @@ Read-only critique of the design system — token coverage across `tokens.md` / 
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.2.1
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
-Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, then promote the design (brief + mockups + layouts) into production code — Elementor widgets/templates or a static HTML/CSS site. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
+Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist
 
 **Reads:**
 - .twt-artifacts/design/design-brief.md
@@ -835,6 +918,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - .twt-artifacts/design/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Writes:**
 - site/assets/css/sections.css            # html target — merged section-CSS deltas (Step 4c)
@@ -849,8 +933,10 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 
 **Success criteria:**
 - Target chosen (HTML or Elementor); the target's scaffold is ensured (created if its `conventions.md` is missing)
-- Each Phase-2 mockup page is promoted into the target via the matching builder
+- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically
+- Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests
 - A **foundation page** is promoted first (serial) to seed reuse; the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially
+- Approved workbook rows are **not** applied by this skill; after stakeholder confirmation, the user explicitly runs `/twt-content-approval-implement` to update the corresponding blocks/pages
 - Reports what was built per page and anything to follow up before Phase 4
 
 ---
@@ -1042,10 +1128,10 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 ## /twt-ia
 
 **Category:** ia
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call IA workflow: define → validate, looping until clean or the bounded loop stops.
+One-call IA workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1068,7 +1154,7 @@ One-call IA workflow: define → validate, looping until clean or the bounded lo
 
 **Success criteria:**
 - Produces/refines `sitemap.md` + `functional-scope.md` + current `validation-report.md`
-- Honors the bounded loop (§9): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health, report-and-stop otherwise; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
 
 ---
@@ -1153,10 +1239,10 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout
 
 **Category:** layout
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call layout workflow: define → validate, then loop define→validate until the layouts are clean or the bounded loop stops.
+One-call layout workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional: which page(s) to scope to
@@ -1179,7 +1265,7 @@ One-call layout workflow: define → validate, then loop define→validate until
 
 **Success criteria:**
 - Produces/refines `layouts/<page>.md` files and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, Band-based stop, no-progress break, report-and-stop on unresolved BLOCKERs; surfaces open decisions per §13
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -1307,10 +1393,10 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup
 
 **Category:** mockup
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call mockup workflow: define → validate, then loop define→validate until the mockups are clean or the bounded loop stops.
+One-call mockup workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional: which page(s) to scope to
@@ -1333,7 +1419,7 @@ One-call mockup workflow: define → validate, then loop define→validate until
 
 **Success criteria:**
 - Produces/refines `pages/<page>.html`, `index.html`, `styles.css` and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, Band-based stop + §13 decisions surfacing, no-progress break, report-and-stop on unresolved BLOCKERs
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
 ---
@@ -1429,10 +1515,10 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 ## /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call positioning workflow: define → validate, looping until clean or the bounded loop stops.
+One-call positioning workflow: define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1454,7 +1540,7 @@ One-call positioning workflow: define → validate, looping until clean or the b
 
 **Success criteria:**
 - Produces/refines `positioning.md` + current `validation-report.md`
-- Honors the bounded loop (§9): ≤3 iterations, stops on Band = Pass + resolved decisions, no-progress break on Health, report-and-stop otherwise; surfaces sub-skill decisions per §13 (or bubbles them up when itself in collect mode)
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
 
 ---
@@ -1536,7 +1622,7 @@ Act as a positioning critic — read `positioning.md`, find vague audiences, wea
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1796,10 +1882,10 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 ## /twt-roast-express
 
 **Category:** roast-express
-**Version:** 1.3.0
+**Version:** 1.4.1
 **Accepts arguments:** yes
 
-The short path. From a Figma link, create or update the cross-phase design-system spine, auto-scaffold the chosen target if needed, then jump straight to page/block development. Skips the full Phase-1/Phase-2 pipeline. Pure dispatcher; writes no artifact of its own. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
+The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -1807,15 +1893,17 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, figma-mcp
+- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
 
 **Writes:**
 - .twt-artifacts/roast-express-log.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**
 - Doesn't run pre-design or design phases (use `/twt-pre-design` / `/twt-design` for those)
@@ -1827,18 +1915,20 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 - Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged
 - Auto mode asks **nothing** (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting
 - `/twt-design-system-define` runs in analyse-existing mode from the Figma link (spine created or updated)
+- `/twt-content-approval-checklist` creates or reuses `.twt-artifacts/content-approval/content-approval-checklist.xlsx` before development
 - The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
 - The matching builder is dispatched to start page/block development
+- Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs `/twt-content-approval-implement` to update corresponding blocks/pages
 
 ---
 
 ## /twt-roast-full
 
 **Category:** roast-full
-**Version:** 1.4.0
+**Version:** 1.5.2
 **Accepts arguments:** yes
 
-Run the entire twt pipeline — Pre-design → Design → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
+Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
 
 **Inputs:**
 - Optional notes, a live URL, or a hint of which phase to start from
@@ -1846,16 +1936,18 @@ Run the entire twt pipeline — Pre-design → Design → Development → QA —
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-qa
+- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa
 
 **Reads:**
 - .twt-artifacts/pre-design/pre-design-brief.md
 - .twt-artifacts/design/design-brief.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
 
 **Writes:**
 - .twt-artifacts/roast-full-log.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**
 - Doesn't reproduce any phase's logic — dispatches each phase wrapper via the Agent tool (rule 5)
@@ -1867,6 +1959,7 @@ Run the entire twt pipeline — Pre-design → Design → Development → QA —
 - Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
 - Figma-express target routes Development through `/twt-roast-express` and skips Pre-design + Design
+- When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 
 ---
@@ -1908,10 +2001,10 @@ Find every occurrence of a specific string across a website's pages and produce 
 ## /twt-spec
 
 **Category:** spec
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
-One-call spec workflow: define (interview into the north-star `specification.md`) → validate, then loop define→validate until the spec is clean or the bounded loop stops.
+One-call spec workflow: define (interview into the north-star `specification.md`) → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
@@ -1934,7 +2027,7 @@ One-call spec workflow: define (interview into the north-star `specification.md`
 
 **Success criteria:**
 - Produces/refines `specification.md` and a current `validation-report.md`
-- Honors the bounded-loop contract (CONVENTIONS §9): ≤3 iterations, no-progress break, report-and-stop on unresolved BLOCKERs
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
 
 ---
@@ -2047,5 +2140,3 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 - Every existing pipeline artifact is reported as FRESH / STALE / NO-INPUTS-PRESENT, with the newer input named for each STALE one
 - A re-run plan ordered upstream→downstream (so re-running a parent doesn't leave the user chasing freshly-staled children)
 - Honest about what it can't see (e.g. external Figma sources have no local mtime)
-
----

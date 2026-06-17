@@ -8,6 +8,6 @@ Component library specs and a token-driven HTML gallery
 
 | command | description |
 |---------|-------------|
-| /twt-component | Orchestrate component define/validate with a bounded improvement loop |
+| /twt-component | Orchestrate component define/validate in a single define→validate pass |
 | /twt-component-define | Define component specs (components.md) and render a token-driven gallery.html |
 | /twt-component-validate | Read-only critique of components.md and gallery.html into validation-report.md |
