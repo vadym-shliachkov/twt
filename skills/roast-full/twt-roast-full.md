@@ -2,11 +2,12 @@
 name: twt-roast-full
 category: roast-full
 description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.5.2
+version: 1.5.3
 accepts_arguments: true
 inputs:
   - Optional notes, a live URL, or a hint of which phase to start from
   - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
+  - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
 dependencies:
   hard: []
   soft:
@@ -24,6 +25,7 @@ reads:
   - .twt-artifacts/qa/gaps.md
 writes:
   - .twt-artifacts/roast-full-log.md
+  - .twt-artifacts/roast-full-debug.md (only with --log)
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
@@ -50,6 +52,13 @@ writes:
 
 ## Step 0 — Mode
 If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat everything after it as free-form context (notes, a live or Figma URL, target hints like "elementor" or "html"). In auto mode this skill asks **nothing** — no AskUserQuestion, no plain-text prompts, no approval requests; every decision comes from that context, the existing `.twt-artifacts/` state, and the defaults named below. Without the leading `auto`, run interactively as before.
+
+## Step 0·log — Debug tracer (`--log`)
+If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **strip the token** from `$ARGUMENTS` (so it isn't forwarded to children or parsed as context). The tracer is a project-local hook the installer seeds at `.claude/hooks/twt-debug-log.js`.
+
+- **Arm it now** (Bash): `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --arm "roast-full $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/roast-full-debug.md`. Without `--log` the hooks stay completely inert.
+- **If that hook file is missing** (twt was installed globally, not into this project), tell the user `--log` needs a project install (`install.ps1 -Target .` or `bash install.sh --target .`) and continue **without** debug logging — never block the run.
+- **When armed, prefix every dispatch prompt (Step 3) with a `WHY:` line** — `WHY: <one-line reason this phase/skill is being called now>` — so the trace records real intent instead of a guessed snippet.
 
 ## Step 0a — Open the session log
 Start a session log at `.twt-artifacts/roast-full-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section from `templates/roast-log.md` — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail.
@@ -105,6 +114,8 @@ Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
 When BLOCKERs are present, the option descriptions should recommend Re-run or Stop and name the blocker count. Continue only on **Proceed**.
 
 ## Step 5 — Final summary & finalize the log
-First finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-full-log.md`.
+If the debug tracer was armed (`--log`), **first** run (Bash) `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/roast-full-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
 
-Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/roast-full-log.md`). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.
+Then finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-full-log.md`.
+
+Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/roast-full-log.md`; plus `.twt-artifacts/roast-full-debug.md` with the dispatch trace + cost table when `--log` was used). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.

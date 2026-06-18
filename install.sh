@@ -133,6 +133,21 @@ elif [ -z "$TARGET" ]; then
   echo "        bash install.sh --target /path/to/project"
 fi
 
+# Seed the opt-in debug tracer (project-local installs only). The hook is inert
+# unless /twt-roast-full --log arms it, so seeding it is always safe.
+if [ -n "$TARGET" ]; then
+  echo ""
+  echo "  Debug tracer for /twt-roast-full --log (inert until armed)"
+  DBG="$SCRIPT_DIR/tools/seed-debug-log.js"
+  if ! command -v node >/dev/null 2>&1; then
+    echo "  ! node not found — skipping (the debug hook needs Node.js)."
+  elif [ ! -f "$DBG" ]; then
+    echo "  ! Helper not found at $DBG — skipping."
+  else
+    node "$(to_native "$DBG")" "$(to_native "$CLAUDE_DIR")" "$(to_native "$SCRIPT_DIR")"
+  fi
+fi
+
 # Optionally install the external community design skills via the `skills` CLI (needs Node/npx).
 if [ "$WITH_EXTERNAL_SKILLS" -eq 1 ]; then
   echo ""

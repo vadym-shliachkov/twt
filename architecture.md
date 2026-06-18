@@ -1225,7 +1225,7 @@ flowchart TB
 ### /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - (none)
@@ -1657,6 +1657,7 @@ flowchart TB
 **Inputs:**
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
+- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
 
 **Dependencies:**
 - Hard: none
@@ -1677,6 +1678,7 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/roast-full-log.md |  |
+| .twt-artifacts/roast-full-debug.md (only with --log) |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-search-site
@@ -1877,6 +1879,7 @@ flowchart TB
   pre-design/
   qa/
   roast-express-log.md/
+  roast-full-debug.md/
   roast-full-log.md/
   search/
 ```

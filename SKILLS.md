@@ -1352,7 +1352,7 @@ Read-only critique of the page layouts — section order & hierarchy, component-
 ## /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** no
 
 Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, category `README.md` files, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill under `skills/`. Ensures docs never drift from skills.
@@ -1933,6 +1933,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 **Inputs:**
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
+- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
 
 **Dependencies:**
 - Hard: none
@@ -1947,6 +1948,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 
 **Writes:**
 - .twt-artifacts/roast-full-log.md
+- .twt-artifacts/roast-full-debug.md (only with --log)
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**

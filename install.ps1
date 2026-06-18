@@ -126,6 +126,21 @@ if ($Target -and -not $NoScopeGuard) {
     Write-Host "        .\install.ps1 -Target C:\path\to\project" -ForegroundColor DarkGray
 }
 
+# Seed the opt-in debug tracer (project-local installs only). The hook is inert
+# unless /twt-roast-full --log arms it, so seeding it is always safe.
+if ($Target) {
+    $dbg = Join-Path $ScriptDir "tools\seed-debug-log.js"
+    Write-Host ""
+    Write-Host "  Debug tracer for /twt-roast-full --log (inert until armed)" -ForegroundColor Cyan
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Write-Host "  ! node not found - skipping (the debug hook needs Node.js)." -ForegroundColor Yellow
+    } elseif (-not (Test-Path $dbg)) {
+        Write-Host "  ! Helper not found at $dbg - skipping." -ForegroundColor Yellow
+    } else {
+        & node $dbg $ClaudeDir $ScriptDir
+    }
+}
+
 # Optionally install the external community design skills via the `skills` CLI (needs Node/npx).
 if ($WithExternalSkills) {
     Write-Host ""
