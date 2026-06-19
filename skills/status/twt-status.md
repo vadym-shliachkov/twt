@@ -49,8 +49,8 @@ The twt pipeline is a fixed DAG; an output is **stale** when any input it derive
 | `design/layout/layouts/` | `pre-design/ia/sitemap.md`, `pre-design/curation/outlines/`, `design/component/components.md` | `/twt-layout` |
 | `design/mockup/pages/`, `…/styles.css` | `design/layout/layouts/`, `design/component/components.md`, `design/design-system/tokens.css`, `pre-design/curation/inventory.md`, `pre-design/curation/outlines/` | `/twt-mockup` |
 | `design/design-brief.md` | `design/design-system/tokens.md`, `design/component/components.md`, `design/layout/layouts/`, `design/mockup/index.html` | `/twt-design` (synthesis) |
-| `site/` (built static site) | `design/design-brief.md`, `design/mockup/pages/`, `design/layout/layouts/`, `design/component/components.md`, `design/design-system/tokens.css` | `/twt-develop` (or `/twt-roast-express`) |
-| `wp-content/themes/hello-elementor-*/` | same design inputs as `site/` | `/twt-develop` (or `/twt-roast-express`) |
+| `site/` (built static site) | `design/design-brief.md`, `design/mockup/pages/`, `design/layout/layouts/`, `design/component/components.md`, `design/design-system/tokens.css` | `/twt-develop` (or `/twt-site-dev`) |
+| `wp-content/themes/hello-elementor-*/` | same design inputs as `site/` | `/twt-develop` (or `/twt-site-dev`) |
 | `qa/qa-report.md`, `qa/gaps.md` | the built `site/` or theme | `/twt-qa` |
 
 If `$ARGUMENTS` names a phase or artifact, scope the check to that artifact and everything downstream of it; otherwise check the whole map.

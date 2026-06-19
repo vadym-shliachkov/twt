@@ -32,6 +32,10 @@ writes:
 
 ---
 
+<!-- Self-contained at runtime (CONVENTIONS §14): inline every artifact format you write —
+     never reference a templates/… path. Read only inside the current project; never reach into
+     sibling projects or the home directory for templates, conventions, or format examples. -->
+
 ## Step 1 — <name>
 
 <instructions for Claude>

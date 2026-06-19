@@ -1,6 +1,6 @@
 ---
-name: twt-roast-express
-category: roast-express
+name: twt-site-dev
+category: site-dev
 description: Phase 3 express — from a Figma link, build/update the design system and jump to development
 version: 1.4.1
 accepts_arguments: true
@@ -23,11 +23,11 @@ reads:
   - .twt-artifacts/elementor-theme/conventions.md
   - .twt-artifacts/html-site/conventions.md
 writes:
-  - .twt-artifacts/roast-express-log.md
+  - .twt-artifacts/site-dev-log.md
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
-# /twt-roast-express
+# /twt-site-dev
 
 ## Intent
 
@@ -55,10 +55,10 @@ Arguments passed to this command: $ARGUMENTS
 ## Step 0 — Mode
 If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat the rest as free-form context (Figma URL, target hints like "elementor"/"html", notes). In auto mode ask **nothing** — no AskUserQuestion, no plain-text prompts; decide from the context, the existing `.twt-artifacts/` state, and the defaults below, and log every auto-decision for the final report. Without the leading `auto`, run interactively as before.
 
-If `$ARGUMENTS` contains a Figma URL, use it; otherwise ask for one — **except in auto mode**, where a missing Figma URL aborts: "Auto mode needs the Figma URL in the arguments: /twt-roast-express auto <figma-url> [notes]".
+If `$ARGUMENTS` contains a Figma URL, use it; otherwise ask for one — **except in auto mode**, where a missing Figma URL aborts: "Auto mode needs the Figma URL in the arguments: /twt-site-dev auto <figma-url> [notes]".
 
 ## Step 0a — Open the session log
-Start a session log at `.twt-artifacts/roast-express-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section from `templates/roast-log.md` — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 1), and the user's free-form Requested context. Then **keep the Timeline live for the rest of the run**: append one numbered entry for **every** question you ask (the question text + the user's answer, or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)`) and one for **every** skill you dispatch (`[step]` + the skill name + a **one-sentence** why). Surfaced child `decisions.md` questions and their answers are logged the same way. This logging is **not** skipped in auto mode — auto runs especially need the trail.
+Start a session log at `.twt-artifacts/site-dev-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 1), and the user's free-form Requested context. Then **keep the Timeline live for the rest of the run**: append one numbered entry for **every** question you ask (the question text + the user's answer, or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)`) and one for **every** skill you dispatch (`[step]` + the skill name + a **one-sentence** why). Surfaced child `decisions.md` questions and their answers are logged the same way. This logging is **not** skipped in auto mode — auto runs especially need the trail.
 
 ## Step 1 — Target menu
 
@@ -99,6 +99,6 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 - `<target>` = **html** → `/twt-html-block-creator`
 
 ## Step 5 — Report & finalize the log
-First finalize the session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-express-log.md`.
+First finalize the session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`.
 
-Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), that approved workbook content was not auto-applied, and **the log location** (`.twt-artifacts/roast-express-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-roast-express` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).
+Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), that approved workbook content was not auto-applied, and **the log location** (`.twt-artifacts/site-dev-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-site-dev` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).

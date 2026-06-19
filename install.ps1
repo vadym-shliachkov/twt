@@ -35,6 +35,15 @@ if ($Target) {
     $CommandsDir = Join-Path $ClaudeDir "commands"
     $Scope = "global ($env:USERPROFILE)"
 }
+$SkillsDestDir = Join-Path $ClaudeDir "skills"
+
+# Sub-skills (the *-define / *-validate workers + the brand-fetch helper) are dispatched
+# only by their orchestrators, never typed directly. They install into .claude/skills/<name>/SKILL.md
+# (still invocable via the Skill tool) instead of .claude/commands/, so they don't clutter the
+# slash-command list. Everything else (orchestrators + standalone tools) stays a slash command.
+function Test-IsSubSkill([string]$BaseName) {
+    return ($BaseName -match '-(define|validate)$') -or ($BaseName -eq 'twt-brand-fetch')
+}
 
 Write-Host ""
 Write-Host "  twt Skills Marketplace - Installer" -ForegroundColor Cyan
@@ -55,23 +64,35 @@ if (-not (Test-Path $CommandsDir)) {
     New-Item -ItemType Directory -Path $CommandsDir -Force | Out-Null
 }
 
-# Find and install all skill files recursively (skip category READMEs)
+# Find and install all skill files recursively (skip category READMEs).
+# Orchestrators + standalone tools -> .claude/commands/<name>.md (slash commands).
+# Sub-skills (*-define / *-validate / brand-fetch) -> .claude/skills/<name>/SKILL.md (Skill-tool only).
 $Installed = 0
+$SkillsInstalled = 0
 Get-ChildItem -Path $SkillsDir -Filter "*.md" -Recurse |
     Where-Object { $_.Name -ne "README.md" } |
     Sort-Object Name |
     ForEach-Object {
-        $dest = Join-Path $CommandsDir $_.Name
-        $cmd  = $_.BaseName
+        $cmd = $_.BaseName
 
-        if (Test-Path $dest) {
-            Write-Host "  Updating : /$cmd"
+        if (Test-IsSubSkill $cmd) {
+            # Sub-skill: install as a Skill (directory + SKILL.md).
+            $skillDir = Join-Path $SkillsDestDir $cmd
+            if (-not (Test-Path $skillDir)) { New-Item -ItemType Directory -Path $skillDir -Force | Out-Null }
+            $dest = Join-Path $skillDir "SKILL.md"
+            if (Test-Path $dest) { Write-Host "  Updating  (skill): $cmd" } else { Write-Host "  Installing (skill): $cmd" }
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+            # Migration: remove a stale slash-command copy from an older install.
+            $stale = Join-Path $CommandsDir $_.Name
+            if (Test-Path $stale) { Remove-Item -Path $stale -Force; Write-Host "    (removed stale /$cmd from commands\)" }
+            $SkillsInstalled++
         } else {
-            Write-Host "  Installing: /$cmd"
+            # Orchestrator / standalone tool: install as a slash command.
+            $dest = Join-Path $CommandsDir $_.Name
+            if (Test-Path $dest) { Write-Host "  Updating : /$cmd" } else { Write-Host "  Installing: /$cmd" }
+            Copy-Item -Path $_.FullName -Destination $dest -Force
+            $Installed++
         }
-
-        Copy-Item -Path $_.FullName -Destination $dest -Force
-        $Installed++
     }
 
 # Optionally seed the reusable Figma MCP permission allowlist (merge-safe).
@@ -137,11 +158,11 @@ if ($Target -and -not $NoScopeGuard) {
 }
 
 # Seed the opt-in debug tracer (project-local installs only). The hook is inert
-# unless /twt-roast-full --log arms it, so seeding it is always safe.
+# unless /twt-site --log arms it, so seeding it is always safe.
 if ($Target) {
     $dbg = Join-Path $ScriptDir "tools\seed-debug-log.js"
     Write-Host ""
-    Write-Host "  Debug tracer for /twt-roast-full --log (inert until armed)" -ForegroundColor Cyan
+    Write-Host "  Debug tracer for /twt-site --log (inert until armed)" -ForegroundColor Cyan
     if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
         Write-Host "  ! node not found - skipping (the debug hook needs Node.js)." -ForegroundColor Yellow
     } elseif (-not (Test-Path $dbg)) {
@@ -185,11 +206,12 @@ if ($WithExternalSkills) {
 }
 
 Write-Host ""
-Write-Host "  Done! $Installed command(s) installed to $CommandsDir" -ForegroundColor Green
+Write-Host "  Done! $Installed command(s) -> $CommandsDir" -ForegroundColor Green
+Write-Host "        $SkillsInstalled sub-skill(s) -> $SkillsDestDir (dispatched by orchestrators, not in the / menu)" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Available commands:"
 Get-ChildItem -Path $SkillsDir -Filter "*.md" -Recurse |
-    Where-Object { $_.Name -ne "README.md" } |
+    Where-Object { $_.Name -ne "README.md" -and -not (Test-IsSubSkill $_.BaseName) } |
     Sort-Object Name |
     ForEach-Object { Write-Host "    /$($_.BaseName)" }
 Write-Host ""

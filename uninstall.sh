@@ -4,7 +4,9 @@
 
 set -e
 
-COMMANDS_DIR="$HOME/.claude/commands"
+CLAUDE_DIR="$HOME/.claude"
+COMMANDS_DIR="$CLAUDE_DIR/commands"
+SKILLS_DEST_DIR="$CLAUDE_DIR/skills"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
 
@@ -18,15 +20,17 @@ while IFS= read -r -d '' file; do
   filename="$(basename "$file")"
   [[ "$filename" == "README.md" ]] && continue
 
-  dest="$COMMANDS_DIR/$filename"
   cmd="${filename%.md}"
+  # Remove wherever it might live (handles installs from before/after the skills/ split).
+  found=0
+  if [ -f "$COMMANDS_DIR/$filename" ]; then rm -f "$COMMANDS_DIR/$filename"; found=1; fi
+  if [ -d "$SKILLS_DEST_DIR/$cmd" ]; then rm -rf "$SKILLS_DEST_DIR/$cmd"; found=1; fi
 
-  if [ -f "$dest" ]; then
-    rm "$dest"
-    echo "  Removed: /$cmd"
+  if [ "$found" -eq 1 ]; then
+    echo "  Removed: $cmd"
     REMOVED=$((REMOVED + 1))
   else
-    echo "  Skipped (not found): /$cmd"
+    echo "  Skipped (not found): $cmd"
   fi
 done < <(find "$SKILLS_DIR" -name "*.md" -type f -print0 | sort -z)
 

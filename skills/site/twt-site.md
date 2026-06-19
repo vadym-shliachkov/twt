@@ -1,20 +1,20 @@
 ---
-name: twt-roast-full
-category: roast-full
+name: twt-site
+category: site
 description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.5.4
+version: 1.5.5
 accepts_arguments: true
 inputs:
   - Optional notes, a live URL, or a hint of which phase to start from
   - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-  - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
+  - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
 dependencies:
   hard: []
   soft:
     - twt-pre-design
     - twt-design
     - twt-develop
-    - twt-roast-express
+    - twt-site-dev
     - twt-content-approval-checklist
     - twt-qa
 reads:
@@ -24,12 +24,12 @@ reads:
   - .twt-artifacts/qa/qa-report.md
   - .twt-artifacts/qa/gaps.md
 writes:
-  - .twt-artifacts/roast-full-log.md
-  - .twt-artifacts/roast-full-debug.md (only with --log)
+  - .twt-artifacts/site-log.md
+  - .twt-artifacts/site-debug.md (only with --log)
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
-# /twt-roast-full
+# /twt-site
 
 ## Intent
 
@@ -44,7 +44,7 @@ writes:
 **Success criteria:**
 - Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
-- Figma-express target routes Development through `/twt-roast-express` and skips Pre-design + Design
+- Figma-express target routes Development through `/twt-site-dev` and skips Pre-design + Design
 - When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 
@@ -56,12 +56,25 @@ If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip th
 ## Step 0·log — Debug tracer (`--log`)
 If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **strip the token** from `$ARGUMENTS` (so it isn't forwarded to children or parsed as context). The tracer is a project-local hook the installer seeds at `.claude/hooks/twt-debug-log.js`.
 
-- **Arm it now** (Bash): `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --arm "roast-full $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/roast-full-debug.md`. Without `--log` the hooks stay completely inert.
+- **Arm it now** (Bash): `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --arm "site $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/site-debug.md`. Without `--log` the hooks stay completely inert.
 - **If that hook file is missing** (twt was installed globally, not into this project), tell the user `--log` needs a project install (`install.ps1 -Target .` or `bash install.sh --target .`) and continue **without** debug logging — never block the run.
 - **When armed, prefix every dispatch prompt (Step 3) with a `WHY:` line** — `WHY: <one-line reason this phase/skill is being called now>` — so the trace records real intent instead of a guessed snippet.
 
 ## Step 0a — Open the session log
-Start a session log at `.twt-artifacts/roast-full-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section from `templates/roast-log.md` — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail.
+Start a session log at `.twt-artifacts/site-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail.
+
+## Step 0b — Intake (project brief)
+This is the **main-thread interview** that gives the pipeline something real to work from. The phases below are dispatched with `subagent-collect`, so the sub-skills will **not** ask the user anything — if you skip this step, they invent the brand, audience, and content from nothing. Gather it **here**, in the main thread, and forward it as context to every phase.
+
+**Auto mode:** skip the interview — treat the free-form `$ARGUMENTS` context as the project brief; do not ask.
+
+Otherwise, before choosing phases, collect the brief (free-form input stays plain-text per CONVENTIONS §4; the one fixed-option question uses **AskUserQuestion**):
+1. **What & who** *(plain-text prompt)*: "In a sentence or two — what is this site for? The business/product, the goal of the site, and who the audience is."
+2. **Content sources** *(plain-text prompt)*: "Paste anything I should build from — live site URL(s), PDF or doc paths, or type `none`. I'll ingest whatever you give me." Record each source.
+3. **Brand / design source** *(plain-text prompt)*: "Any brand or design materials? A brand book, a Figma link, existing colors/fonts — paste a path/URL, or `none`."
+4. **Stage** *(AskUserQuestion, single-select, header "Stage")*: **New build** (from scratch) · **Redesign** (replace an existing site) · **Extend** (add to an existing build) · **You decide**.
+
+Record all answers as the **project brief**. Append each Q&A to the session-log Timeline. If a Figma link was given in (3), note it — it likely makes **Figma express** the natural target in Step 2. If real content sources were given in (2), they will be handed to `/twt-pre-design` (which dispatches `/twt-content-fetch`) — do not re-ask for them later.
 
 ## Step 1 — Choose phases
 **Auto mode:** run all four phases (Pre-design → Design → Development → QA), minus any the context clearly excludes (e.g. "QA only", "skip pre-design") and minus Pre-design/Design when the target resolves to Figma express. Skip the menu.
@@ -79,7 +92,7 @@ Record the selected, ordered set.
 Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") how Development should build:
 - **Static HTML** — dependency-free `site/` (runs `/twt-develop --target html`)
 - **Elementor** — WordPress child theme (runs `/twt-develop --target elementor`)
-- **Figma express** — start from a Figma link via `/twt-roast-express` (skips Pre-design + Design)
+- **Figma express** — start from a Figma link via `/twt-site-dev` (skips Pre-design + Design)
 - **You decide** — I pick the best-fit (defaults to Static HTML; Figma express only when a Figma link is present; Elementor when the context/`conventions.md` indicates WordPress)
 If **Figma express** is chosen, tell the user Pre-design and Design will be skipped (express starts from Figma), drop them from the phase set, and continue.
 
@@ -88,12 +101,14 @@ For each phase still selected, in pipeline order, dispatch its wrapper via the A
 - **Pre-design** → `/twt-pre-design`
 - **Design** → `/twt-design`
 - **Content approval checklist** → `/twt-content-approval-checklist` (whenever Development is selected; for Figma express, pass the Figma URL so current design copy, lorem/placeholder text, links, and media references are captured into the workbook before build)
-- **Development** → `/twt-develop` (forwarding the chosen `--target`; it builds with currently available content and leaves approval implementation for a later explicit call) **or** `/twt-roast-express` (Figma express; it reuses/refines the workbook and builds with current Figma content)
+- **Development** → `/twt-develop` (forwarding the chosen `--target`; it builds with currently available content and leaves approval implementation for a later explicit call) **or** `/twt-site-dev` (Figma express; it reuses/refines the workbook and builds with current Figma content)
 - **QA** → `/twt-qa`
 
-Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward the free-form context as notes.
+Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward **the Step 0b project brief** (what/who, content sources, brand/design source, stage) plus any free-form `$ARGUMENTS` context as notes — this is the input the collect-mode sub-skills draft from, so pass it in full to every phase.
 
 **Visual-direction surfacing (interactive only, before Design).** When the Design phase is in the set, no Figma/exported design was provided, and this is **not** auto mode: after `/twt-design` returns, read `.twt-artifacts/design/decisions.md` for the open "Confirm site visual direction" decision and present it to the user via the **AskUserQuestion** tool (Approve / Adjust dials / Override / You decide — per `/twt-design` Step 1b). Then re-dispatch `/twt-design --only design-system … ` in refinement mode with the resolved direction so the confirmed `design-read.md` propagates before components/layouts/mockups bind to it. This is the rule-13 surfacing point — without it the visual direction silently stays inferred. **Auto mode skips this** (the proposed read is model-decided and logged in Step 5).
+
+**Pilot-page surfacing (interactive only, during Development via `/twt-develop`).** A full multi-page build is the most expensive part of the run, so check one page before committing to all. When Development builds via `/twt-develop` (not Figma express) and this is **not** auto mode: `/twt-develop` (dispatched with `subagent-collect`) builds only the **pilot page** and returns an open "Pilot page built — approve to build the rest" decision in `.twt-artifacts/<html-site|elementor-theme>/decisions.md` with the pilot's path and the list of remaining pages. Read it and present the gate to the user via the **AskUserQuestion** tool (single-select, header "Pilot"): **Build the remaining N pages** / **Add one more pilot page** / **Adjust the pilot** / **Stop here**. On approve, re-dispatch `/twt-develop --target <target> pilot-approved` (with `subagent-collect`) to promote the rest; on adjust/add, forward the feedback and re-dispatch, then re-surface; on stop, leave the remaining pages unbuilt and record it. Log each gate Q&A to the Timeline. **Auto mode skips this** — dispatch `/twt-develop auto …` so it builds all pages in one pass.
 
 Before dispatching a phase, check its prerequisite exists: Development (non-express) needs `.twt-artifacts/design/design-brief.md`; QA needs built output (`site/` or a theme). If a prerequisite is missing, raise it at the Step 4 pause instead of dispatching blindly (in auto mode: stop the pipeline there and report — never invent the missing input).
 
@@ -115,8 +130,8 @@ Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
 When BLOCKERs are present, the option descriptions should recommend the right remedy and name the blocker count — for an unconfirmed-visual-direction BLOCKER that remedy is **Discuss visual direction** (a human pick, not a re-run, which can't resolve it). Continue the pipeline on **Proceed**, or after **Discuss visual direction** resolves.
 
 ## Step 5 — Final summary & finalize the log
-If the debug tracer was armed (`--log`), **first** run (Bash) `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/roast-full-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
+If the debug tracer was armed (`--log`), **first** run (Bash) `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/site-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
 
-Then finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/roast-full-log.md`.
+Then finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-log.md`.
 
-Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/roast-full-log.md`; plus `.twt-artifacts/roast-full-debug.md` with the dispatch trace + cost table when `--log` was used). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.
+Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/site-log.md`; plus `.twt-artifacts/site-debug.md` with the dispatch trace + cost table when `--log` was used). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.

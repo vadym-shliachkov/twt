@@ -60,9 +60,9 @@ flowchart TB
     twt_qa_design["/twt-qa-design"]:::skill
     twt_qa_elementor["/twt-qa-elementor"]:::skill
     twt_qa_links["/twt-qa-links"]:::skill
-    twt_roast_express["/twt-roast-express"]:::skill
-    twt_roast_full["/twt-roast-full"]:::skill
     twt_search_site["/twt-search-site"]:::skill
+    twt_site["/twt-site"]:::skill
+    twt_site_dev["/twt-site-dev"]:::skill
     twt_spec["/twt-spec"]:::skill
     twt_spec_define["/twt-spec-define"]:::skill
     twt_spec_validate["/twt-spec-validate"]:::skill
@@ -143,18 +143,18 @@ flowchart TB
     twt_qa_links -.-> twt_qa
     twt_qa_elementor -.-> twt_qa
     twt_content_validate -.-> twt_qa_content
-    twt_design_system_define -.-> twt_roast_express
-    twt_elementor_theme_creator -.-> twt_roast_express
-    twt_elementor_block_creator -.-> twt_roast_express
-    twt_html_site_creator -.-> twt_roast_express
-    twt_html_block_creator -.-> twt_roast_express
-    twt_content_approval_checklist -.-> twt_roast_express
-    twt_pre_design -.-> twt_roast_full
-    twt_design -.-> twt_roast_full
-    twt_develop -.-> twt_roast_full
-    twt_roast_express -.-> twt_roast_full
-    twt_content_approval_checklist -.-> twt_roast_full
-    twt_qa -.-> twt_roast_full
+    twt_pre_design -.-> twt_site
+    twt_design -.-> twt_site
+    twt_develop -.-> twt_site
+    twt_site_dev -.-> twt_site
+    twt_content_approval_checklist -.-> twt_site
+    twt_qa -.-> twt_site
+    twt_design_system_define -.-> twt_site_dev
+    twt_elementor_theme_creator -.-> twt_site_dev
+    twt_elementor_block_creator -.-> twt_site_dev
+    twt_html_site_creator -.-> twt_site_dev
+    twt_html_block_creator -.-> twt_site_dev
+    twt_content_approval_checklist -.-> twt_site_dev
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
@@ -267,17 +267,17 @@ flowchart TB
 - /twt-qa-elementor - Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
 - /twt-qa-links - Audit built or served pages for link integrity and declared responsive tiers
 
-### roast-express
-
-- /twt-roast-express - Phase 3 express — from a Figma link, build/update the design system and jump to development
-
-### roast-full
-
-- /twt-roast-full - Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-
 ### search
 
 - /twt-search-site - Search a website for an exact string; report page links with ±100 chars of context per match
+
+### site
+
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
+
+### site-dev
+
+- /twt-site-dev - Phase 3 express — from a Figma link, build/update the design system and jump to development
 
 ### spec
 
@@ -488,7 +488,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-content-approval-implement
-- Soft consumers: twt-develop, twt-roast-express, twt-roast-full
+- Soft consumers: twt-develop, twt-site, twt-site-dev
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
@@ -792,7 +792,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-roast-full
+- Soft consumers: twt-site
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -853,7 +853,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-elementor-block-creator, twt-html-block-creator, twt-roast-express
+- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -905,7 +905,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -916,7 +916,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-roast-full
+- Soft consumers: twt-site
 
 **Reads:**
 - .twt-artifacts/design/design-brief.md
@@ -952,7 +952,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-implement, twt-develop, twt-roast-express
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/elementor-theme/conventions.md
@@ -989,7 +989,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-elementor-block-creator
-- Soft consumers: twt-develop, twt-roast-express
+- Soft consumers: twt-develop, twt-site-dev
 
 **Reads:**
 - (none)
@@ -1175,7 +1175,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-implement, twt-develop, twt-roast-express
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/html-site/conventions.md
@@ -1209,7 +1209,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-html-block-creator
-- Soft consumers: twt-develop, twt-roast-express
+- Soft consumers: twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
@@ -1593,7 +1593,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1604,7 +1604,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-roast-full
+- Soft consumers: twt-site
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1639,7 +1639,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-roast-full
+- Soft consumers: twt-site
 
 **Reads:**
 - .twt-artifacts/qa/content-report.md
@@ -1791,67 +1791,6 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/qa/links-report.md |  |
 
-### /twt-roast-express
-
-**Category:** roast-express
-**Version:** 1.4.1
-
-**Inputs:**
-- Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
-- Optional first token `auto` — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
-
-**Feeds into:**
-- Hard consumers: none
-- Soft consumers: twt-roast-full
-
-**Reads:**
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-- .twt-artifacts/elementor-theme/conventions.md
-- .twt-artifacts/html-site/conventions.md
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-| .twt-artifacts/roast-express-log.md |  |
-| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
-
-### /twt-roast-full
-
-**Category:** roast-full
-**Version:** 1.5.3
-
-**Inputs:**
-- Optional notes, a live URL, or a hint of which phase to start from
-- Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa
-
-**Feeds into:**
-- Hard consumers: none
-- Soft consumers: none
-
-**Reads:**
-- .twt-artifacts/pre-design/pre-design-brief.md
-- .twt-artifacts/design/design-brief.md
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-- .twt-artifacts/qa/qa-report.md
-- .twt-artifacts/qa/gaps.md
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-| .twt-artifacts/roast-full-log.md |  |
-| .twt-artifacts/roast-full-debug.md (only with --log) |  |
-| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
-
 ### /twt-search-site
 
 **Category:** search
@@ -1876,6 +1815,67 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/search/<domain>/search-report-<query-slug>.md |  |
+
+### /twt-site
+
+**Category:** site
+**Version:** 1.5.5
+
+**Inputs:**
+- Optional notes, a live URL, or a hint of which phase to start from
+- Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
+- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/pre-design/pre-design-brief.md
+- .twt-artifacts/design/design-brief.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/qa/qa-report.md
+- .twt-artifacts/qa/gaps.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/site-log.md |  |
+| .twt-artifacts/site-debug.md (only with --log) |  |
+| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
+
+### /twt-site-dev
+
+**Category:** site-dev
+**Version:** 1.4.1
+
+**Inputs:**
+- Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
+- Optional first token `auto` — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-site
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/elementor-theme/conventions.md
+- .twt-artifacts/html-site/conventions.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/site-dev-log.md |  |
+| .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-spec
 
@@ -2035,9 +2035,9 @@ flowchart TB
 | /twt-qa-design | none | none |
 | /twt-qa-elementor | none | none |
 | /twt-qa-links | none | none |
-| /twt-roast-express | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
-| /twt-roast-full | none | twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa |
 | /twt-search-site | none | WebFetch |
+| /twt-site | none | twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
+| /twt-site-dev | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
@@ -2055,8 +2055,8 @@ flowchart TB
   html-site/
   pre-design/
   qa/
-  roast-express-log.md/
-  roast-full-debug.md/
-  roast-full-log.md/
   search/
+  site-debug.md/
+  site-dev-log.md/
+  site-log.md/
 ```

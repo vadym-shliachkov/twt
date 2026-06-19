@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * twt-debug-log — opt-in debug tracer for /twt-roast-full --log.
+ * twt-debug-log — opt-in debug tracer for /twt-site --log.
  *
  * Three modes:
  *   1. --arm "<label>"     create the sentinel + open a fresh debug log section.
@@ -19,7 +19,7 @@
  * Never throws out of the top level — any failure exits 0 so it can never break
  * a run (same safety posture as twt-scope-guard).
  *
- * Output (human): <project>/.twt-artifacts/roast-full-debug.md
+ * Output (human): <project>/.twt-artifacts/site-debug.md
  * Output (machine, for --summarize): <project>/.twt-artifacts/.twt-debug/events.jsonl
  */
 'use strict';
@@ -37,7 +37,7 @@ const DBG_DIR = path.join(ROOT, '.twt-artifacts', '.twt-debug');
 const SENTINEL = path.join(DBG_DIR, 'active.json');
 const EVENTS = path.join(DBG_DIR, 'events.jsonl');
 const STATE = path.join(DBG_DIR, 'state.json');
-const LOG_MD = path.join(ROOT, '.twt-artifacts', 'roast-full-debug.md');
+const LOG_MD = path.join(ROOT, '.twt-artifacts', 'site-debug.md');
 
 // ---- tiny helpers --------------------------------------------------------
 
@@ -58,10 +58,10 @@ function fmtDur(ms) {
 // Map every worker skill to the phase that owns it, for the rolled-up table.
 const PHASE_OF = (name) => {
   const n = String(name).replace(/^\//, '');
-  if (n === 'twt-roast-full') return 'orchestrator';
+  if (n === 'twt-site') return 'orchestrator';
   if (/^twt-(content|brand|spec|positioning|ia|curation|pre-design)/.test(n)) return 'pre-design';
   if (/^twt-(design$|design-system|component|layout|mockup|design)/.test(n)) return 'design';
-  if (/^twt-(develop|html|elementor|content-approval|roast-express)/.test(n)) return 'development';
+  if (/^twt-(develop|html|elementor|content-approval|site-dev)/.test(n)) return 'development';
   if (/^twt-qa/.test(n)) return 'qa';
   return 'other';
 };
@@ -89,11 +89,11 @@ function parseDispatch(input) {
 function arm(label) {
   try { fs.mkdirSync(DBG_DIR, { recursive: true }); } catch {}
   const runId = Date.now().toString(36);
-  writeJson(SENTINEL, { runId, started: nowIso(), label: label || 'roast-full' });
+  writeJson(SENTINEL, { runId, started: nowIso(), label: label || 'site' });
   writeJson(STATE, { open: 0, stack: [] });
   try { fs.writeFileSync(EVENTS, ''); } catch {}
   appendMd(
-    `\n\n## Debug run ${nowIso()} — \`${label || 'roast-full'}\`\n\n` +
+    `\n\n## Debug run ${nowIso()} — \`${label || 'site'}\`\n\n` +
     `> Hook-driven trace. \`▶\` dispatch · \`✔\` done · boxed = user choice. ` +
     `Cost is a **wall-time proxy** for token spend (see summary).\n\n` +
     `### Trace\n\n`
@@ -199,7 +199,7 @@ function summarize() {
 
   // disarm: keep the log + events for reference, remove the sentinel.
   try { fs.unlinkSync(SENTINEL); } catch {}
-  process.stdout.write('twt-debug-log: summarized + disarmed. See .twt-artifacts/roast-full-debug.md\n');
+  process.stdout.write('twt-debug-log: summarized + disarmed. See .twt-artifacts/site-debug.md\n');
 }
 
 // ---- dispatch ------------------------------------------------------------

@@ -61,7 +61,7 @@ Check `.twt-artifacts/html-site/conventions.md` exists.
 ⚠ No static-site conventions found.
 Run /twt-html-site-creator first, then return here.
 ```
-(Exception: when dispatched by `/twt-roast-express`, the scaffold is created upstream — the file will exist.)
+(Exception: when dispatched by `/twt-site-dev`, the scaffold is created upstream — the file will exist.)
 
 ## Step 2 — Load conventions
 

@@ -7,7 +7,7 @@ Editorial guidance on how the skills compose. Hand-edited. See `architecture.md`
 ## Run the whole pipeline (one command)
 
 ```
-/twt-roast-full                      ← guided end-to-end run
+/twt-site                      ← guided end-to-end run
     │  pick phases (checkboxes) + target (HTML / Elementor / Figma express)
     ├── /twt-pre-design              ─┐
     ├── /twt-design                   │  pauses after each phase:
@@ -15,7 +15,7 @@ Editorial guidance on how the skills compose. Hand-edited. See `architecture.md`
     └── /twt-qa                      ─┘
 ```
 
-`/twt-roast-full` composes the four phase wrappers below; every phase (and every
+`/twt-site` composes the four phase wrappers below; every phase (and every
 sub-skill) is still callable on its own. It pauses for approval between phases and never
 proceeds past BLOCKERs without your say-so.
 
@@ -95,7 +95,7 @@ ensure-scaffold → build core.
     ├── ensure scaffold (theme-creator / html-site-creator if conventions.md missing)
     └── per page → builder (elementor-block-creator / html-block-creator)
 
-/twt-roast-express <figma-url>       ← EXPRESS path: short, from Figma
+/twt-site-dev <figma-url>       ← EXPRESS path: short, from Figma
     │   Menu: target? 1) HTML  2) Elementor
     ├── /twt-design-system-define     ← analyse-existing mode → tokens spine
     ├── ensure scaffold (theme-creator / html-site-creator if missing)

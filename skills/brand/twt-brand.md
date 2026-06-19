@@ -43,7 +43,7 @@ If `brand-brief.md` exists, ask via the **AskUserQuestion** tool (single-select,
 If the user provided a source (in `$ARGUMENTS` or when asked), dispatch `/twt-brand-fetch` with it (Agent tool). Otherwise skip.
 
 ## Step 3 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
-Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (i.e. it was itself dispatched by /twt-pre-design or /twt-roast-full). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see step 2 below).
+Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (i.e. it was itself dispatched by /twt-pre-design or /twt-site). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see step 2 below).
 
 Run **one** define → validate cycle — no iteration loop (§9):
 1. **Define (subagent):** dispatch `/twt-brand-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-brand-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.

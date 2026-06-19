@@ -2,7 +2,7 @@
 name: twt-pre-design
 category: pre-design
 description: Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.1.2
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -51,7 +51,16 @@ writes:
 ---
 
 ## Step 1 — Discovery
-Ask what's provided: site URLs, PDFs, docs, brand book/Figma, anything else. Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/brand/spec/positioning/ia/curation).
+Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/brand/spec/positioning/ia/curation).
+
+**Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** ask anything — the orchestrator already ran the intake interview and forwarded the project brief in `$ARGUMENTS`. Read it: what the site is for / the audience / the goal, content sources, brand-or-design source, and stage. Use those as the discovery answers and continue.
+
+**Standalone** (user invoked `/twt-pre-design` directly): run the intake interview here in the main thread (free-form input stays plain-text per CONVENTIONS §4):
+- **What & who** — "In a sentence or two: what is this site for — the business/product, the goal, and the audience?"
+- **Content sources** — "Paste site URL(s), PDF/doc paths, or `none`."
+- **Brand / design source** — "A brand book, a Figma link, existing colors/fonts, or `none`."
+
+Carry the answers forward as the project brief for the steps below.
 
 ## Step 2 — Content ingest (A)
 If sources were provided (and not skipped by flags), dispatch `/twt-content-fetch` with them (Agent tool). If none, note it and continue.
@@ -63,7 +72,7 @@ Brand reads the brand source; Spec reads the starting notes / Figma URL. Neither
 
 Wait for both to finish before Step 4 (Positioning depends on both). Surface any questions or BLOCKERs either raised after the batch. (Respect flags: skip whichever is excluded; if only one remains, run it alone.)
 
-> Surfacing follows CONVENTIONS rule 13 — if `/twt-pre-design` was itself dispatched with `subagent-collect` (e.g. by `/twt-roast-full`), bubble the merged decisions upward instead of asking.
+> Surfacing follows CONVENTIONS rule 13 — if `/twt-pre-design` was itself dispatched with `subagent-collect` (e.g. by `/twt-site`), bubble the merged decisions upward instead of asking.
 
 ## Step 4 — Positioning (D)
 Dispatch `/twt-positioning`.

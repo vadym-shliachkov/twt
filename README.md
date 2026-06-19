@@ -130,9 +130,9 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-qa-design | qa | Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system) |
 | /twt-qa-elementor | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | /twt-qa-links | qa | Audit built or served pages for link integrity and declared responsive tiers |
-| /twt-roast-express | roast-express | Phase 3 express — from a Figma link, build/update the design system and jump to development |
-| /twt-roast-full | roast-full | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
 | /twt-search-site | search | Search a website for an exact string; report page links with ±100 chars of context per match |
+| /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
+| /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 <!-- TWT_SKILLS_TABLE_END -->

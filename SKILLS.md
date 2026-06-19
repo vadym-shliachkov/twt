@@ -44,9 +44,9 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-design](#twt-qa-design) | qa | Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system) |
 | [/twt-qa-elementor](#twt-qa-elementor) | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
-| [/twt-roast-express](#twt-roast-express) | roast-express | Phase 3 express — from a Figma link, build/update the design system and jump to development |
-| [/twt-roast-full](#twt-roast-full) | roast-full | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
+| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
+| [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 
@@ -567,7 +567,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.1
+**Version:** 1.3.2
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -598,13 +598,14 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 **Non-goals:**
 - Doesn't do QA (Phase 4)
 - Doesn't reproduce builder/scaffolder logic — dispatches each via the Agent tool (rule 5)
-- Doesn't start from Figma — that's the express path, `/twt-roast-express`
+- Doesn't start from Figma — that's the express path, `/twt-site-dev`
 
 **Success criteria:**
 - Target chosen (HTML or Elementor); the target's scaffold is ensured (created if its `conventions.md` is missing)
 - `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically
 - Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests
-- A **foundation page** is promoted first (serial) to seed reuse; the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially
+- A **foundation page** is promoted first (serial) to seed reuse; it doubles as a **pilot** that the user reviews at a gate before the remaining pages are built — so a wrong direction is caught after 1 page, not after all of them
+- After the pilot is approved, the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially
 - Approved workbook rows are **not** applied by this skill; after stakeholder confirmation, the user explicitly runs `/twt-content-approval-implement` to update the corresponding blocks/pages
 - Reports what was built per page and anything to follow up before Phase 4
 
@@ -1188,7 +1189,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1445,93 +1446,6 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 
 ---
 
-## /twt-roast-express
-
-**Category:** roast-express
-**Version:** 1.4.1
-**Accepts arguments:** yes
-
-The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
-
-**Inputs:**
-- Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
-- Optional first token `auto` — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
-
-**Reads:**
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-- .twt-artifacts/elementor-theme/conventions.md
-- .twt-artifacts/html-site/conventions.md
-
-**Writes:**
-- .twt-artifacts/roast-express-log.md
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-
-**Non-goals:**
-- Doesn't run pre-design or design phases (use `/twt-pre-design` / `/twt-design` for those)
-- Doesn't reproduce design-system / scaffold / builder logic — dispatches each via the Agent tool (rule 5)
-- Doesn't replace an existing design system — extends it (tokens are never revalued)
-- Auto mode never grants destructive consents (in-place replacement, overwriting user-confirmed targets) — children write to artifacts and the scaffold only
-
-**Success criteria:**
-- Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged
-- Auto mode asks **nothing** (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting
-- `/twt-design-system-define` runs in analyse-existing mode from the Figma link (spine created or updated)
-- `/twt-content-approval-checklist` creates or reuses `.twt-artifacts/content-approval/content-approval-checklist.xlsx` before development
-- The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
-- The matching builder is dispatched to start page/block development
-- Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs `/twt-content-approval-implement` to update corresponding blocks/pages
-
----
-
-## /twt-roast-full
-
-**Category:** roast-full
-**Version:** 1.5.3
-**Accepts arguments:** yes
-
-Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
-
-**Inputs:**
-- Optional notes, a live URL, or a hint of which phase to start from
-- Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/roast-full-debug.md`
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-roast-express, twt-content-approval-checklist, twt-qa
-
-**Reads:**
-- .twt-artifacts/pre-design/pre-design-brief.md
-- .twt-artifacts/design/design-brief.md
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-- .twt-artifacts/qa/qa-report.md
-- .twt-artifacts/qa/gaps.md
-
-**Writes:**
-- .twt-artifacts/roast-full-log.md
-- .twt-artifacts/roast-full-debug.md (only with --log)
-- .twt-artifacts/content-approval/content-approval-checklist.xlsx
-
-**Non-goals:**
-- Doesn't reproduce any phase's logic — dispatches each phase wrapper via the Agent tool (rule 5)
-- Doesn't add build or QA capability — only composes the existing wrappers
-- Doesn't auto-proceed past BLOCKERs in interactive mode — the human approves every phase transition (auto mode defers them to the final summary instead)
-- Auto mode never grants destructive consents (in-place file replacement, overwrite of user-confirmed targets) — children keep writing to artifacts only
-
-**Success criteria:**
-- Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
-- Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
-- Figma-express target routes Development through `/twt-roast-express` and skips Pre-design + Design
-- When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
-- Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
-
----
-
 ## /twt-search-site
 
 **Category:** search
@@ -1563,6 +1477,93 @@ Find every occurrence of a specific string across a website's pages and produce 
 - A report exists at `.twt-artifacts/search/<domain>/search-report-<query-slug>.md`
 - Every listed match has the exact page URL and a context snippet of up to 100 characters on each side of the matched string
 - The report states how many pages were scanned, so the user knows the coverage (and the 50-page cap if hit)
+
+---
+
+## /twt-site
+
+**Category:** site
+**Version:** 1.5.5
+**Accepts arguments:** yes
+
+Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
+
+**Inputs:**
+- Optional notes, a live URL, or a hint of which phase to start from
+- Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
+- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+
+**Reads:**
+- .twt-artifacts/pre-design/pre-design-brief.md
+- .twt-artifacts/design/design-brief.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/qa/qa-report.md
+- .twt-artifacts/qa/gaps.md
+
+**Writes:**
+- .twt-artifacts/site-log.md
+- .twt-artifacts/site-debug.md (only with --log)
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+
+**Non-goals:**
+- Doesn't reproduce any phase's logic — dispatches each phase wrapper via the Agent tool (rule 5)
+- Doesn't add build or QA capability — only composes the existing wrappers
+- Doesn't auto-proceed past BLOCKERs in interactive mode — the human approves every phase transition (auto mode defers them to the final summary instead)
+- Auto mode never grants destructive consents (in-place file replacement, overwrite of user-confirmed targets) — children keep writing to artifacts only
+
+**Success criteria:**
+- Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
+- Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
+- Figma-express target routes Development through `/twt-site-dev` and skips Pre-design + Design
+- When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
+- Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
+
+---
+
+## /twt-site-dev
+
+**Category:** site-dev
+**Version:** 1.4.1
+**Accepts arguments:** yes
+
+The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
+
+**Inputs:**
+- Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
+- Optional first token `auto` — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/elementor-theme/conventions.md
+- .twt-artifacts/html-site/conventions.md
+
+**Writes:**
+- .twt-artifacts/site-dev-log.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+
+**Non-goals:**
+- Doesn't run pre-design or design phases (use `/twt-pre-design` / `/twt-design` for those)
+- Doesn't reproduce design-system / scaffold / builder logic — dispatches each via the Agent tool (rule 5)
+- Doesn't replace an existing design system — extends it (tokens are never revalued)
+- Auto mode never grants destructive consents (in-place replacement, overwriting user-confirmed targets) — children write to artifacts and the scaffold only
+
+**Success criteria:**
+- Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged
+- Auto mode asks **nothing** (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting
+- `/twt-design-system-define` runs in analyse-existing mode from the Figma link (spine created or updated)
+- `/twt-content-approval-checklist` creates or reuses `.twt-artifacts/content-approval/content-approval-checklist.xlsx` before development
+- The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
+- The matching builder is dispatched to start page/block development
+- Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs `/twt-content-approval-implement` to update corresponding blocks/pages
 
 ---
 

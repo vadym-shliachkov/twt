@@ -29,6 +29,18 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$SCRIPT_DIR/skills"
 
+# Sub-skills (the *-define / *-validate workers + the brand-fetch helper) are dispatched only
+# by their orchestrators, never typed directly. They install into .claude/skills/<name>/SKILL.md
+# (still invocable via the Skill tool) instead of .claude/commands/, so they don't clutter the
+# slash-command list. Everything else (orchestrators + standalone tools) stays a slash command.
+is_sub_skill() {
+  case "$1" in
+    *-define|*-validate) return 0 ;;
+    twt-brand-fetch)     return 0 ;;
+    *)                   return 1 ;;
+  esac
+}
+
 # On Git Bash / MSYS, node resolves "/c/..." paths as drive-relative; convert
 # them to native "C:/..." form. No-op on macOS/Linux.
 to_native() {
@@ -52,6 +64,7 @@ else
   COMMANDS_DIR="$CLAUDE_DIR/commands"
   SCOPE="global ($HOME)"
 fi
+SKILLS_DEST_DIR="$CLAUDE_DIR/skills"
 
 echo ""
 echo "  twt Skills Marketplace — Installer"
@@ -72,25 +85,34 @@ if [ ! -d "$COMMANDS_DIR" ]; then
   mkdir -p "$COMMANDS_DIR"
 fi
 
-# Find and install all skill files recursively (skip category READMEs)
+# Find and install all skill files recursively (skip category READMEs).
+# Orchestrators + standalone tools -> .claude/commands/<name>.md (slash commands).
+# Sub-skills (*-define / *-validate / brand-fetch) -> .claude/skills/<name>/SKILL.md (Skill-tool only).
 INSTALLED=0
+SKILLS_INSTALLED=0
 while IFS= read -r -d '' file; do
   filename="$(basename "$file")"
 
   # Skip category README files
   [[ "$filename" == "README.md" ]] && continue
 
-  dest="$COMMANDS_DIR/$filename"
   cmd="${filename%.md}"
 
-  if [ -f "$dest" ]; then
-    echo "  Updating : /$cmd"
+  if is_sub_skill "$cmd"; then
+    skill_dir="$SKILLS_DEST_DIR/$cmd"
+    mkdir -p "$skill_dir"
+    dest="$skill_dir/SKILL.md"
+    if [ -f "$dest" ]; then echo "  Updating  (skill): $cmd"; else echo "  Installing (skill): $cmd"; fi
+    cp "$file" "$dest"
+    # Migration: remove a stale slash-command copy from an older install.
+    if [ -f "$COMMANDS_DIR/$filename" ]; then rm -f "$COMMANDS_DIR/$filename"; echo "    (removed stale /$cmd from commands/)"; fi
+    SKILLS_INSTALLED=$((SKILLS_INSTALLED + 1))
   else
-    echo "  Installing: /$cmd"
+    dest="$COMMANDS_DIR/$filename"
+    if [ -f "$dest" ]; then echo "  Updating : /$cmd"; else echo "  Installing: /$cmd"; fi
+    cp "$file" "$dest"
+    INSTALLED=$((INSTALLED + 1))
   fi
-
-  cp "$file" "$dest"
-  INSTALLED=$((INSTALLED + 1))
 done < <(find "$SKILLS_DIR" -name "*.md" -type f -print0 | sort -z)
 
 # Optionally seed the reusable Figma MCP permission allowlist (merge-safe, needs jq).
@@ -144,10 +166,10 @@ elif [ -z "$TARGET" ] && [ "$NO_SCOPE_GUARD" -eq 0 ]; then
 fi
 
 # Seed the opt-in debug tracer (project-local installs only). The hook is inert
-# unless /twt-roast-full --log arms it, so seeding it is always safe.
+# unless /twt-site --log arms it, so seeding it is always safe.
 if [ -n "$TARGET" ]; then
   echo ""
-  echo "  Debug tracer for /twt-roast-full --log (inert until armed)"
+  echo "  Debug tracer for /twt-site --log (inert until armed)"
   DBG="$SCRIPT_DIR/tools/seed-debug-log.js"
   if ! command -v node >/dev/null 2>&1; then
     echo "  ! node not found — skipping (the debug hook needs Node.js)."
@@ -187,13 +209,16 @@ if [ "$WITH_EXTERNAL_SKILLS" -eq 1 ]; then
 fi
 
 echo ""
-echo "  ✓ Done! $INSTALLED command(s) installed to $COMMANDS_DIR"
+echo "  ✓ Done! $INSTALLED command(s) -> $COMMANDS_DIR"
+echo "          $SKILLS_INSTALLED sub-skill(s) -> $SKILLS_DEST_DIR (dispatched by orchestrators, not in the / menu)"
 echo ""
 echo "  Available commands:"
 while IFS= read -r -d '' file; do
   filename="$(basename "$file")"
   [[ "$filename" == "README.md" ]] && continue
-  echo "    /${filename%.md}"
+  cmd="${filename%.md}"
+  is_sub_skill "$cmd" && continue
+  echo "    /$cmd"
 done < <(find "$SKILLS_DIR" -name "*.md" -type f -print0 | sort -z)
 echo ""
 echo "  Restart Claude Code (CLI or Desktop) to pick up the new commands."

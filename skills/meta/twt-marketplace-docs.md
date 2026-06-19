@@ -239,9 +239,9 @@ For each category folder under `skills/`, overwrite `skills/<category>/README.md
 - `design` — Phase 2 wrapper that orchestrates the full design pipeline
 - `html` — Skills for building a dependency-free static HTML/CSS site (scaffold + token-driven page builder)
 - `develop` — Phase 3 full-path wrapper: promote the Phase-2 design into the chosen build target
-- `roast-express` — Phase 3 express entry: from a Figma link, build the design system and jump to development
+- `site-dev` — Phase 3 express entry: from a Figma link, build the design system and jump to development
 - `qa` — Static-analysis QA audits of built output (content, design, a11y, links, Elementor hygiene) + gaps punch-list
-- `roast-full` — Master orchestrator that runs the full pre-design→design→development→QA pipeline with approval pauses
+- `site` — Master orchestrator that runs the full pre-design→design→development→QA pipeline with approval pauses
 - `status` — Pipeline freshness check: flag artifacts that are older than the inputs they were derived from
 - `search` — Standalone site-search utilities — find a string across a website's pages and report where it appears
 

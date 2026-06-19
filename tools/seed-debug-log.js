@@ -7,7 +7,7 @@
  *   2. merges PreToolUse + PostToolUse hook entries (matcher Task|AskUserQuestion)
  *      into <claudeDir>/settings.json
  *
- * The hook is INERT unless /twt-roast-full --log arms it (sentinel file), so
+ * The hook is INERT unless /twt-site --log arms it (sentinel file), so
  * seeding it has no effect on normal runs.
  *
  * Usage:
