@@ -8,6 +8,7 @@
 #   bash install.sh --target . --with-figma-permissions   Also seed the Figma MCP permission allowlist
 #   bash install.sh --target . --with-external-skills      Also install the external design skills via `npx skills`
 #   bash install.sh --no-scope-guard                Skip the scope guard (seeded by default, global and --target)
+#   bash install.sh --no-permissions               Skip the runtime permission allowlist (seeded by default)
 
 set -e
 
@@ -15,6 +16,7 @@ TARGET=""
 WITH_FIGMA_PERMISSIONS=0
 WITH_EXTERNAL_SKILLS=0
 NO_SCOPE_GUARD=0
+NO_PERMISSIONS=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --target) TARGET="$2"; shift 2 ;;
@@ -22,6 +24,7 @@ while [ $# -gt 0 ]; do
     --with-figma-permissions) WITH_FIGMA_PERMISSIONS=1; shift ;;
     --with-external-skills) WITH_EXTERNAL_SKILLS=1; shift ;;
     --no-scope-guard) NO_SCOPE_GUARD=1; shift ;;
+    --no-permissions) NO_PERMISSIONS=1; shift ;;
     *) echo "  Unknown argument: $1"; exit 1 ;;
   esac
 done
@@ -162,6 +165,23 @@ elif [ -z "$TARGET" ] && [ "$NO_SCOPE_GUARD" -eq 0 ]; then
     echo "  ! Helper not found at $GUARD — skipping."
   else
     node "$(to_native "$GUARD")" "$(to_native "$CLAUDE_DIR")" "$(to_native "$SCRIPT_DIR")" --global
+  fi
+fi
+
+# Seed the runtime permission allowlist (on by default; --no-permissions opts out).
+# Merge-safe: only adds curated allow entries (utility Bash, WebFetch, Figma read
+# MCP tools) so a pipeline run stops prompting for routine commands. Pairs with
+# the scope guard, which still gates anything that escapes the project folder.
+if [ "$NO_PERMISSIONS" -eq 0 ]; then
+  echo ""
+  echo "  Permission allowlist (fewer prompts during runs)"
+  PERMS="$SCRIPT_DIR/tools/seed-permissions.js"
+  if ! command -v node >/dev/null 2>&1; then
+    echo "  ! node not found — skipping (the permission seeder needs Node.js)."
+  elif [ ! -f "$PERMS" ]; then
+    echo "  ! Helper not found at $PERMS — skipping."
+  else
+    node "$(to_native "$PERMS")" "$(to_native "$CLAUDE_DIR")"
   fi
 fi
 

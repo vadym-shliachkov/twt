@@ -7,12 +7,14 @@
 #   .\install.ps1 -Target . -WithFigmaPermissions   Also seed the Figma MCP permission allowlist
 #   .\install.ps1 -Target . -WithExternalSkills      Also install the external design skills via `npx skills`
 #   .\install.ps1 -NoScopeGuard                Skip the scope guard (seeded by default, global and -Target)
+#   .\install.ps1 -NoPermissions               Skip the runtime permission allowlist (seeded by default)
 
 param(
     [string]$Target,
     [switch]$WithFigmaPermissions,
     [switch]$WithExternalSkills,
-    [switch]$NoScopeGuard
+    [switch]$NoScopeGuard,
+    [switch]$NoPermissions
 )
 
 $ErrorActionPreference = "Stop"
@@ -154,6 +156,23 @@ if ($Target -and -not $NoScopeGuard) {
         Write-Host "  ! Helper not found at $guard - skipping." -ForegroundColor Yellow
     } else {
         & node $guard $ClaudeDir $ScriptDir --global
+    }
+}
+
+# Seed the runtime permission allowlist (on by default; -NoPermissions opts out).
+# Merge-safe: only adds curated allow entries (utility Bash, WebFetch, Figma read
+# MCP tools) so a pipeline run stops prompting for routine commands. Pairs with
+# the scope guard, which still gates anything that escapes the project folder.
+if (-not $NoPermissions) {
+    $perms = Join-Path $ScriptDir "tools\seed-permissions.js"
+    Write-Host ""
+    Write-Host "  Permission allowlist (fewer prompts during runs)" -ForegroundColor Cyan
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Write-Host "  ! node not found - skipping (the permission seeder needs Node.js)." -ForegroundColor Yellow
+    } elseif (-not (Test-Path $perms)) {
+        Write-Host "  ! Helper not found at $perms - skipping." -ForegroundColor Yellow
+    } else {
+        & node $perms $ClaudeDir
     }
 }
 
