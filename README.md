@@ -95,12 +95,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | command | category | description |
 |---------|----------|-------------|
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| /twt-brand-define | brand | Build or refine the canonical brand-brief.md through guided dialogue |
 | /twt-brand-fetch | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
-| /twt-brand-validate | brand | Critique brand-brief.md and write a validation-report.md (read-only critic) |
 | /twt-component | component | Orchestrate component define/validate in a single define→validate pass |
-| /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html |
-| /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page |
 | /twt-content-approval-implement | content | Apply ready approved XLSX content into the built site or development artifacts |
 | /twt-content-fetch | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
@@ -110,30 +106,23 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | /twt-content-validate | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
 | /twt-curation | curation | Orchestrate curation define/validate in a single define→validate pass |
-| /twt-curation-define | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
-| /twt-curation-validate | curation | Critique curation against brand voice and IA; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass |
-| /twt-design-system-define | design-system | Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview) |
-| /twt-design-system-validate | design-system | Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
+| /twt-export | export | Orchestrate PDF, DOCX, PPTX, and template-based exports |
+| /twt-export-docx | export | Convert Markdown to a polished DOCX with the shared document template |
+| /twt-export-pdf | export | Convert Markdown to a polished PDF with the shared document template |
+| /twt-export-presentation | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
+| /twt-export-template-create | export | Create reusable export templates from brand or user style instructions |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia | ia | Orchestrate IA define/validate in a single define→validate pass |
-| /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
-| /twt-ia-validate | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | /twt-layout | layout | Orchestrate layout define/validate in a single define→validate pass |
-| /twt-layout-define | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
-| /twt-layout-validate | layout | Read-only critique of per-page layout specs into validation-report.md |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter |
 | /twt-mockup | mockup | Orchestrate mockup define/validate in a single define→validate pass |
-| /twt-mockup-define | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
-| /twt-mockup-validate | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
-| /twt-positioning-define | positioning | Build or refine positioning.md — audience, value props, promotion priorities |
-| /twt-positioning-validate | positioning | Critique positioning.md against brand and content signal; write validation-report.md |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | /twt-qa | qa | Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md |
 | /twt-qa-a11y | qa | Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast) |
@@ -145,8 +134,6 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-roast-full | roast-full | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
 | /twt-search-site | search | Search a website for an exact string; report page links with ±100 chars of context per match |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
-| /twt-spec-define | spec | Interview the user (brainstorming-style) into a north-star specification.md |
-| /twt-spec-validate | spec | Critique specification.md and write a validation-report.md (read-only critic) |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 <!-- TWT_SKILLS_TABLE_END -->
 

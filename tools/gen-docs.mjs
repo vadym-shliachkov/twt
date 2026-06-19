@@ -152,6 +152,13 @@ for (const cat of readdirSync(SKILLS_DIR, { withFileTypes: true })) {
 skills.sort((a, b) => a.name.localeCompare(b.name));
 const byName = new Map(skills.map((s) => [s.name, s]));
 
+function isInternalOrchestratedRole(s) {
+  const match = s.name.match(/^(.*)-(define|validate)$/);
+  return Boolean(match && byName.has(match[1]));
+}
+
+const publicSkills = skills.filter((s) => !isInternalOrchestratedRole(s));
+
 // reverse deps
 for (const s of skills) {
   s.hard_consumers = skills.filter((o) => (o.dependencies.hard || []).includes(s.name)).map((o) => o.name).sort();
@@ -166,7 +173,7 @@ const nodeId = (n) => n.replace(/-/g, "_");
 // ---- SKILLS.md -----------------------------------------------------------
 
 function renderSkills() {
-  const idx = skills.map((s) => `| [/${s.name}](#${s.name}) | ${s.category} | ${s.description} |`).join("\n");
+  const idx = publicSkills.map((s) => `| [/${s.name}](#${s.name}) | ${s.category} | ${s.description} |`).join("\n");
   const head =
 `${SKILLS_HDR}
 
@@ -180,7 +187,7 @@ All commands use the \`/twt-\` prefix. Type the command name in Claude Code to r
 |---------|----------|-------------|
 ${idx}`;
 
-  const sections = skills.map((s) => {
+  const sections = publicSkills.map((s) => {
     const writes = bulletsOrNone(s.writes);
     return `## /${s.name}
 
@@ -311,7 +318,7 @@ ${namespace}
 // ---- category READMEs ----------------------------------------------------
 
 function renderCatReadme(cat) {
-  const rows = skills.filter((s) => s.category === cat).map((s) => `| /${s.name} | ${s.description} |`).join("\n");
+  const rows = publicSkills.filter((s) => s.category === cat).map((s) => `| /${s.name} | ${s.description} |`).join("\n");
   const desc = CATEGORY_DESC[cat] || `Skills in the ${cat} category.`;
   return `${README_HDR}
 
@@ -338,7 +345,7 @@ function updateReadmeBlock() {
   const START = "<!-- TWT_SKILLS_TABLE_START -->";
   const END = "<!-- TWT_SKILLS_TABLE_END -->";
   if (!txt.includes(START) || !txt.includes(END)) return "README.md: TWT_SKILLS_TABLE markers not found — skipped";
-  const rows = skills.map((s) => `| /${s.name} | ${s.category} | ${s.description} |`).join("\n");
+  const rows = publicSkills.map((s) => `| /${s.name} | ${s.category} | ${s.description} |`).join("\n");
   const block = `${START}\n| command | category | description |\n|---------|----------|-------------|\n${rows}\n${END}`;
   const next = txt.replace(new RegExp(`${START}[\\s\\S]*?${END}`), block);
   return { p, next, label: "README.md (marked block)" };

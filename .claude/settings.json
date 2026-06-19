@@ -18,7 +18,6 @@
       "Bash(pdftotext *)",
       "Bash(python *)",
       "Bash(python3 *)",
-      "WebFetch(domain:xivic.com)",
       "Read(.claude/hooks/**)",
       "Edit(.claude/hooks/**)",
       "Write(.claude/hooks/**)"

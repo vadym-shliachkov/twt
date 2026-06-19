@@ -9,5 +9,3 @@ Skills for defining audience, value propositions, and promotion priorities
 | command | description |
 |---------|-------------|
 | /twt-positioning | Orchestrate positioning define/validate in a single define→validate pass |
-| /twt-positioning-define | Build or refine positioning.md — audience, value props, promotion priorities |
-| /twt-positioning-validate | Critique positioning.md against brand and content signal; write validation-report.md |

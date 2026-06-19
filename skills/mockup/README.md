@@ -9,5 +9,3 @@ Fully-responsive plain-HTML/CSS hi-fi page mockups from real content
 | command | description |
 |---------|-------------|
 | /twt-mockup | Orchestrate mockup define/validate in a single define→validate pass |
-| /twt-mockup-define | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
-| /twt-mockup-validate | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |

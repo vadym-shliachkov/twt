@@ -33,6 +33,11 @@ flowchart TB
     twt_develop["/twt-develop"]:::skill
     twt_elementor_block_creator["/twt-elementor-block-creator"]:::skill
     twt_elementor_theme_creator["/twt-elementor-theme-creator"]:::skill
+    twt_export["/twt-export"]:::skill
+    twt_export_docx["/twt-export-docx"]:::skill
+    twt_export_pdf["/twt-export-pdf"]:::skill
+    twt_export_presentation["/twt-export-presentation"]:::skill
+    twt_export_template_create["/twt-export-template-create"]:::skill
     twt_html_block_creator["/twt-html-block-creator"]:::skill
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia["/twt-ia"]:::skill
@@ -105,6 +110,11 @@ flowchart TB
     twt_content_approval_checklist -.-> twt_develop
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
+    twt_export_pdf -.-> twt_export
+    twt_export_docx -.-> twt_export
+    twt_export_presentation -.-> twt_export
+    twt_export_template_create -.-> twt_export
+    twt_brand_define -.-> twt_export_template_create
     twt_html_site_creator --> twt_html_block_creator
     twt_design_system_define -.-> twt_html_block_creator
     twt_ia_define -.-> twt_ia
@@ -202,6 +212,14 @@ flowchart TB
 
 - /twt-elementor-block-creator - Build an Elementor widget or full-page template following project conventions
 - /twt-elementor-theme-creator - Scaffold a production-ready Hello Elementor child theme for a WordPress project
+
+### export
+
+- /twt-export - Orchestrate PDF, DOCX, PPTX, and template-based exports
+- /twt-export-docx - Convert Markdown to a polished DOCX with the shared document template
+- /twt-export-pdf - Convert Markdown to a polished PDF with the shared document template
+- /twt-export-presentation - Convert Markdown to PPTX or PDF slides via the presentation export script
+- /twt-export-template-create - Create reusable export templates from brand or user style instructions
 
 ### html
 
@@ -311,7 +329,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-brand-validate
-- Soft consumers: twt-brand, twt-curation-define, twt-positioning-define
+- Soft consumers: twt-brand, twt-curation-define, twt-export-template-create, twt-positioning-define
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
@@ -990,6 +1008,159 @@ flowchart TB
 | wp-content/themes/hello-elementor-<slug>/wpml-config.xml |  |
 | .twt-artifacts/elementor-theme/conventions.md |  |
 
+### /twt-export
+
+**Category:** export
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-export-pdf, twt-export-docx, twt-export-presentation, twt-export-template-create
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- <markdown-path>
+- .twt-artifacts/export/templates/*/template.json
+- .twt-artifacts/export/templates/*/template.md
+- tools/export-source-create.mjs
+- tools/export-document.mjs
+- tools/export-presentation.mjs
+- tools/export-template-create.mjs
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/export/sources/<source-slug>.md |  |
+| .twt-artifacts/export/sources/<source-slug>.notes.md |  |
+| .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx |  |
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx |  |
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/templates/<template-slug>/template.md |  |
+| .twt-artifacts/export/templates/<template-slug>/template.json |  |
+| .twt-artifacts/export/templates/<template-slug>/preview-notes.md |  |
+
+### /twt-export-docx
+
+**Category:** export
+**Version:** 1.0.0
+
+**Inputs:**
+- Markdown file path
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-export
+
+**Reads:**
+- <markdown-path>
+- tools/export-document.mjs
+- templates/document-export-style.md
+- .twt-artifacts/export/templates/*/template.json
+- .twt-artifacts/export/templates/*/template.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx |  |
+| .twt-artifacts/export/docx/<source-slug>/render-notes.md |  |
+
+### /twt-export-pdf
+
+**Category:** export
+**Version:** 1.0.0
+
+**Inputs:**
+- Markdown file path
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-export
+
+**Reads:**
+- <markdown-path>
+- tools/export-document.mjs
+- templates/document-export-style.md
+- .twt-artifacts/export/templates/*/template.json
+- .twt-artifacts/export/templates/*/template.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/pdf/<source-slug>/render-notes.md |  |
+
+### /twt-export-presentation
+
+**Category:** export
+**Version:** 1.0.0
+
+**Inputs:**
+- Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-export
+
+**Reads:**
+- <markdown-path>
+- tools/export-presentation.mjs
+- templates/presentation-export-style.md
+- .twt-artifacts/export/templates/*/template.json
+- .twt-artifacts/export/templates/*/template.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx |  |
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/presentation/<source-slug>/render-notes.md |  |
+
+### /twt-export-template-create
+
+**Category:** export
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional template name, type, brand path, style direction, and instructions
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-brand-define
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-export
+
+**Reads:**
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- tools/export-template-create.mjs
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/export/templates/<template-slug>/template.md |  |
+| .twt-artifacts/export/templates/<template-slug>/template.json |  |
+| .twt-artifacts/export/templates/<template-slug>/preview-notes.md |  |
+
 ### /twt-html-block-creator
 
 **Category:** html
@@ -1652,7 +1823,7 @@ flowchart TB
 ### /twt-roast-full
 
 **Category:** roast-full
-**Version:** 1.5.2
+**Version:** 1.5.3
 
 **Inputs:**
 - Optional notes, a live URL, or a hint of which phase to start from
@@ -1837,6 +2008,11 @@ flowchart TB
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
+| /twt-export | none | twt-export-pdf, twt-export-docx, twt-export-presentation, twt-export-template-create |
+| /twt-export-docx | none | none |
+| /twt-export-pdf | none | none |
+| /twt-export-presentation | none | none |
+| /twt-export-template-create | none | twt-brand-define |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
 | /twt-html-site-creator | none | none |
 | /twt-ia | none | twt-ia-define, twt-ia-validate |
@@ -1875,6 +2051,7 @@ flowchart TB
   content-approval/
   design/
   elementor-theme/
+  export/
   html-site/
   pre-design/
   qa/

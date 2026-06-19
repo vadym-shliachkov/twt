@@ -106,4 +106,4 @@ Thin index — canonical detail lives in the linked artifacts; this file is link
 Keep it short: the value is the link table + the aggregated BLOCKERs, never prose restating the artifacts. Never mask a sub-area's BLOCKERs.
 
 ## Step 8 — Report
-Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should resolve before Phase 2.
+Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should review before Phase 2. If brand validation produced a `## Before design proceeds` notice, quote it directly: Phase 2 may continue with explicit caveats, but the user must be informed before brand choices are bound into design tokens, components, layouts, or copy.
