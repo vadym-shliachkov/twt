@@ -6,7 +6,7 @@
 #   .\install.ps1 -Target C:\path\to\project   Install into one project (<project>\.claude\commands)
 #   .\install.ps1 -Target . -WithFigmaPermissions   Also seed the Figma MCP permission allowlist
 #   .\install.ps1 -Target . -WithExternalSkills      Also install the external design skills via `npx skills`
-#   .\install.ps1 -Target . -NoScopeGuard            Skip the project-scope permission guard (on by default for -Target)
+#   .\install.ps1 -NoScopeGuard                Skip the scope guard (seeded by default, global and -Target)
 
 param(
     [string]$Target,
@@ -106,9 +106,10 @@ if ($WithFigmaPermissions) {
     Write-Host "  Seeded $added Figma MCP permission(s) into $settingsPath" -ForegroundColor Green
 }
 
-# Seed the project-scope permission guard (project-local installs only, on by default).
+# Seed the scope-guard permission hook (on by default; -NoScopeGuard opts out).
 # A PreToolUse hook auto-allows tool calls that stay inside the project folder and
-# leaves anything reaching outside it to the normal approval prompt.
+# leaves anything reaching outside it to the normal approval prompt. Project-local
+# installs seed it here; the global branch below seeds it into ~/.claude instead.
 if ($Target -and -not $NoScopeGuard) {
     $guard = Join-Path $ScriptDir "tools\seed-scope-guard.js"
     Write-Host ""
@@ -120,10 +121,19 @@ if ($Target -and -not $NoScopeGuard) {
     } else {
         & node $guard $ClaudeDir $ScriptDir
     }
-} elseif (-not $Target) {
+} elseif (-not $Target -and -not $NoScopeGuard) {
+    # Global install: seed the scope guard into ~/.claude so the rule
+    # (auto-allow inside the open project, ask outside) applies in every project.
+    $guard = Join-Path $ScriptDir "tools\seed-scope-guard.js"
     Write-Host ""
-    Write-Host "  Note: the scope guard is project-scoped. Add it to a project with:" -ForegroundColor DarkGray
-    Write-Host "        .\install.ps1 -Target C:\path\to\project" -ForegroundColor DarkGray
+    Write-Host "  Scope guard (global: auto-allow inside the open project, ask outside)" -ForegroundColor Cyan
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+        Write-Host "  ! node not found - skipping (the scope-guard hook needs Node.js)." -ForegroundColor Yellow
+    } elseif (-not (Test-Path $guard)) {
+        Write-Host "  ! Helper not found at $guard - skipping." -ForegroundColor Yellow
+    } else {
+        & node $guard $ClaudeDir $ScriptDir --global
+    }
 }
 
 # Seed the opt-in debug tracer (project-local installs only). The hook is inert

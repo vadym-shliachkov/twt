@@ -10,10 +10,13 @@
  * project folder and prompt for anything that reaches outside it.
  *
  * Usage:
- *   node seed-scope-guard.js <claudeDir> <repoRoot> [--remove]
- *     <claudeDir>  the target project's .claude directory
+ *   node seed-scope-guard.js <claudeDir> <repoRoot> [--remove] [--global]
+ *     <claudeDir>  the .claude directory to seed (a project's, or ~/.claude)
  *     <repoRoot>   the twt marketplace repo root (to locate the template)
  *     --remove     unmerge the hook entry and delete the copied hook file
+ *     --global     reference the hook by absolute path instead of the
+ *                  $CLAUDE_PROJECT_DIR form, for a user-level (~/.claude)
+ *                  install that must apply in every project
  *
  * Always exits 0 for non-fatal issues so it never breaks an install run.
  */
@@ -23,7 +26,6 @@ const fs = require('fs');
 const path = require('path');
 
 const HOOK_NAME = 'twt-scope-guard.js';
-const HOOK_COMMAND = 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/' + HOOK_NAME + '"';
 const MATCHER = 'Bash|Read|Write|Edit|NotebookEdit|Glob|Grep';
 
 function fail(msg) { console.error('  ! scope-guard: ' + msg); process.exit(0); }
@@ -41,13 +43,22 @@ function nativize(p) {
 const claudeDir = nativize(process.argv[2]);
 const repoRoot = nativize(process.argv[3]);
 const remove = process.argv.includes('--remove');
+const global = process.argv.includes('--global');
 
-if (!claudeDir || !repoRoot) fail('usage: seed-scope-guard.js <claudeDir> <repoRoot> [--remove]');
+if (!claudeDir || !repoRoot) fail('usage: seed-scope-guard.js <claudeDir> <repoRoot> [--remove] [--global]');
 
 const hooksDir = path.join(claudeDir, 'hooks');
 const hookDest = path.join(hooksDir, HOOK_NAME);
 const hookSrc = path.join(repoRoot, 'templates', 'hooks', HOOK_NAME);
 const settingsPath = path.join(claudeDir, 'settings.json');
+
+// A global (~/.claude) install must reference the hook by absolute path, since
+// no per-project copy exists. A project install uses the portable
+// $CLAUDE_PROJECT_DIR form. Either way the hook resolves the project root from
+// the CLAUDE_PROJECT_DIR env var at runtime, so the rule tracks the open project.
+const HOOK_COMMAND = global
+  ? 'node "' + hookDest.replace(/\\/g, '/') + '"'
+  : 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/' + HOOK_NAME + '"';
 
 function readSettings() {
   if (!fs.existsSync(settingsPath)) return {};

@@ -2,7 +2,7 @@
 name: twt-roast-full
 category: roast-full
 description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.5.3
+version: 1.5.4
 accepts_arguments: true
 inputs:
   - Optional notes, a live URL, or a hint of which phase to start from
@@ -108,10 +108,11 @@ Read the just-finished phase's output and count any **outstanding BLOCKERs**:
 **Auto mode — no gate:** auto-proceed to the next phase. Resolve any aggregated `decisions.md` open questions yourself: prefer an answer derivable from the free-form context, else accept the child's proposed/model-decided assumption, re-dispatch the relevant `*-define` in refinement mode with those answers (clearing `decisions.md` → resolved), and log every auto-decision for the final summary. BLOCKERs don't stop the run — record them as **deferred** and continue; stop only when the next phase's hard prerequisite is missing. Never re-run a phase more than once on the same inputs.
 
 Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
-- **Proceed to <next phase>** — continue the pipeline (describe as "finish" after the last phase)
+- **Discuss visual direction** *(offer only when the next phase is Design and no Figma/exported design was provided)* — set the site's visual requirements *with the user before* Design runs, instead of reviewing them after the design system is built. Run the `/twt-design` Step 1b gate now: present the proposed Design Read (one-line read + the three dials + type/color/layout/motion notes) and ask via **AskUserQuestion** (Approve / Adjust dials / Override / You decide), then write `.twt-artifacts/design/design-read.md` with `status: confirmed` and clear the "Confirm site visual direction" decision in `decisions.md`. Then dispatch Design with the confirmed read — this makes the Step 3 post-Design surfacing a no-op. List this **first** and recommend it whenever the only outstanding BLOCKER is the unconfirmed visual direction.
+- **Proceed to <next phase>** — continue the pipeline (describe as "finish" after the last phase). When the next phase is Design and the visual direction is still unconfirmed, proceeding here defers it to the post-Design art-direction pick (the Step 3 surfacing).
 - **Re-run this phase** — dispatch the same phase wrapper again (e.g. after fixing inputs)
 - **Stop here** — end the workflow; report what's done and what remains
-When BLOCKERs are present, the option descriptions should recommend Re-run or Stop and name the blocker count. Continue only on **Proceed**.
+When BLOCKERs are present, the option descriptions should recommend the right remedy and name the blocker count — for an unconfirmed-visual-direction BLOCKER that remedy is **Discuss visual direction** (a human pick, not a re-run, which can't resolve it). Continue the pipeline on **Proceed**, or after **Discuss visual direction** resolves.
 
 ## Step 5 — Final summary & finalize the log
 If the debug tracer was armed (`--log`), **first** run (Bash) `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/roast-full-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.

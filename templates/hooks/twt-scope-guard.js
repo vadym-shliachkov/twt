@@ -55,6 +55,20 @@ function isInside(child, root) {
   return child === root || child.startsWith(root + '/');
 }
 
+// Does a regex hit look like a real filesystem path, or is it an arithmetic /
+// regex artifact (e.g. ")/1.055" from "(x)/1.055", or "3:1")? Drive-letter
+// tokens (C:\, C:/) always count. A POSIX "/x" token counts only when its
+// first segment starts with a path-like char (letter, ".", "_", "~") OR it has
+// two or more segments (e.g. /2023/report). This drops bare numeric segments
+// like "/1.055" that come from arithmetic inside a command or heredoc, so they
+// no longer trigger a needless prompt.
+function looksLikePath(raw) {
+  if (/^[A-Za-z]:[\\/]/.test(raw)) return true;
+  if (raw[0] !== '/') return false;
+  if (/^\/[A-Za-z._~]/.test(raw)) return true;
+  return (raw.match(/\//g) || []).length >= 2;
+}
+
 function allow(reason) {
   process.stdout.write(JSON.stringify({
     hookSpecificOutput: {
@@ -96,6 +110,7 @@ function main() {
     const re = /(?<![A-Za-z0-9._~/\\-])(?:[A-Za-z]:[\\/]|\/)[A-Za-z0-9._~][^\s"'`<>|;)&]*/g;
     const found = cmd.match(re) || [];
     for (const raw of found) {
+      if (!looksLikePath(raw)) continue;
       const c = canon(raw);
       if (!c.startsWith('/')) continue;
       if (DEVNULL.has(c)) continue;

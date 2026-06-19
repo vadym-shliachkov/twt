@@ -7,7 +7,7 @@
 #   bash install.sh --target /path/to/project       Install into one project (<project>/.claude/commands)
 #   bash install.sh --target . --with-figma-permissions   Also seed the Figma MCP permission allowlist
 #   bash install.sh --target . --with-external-skills      Also install the external design skills via `npx skills`
-#   bash install.sh --target . --no-scope-guard            Skip the project-scope permission guard (on by default for --target)
+#   bash install.sh --no-scope-guard                Skip the scope guard (seeded by default, global and --target)
 
 set -e
 
@@ -113,9 +113,10 @@ if [ "$WITH_FIGMA_PERMISSIONS" -eq 1 ]; then
   fi
 fi
 
-# Seed the project-scope permission guard (project-local installs only, on by default).
+# Seed the scope-guard permission hook (on by default; --no-scope-guard opts out).
 # A PreToolUse hook auto-allows tool calls that stay inside the project folder and
-# leaves anything reaching outside it to the normal approval prompt.
+# leaves anything reaching outside it to the normal approval prompt. Project-local
+# installs seed it here; the global branch below seeds it into ~/.claude instead.
 if [ -n "$TARGET" ] && [ "$NO_SCOPE_GUARD" -eq 0 ]; then
   echo ""
   echo "  Scope guard (auto-allow inside project, ask outside)"
@@ -127,10 +128,19 @@ if [ -n "$TARGET" ] && [ "$NO_SCOPE_GUARD" -eq 0 ]; then
   else
     node "$(to_native "$GUARD")" "$(to_native "$CLAUDE_DIR")" "$(to_native "$SCRIPT_DIR")"
   fi
-elif [ -z "$TARGET" ]; then
+elif [ -z "$TARGET" ] && [ "$NO_SCOPE_GUARD" -eq 0 ]; then
+  # Global install: seed the scope guard into ~/.claude so the rule
+  # (auto-allow inside the open project, ask outside) applies in every project.
   echo ""
-  echo "  Note: the scope guard is project-scoped. Add it to a project with:"
-  echo "        bash install.sh --target /path/to/project"
+  echo "  Scope guard (global: auto-allow inside the open project, ask outside)"
+  GUARD="$SCRIPT_DIR/tools/seed-scope-guard.js"
+  if ! command -v node >/dev/null 2>&1; then
+    echo "  ! node not found — skipping (the scope-guard hook needs Node.js)."
+  elif [ ! -f "$GUARD" ]; then
+    echo "  ! Helper not found at $GUARD — skipping."
+  else
+    node "$(to_native "$GUARD")" "$(to_native "$CLAUDE_DIR")" "$(to_native "$SCRIPT_DIR")" --global
+  fi
 fi
 
 # Seed the opt-in debug tracer (project-local installs only). The hook is inert
