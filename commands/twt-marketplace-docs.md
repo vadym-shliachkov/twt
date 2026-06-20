@@ -45,8 +45,8 @@ writes:
 This regeneration is **deterministic**, so it is delegated to a script rather than done by hand — running it as a model wastes tokens and risks format drift. From the marketplace repo root:
 
 ```bash
-node tools/gen-docs.mjs            # regenerate all derived docs
-node tools/gen-docs.mjs --check    # CI: exit 1 if any derived doc is stale
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs"            # regenerate all derived docs
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs" --check    # CI: exit 1 if any derived doc is stale
 ```
 
 The script (`tools/gen-docs.mjs`, zero dependencies) parses every skill's frontmatter + Intent block and rewrites `SKILLS.md`, `architecture.md`, each `skills/<category>/README.md`, and the `README.md` marked block — preserving each file's existing line endings and printing the same skills-indexed / categories / validation-warnings summary described below. It only needs Node.

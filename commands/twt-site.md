@@ -58,9 +58,9 @@ writes:
 If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat everything after it as free-form context (notes, a live or Figma URL, target hints like "elementor" or "html"). In auto mode this skill asks **nothing** — no AskUserQuestion, no plain-text prompts, no approval requests; every decision comes from that context, the existing `.twt-artifacts/` state, and the defaults named below. Without the leading `auto`, run interactively as before.
 
 ## Step 0·log — Debug tracer (`--log`)
-If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **strip the token** from `$ARGUMENTS` (so it isn't forwarded to children or parsed as context). The tracer is a project-local hook the installer seeds at `.claude/hooks/twt-debug-log.js`.
+If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **strip the token** from `$ARGUMENTS` (so it isn't forwarded to children or parsed as context). The tracer is bundled in the plugin at `${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js`.
 
-- **Arm it now** (Bash): `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --arm "site $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/site-debug.md`. Without `--log` the hooks stay completely inert.
+- **Arm it now** (Bash): `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --arm "site $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/site-debug.md`. Without `--log` the hooks stay completely inert.
 - **If that hook file is missing** (twt was installed globally, not into this project), tell the user `--log` needs a project install (`install.ps1 -Target .` or `bash install.sh --target .`) and continue **without** debug logging — never block the run.
 - **When armed, prefix every dispatch prompt (Step 3) with a `WHY:` line** — `WHY: <one-line reason this phase/skill is being called now>` — so the trace records real intent instead of a guessed snippet.
 
@@ -166,7 +166,7 @@ Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
 When BLOCKERs are present, the option descriptions should recommend the right remedy and name the blocker count — for an unconfirmed-visual-direction BLOCKER that remedy is **Discuss visual direction** (a human pick, not a re-run, which can't resolve it). Continue the pipeline on **Proceed**, or after **Discuss visual direction** resolves.
 
 ## Step 5 — Final summary & finalize the log
-If the debug tracer was armed (`--log`), **first** run (Bash) `node "$CLAUDE_PROJECT_DIR/.claude/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/site-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
+If the debug tracer was armed (`--log`), **first** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/site-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
 
 Then finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-log.md`.
 

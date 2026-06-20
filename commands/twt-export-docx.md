@@ -33,7 +33,7 @@ writes:
 - Doesn't manually reproduce conversion logic from `tools/export-document.mjs`
 
 **Success criteria:**
-- Delegates conversion to `node tools/export-document.mjs --format docx --input <markdown-path>`
+- Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input <markdown-path>`
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
 - Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
@@ -65,13 +65,13 @@ Resolve template choice:
 Run from the repository or project root that contains `tools/export-document.mjs`:
 
 ```powershell
-node tools/export-document.mjs --format docx --input "<markdown-path>" --template "<template-path>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --template "<template-path>"
 ```
 
 If `--force` was requested:
 
 ```powershell
-node tools/export-document.mjs --format docx --input "<markdown-path>" --template "<template-path>" --force
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --template "<template-path>" --force
 ```
 
 The script handles slugging, output folders, heading nesting checks, temporary normalized export copies, Pandoc invocation, output verification, and `render-notes.md`.

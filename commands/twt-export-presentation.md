@@ -36,7 +36,7 @@ writes:
 **Success criteria:**
 - With no `$ARGUMENTS`, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path
 - Offers a template choice when multiple presentation/universal templates exist
-- Delegates conversion to `node tools/export-presentation.mjs --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
+- Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
 - Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path
@@ -83,13 +83,13 @@ Resolve template choice:
 Run from the repository or project root that contains `tools/export-presentation.mjs`:
 
 ```powershell
-node tools/export-presentation.mjs --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>"
 ```
 
 If `--force` was requested:
 
 ```powershell
-node tools/export-presentation.mjs --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>" --force
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>" --force
 ```
 
 The script handles slide parsing, output folders, aspect validation, density warnings, Pandoc invocation, output verification, and `render-notes.md`.

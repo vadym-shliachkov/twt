@@ -36,7 +36,7 @@ writes:
 - A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
 - Findings keep BLOCKER/WARNING/SUGGESTION with Where/Problem/Recommendation, Problem citing evidence
 - Brand problems do not stop the workflow by themselves; the report must clearly inform the user before design proceeds, with BLOCKERs carried forward as known design risks
-- The report passes `node tools/check-brand-validation-report.mjs --file .twt-artifacts/pre-design/brand/validation-report.md`
+- The report passes `node "${CLAUDE_PLUGIN_ROOT}/tools/check-brand-validation-report.mjs" --file .twt-artifacts/pre-design/brand/validation-report.md`
 - If `brand-brief.md` is missing, aborts pointing to `/twt-brand-define`
 
 ---
@@ -192,7 +192,7 @@ Write ONLY this file.
 After writing, run:
 
 ```powershell
-node tools/check-brand-validation-report.mjs --file .twt-artifacts/pre-design/brand/validation-report.md
+node "${CLAUDE_PLUGIN_ROOT}/tools/check-brand-validation-report.mjs" --file .twt-artifacts/pre-design/brand/validation-report.md
 ```
 
 If the checker fails, fix `validation-report.md` until it passes. The checker is structural; passing it does not replace the quality judgment required by this rubric.

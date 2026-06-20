@@ -112,7 +112,7 @@ When the user chooses **New from instructions**, gather:
 Then run:
 
 ```powershell
-node tools/export-source-create.mjs --type <document|presentation> --title "<title>" --instructions "<instructions>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-source-create.mjs" --type <document|presentation> --title "<title>" --instructions "<instructions>"
 ```
 
 Use `--type document` for PDF/DOCX document outputs and `--type presentation` for PPTX/PDF presentation outputs. If overwrite was explicitly requested, add `--force`.

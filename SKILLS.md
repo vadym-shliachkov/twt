@@ -794,7 +794,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 - Doesn't manually reproduce conversion logic from `tools/export-document.mjs`
 
 **Success criteria:**
-- Delegates conversion to `node tools/export-document.mjs --format docx --input <markdown-path>`
+- Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input <markdown-path>`
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
 - Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
@@ -835,7 +835,7 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 - Doesn't manually reproduce conversion logic from `tools/export-document.mjs`
 
 **Success criteria:**
-- Delegates conversion to `node tools/export-document.mjs --format pdf --input <markdown-path>`
+- Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format pdf --input <markdown-path>`
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf`
 - Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
@@ -879,7 +879,7 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 **Success criteria:**
 - With no `$ARGUMENTS`, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path
 - Offers a template choice when multiple presentation/universal templates exist
-- Delegates conversion to `node tools/export-presentation.mjs --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
+- Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
 - Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path

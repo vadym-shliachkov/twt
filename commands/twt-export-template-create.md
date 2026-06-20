@@ -99,13 +99,13 @@ If the user gives a vague name, improve it while preserving their intent and men
 Run from the repository or project root that contains `tools/export-template-create.mjs`:
 
 ```powershell
-node tools/export-template-create.mjs --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --instructions "<instructions>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-template-create.mjs" --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --instructions "<instructions>"
 ```
 
 If using a brand source:
 
 ```powershell
-node tools/export-template-create.mjs --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --brand "<brand-path>" --instructions "<instructions>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-template-create.mjs" --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --brand "<brand-path>" --instructions "<instructions>"
 ```
 
 If overwriting was explicitly requested, add `--force`.
