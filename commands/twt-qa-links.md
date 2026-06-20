@@ -1,8 +1,8 @@
 ---
 name: twt-qa-links
 category: qa
-description: (v1.0.2) Audit built or served pages for link integrity and declared responsive tiers
-version: 1.0.2
+description: (v1.1.0) Audit built or served pages for link integrity and declared responsive tiers
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -39,7 +39,16 @@ writes:
 Parse `$ARGUMENTS`. URL → **live mode** (`WebFetch` the entry page + up to 25 deduped internal pages; build the page set first so internal targets can be checked). Else → **local mode** (`site/*.html` + `site/partials/`, else `mockup/pages/*.html`). If neither exists, abort: "No built HTML or URL to audit."
 
 ## Step 2 — Run checks
-- **BLOCKER** — an internal `href`/anchor pointing to a page, section, or `id` that does not exist in the page set; nav linking to a missing page; a referenced asset file that does not exist in the build's `assets/` (cross-checked against `.twt-artifacts/design/assets/manifest.md` — use the manifest's `filename` to confirm identity) — tag as **MISSING-ASSET**.
+
+In **local mode, gather the deterministic counts first — don't trace links by hand.** Run the bundled scanner; it returns exact `dead_internal_links`, `dead_anchors`, `missing_assets`, and `empty_or_placeholder_hrefs` counts with `file:line` + the offending `href` per finding (it strips query strings and ignores external/`mailto:`/`tel:` links):
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" links "$CLAUDE_PROJECT_DIR"
+```
+
+Use its `counts`/`findings[]` as the link-integrity evidence backbone. You still add what the script doesn't cover: cross-check assets against `.twt-artifacts/design/assets/manifest.md` (planned-but-unused entries), and the *(local-only)* responsive-tier/fixed-width checks below. In **live mode** there's no script — build the page set via `WebFetch` and check links against it as before. Then classify:
+
+- **BLOCKER** — an internal `href`/anchor pointing to a page, section, or `id` that does not exist in the page set (scanner's `dead_internal_links` + `dead_anchors`); nav linking to a missing page; a referenced asset file that does not exist in the build's `assets/` (scanner's `missing_assets`, cross-checked against `.twt-artifacts/design/assets/manifest.md` — use the manifest's `filename` to confirm identity) — tag as **MISSING-ASSET**.
 - **WARNING** — a **placeholder link** (`href="#"`, `href=""`, `javascript:void`, "TODO"); nav inconsistent across pages; *(local only)* a page/section with a needed breakpoint (960/720/600/480) not declared in CSS; *(local only)* a fixed `px` width that would overflow below a breakpoint; a manifest `filename` that no page references (planned-but-unused asset).
 - **SUGGESTION** — an external link missing `rel`/`target` conventions.
 

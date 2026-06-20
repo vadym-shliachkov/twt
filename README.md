@@ -72,6 +72,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-mockup | mockup | Orchestrate mockup define/validate in a single define→validate pass |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
+| /twt-project-intake | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
 | /twt-qa | qa | Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md |
 | /twt-qa-a11y | qa | Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast) |
 | /twt-qa-content | qa | Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem) |

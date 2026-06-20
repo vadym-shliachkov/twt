@@ -1,8 +1,8 @@
 ---
 name: twt-qa-content
 category: qa
-description: (v1.1.1) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
-version: 1.1.1
+description: (v1.2.0) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
+version: 1.2.0
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -50,8 +50,16 @@ Read `sitemap.md`, `outlines/`, and `inventory.md` (skip any that are absent, no
 - **Live:** `WebFetch` the entry URL, extract internal links (nav + in-page), and crawl **internal** pages only, deduped, **capped at 25**. Record the page set.
 
 ## Step 4 — Run checks
-For each page:
-- **BLOCKER** — a `sitemap.md` page has no corresponding built/served page; an outline section is missing from its page; **lorem/placeholder** text present (match "lorem ipsum", stray "Lorem", obvious filler); a content slot the outline specifies is empty.
+
+In **local mode, gather the deterministic counts first — don't scan for filler by hand.** Run the bundled scanner; it returns exact `lorem_blocks`, `placeholder_markers`, `empty_headings`, plus `missing_pages`/`extra_pages` (sitemap coverage, when `sitemap.md` is present), each with `file:line` locations:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" content "$CLAUDE_PROJECT_DIR"
+```
+
+Use its `counts`/`findings[]` for the lorem/placeholder/empty and sitemap-coverage evidence. You still own the judgment the script can't do: **outline fidelity** (do the sections match `outlines/`?), **copy quality** (Step 5), and the **manifest** cross-check. In **live mode** there's no script — crawl with `WebFetch` (Step 3) and judge content from the rendered text. Then, for each page:
+
+- **BLOCKER** — a `sitemap.md` page has no corresponding built/served page (scanner's `missing_pages`); an outline section is missing from its page; **lorem/placeholder** text present (scanner's `lorem_blocks` + `placeholder_markers`); a content slot the outline specifies is empty (scanner's `empty_headings` + your outline read).
 - **WARNING** — content present but not traceable to any outline; a heading/copy block materially diverges from the outline; a manifest entry that no page references (planned-but-unused asset).
 - **SUGGESTION** — minor copy deviation; an image/asset referenced but missing (also recorded as a gap).
 

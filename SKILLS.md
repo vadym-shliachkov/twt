@@ -38,6 +38,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate in a single define→validate pass |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
+| [/twt-project-intake](#twt-project-intake) | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
 | [/twt-qa](#twt-qa) | qa | Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md |
 | [/twt-qa-a11y](#twt-qa-a11y) | qa | Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast) |
 | [/twt-qa-content](#twt-qa-content) | qa | Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem) |
@@ -1233,6 +1234,47 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 ---
 
+## /twt-project-intake
+
+**Category:** intake
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Convert messy project notes, links, Figma references, document paths, and constraints into a clear `site-instruction.md` that `/twt-site` can read before its intake interview. This gives the full pipeline a reusable, human-editable brief instead of making each phase infer intent from scattered notes.
+
+**Inputs:**
+- Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`
+- Optional `--root` to write `site-instruction.md` at the project root instead of `.twt-artifacts/site-instruction.md`
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- $ARGUMENTS
+- site-instruction.md
+- .twt-artifacts/site-instruction.md
+- .twt-artifacts/pre-design/pre-design-brief.md
+- .twt-artifacts/design/design-brief.md
+
+**Writes:**
+- .twt-artifacts/site-instruction.md
+- site-instruction.md (only with --root or explicit user confirmation)
+- .twt-artifacts/intake/intake-report.md
+
+**Non-goals:**
+- Does not run `/twt-site`, fetch source content, build pages, or validate downstream artifacts
+- Does not silently overwrite an existing instruction file
+- Does not invent binding project decisions when the notes are ambiguous; it records open questions instead
+
+**Success criteria:**
+- Writes a structured `site-instruction.md` covering intake, sources, phase choices, Figma approach, build target, and per-phase guidance when those can be inferred
+- Preserves ambiguous or missing inputs as explicit open questions instead of hiding them
+- If an instruction file already exists, enters refinement mode and merges new notes without discarding previous user decisions
+- Ends with a concise report naming the file written, major inferred decisions, open questions, and the suggested next `/twt-site` command
+
+---
+
 ## /twt-qa
 
 **Category:** qa
@@ -1274,7 +1316,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 ## /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Read-only accessibility audit of the built HTML (local) or the rendered pages (live, best-effort) — image alt text, heading order, landmarks, form labels, and WCAG AA contrast for declared color pairs.
@@ -1308,7 +1350,7 @@ Read-only accessibility audit of the built HTML (local) or the rendered pages (l
 ## /twt-qa-content
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.2.0
 **Accepts arguments:** yes
 
 Read-only audit of content & information-architecture fidelity — every sitemap page exists, each page's sections match the Phase-1 outlines, and the content is real (no lorem/placeholder, no empty slots). Works on local HTML files or, given a URL, on the rendered site (the only way to see Elementor content).
@@ -1346,7 +1388,7 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 ## /twt-qa-design
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Read-only audit of design & token fidelity on the **source** files — CSS is token-only (no hex/px/font literals), every custom property used is defined in `tokens.css`, and each page's section structure includes the components its layout requires.
@@ -1417,7 +1459,7 @@ Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS
 ## /twt-qa-links
 
 **Category:** qa
-**Version:** 1.0.2
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Read-only audit of link integrity (internal links/anchors resolve, nav consistent) and — in local mode — declared responsive tiers (960/720/600/480) and fixed-width risks. Detects dead and placeholder links for the gaps punch-list.
@@ -1644,7 +1686,7 @@ One-call spec workflow: define (interview into the north-star `specification.md`
 ## /twt-status
 
 **Category:** status
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 In the iterative design loop, editing an upstream artifact silently invalidates everything derived from it — `brand-brief.md` changes and `positioning.md` is now stale, but nothing says so. This skill compares each artifact's modification time against the inputs it was derived from, flags the stale ones, and reports the minimal upstream-first set of skills to re-run. Read-only: it never re-runs or edits anything.

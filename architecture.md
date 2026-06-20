@@ -54,6 +54,7 @@ flowchart TB
     twt_positioning_define["/twt-positioning-define"]:::skill
     twt_positioning_validate["/twt-positioning-validate"]:::skill
     twt_pre_design["/twt-pre-design"]:::skill
+    twt_project_intake["/twt-project-intake"]:::skill
     twt_qa["/twt-qa"]:::skill
     twt_qa_a11y["/twt-qa-a11y"]:::skill
     twt_qa_content["/twt-qa-content"]:::skill
@@ -232,6 +233,10 @@ flowchart TB
 - /twt-ia - Orchestrate IA define/validate in a single define→validate pass
 - /twt-ia-define - Build or refine sitemap.md and functional-scope.md
 - /twt-ia-validate - Critique sitemap.md + functional-scope.md against positioning and content; write report
+
+### intake
+
+- /twt-project-intake - Normalize messy project notes into a clean site-instruction.md for /twt-site
 
 ### layout
 
@@ -1633,6 +1638,37 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/pre-design-brief.md |  |
 
+### /twt-project-intake
+
+**Category:** intake
+**Version:** 1.0.0
+
+**Inputs:**
+- Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`
+- Optional `--root` to write `site-instruction.md` at the project root instead of `.twt-artifacts/site-instruction.md`
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS
+- site-instruction.md
+- .twt-artifacts/site-instruction.md
+- .twt-artifacts/pre-design/pre-design-brief.md
+- .twt-artifacts/design/design-brief.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/site-instruction.md |  |
+| site-instruction.md (only with --root or explicit user confirmation) |  |
+| .twt-artifacts/intake/intake-report.md |  |
+
 ### /twt-qa
 
 **Category:** qa
@@ -1665,7 +1701,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1691,7 +1727,7 @@ flowchart TB
 ### /twt-qa-content
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.2.0
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1720,7 +1756,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -1775,7 +1811,7 @@ flowchart TB
 ### /twt-qa-links
 
 **Category:** qa
-**Version:** 1.0.2
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1992,7 +2028,7 @@ flowchart TB
 ### /twt-status
 
 **Category:** status
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional: a phase (pre-design|design|develop|qa) or artifact path to scope the check; else the whole pipeline
@@ -2064,6 +2100,7 @@ flowchart TB
 | /twt-positioning-define | none | twt-brand-define, twt-content-fetch |
 | /twt-positioning-validate | twt-positioning-define | none |
 | /twt-pre-design | none | twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia, twt-curation |
+| /twt-project-intake | none | none |
 | /twt-qa | none | twt-qa-content, twt-qa-design, twt-qa-a11y, twt-qa-links, twt-qa-elementor |
 | /twt-qa-a11y | none | none |
 | /twt-qa-content | none | twt-content-validate |
@@ -2089,10 +2126,12 @@ flowchart TB
   elementor-theme/
   export/
   html-site/
+  intake/
   pre-design/
   qa/
   search/
   site-debug.md/
   site-dev-log.md/
+  site-instruction.md/
   site-log.md/
 ```

@@ -1,4 +1,5 @@
-# Usage: pwsh tools/check-skill.ps1 skills/brand/twt-brand.md
+# Usage: pwsh tools/check-skill.ps1 commands/twt-site.md
+#        pwsh tools/check-skill.ps1 skills/twt-brand-define/SKILL.md
 # ASCII-only on purpose: this runs under Windows PowerShell 5.1, which misreads
 # non-ASCII bytes in a UTF-8 (no BOM) file. Do not add em dashes / section signs.
 param([Parameter(Mandatory)][string]$Path)
@@ -10,7 +11,45 @@ $KnownExternalDeps = @('figma-mcp','WebFetch')
 
 function Fail($msg) { Write-Error $msg; exit 1 }
 
+function Get-SkillNameFromPath {
+    param([string]$SkillPath)
+    $leaf = Split-Path $SkillPath -Leaf
+    if ($leaf -ieq 'SKILL.md') {
+        return Split-Path (Split-Path $SkillPath -Parent) -Leaf
+    }
+    return [System.IO.Path]::GetFileNameWithoutExtension($SkillPath)
+}
+
+function Get-RepoRootFromPath {
+    param([string]$SkillPath)
+    $leaf = Split-Path $SkillPath -Leaf
+    $parent = Split-Path $SkillPath -Parent
+    if ($leaf -ieq 'SKILL.md') {
+        $skillsDir = Split-Path $parent -Parent
+        return Split-Path $skillsDir -Parent
+    }
+    return Split-Path $parent -Parent
+}
+
+function Get-NativeSkillFiles {
+    param([string]$RepoRoot)
+    $files = @()
+    $commandsDir = Join-Path $RepoRoot 'commands'
+    $skillsDir = Join-Path $RepoRoot 'skills'
+    if (Test-Path $commandsDir) {
+        $files += Get-ChildItem -Path $commandsDir -Filter '*.md' -File | Where-Object { $_.Name -ne 'README.md' }
+    }
+    if (Test-Path $skillsDir) {
+        $files += Get-ChildItem -Path $skillsDir -Recurse -Filter 'SKILL.md' -File
+    }
+    return $files
+}
+
 if (-not (Test-Path $Path)) { Fail "MISSING FILE: $Path" }
+$resolvedPath = (Resolve-Path $Path).Path
+$expectedName = Get-SkillNameFromPath $resolvedPath
+$repoRoot = Get-RepoRootFromPath $resolvedPath
+
 # Read as UTF-8 so the section-sign (U+00A7) in CONVENTIONS citations is intact.
 $text = Get-Content $Path -Raw -Encoding UTF8
 if ($text -notmatch "^---") { Fail "NO FRONTMATTER: $Path" }
@@ -21,16 +60,9 @@ $fmLines = $fm -split "`r?`n"
 $missing = $required | Where-Object { $fm -notmatch "(?m)^\s*$($_):" }
 if ($missing) { Fail "MISSING FIELDS in ${Path}: $($missing -join ', ')" }
 
-# name == filename
-$expectedName = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+# name == command filename or sub-skill directory
 if ($fm -notmatch "(?m)^\s*name:\s*$([regex]::Escape($expectedName))\s*$") {
     Fail "NAME MISMATCH in ${Path}: frontmatter name must equal '$expectedName'"
-}
-
-# category == parent folder (CONVENTIONS section 1)
-$folder = Split-Path (Split-Path $Path -Parent) -Leaf
-if ($fm -notmatch "(?m)^\s*category:\s*$([regex]::Escape($folder))\s*$") {
-    Fail "CATEGORY MISMATCH in ${Path}: frontmatter category must equal parent folder '$folder'"
 }
 
 # Intent block present
@@ -69,28 +101,26 @@ if ($expectedName -match '-validate$') {
     }
 }
 
-# Cross-file checks (need the whole skills tree)
-$skillsRoot = Split-Path (Split-Path $Path -Parent) -Parent
-if (Test-Path $skillsRoot) {
-    $allFiles = Get-ChildItem -Path $skillsRoot -Recurse -Filter '*.md' | Where-Object { $_.Name -ne 'README.md' }
+# Cross-file checks (need the whole native plugin skill tree)
+if (Test-Path $repoRoot) {
+    $allFiles = Get-NativeSkillFiles $repoRoot
 
-    # Global filename uniqueness: the installer copies every skill FLAT into one
-    # commands dir, so two same-named files in different categories would clobber.
-    $dupes = @($allFiles | Where-Object { $_.Name -eq "$expectedName.md" })
+    # Global skill-name uniqueness across commands/*.md and skills/*/SKILL.md.
+    $dupes = @($allFiles | Where-Object { (Get-SkillNameFromPath $_.FullName) -eq $expectedName })
     if ($dupes.Count -gt 1) {
         $where = ($dupes | ForEach-Object { $_.FullName }) -join '; '
-        Fail "DUPLICATE SKILL FILENAME '$expectedName.md' ($($dupes.Count) copies): $where (installer copies flat, filenames must be globally unique)"
+        Fail "DUPLICATE SKILL NAME '$expectedName' ($($dupes.Count) copies): $where"
     }
 
     # Dangling dependencies: every hard/soft dep must resolve to a real skill
     # file or a known external tool.
-    $allNames = $allFiles | ForEach-Object { $_.BaseName }
+    $allNames = $allFiles | ForEach-Object { Get-SkillNameFromPath $_.FullName }
     $deps = @()
     $deps += Get-YamlList -Lines $fmLines -Key 'hard' -KeyIndent 2
     $deps += Get-YamlList -Lines $fmLines -Key 'soft' -KeyIndent 2
     $dangling = $deps | Where-Object { $_ -and ($allNames -notcontains $_) -and ($KnownExternalDeps -notcontains $_) }
     if ($dangling) {
-        Fail "DANGLING DEPENDENCY in ${Path}: $($dangling -join ', ') (not a skill in $skillsRoot and not a known external: $($KnownExternalDeps -join ', '))"
+        Fail "DANGLING DEPENDENCY in ${Path}: $($dangling -join ', ') (not a skill in $repoRoot and not a known external: $($KnownExternalDeps -join ', '))"
     }
 }
 
@@ -99,9 +129,8 @@ if (Test-Path $skillsRoot) {
 # like the old phantom "13.1"). The section sign (U+00A7) is built at runtime via
 # [char]0x00A7 so this script's source stays pure ASCII (Windows PowerShell 5.1
 # mangles non-ASCII bytes in a no-BOM file).
-if ($skillsRoot) {
-    $repoRoot = Split-Path $skillsRoot -Parent
-    if ([string]::IsNullOrEmpty($repoRoot)) { $repoRoot = '.' }   # relative 'skills' -> repo root is cwd
+if ($repoRoot) {
+    if ([string]::IsNullOrEmpty($repoRoot)) { $repoRoot = '.' }
     $convPath = Join-Path $repoRoot 'CONVENTIONS.md'
     if (Test-Path $convPath) {
         $sectionSign = [char]0x00A7

@@ -1,8 +1,8 @@
 ---
 name: twt-qa-a11y
 category: qa
-description: (v1.0.1) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
-version: 1.0.1
+description: (v1.1.0) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -38,8 +38,16 @@ writes:
 Parse `$ARGUMENTS`. URL → **live mode** (`WebFetch` the entry page + up to 25 deduped internal pages). Else → **local mode** (`site/*.html`, else `mockup/pages/*.html`). If neither URL nor local HTML exists, abort: "No built HTML or URL to audit." Read `tokens.css` for contrast computation (local mode; in live mode compute contrast only where colors are inspectable).
 
 ## Step 2 — Run checks
-Per page:
-- **BLOCKER** — `<img>` without `alt`; a skipped heading level (e.g. `h1`→`h3`); no `<main>` or landmark element; a form control without an associated label; a declared text/background **token pair** that fails WCAG AA (< 4.5:1 for normal text).
+
+In **local mode, gather the deterministic counts first — don't hand-scan attributes.** Run the bundled scanner; it returns exact `img_no_alt`, `control_no_label`, `heading_jumps`, `missing_h1`, `missing_lang`, and `link_no_text` counts with `file:line` locations:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" a11y "$CLAUDE_PROJECT_DIR"
+```
+
+Use its `counts`/`findings[]` for the attribute/structure evidence. **Contrast is not in the script** — compute WCAG AA token pairs yourself by reading `tokens.css` (the one check needing color math). In **live mode** there's no script — judge attributes from the `WebFetch`-rendered pages. Then, per page:
+
+- **BLOCKER** — `<img>` without `alt` (scanner's `img_no_alt`); a skipped heading level, e.g. `h1`→`h3` (scanner's `heading_jumps`); no `<main>` or landmark element; a form control without an associated label (scanner's `control_no_label`); a declared text/background **token pair** that fails WCAG AA (< 4.5:1 for normal text — your contrast computation).
 - **WARNING** — more than one `<h1>`; a link/button with no discernible text; non-descriptive `alt` (e.g. "image").
 - **SUGGESTION** — no skip-link; missing `lang` attribute; no focus-visible styling.
 

@@ -1,8 +1,8 @@
 ---
 name: twt-qa-design
 category: qa
-description: (v1.0.1) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
-version: 1.0.1
+description: (v1.1.0) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Optional local path; a URL is rejected (source-only audit)
@@ -44,7 +44,16 @@ If `$ARGUMENTS` contains an `http(s)://` URL, write `.twt-artifacts/qa/design-re
 Audit `site/assets/css/*.css` + `site/*.html` if `site/` exists; otherwise `.twt-artifacts/design/mockup/styles.css` + `mockup/pages/*.html`. If neither exists, abort: "No built source to audit — build the site (Phase 3) first." Read `tokens.css`, `components.md`, and `layouts/` as baselines.
 
 ## Step 3 — Run checks
-- **BLOCKER** — a hex (`#abc`/`#aabbcc`), raw `px`/`rem` length, or raw font-family **literal** in token-only CSS where a token exists; a `var(--x)` referencing a custom property absent from `tokens.css`; a page's section omits a component its `layouts/<page>.md` requires.
+
+**First, gather the deterministic counts — don't eyeball the CSS.** Run the bundled scanner; it returns exact `hex_literals`, `length_literals`, `font_literals`, and `undefined_var_refs` counts with `file:line` locations, and it already ignores literals that are token *definitions* (e.g. `--color-error: #B23A48` even in a non-tokens file) and literals inside `tokens.css`:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" tokens "$CLAUDE_PROJECT_DIR"
+```
+
+Use its `counts` as the evidence backbone and its `findings[]` locations in your report. You still apply judgment the script can't: decide which `length_literals` are **sanctioned** (44px touch targets, SVG geometry, the comment-flagged exceptions) vs. real BLOCKERs, and run the **structure-vs-design-system** check yourself by reading `layouts/<page>.md` against each page. Then classify:
+
+- **BLOCKER** — a hex (`#abc`/`#aabbcc`), raw `px`/`rem` length, or raw font-family **literal** in token-only CSS where a token exists (from the scanner, minus sanctioned exceptions); a `var(--x)` referencing a custom property absent from `tokens.css` (scanner's `undefined_var_refs`); a page's section omits a component its `layouts/<page>.md` requires.
 - **WARNING** — a literal that approximates an existing token (should reference it); a component/variant in the build not documented in `components.md`.
 - **SUGGESTION** — a token defined in `tokens.css` but never used; minor spacing-scale drift.
 (Ignore literals inside `tokens.css` itself — that file *defines* the values.)
