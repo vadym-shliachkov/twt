@@ -1,7 +1,7 @@
 ---
 name: twt-elementor-block-creator
 category: elementor
-description: Build an Elementor widget or full-page template following project conventions
+description: (v1.2.1) Build an Elementor widget or full-page template following project conventions
 version: 1.2.1
 accepts_arguments: true
 inputs:

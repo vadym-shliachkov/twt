@@ -1,7 +1,7 @@
 ---
 name: twt-elementor-theme-creator
 category: elementor
-description: Scaffold a production-ready Hello Elementor child theme for a WordPress project
+description: (v1.1.1) Scaffold a production-ready Hello Elementor child theme for a WordPress project
 version: 1.1.1
 accepts_arguments: false
 inputs:

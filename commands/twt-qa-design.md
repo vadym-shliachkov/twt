@@ -1,7 +1,7 @@
 ---
 name: twt-qa-design
 category: qa
-description: Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
+description: (v1.0.1) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
 version: 1.0.1
 accepts_arguments: true
 inputs:

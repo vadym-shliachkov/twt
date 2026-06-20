@@ -1,7 +1,7 @@
 ---
 name: twt-marketplace-docs
 category: meta
-description: Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
+description: (v1.0.3) Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
 version: 1.0.3
 accepts_arguments: false
 inputs: []

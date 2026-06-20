@@ -1,7 +1,7 @@
 ---
 name: twt-qa-a11y
 category: qa
-description: Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
+description: (v1.0.1) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 version: 1.0.1
 accepts_arguments: true
 inputs:

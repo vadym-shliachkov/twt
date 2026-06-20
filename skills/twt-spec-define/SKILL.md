@@ -1,7 +1,7 @@
 ---
 name: twt-spec-define
 category: spec
-description: Interview the user (brainstorming-style) into a north-star specification.md
+description: (v1.0.2) Interview the user (brainstorming-style) into a north-star specification.md
 version: 1.0.2
 accepts_arguments: true
 inputs:

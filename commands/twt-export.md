@@ -1,7 +1,7 @@
 ---
 name: twt-export
 category: export
-description: Orchestrate PDF, DOCX, PPTX, and template-based exports
+description: (v1.0.0) Orchestrate PDF, DOCX, PPTX, and template-based exports
 version: 1.0.0
 accepts_arguments: true
 inputs:

@@ -1,7 +1,7 @@
 ---
 name: twt-positioning
 category: positioning
-description: Orchestrate positioning define/validate in a single define→validate pass
+description: (v1.1.2) Orchestrate positioning define/validate in a single define→validate pass
 version: 1.1.2
 accepts_arguments: true
 inputs:

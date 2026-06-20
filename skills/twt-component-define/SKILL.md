@@ -1,7 +1,7 @@
 ---
 name: twt-component-define
 category: component
-description: Define component specs (components.md) and render a token-driven gallery.html
+description: (v1.3.1) Define component specs (components.md) and render a token-driven gallery.html
 version: 1.3.1
 accepts_arguments: true
 inputs:

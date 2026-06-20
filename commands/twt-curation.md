@@ -1,7 +1,7 @@
 ---
 name: twt-curation
 category: curation
-description: Orchestrate curation define/validate in a single define→validate pass
+description: (v1.2.2) Orchestrate curation define/validate in a single define→validate pass
 version: 1.2.2
 accepts_arguments: true
 inputs:

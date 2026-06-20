@@ -1,7 +1,7 @@
 ---
 name: twt-content-fetch-doc
 category: content
-description: Extract a Word/Google Doc's content and save as clean Markdown
+description: (v1.0.0) Extract a Word/Google Doc's content and save as clean Markdown
 version: 1.0.0
 accepts_arguments: true
 inputs:

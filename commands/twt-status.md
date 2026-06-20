@@ -1,7 +1,7 @@
 ---
 name: twt-status
 category: status
-description: Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
+description: (v1.0.0) Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
 version: 1.0.0
 accepts_arguments: true
 inputs:

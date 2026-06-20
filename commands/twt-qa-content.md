@@ -1,7 +1,7 @@
 ---
 name: twt-qa-content
 category: qa
-description: Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
+description: (v1.1.1) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
 version: 1.1.1
 accepts_arguments: true
 inputs:

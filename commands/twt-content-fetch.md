@@ -1,7 +1,7 @@
 ---
 name: twt-content-fetch
 category: content
-description: Detect provided sources and dispatch to the right content-fetch sub-skill
+description: (v1.0.0) Detect provided sources and dispatch to the right content-fetch sub-skill
 version: 1.0.0
 accepts_arguments: true
 inputs:

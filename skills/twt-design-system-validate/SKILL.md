@@ -1,7 +1,7 @@
 ---
 name: twt-design-system-validate
 category: design-system
-description: Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
+description: (v1.3.1) Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
 version: 1.3.1
 accepts_arguments: false
 inputs:

@@ -1,7 +1,7 @@
 ---
 name: twt-export-pdf
 category: export
-description: Convert Markdown to a polished PDF with the shared document template
+description: (v1.0.0) Convert Markdown to a polished PDF with the shared document template
 version: 1.0.0
 accepts_arguments: true
 inputs:

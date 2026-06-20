@@ -1,7 +1,7 @@
 ---
 name: twt-ia
 category: ia
-description: Orchestrate IA define/validate in a single define→validate pass
+description: (v1.1.2) Orchestrate IA define/validate in a single define→validate pass
 version: 1.1.2
 accepts_arguments: true
 inputs:

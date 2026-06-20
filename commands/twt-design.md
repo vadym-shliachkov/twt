@@ -1,7 +1,7 @@
 ---
 name: twt-design
 category: design
-description: Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+description: (v1.2.4) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
 version: 1.2.4
 accepts_arguments: true
 inputs:

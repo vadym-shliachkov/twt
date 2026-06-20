@@ -1,7 +1,7 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: Phase 3 express — from a Figma link, build/update the design system and jump to development
+description: (v1.4.1) Phase 3 express — from a Figma link, build/update the design system and jump to development
 version: 1.4.1
 accepts_arguments: true
 inputs:

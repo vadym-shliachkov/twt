@@ -1,7 +1,7 @@
 ---
 name: twt-layout-define
 category: layout
-description: Define per-page layout specs (section order, component slots, content map, breakpoints)
+description: (v1.2.1) Define per-page layout specs (section order, component slots, content map, breakpoints)
 version: 1.2.1
 accepts_arguments: true
 inputs:

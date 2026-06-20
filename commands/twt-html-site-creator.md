@@ -1,7 +1,7 @@
 ---
 name: twt-html-site-creator
 category: html
-description: Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md)
+description: (v1.1.1) Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md)
 version: 1.1.1
 accepts_arguments: false
 inputs:

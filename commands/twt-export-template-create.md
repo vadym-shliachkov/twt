@@ -1,7 +1,7 @@
 ---
 name: twt-export-template-create
 category: export
-description: Create reusable export templates from brand or user style instructions
+description: (v1.0.0) Create reusable export templates from brand or user style instructions
 version: 1.0.0
 accepts_arguments: true
 inputs:

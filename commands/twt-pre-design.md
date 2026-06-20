@@ -1,7 +1,7 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+description: (v1.1.6) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
 version: 1.1.6
 accepts_arguments: true
 inputs:

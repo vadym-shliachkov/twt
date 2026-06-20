@@ -1,7 +1,7 @@
 ---
 name: twt-content-fetch-site
 category: content
-description: Fetch a website's content and save as clean Markdown
+description: (v1.1.1) Fetch a website's content and save as clean Markdown
 version: 1.1.1
 accepts_arguments: true
 inputs:

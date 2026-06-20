@@ -1,7 +1,7 @@
 ---
 name: twt-site
 category: site
-description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
+description: (v1.7.1) Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
 version: 1.7.1
 accepts_arguments: true
 inputs:

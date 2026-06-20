@@ -1,7 +1,7 @@
 ---
 name: twt-search-site
 category: search
-description: Search a website for an exact string; report page links with ±100 chars of context per match
+description: (v1.0.1) Search a website for an exact string; report page links with ±100 chars of context per match
 version: 1.0.1
 accepts_arguments: true
 inputs:

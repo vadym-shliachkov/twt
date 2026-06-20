@@ -1,7 +1,7 @@
 ---
 name: twt-spec-validate
 category: spec
-description: Critique specification.md and write a validation-report.md (read-only critic)
+description: (v1.0.2) Critique specification.md and write a validation-report.md (read-only critic)
 version: 1.0.2
 accepts_arguments: false
 inputs:

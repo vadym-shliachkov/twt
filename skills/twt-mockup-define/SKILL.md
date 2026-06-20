@@ -1,7 +1,7 @@
 ---
 name: twt-mockup-define
 category: mockup
-description: Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
+description: (v1.2.1) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
 version: 1.2.1
 accepts_arguments: true
 inputs:

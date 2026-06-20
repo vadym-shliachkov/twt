@@ -1,7 +1,7 @@
 ---
 name: twt-positioning-define
 category: positioning
-description: Build or refine positioning.md — audience, value props, promotion priorities
+description: (v1.0.1) Build or refine positioning.md — audience, value props, promotion priorities
 version: 1.0.1
 accepts_arguments: true
 inputs:

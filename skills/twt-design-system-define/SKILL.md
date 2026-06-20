@@ -1,7 +1,7 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
+description: (v1.5.1) Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
 version: 1.5.1
 accepts_arguments: true
 inputs:

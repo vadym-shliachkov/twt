@@ -1,7 +1,7 @@
 ---
 name: twt-qa
 category: qa
-description: Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
+description: (v1.0.1) Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
 version: 1.0.1
 accepts_arguments: true
 inputs:

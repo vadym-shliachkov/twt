@@ -1,7 +1,7 @@
 ---
 name: twt-curation-define
 category: curation
-description: Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines
+description: (v1.0.2) Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines
 version: 1.0.2
 accepts_arguments: true
 inputs:

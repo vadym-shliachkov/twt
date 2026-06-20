@@ -1,7 +1,7 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: Create a human-readable XLSX content approval checklist for every project page
+description: (v1.0.1) Create a human-readable XLSX content approval checklist for every project page
 version: 1.0.1
 accepts_arguments: true
 inputs:

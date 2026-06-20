@@ -1,7 +1,7 @@
 ---
 name: twt-qa-elementor
 category: qa
-description: Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
+description: (v1.0.1) Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
 version: 1.0.1
 accepts_arguments: true
 inputs:

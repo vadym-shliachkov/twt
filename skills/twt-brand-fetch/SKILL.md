@@ -1,7 +1,7 @@
 ---
 name: twt-brand-fetch
 category: brand
-description: Extract brand attributes from a brand book, Figma, or screenshots into raw notes
+description: (v1.0.0) Extract brand attributes from a brand book, Figma, or screenshots into raw notes
 version: 1.0.0
 accepts_arguments: true
 inputs:

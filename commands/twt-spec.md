@@ -1,7 +1,7 @@
 ---
 name: twt-spec
 category: spec
-description: Orchestrate the spec define/validate skills in a single define→validate pass
+description: (v1.1.2) Orchestrate the spec define/validate skills in a single define→validate pass
 version: 1.1.2
 accepts_arguments: true
 inputs:

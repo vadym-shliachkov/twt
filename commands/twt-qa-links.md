@@ -1,7 +1,7 @@
 ---
 name: twt-qa-links
 category: qa
-description: Audit built or served pages for link integrity and declared responsive tiers
+description: (v1.0.2) Audit built or served pages for link integrity and declared responsive tiers
 version: 1.0.2
 accepts_arguments: true
 inputs:

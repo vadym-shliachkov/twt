@@ -1,7 +1,7 @@
 ---
 name: twt-develop
 category: develop
-description: Phase 3 full path — promote the Phase-2 design into the chosen build target
+description: (v1.3.2) Phase 3 full path — promote the Phase-2 design into the chosen build target
 version: 1.3.2
 accepts_arguments: true
 inputs:

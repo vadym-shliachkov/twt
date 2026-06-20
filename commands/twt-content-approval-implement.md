@@ -1,7 +1,7 @@
 ---
 name: twt-content-approval-implement
 category: content
-description: Apply ready approved XLSX content into the built site or development artifacts
+description: (v1.0.1) Apply ready approved XLSX content into the built site or development artifacts
 version: 1.0.1
 accepts_arguments: true
 inputs:

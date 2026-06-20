@@ -1,7 +1,7 @@
 ---
 name: twt-content-fetch-pdf
 category: content
-description: Extract a PDF's text content and save as clean Markdown
+description: (v1.0.0) Extract a PDF's text content and save as clean Markdown
 version: 1.0.0
 accepts_arguments: true
 inputs:

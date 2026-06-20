@@ -1,7 +1,7 @@
 ---
 name: twt-export-presentation
 category: export
-description: Convert Markdown to PPTX or PDF slides via the presentation export script
+description: (v1.0.0) Convert Markdown to PPTX or PDF slides via the presentation export script
 version: 1.0.0
 accepts_arguments: true
 inputs:
