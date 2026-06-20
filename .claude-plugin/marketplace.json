@@ -1,0 +1,18 @@
+{
+  "name": "twt-marketplace",
+  "owner": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "metadata": {
+    "description": "Marketplace hosting the twt web-design pipeline plugin.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "twt",
+      "source": "./",
+      "description": "Four-phase web-design pipeline: /twt-* orchestrators + dispatched sub-skills, hooks, and runtime tools."
+    }
+  ]
+}

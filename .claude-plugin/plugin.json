@@ -1,0 +1,20 @@
+{
+  "name": "twt",
+  "version": "1.0.0",
+  "description": "Personal web-design skills marketplace: a four-phase pre-design -> design -> develop -> QA pipeline of /twt-* orchestrators plus their dispatched sub-skills.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "web-design",
+    "design-system",
+    "elementor",
+    "figma",
+    "qa",
+    "claude-code"
+  ]
+}
