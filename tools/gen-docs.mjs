@@ -153,7 +153,7 @@ let stampStale = 0;
 for (const { path, expectedName, source } of sourceFiles) {
   // Read raw bytes, stamp, then write back if changed — preserving EOL.
   const rawBuf = readFileSync(path);
-  const rawText = rawBuf.toString("utf8");
+  const rawText = rawBuf.toString("utf8").replace(/^﻿/, ""); // strip BOM if present
   const eol = detectEol(rawText);
 
   const stamped = stampVersion(rawText);
@@ -179,7 +179,7 @@ for (const { path, expectedName, source } of sourceFiles) {
   const REQ = ["name", "category", "description", "version", "inputs", "reads", "writes"];
   for (const k of REQ) {
     const v = fm[k];
-    if (v === undefined || (Array.isArray(v) && v.length === 0 && k !== "writes" && k !== "reads")) {
+    if (v === undefined || (Array.isArray(v) && v.length === 0 && k !== "writes" && k !== "reads" && k !== "inputs")) {
       warnings.push(`${path}: missing field ${k}`);
     }
   }

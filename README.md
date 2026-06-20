@@ -6,15 +6,11 @@ A collection of Claude Code slash commands you can install once and use across a
 
 ## What is this?
 
-**twt** is a personal skills marketplace for Claude Code. Each skill is a `/twt-*` slash command that extends Claude with a specific capability. Clone this repo, run the installer, and the commands are immediately available in both the Claude Code CLI and the Desktop application.
+**twt** is a personal skills marketplace for Claude Code. Each skill is a `/twt-*` slash command that extends Claude with a specific capability. Install the plugin once and the commands are immediately available in both the Claude Code CLI and the Desktop application.
 
 ---
 
 ## Quick Start
-
-### Native plugin (recommended)
-
-If your Claude Code build supports `/plugin` commands:
 
 ```
 /plugin marketplace add vadym-shliachkov/twt
@@ -25,51 +21,17 @@ Then **restart Claude Code** (CLI or Desktop). All `/twt-*` commands are immedia
 
 After the plugin is active, run `/twt-setup` once in any project to merge the curated permission allowlist into that project's `settings.json` — this cuts the "Do you want to proceed?" prompts during pipeline runs.
 
-### Manual / legacy install
-
-For users not on a `/plugin`-capable build, clone the repo and run the installer:
-
-#### macOS / Linux
-
-```bash
-git clone <your-repo-url> twt
-cd twt
-bash install.sh
-```
-
-#### Windows (PowerShell)
-
-```powershell
-git clone <your-repo-url> twt
-cd twt
-.\install.ps1
-```
-
-After installing, **restart Claude Code** (CLI or Desktop) so it picks up the new commands.
-
 ---
 
 ## Uninstalling
 
-**Plugin install:** `/plugin remove twt` and restart.
-
-**Legacy install:**
-
-```bash
-# macOS / Linux
-bash uninstall.sh
-
-# Windows
-.\uninstall.ps1
-```
+`/plugin remove twt` and restart.
 
 ---
 
 ## Using on a new Claude account
 
-**Plugin install:** run the two `/plugin` commands above on the new machine — no cloning required.
-
-**Legacy install:** clone the repo on the new machine, run the installer. Commands are account-agnostic; they live in the local `~/.claude/` directory.
+Run the two `/plugin` commands above on the new machine — no cloning required.
 
 ---
 
@@ -106,7 +68,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia | ia | Orchestrate IA define/validate in a single define→validate pass |
 | /twt-layout | layout | Orchestrate layout define/validate in a single define→validate pass |
-| /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter |
+| /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | /twt-mockup | mockup | Orchestrate mockup define/validate in a single define→validate pass |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
@@ -140,11 +102,7 @@ twt/
 │       └── SKILL.md
 ├── hooks/                 ← bundled plugin hooks
 │   └── hooks.json         ← scope-guard + debug tracer (activated by plugin)
-├── tools/                 ← Node scripts invoked from skill bodies
-├── install.sh             ← macOS / Linux legacy installer
-├── install.ps1            ← Windows legacy installer
-├── uninstall.sh           ← macOS / Linux legacy uninstaller
-└── uninstall.ps1          ← Windows legacy uninstaller
+└── tools/                 ← Node scripts invoked from skill bodies
 ```
 
 Category is expressed only via the `category:` frontmatter field — there are no per-category subfolders.

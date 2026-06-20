@@ -34,7 +34,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia](#twt-ia) | ia | Orchestrate IA define/validate in a single define→validate pass |
 | [/twt-layout](#twt-layout) | layout | Orchestrate layout define/validate in a single define→validate pass |
-| [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter |
+| [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate in a single define→validate pass |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
@@ -1089,7 +1089,7 @@ One-call layout workflow: define → validate in one pass (§9 — no iteration 
 **Version:** 1.0.3
 **Accepts arguments:** no
 
-Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, category `README.md` files, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill under `skills/`. Ensures docs never drift from skills.
+Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill. Stamps `(vX.Y.Z)` into each skill's committed `description:` field from its `version:` frontmatter. Ensures docs never drift from skills.
 
 **Inputs:**
 - (none)
@@ -1099,25 +1099,23 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 - Soft: none
 
 **Reads:**
-- skills/**/*.md
-- CONVENTIONS.md
+- commands/*.md
+- skills/*/SKILL.md
 
 **Writes:**
 - SKILLS.md
 - architecture.md
-- skills/*/README.md
 - README.md (marked block only)
 
 **Non-goals:**
-- Doesn't modify skill files themselves
+- Doesn't modify skill body content — only stamps the `description:` frontmatter field and rewrites generated files
 - Doesn't validate skill body content — only frontmatter
-- Doesn't run the installer
+- Doesn't create per-category README files (those no longer exist)
 - Doesn't enforce strict lint rules — only warns about missing required fields
 
 **Success criteria:**
-- `SKILLS.md` lists every skill found, grouped by category and sorted alphabetically within each category
+- `SKILLS.md` lists every skill found, sorted alphabetically, with the `(vX.Y.Z)` version stripped from the displayed description
 - `architecture.md` contains a current mermaid diagram of skill dependencies plus a per-skill detail table
-- `skills/<category>/README.md` exists for every populated category folder
 - Validation warnings printed for any skill missing required frontmatter fields
 - Every auto-generated file starts with the AUTO-GENERATED header
 - Root `README.md` marked block (if present) is updated

@@ -241,7 +241,7 @@ flowchart TB
 
 ### meta
 
-- /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
+- /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
 - /twt-setup - One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
 
 ### mockup
@@ -1419,15 +1419,14 @@ flowchart TB
 - Soft consumers: none
 
 **Reads:**
-- skills/**/*.md
-- CONVENTIONS.md
+- commands/*.md
+- skills/*/SKILL.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | SKILLS.md |  |
 | architecture.md |  |
-| skills/*/README.md |  |
 | README.md (marked block only) |  |
 
 ### /twt-mockup

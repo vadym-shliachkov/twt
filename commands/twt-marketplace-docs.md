@@ -1,7 +1,7 @@
 ---
 name: twt-marketplace-docs
 category: meta
-description: (v1.0.3) Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
+description: (v1.0.3) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
 version: 1.0.3
 accepts_arguments: false
 inputs: []
@@ -9,12 +9,11 @@ dependencies:
   hard: []
   soft: []
 reads:
-  - skills/**/*.md
-  - CONVENTIONS.md
+  - commands/*.md
+  - skills/*/SKILL.md
 writes:
   - SKILLS.md
   - architecture.md
-  - skills/*/README.md
   - README.md (marked block only)
 ---
 
@@ -22,25 +21,24 @@ writes:
 
 ## Intent
 
-**Purpose:** Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, category `README.md` files, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill under `skills/`. Ensures docs never drift from skills.
+**Purpose:** Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill. Stamps `(vX.Y.Z)` into each skill's committed `description:` field from its `version:` frontmatter. Ensures docs never drift from skills.
 
 **Non-goals:**
-- Doesn't modify skill files themselves
+- Doesn't modify skill body content — only stamps the `description:` frontmatter field and rewrites generated files
 - Doesn't validate skill body content — only frontmatter
-- Doesn't run the installer
+- Doesn't create per-category README files (those no longer exist)
 - Doesn't enforce strict lint rules — only warns about missing required fields
 
 **Success criteria:**
-- `SKILLS.md` lists every skill found, grouped by category and sorted alphabetically within each category
+- `SKILLS.md` lists every skill found, sorted alphabetically, with the `(vX.Y.Z)` version stripped from the displayed description
 - `architecture.md` contains a current mermaid diagram of skill dependencies plus a per-skill detail table
-- `skills/<category>/README.md` exists for every populated category folder
 - Validation warnings printed for any skill missing required frontmatter fields
 - Every auto-generated file starts with the AUTO-GENERATED header
 - Root `README.md` marked block (if present) is updated
 
 ---
 
-## Step 0 — Run the generator script (preferred)
+## Step 0 — Run the generator script
 
 This regeneration is **deterministic**, so it is delegated to a script rather than done by hand — running it as a model wastes tokens and risks format drift. From the marketplace repo root:
 
@@ -49,237 +47,59 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs"            # regenerate all deri
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs" --check    # CI: exit 1 if any derived doc is stale
 ```
 
-The script (`tools/gen-docs.mjs`, zero dependencies) parses every skill's frontmatter + Intent block and rewrites `SKILLS.md`, `architecture.md`, each `skills/<category>/README.md`, and the `README.md` marked block — preserving each file's existing line endings and printing the same skills-indexed / categories / validation-warnings summary described below. It only needs Node.
+The script (`tools/gen-docs.mjs`, zero dependencies) reads skills from two locations:
+- `commands/*.md` — orchestrators and standalone tools (39+ skills)
+- `skills/*/SKILL.md` — sub-skills (one directory per sub-skill)
 
-If the script runs successfully, **you are done** — report its summary output (Step 8). Only fall back to the manual Steps 1–8 below if Node is unavailable or the script errors; they document the exact same output contract the script implements, so the two never diverge.
+Category comes from the `category:` frontmatter field (not from a folder name). The script stamps `(vX.Y.Z)` into each skill's `description:` from its `version:` field, then rewrites `SKILLS.md`, `architecture.md`, and the `README.md` marked block — preserving each file's existing line endings. It prints a skills-indexed / categories / validation-warnings summary and exits 0 on success (or 1 when `--check` finds stale files).
 
-## Step 1 — Scan skills directory
+If the script runs successfully, **you are done** — report its summary output (Step 5). Only fall back to the manual steps below if Node is unavailable or the script errors.
 
-Recursively scan `skills/**/*.md` (one level deep: `skills/<category>/twt-<name>.md`). For each file:
+## Step 1 — Scan skill files
+
+Read skills from two locations (plugin layout):
+- `commands/*.md` — skip `README.md`; the file's basename (without `.md`) is the expected skill name
+- `skills/*/SKILL.md` — the parent directory name is the expected skill name
+
+For each file:
+- Strip a leading BOM if present
 - Parse YAML frontmatter (text between the first two `---` markers)
-- Capture the Intent block (text between `## Intent` and the next `---` or `## Step` heading)
-- Build an in-memory record: `{filepath, category, frontmatter (object), intent (object with purpose/non_goals/success_criteria)}`
+- Capture the Intent block (text between `## Intent` and the next `---`)
+- Stamp `(vX.Y.Z)` into the `description:` line using the `version:` field; write back if changed
 
-Skip files that have no frontmatter (warn about them but don't crash). Skip `README.md` files inside category folders (those are generated, not skills).
+Build an in-memory record per skill: `{name, category, description, version, accepts_arguments, inputs, reads, writes, dependencies, intent}`.
 
 ## Step 2 — Validate frontmatter
 
-For each skill, verify these fields are present and non-empty:
-- `name`, `category`, `description`, `version`, `accepts_arguments`, `inputs`, `dependencies.hard`, `dependencies.soft`, `reads`, `writes`
+For each skill, verify these fields are present and non-empty (an explicit empty list `[]` is acceptable for `inputs`, `reads`, `writes`):
+- `name`, `category`, `description`, `version`, `accepts_arguments`, `inputs`, `reads`, `writes`
 
-For any missing or malformed field, append an entry to a `warnings` list: `<filepath>: missing field <name>`. Continue regardless — validation is a warning, not an abort.
+For any genuinely absent field (undefined), append an entry to a `warnings` list: `<filepath>: missing field <name>`. Continue regardless — validation is a warning, not an abort.
 
-Also verify `name` matches the filename (sans `.md`) and `category` matches the parent folder. Warn on mismatch.
+Also verify `name` matches the expected name (file basename for commands, directory name for skills). Warn on mismatch. Warn if `accepts_arguments` is absent.
 
 ## Step 3 — Compute reverse dependencies
 
-For each skill `S`, scan all other skills for entries in `dependencies.hard` or `dependencies.soft` matching `S.name`. Attach the resulting list as `feeds_into` (separated into `hard_consumers` and `soft_consumers`).
+For each skill `S`, scan all other skills for entries in `dependencies.hard` or `dependencies.soft` matching `S.name`. Attach the resulting list as `hard_consumers` and `soft_consumers`.
 
-## Step 4 — Render SKILLS.md
+## Step 4 — Render and write output files
 
-Overwrite `SKILLS.md` with this exact structure:
+Render and overwrite three files (preserving each file's existing line endings):
 
-```markdown
-<!-- AUTO-GENERATED by /twt-marketplace-docs · do not edit by hand · regenerate after any frontmatter change -->
+**`SKILLS.md`** — Index table (one row per "public" skill — those not filtered as internal define/validate sub-skills with a matching bare orchestrator) plus per-skill detail sections.
 
-# twt Skills — Command Reference
+**`architecture.md`** — Mermaid flowchart of all skill dependencies, skills-by-category listing, per-skill detail tables (with writes as a table), cross-skill dependency table, and artifact namespace summary derived from all `writes` paths starting with `.twt-artifacts/`.
 
-All commands use the `/twt-` prefix. Type the command name in Claude Code to run it.
+**`README.md` marked block** — Replace the content between `<!-- TWT_SKILLS_TABLE_START -->` and `<!-- TWT_SKILLS_TABLE_END -->` with a `| command | category | description |` table row for each public skill (description with `(vX.Y.Z)` stripped).
 
-## Index
-
-| command | category | description |
-|---------|----------|-------------|
-[one row per skill, sorted by category then name, with link to the per-skill section below]
-
----
-
-[per-skill detail section: one ## heading per skill in same order as the table]
-```
-
-For each skill:
-
-```markdown
-## /<skill.name>
-
-**Category:** <skill.category>
-**Version:** <skill.version>
-**Accepts arguments:** <yes/no>
-
-<skill.intent.purpose>
-
-**Inputs:**
-- bullet list from frontmatter.inputs
-
-**Dependencies:**
-- Hard: <comma-separated list from dependencies.hard, or "none">
-- Soft: <comma-separated list from dependencies.soft, or "none">
-
-**Reads:**
-- bullet list from frontmatter.reads
-
-**Writes:**
-- bullet list from frontmatter.writes
-
-**Non-goals:**
-- bullet list from intent.non_goals
-
-**Success criteria:**
-- bullet list from intent.success_criteria
-
----
-```
-
-## Step 5 — Render architecture.md
-
-Overwrite `architecture.md` with this exact structure:
-
-```markdown
-<!-- AUTO-GENERATED by /twt-marketplace-docs · do not edit by hand · regenerate after any frontmatter change -->
-
-# twt — Skill Architecture
-
-Auto-generated dependency and artifact map. For editorial workflows, see [WORKFLOWS.md](WORKFLOWS.md).
-
-## Skill dependency graph
-
-```mermaid
-flowchart TB
-    [for each skill: <name>["/<name>"]:::skill]
-    [for each skill S, for each dep D in S.dependencies.hard: D --> S]
-    [for each skill S, for each dep D in S.dependencies.soft: D -.-> S]
-
-    classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
-```
-
-## Skills by category
-
-For each category (sorted), one ### subsection listing the skills in that category with a one-line description from frontmatter.
-
-## Per-skill details
-```
-
-For each skill:
-
-```markdown
-### /<skill.name>
-
-**Category:** <skill.category>
-**Version:** <skill.version>
-
-**Inputs:**
-- bullet list
-
-**Dependencies:**
-- Hard: <list or "none">
-- Soft: <list or "none">
-
-**Feeds into:**
-- Hard consumers: <list of skills that depend hard on this, or "none">
-- Soft consumers: <list of skills that depend soft on this, or "none">
-
-**Reads:**
-- bullet list
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-| <each path from writes> | (notes blank for now) |
-```
-
-Then a final cross-skill dependency table:
-
-```markdown
-## Cross-skill dependency table
-
-| Skill | Hard deps | Soft deps |
-|-------|-----------|-----------|
-[one row per skill]
-
-## Artifact namespace summary
-
-```
-.twt-artifacts/
-[derived from grouping all writes paths starting with .twt-artifacts/ by their second segment]
-```
-```
-
-## Step 6 — Render category READMEs
-
-For each category folder under `skills/`, overwrite `skills/<category>/README.md` with:
-
-```markdown
-<!-- AUTO-GENERATED by /twt-marketplace-docs · do not edit by hand -->
-
-# <category>
-
-<category-description, looked up from this hardcoded mapping below; default to "Skills in the <category> category.">
-
-## Skills
-
-| command | description |
-|---------|-------------|
-[one row per skill in this category]
-```
-
-**Category description mapping** (extend as new categories are added):
-- `content` — Skills for fetching and processing external content
-- `elementor` — Skills for building Hello Elementor child themes and widgets
-- `meta` — Skills that manage the twt marketplace itself
-- `brand` — Skills for capturing or deriving brand identity (palette, voice, tone, values)
-- `spec` — Skills for capturing the north-star specification (vision, functional scope, visual & motion direction)
-- `positioning` — Skills for defining audience, value propositions, and promotion priorities
-- `ia` — Skills for defining sitemap and functional scope (information architecture)
-- `curation` — Skills for deciding keep/skip/elevate and building page outlines
-- `pre-design` — Phase 1 wrapper that orchestrates the full pre-design pipeline
-- `design-system` — Cross-phase shared design system: tokens, CSS export, and foundations preview
-- `component` — Component library specs and a token-driven HTML gallery
-- `layout` — Per-page responsive layout specs (sections, component slots, content map)
-- `mockup` — Fully-responsive plain-HTML/CSS hi-fi page mockups from real content
-- `design` — Phase 2 wrapper that orchestrates the full design pipeline
-- `html` — Skills for building a dependency-free static HTML/CSS site (scaffold + token-driven page builder)
-- `develop` — Phase 3 full-path wrapper: promote the Phase-2 design into the chosen build target
-- `site-dev` — Phase 3 express entry: from a Figma link, build the design system and jump to development
-- `qa` — Static-analysis QA audits of built output (content, design, a11y, links, Elementor hygiene) + gaps punch-list
-- `site` — Master orchestrator that runs the full pre-design→design→development→QA pipeline with approval pauses
-- `status` — Pipeline freshness check: flag artifacts that are older than the inputs they were derived from
-- `search` — Standalone site-search utilities — find a string across a website's pages and report where it appears
-
-## Step 7 — Update root README.md marked block
-
-Read `README.md`. Locate the block between `<!-- TWT_SKILLS_TABLE_START -->` and `<!-- TWT_SKILLS_TABLE_END -->`. Replace its contents (between, exclusive of, the markers) with:
-
-```markdown
-
-| command | category | description |
-|---------|----------|-------------|
-[one row per skill]
-
-```
-
-If markers are not found, add an entry to warnings: `README.md: TWT_SKILLS_TABLE_START/END markers not found — skipped`. Skip this step.
-
-## Step 8 — Report
+## Step 5 — Report
 
 Print a summary to the user:
 
 ```
-twt-marketplace-docs — regeneration complete
-
-Files written:
-  - SKILLS.md
-  - architecture.md
-  - skills/content/README.md
-  - skills/designer/README.md
-  - skills/elementor/README.md
-  - skills/meta/README.md
-  - README.md (marked block)  [or: skipped — markers not found]
-
 Skills indexed: <N>
 Categories: <list>
+Warnings: (none)   [or list of warnings]
 
-Validation warnings:
-  [list of warnings from Step 2, or "(none)"]
-
-Next: run installer if any skill files were added or modified.
+<N> file(s) regenerated.   [or: 0 file(s) already current.]
 ```
