@@ -45,6 +45,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-elementor](#twt-qa-elementor) | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
+| [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
 | [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
@@ -1481,6 +1482,39 @@ Find every occurrence of a specific string across a website's pages and produce 
 - A report exists at `.twt-artifacts/search/<domain>/search-report-<query-slug>.md`
 - Every listed match has the exact page URL and a context snippet of up to 100 characters on each side of the matched string
 - The report states how many pages were scanned, so the user knows the coverage (and the 50-page cap if hit)
+
+---
+
+## /twt-setup
+
+**Category:** meta
+**Version:** 1.0.0
+**Accepts arguments:** no
+
+Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. Without a permission allowlist the user is prompted for each one. This command merges a curated, additive allowlist into the current project's `.claude/settings.json` so those routine calls are auto-approved and prompts appear only for genuinely novel or risky operations. The scope-guard hook continues to gate any file operation that would escape the project directory.
+
+**Inputs:**
+- (none)
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- (none)
+
+**Writes:**
+- .claude/settings.json (merges permissions.allow; never removes existing entries)
+
+**Non-goals:**
+- Does not install or configure hooks (those are seeded by the marketplace installer)
+- Does not modify global (`~/.claude`) settings — project-local only
+- Does not remove any existing permission entries
+
+**Success criteria:**
+- `.claude/settings.json` in the current project contains all curated allowlist entries
+- The seeder reports how many entries were added (or confirms they were already present)
+- No existing settings entries are altered or removed
 
 ---
 

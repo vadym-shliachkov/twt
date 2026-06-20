@@ -3,7 +3,7 @@
  * seed-scope-guard.js — installer helper (shared by install.ps1 and install.sh).
  *
  * Idempotently seeds the twt scope-guard into a project's .claude folder:
- *   1. copies templates/hooks/twt-scope-guard.js -> <claudeDir>/hooks/
+ *   1. copies hooks/twt-scope-guard.js -> <claudeDir>/hooks/
  *   2. merges a PreToolUse hook entry into <claudeDir>/settings.json
  *
  * The hook makes Claude Code auto-approve any tool call that stays inside the
@@ -49,7 +49,7 @@ if (!claudeDir || !repoRoot) fail('usage: seed-scope-guard.js <claudeDir> <repoR
 
 const hooksDir = path.join(claudeDir, 'hooks');
 const hookDest = path.join(hooksDir, HOOK_NAME);
-const hookSrc = path.join(repoRoot, 'templates', 'hooks', HOOK_NAME);
+const hookSrc = path.join(repoRoot, 'hooks', HOOK_NAME);
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 // A global (~/.claude) install must reference the hook by absolute path, since

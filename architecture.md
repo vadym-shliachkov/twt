@@ -61,6 +61,7 @@ flowchart TB
     twt_qa_elementor["/twt-qa-elementor"]:::skill
     twt_qa_links["/twt-qa-links"]:::skill
     twt_search_site["/twt-search-site"]:::skill
+    twt_setup["/twt-setup"]:::skill
     twt_site["/twt-site"]:::skill
     twt_site_dev["/twt-site-dev"]:::skill
     twt_spec["/twt-spec"]:::skill
@@ -241,6 +242,7 @@ flowchart TB
 ### meta
 
 - /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and category READMEs from skill frontmatter
+- /twt-setup - One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
 
 ### mockup
 
@@ -1823,6 +1825,30 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/search/<domain>/search-report-<query-slug>.md |  |
 
+### /twt-setup
+
+**Category:** meta
+**Version:** 1.0.0
+
+**Inputs:**
+- (none)
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- (none)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .claude/settings.json (merges permissions.allow; never removes existing entries) |  |
+
 ### /twt-site
 
 **Category:** site
@@ -2046,6 +2072,7 @@ flowchart TB
 | /twt-qa-elementor | none | none |
 | /twt-qa-links | none | none |
 | /twt-search-site | none | WebFetch |
+| /twt-setup | none | none |
 | /twt-site | none | twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
 | /twt-site-dev | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |

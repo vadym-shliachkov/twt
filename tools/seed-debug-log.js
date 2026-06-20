@@ -3,7 +3,7 @@
  * seed-debug-log.js — installer helper (shared by install.ps1 and install.sh).
  *
  * Idempotently seeds the twt debug tracer into a project's .claude folder:
- *   1. copies templates/hooks/twt-debug-log.js -> <claudeDir>/hooks/
+ *   1. copies hooks/twt-debug-log.js -> <claudeDir>/hooks/
  *   2. merges PreToolUse + PostToolUse hook entries (matcher Task|AskUserQuestion)
  *      into <claudeDir>/settings.json
  *
@@ -42,7 +42,7 @@ if (!claudeDir || !repoRoot) fail('usage: seed-debug-log.js <claudeDir> <repoRoo
 
 const hooksDir = path.join(claudeDir, 'hooks');
 const hookDest = path.join(hooksDir, HOOK_NAME);
-const hookSrc = path.join(repoRoot, 'templates', 'hooks', HOOK_NAME);
+const hookSrc = path.join(repoRoot, 'hooks', HOOK_NAME);
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 function readSettings() {
