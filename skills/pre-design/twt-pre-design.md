@@ -2,7 +2,7 @@
 name: twt-pre-design
 category: pre-design
 description: Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.1.3
+version: 1.1.6
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -67,7 +67,7 @@ If sources were provided (and not skipped by flags), dispatch `/twt-content-fetc
 
 ## Step 3 — Brand (B) ∥ Spec (S) — in parallel
 Brand reads the brand source; Spec reads the starting notes / Figma URL. Neither reads the other's output and they write to disjoint folders (`brand/` and `spec/`), so dispatch **both in a single batch of parallel Agent calls** (one message, two Agent tool uses), each working from the sources gathered in Step 1:
-- **Brand (B)** → `/twt-brand`, forwarding any brand source. Dispatch with `subagent-collect`. After it returns, read `.twt-artifacts/pre-design/brand/decisions.md`; if `status: open`, surface its open questions / proposed rules via the **AskUserQuestion** tool here in the main thread, then re-dispatch `/twt-brand-define subagent-collect <answers>` to finalize. (The same protocol will apply to Spec in a later phase.)
+- **Brand (B)** → `/twt-brand`, forwarding any brand source. Dispatch with `subagent-collect`. Require the returned brand `validation-report.md` to use the full `/twt-brand-validate` structure, not a shortened collect-mode summary. After it returns, read `.twt-artifacts/pre-design/brand/decisions.md`; if `status: open`, surface its open questions / proposed rules via the **AskUserQuestion** tool here in the main thread, then re-dispatch `/twt-brand-define subagent-collect <answers>` to finalize and refresh the full folded validation report. (The same protocol will apply to Spec in a later phase.)
 - **Spec (S)** → `/twt-spec`, forwarding any starting notes / Figma URL. This is the north-star intent — vision, functional must-haves, and the weighted **visual style + motion/animation** direction — that positioning, IA, and the design phase build on.
 
 Wait for both to finish before Step 4 (Positioning depends on both). Surface any questions or BLOCKERs either raised after the batch. (Respect flags: skip whichever is excluded; if only one remains, run it alone.)
@@ -86,7 +86,7 @@ Dispatch `/twt-curation`.
 (Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`.)
 
 ## Step 7 — Synthesize the brief (thin pointer-index)
-The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize the artifacts. Downstream skills read the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/pre-design/pre-design-brief.md`:
+The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize the artifacts. **Use the file tools, never a shell command:** Glob `.twt-artifacts/pre-design/*/validation-report.md` to list the reports, then Read each (or Grep across them for verdict/BLOCKER lines) — do **not** `cd` into the folder or run a `cat`/`grep`/`for` loop, which forces a permission prompt on every run. The same applies wherever you gather a set of sibling `decisions.md` files. Downstream skills read the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/pre-design/pre-design-brief.md`:
 ```
 ---
 generated: <YYYY-MM-DD>

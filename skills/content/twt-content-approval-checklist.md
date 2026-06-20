@@ -17,7 +17,9 @@ reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/components.md
   - .twt-artifacts/design/layout/layouts/
+  - .twt-artifacts/design/layout/*.md
   - .twt-artifacts/design/mockup/pages/
+  - .twt-artifacts/design/mockup/*.html
   - .twt-artifacts/design/assets/manifest.md
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/curation/
@@ -70,15 +72,17 @@ On Windows where `python` is unavailable but `py` exists, use `py -m pip install
 Find the project page list from the best available source, in this order:
 1. Figma URL/design context supplied in `$ARGUMENTS` (frames/screens/pages become workbook pages).
 2. `.twt-artifacts/design/layout/layouts/*.md`
-3. `.twt-artifacts/design/mockup/pages/*.html`
-4. `.twt-artifacts/pre-design/ia/sitemap.md`
-5. User-provided page list in `$ARGUMENTS`
+3. `.twt-artifacts/design/layout/*.md` (fallback for existing projects that wrote page layouts directly under `layout/`; ignore `validation-report.md` and `decisions.md`).
+4. `.twt-artifacts/design/mockup/pages/*.html`
+5. `.twt-artifacts/design/mockup/*.html` (fallback for existing projects that wrote page mockups directly under `mockup/`; ignore `index.html`).
+6. `.twt-artifacts/pre-design/ia/sitemap.md`
+7. User-provided page list in `$ARGUMENTS`
 
 If no page list can be discovered, ask for the sitemap or page names as free-form text. Normalize each page to a worksheet name under Excel's 31-character limit, keeping names human-readable and unique.
 
 Read available design-system and layout artifacts to infer the content scope:
 - Figma text layers, component instances, frame names, visible URLs, image/video placeholders, media filenames, alt-like labels, and SEO-looking annotations when a Figma source is provided.
-- Component/block inventory from `tokens.md`, `components.md`, page layouts, and mockup HTML.
+- Component/block inventory from `tokens.md`, `components.md`, page layouts (`layout/layouts/*.md` or `layout/*.md`), and mockup HTML (`mockup/pages/*.html` or page-level `mockup/*.html`).
 - Existing copy, links, image paths, video embeds, and forms from mockups or build output if present.
 - Asset requirements from `.twt-artifacts/design/assets/manifest.md`.
 

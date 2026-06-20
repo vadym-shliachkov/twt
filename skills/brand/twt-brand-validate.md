@@ -2,7 +2,7 @@
 name: twt-brand-validate
 category: brand
 description: Critique brand-brief.md and write a validation-report.md (read-only critic)
-version: 1.1.1
+version: 1.1.3
 accepts_arguments: false
 inputs:
   - (none — reads the canonical brand-brief.md)
@@ -12,6 +12,7 @@ dependencies:
   soft: []
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
+  - tools/check-brand-validation-report.mjs
 writes:
   - .twt-artifacts/pre-design/brand/validation-report.md
 ---
@@ -30,11 +31,12 @@ writes:
 **Success criteria:**
 - `validation-report.md` opens with a weighted **Scorecard** (criteria summing to 100) yielding a **Health 0–100 + Band**
 - At least the contrast criterion is computed from actual hex values; AA failures on body text are BLOCKERs
-- A `## Detailed brand component evaluation` section evaluates every available brand component item-by-item, with pros, cons, metric scores, evidence, and design handoff impact
+- A `## Detailed brand component evaluation` section evaluates every available brand component item-by-item, with pros, cons, all eight metric scores/evidence rows, and design handoff impact
 - A `## Critical assessment` section delivers genuine design judgment on whether the palette, type, and voice are actually **good** (not just faithfully transcribed) — strengths, weaknesses, and what a top studio would change — even when the brand is already in production
 - A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
 - Findings keep BLOCKER/WARNING/SUGGESTION with Where/Problem/Recommendation, Problem citing evidence
 - Brand problems do not stop the workflow by themselves; the report must clearly inform the user before design proceeds, with BLOCKERs carried forward as known design risks
+- The report passes `node tools/check-brand-validation-report.mjs --file .twt-artifacts/pre-design/brand/validation-report.md`
 - If `brand-brief.md` is missing, aborts pointing to `/twt-brand-define`
 
 ---
@@ -64,7 +66,7 @@ Collect into **Decisions to confirm** any judgment the validator is inferring as
 ## Step 2a — Detailed brand component evaluation
 Evaluate the brand brief at the item level. Include every item present in `brand-brief.md`, and explicitly mark missing but expected items as `Missing / not evaluable` rather than inventing values. This section is intentionally detailed: it should give the user enough context to decide whether to proceed, refine the brand, or accept known risk before design.
 
-Use these evaluation dimensions wherever they apply:
+Use these eight evaluation dimensions for every item block. If a dimension truly does not apply to an item, still include the row and write `N/A — not applicable because <reason>` instead of omitting it:
 - **Clarity** — how easily a designer, writer, stakeholder, or user could understand the item
 - **Relevance** — how well it fits the audience, category, offer, and business context
 - **Distinctiveness** — how hard it is to confuse with competitors or generic category language
@@ -74,11 +76,11 @@ Use these evaluation dimensions wherever they apply:
 - **Accessibility / usability** — for palette, typography, layout, motion, UX, and touchpoint rules
 - **Governance readiness** — whether teams can apply the rule repeatedly without guessing
 
-Score each applicable dimension 0–5 and compute an **Item health** as the unweighted average of the applicable dimensions. Do not blend these item scores into the top-level Health unless the item also affects a weighted Scorecard row; the detailed section is diagnostic depth, not a second competing total.
+Score each non-`N/A` dimension 0–5 and compute an **Item health** as the unweighted average of the scored dimensions. Do not blend these item scores into the top-level Health unless the item also affects a weighted Scorecard row; the detailed section is diagnostic depth, not a second competing total.
 
 For each item, write:
 - **Evaluation method:** the best way to evaluate that item in practice (for example: strategic fit test, competitor differentiation, recall/comprehension test, WCAG contrast check, readability test, voice consistency audit, touchpoint audit, governance usability test)
-- **Metric values:** dimension scores with concise evidence
+- **Metric values:** all eight dimension rows with concise evidence, including justified `N/A` rows where a dimension is not applicable
 - **Pros:** concrete strengths that should be preserved
 - **Cons / risks:** concrete weaknesses, gaps, contradictions, unsupported assumptions, or downstream design risks
 - **Severity:** `BLOCKER`, `WARNING`, `SUGGESTION`, or `OK`; use BLOCKER only when proceeding would likely cause inaccessible, misleading, contradictory, legally risky, or unusable design decisions
@@ -141,6 +143,8 @@ Generated: <ISO timestamp>  ·  Validator: /twt-brand-validate
   - Consistency: <0-5> — <evidence>
   - Actionability: <0-5> — <evidence>
   - Evidence quality: <0-5> — <evidence>
+  - Accessibility / usability: <0-5 | N/A> — <evidence or why not applicable>
+  - Governance readiness: <0-5 | N/A> — <evidence or why not applicable>
 - **Pros:** <specific strengths>
 - **Cons / risks:** <specific weaknesses or gaps>
 - **Severity:** <OK | SUGGESTION | WARNING | BLOCKER>
@@ -184,6 +188,14 @@ Generated: <ISO timestamp>  ·  Validator: /twt-brand-validate
 <one paragraph tying the band to the top findings>
 ```
 Write ONLY this file.
+
+After writing, run:
+
+```powershell
+node tools/check-brand-validation-report.mjs --file .twt-artifacts/pre-design/brand/validation-report.md
+```
+
+If the checker fails, fix `validation-report.md` until it passes. The checker is structural; passing it does not replace the quality judgment required by this rubric.
 
 ## Step 4 — Report
 Print BLOCKER/WARNING/SUGGESTION counts and the `Before design proceeds` status. End with: "Brand validation does not automatically stop the workflow. Review the report before design proceeds; to address findings, run /twt-brand-define (or /twt-brand to loop automatically)."

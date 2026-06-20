@@ -83,6 +83,8 @@ Wait for it to finish; confirm `.twt-artifacts/design/design-system/tokens.css` 
 
 Dispatch `/twt-content-approval-checklist` via the Agent tool with `subagent-collect`, passing the Figma URL, design-system output, page/screen names if known, and any notes. If `.twt-artifacts/content-approval/content-approval-checklist.xlsx` already exists, instruct the child to reuse/refine without overwriting existing approved content.
 
+After the child returns, verify `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists. If it is missing, stop before scaffold/build work and report the child output plus the Figma/source context that was passed in. Do not silently continue without the workbook; the express build can use current Figma content only after the approval artifact exists as the stakeholder review surface.
+
 In interactive mode, tell the user this workbook is the human approval surface for copy, links, images, videos, header/footer, and SEO. Development continues with the current Figma/design content; approved workbook rows are applied later only when `/twt-content-approval-implement` is explicitly called.
 
 ## Step 3 — Ensure scaffold

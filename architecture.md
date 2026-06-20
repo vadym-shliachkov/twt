@@ -294,7 +294,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -318,7 +318,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.0.2
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -335,12 +335,14 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
+- skills/brand/twt-brand-validate.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/pre-design/brand/brand-brief.md |  |
 | .twt-artifacts/pre-design/brand/decisions.md |  |
+| .twt-artifacts/pre-design/brand/validation-report.md |  |
 
 ### /twt-brand-fetch
 
@@ -370,7 +372,7 @@ flowchart TB
 ### /twt-brand-validate
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.3
 
 **Inputs:**
 - (none — reads the canonical brand-brief.md)
@@ -385,6 +387,7 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
+- tools/check-brand-validation-report.mjs
 
 **Writes:**
 | Path | Notes |
@@ -495,7 +498,9 @@ flowchart TB
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/components.md
 - .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/
@@ -781,7 +786,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.2.2
+**Version:** 1.2.4
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -842,7 +847,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.4.2
+**Version:** 1.5.1
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -878,7 +883,7 @@ flowchart TB
 ### /twt-design-system-validate
 
 **Category:** design-system
-**Version:** 1.2.1
+**Version:** 1.3.1
 
 **Inputs:**
 - none (reads the design-system artifacts)
@@ -922,7 +927,9 @@ flowchart TB
 - .twt-artifacts/design/design-brief.md
 - .twt-artifacts/design/mockup/index.html
 - .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
@@ -1593,7 +1600,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.3
+**Version:** 1.1.6
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1819,9 +1826,10 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.5.5
+**Version:** 1.7.0
 
 **Inputs:**
+- Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
 - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
@@ -1835,6 +1843,8 @@ flowchart TB
 - Soft consumers: none
 
 **Reads:**
+- site-instruction.md
+- .twt-artifacts/site-instruction.md
 - .twt-artifacts/pre-design/pre-design-brief.md
 - .twt-artifacts/design/design-brief.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx

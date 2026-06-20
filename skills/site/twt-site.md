@@ -2,9 +2,10 @@
 name: twt-site
 category: site
 description: Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.5.5
+version: 1.7.1
 accepts_arguments: true
 inputs:
+  - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
   - Optional notes, a live URL, or a hint of which phase to start from
   - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
   - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
@@ -18,6 +19,8 @@ dependencies:
     - twt-content-approval-checklist
     - twt-qa
 reads:
+  - site-instruction.md
+  - .twt-artifacts/site-instruction.md
   - .twt-artifacts/pre-design/pre-design-brief.md
   - .twt-artifacts/design/design-brief.md
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
@@ -44,8 +47,9 @@ writes:
 **Success criteria:**
 - Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
-- Figma-express target routes Development through `/twt-site-dev` and skips Pre-design + Design
+- Figma is a **design source**, not a build target: when a Figma link is provided, a dedicated **Figma-approach** question (Express vs. Design source) decides whether Pre-design + Design are skipped; the build target (HTML/Elementor) is asked separately. Express routes Development through `/twt-site-dev`
 - When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
+- An optional **`site-instruction.md`** (project root or `.twt-artifacts/`) is read first when present: its values pre-fill the intake, phase set, Figma approach, build target, and per-phase guidance, and the orchestrator asks only for what the file leaves unspecified
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 
 ---
@@ -63,38 +67,68 @@ If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **st
 ## Step 0a — Open the session log
 Start a session log at `.twt-artifacts/site-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail.
 
+## Step 0·instr — Project instruction file (read first if present)
+Before the intake interview, check whether the project provides a **`site-instruction.md`** — look first at the project root (`./site-instruction.md`), then `.twt-artifacts/site-instruction.md`. **Use the Glob/Read tools, never a shell command.**
+
+If found, **Read it in full before anything else** and treat it as the user's pre-supplied brief. It is free-form Markdown (no fixed schema) — parse it and **align whatever it states to the pipeline's decision points**, building a `<provided>` map across these slots:
+- **Intake:** what/who · content sources · brand/design source (incl. any Figma link) · stage (new/redesign/extend)
+- **Phases:** which of Pre-design / Design / Development / QA to run (and any to skip)
+- **Figma approach:** express vs. design-source (only relevant if a Figma link is present)
+- **Build target:** Static HTML vs. Elementor
+- **Per-phase guidance:** anything aimed at a specific phase — brand voice/colors/fonts, positioning/audience notes, sitemap/IA preferences, page list, content rules, visual direction/dials, motion posture, QA emphasis, etc.
+
+Record this as `<provided>` and append a Timeline entry summarizing what the instruction file supplied (and from where). Then, in **every step below**, treat a `<provided>` slot as already answered: **do not re-ask it** — use the file's value, state it back to the user once ("From site-instruction.md: …"), and only ask for the slots the file left blank or ambiguous. **Forward the relevant per-phase guidance** as context in each Step 3 dispatch prompt, so the sub-skills honor it instead of re-deriving from scratch.
+
+If a `<provided>` value is internally contradictory or conflicts with the existing `.twt-artifacts/` state, don't silently pick one — surface that one conflict to the user (interactive) or log it as a deferred decision (auto), and continue.
+
+If **no** `site-instruction.md` exists, skip this step and run the intake interview normally.
+
+**Auto mode:** still read `site-instruction.md` if present (it's the richest context an unattended run can get); combine it with the free-form `$ARGUMENTS`. The file's values take precedence over inferred defaults; anything it doesn't cover falls back to the auto-mode inference rules in each step.
+
 ## Step 0b — Intake (project brief)
 This is the **main-thread interview** that gives the pipeline something real to work from. The phases below are dispatched with `subagent-collect`, so the sub-skills will **not** ask the user anything — if you skip this step, they invent the brand, audience, and content from nothing. Gather it **here**, in the main thread, and forward it as context to every phase.
 
-**Auto mode:** skip the interview — treat the free-form `$ARGUMENTS` context as the project brief; do not ask.
+**Auto mode:** skip the interview — treat the free-form `$ARGUMENTS` context (plus any `site-instruction.md` from Step 0·instr) as the project brief; do not ask.
 
-Otherwise, before choosing phases, collect the brief (free-form input stays plain-text per CONVENTIONS §4; the one fixed-option question uses **AskUserQuestion**):
+Otherwise, before choosing phases, collect the brief (free-form input stays plain-text per CONVENTIONS §4; the one fixed-option question uses **AskUserQuestion**). **Skip any item already supplied by `site-instruction.md` (Step 0·instr)** — state the supplied value back rather than re-asking; only ask for what's missing. **Ask the remaining questions one at a time** — pose a question, wait for the user's answer, then ask the next. Never stack them into a single multi-question prompt: a person answers more accurately, and gives you more to work with, when shown one question at a time.
 1. **What & who** *(plain-text prompt)*: "In a sentence or two — what is this site for? The business/product, the goal of the site, and who the audience is."
 2. **Content sources** *(plain-text prompt)*: "Paste anything I should build from — live site URL(s), PDF or doc paths, or type `none`. I'll ingest whatever you give me." Record each source.
 3. **Brand / design source** *(plain-text prompt)*: "Any brand or design materials? A brand book, a Figma link, existing colors/fonts — paste a path/URL, or `none`."
 4. **Stage** *(AskUserQuestion, single-select, header "Stage")*: **New build** (from scratch) · **Redesign** (replace an existing site) · **Extend** (add to an existing build) · **You decide**.
 
-Record all answers as the **project brief**. Append each Q&A to the session-log Timeline. If a Figma link was given in (3), note it — it likely makes **Figma express** the natural target in Step 2. If real content sources were given in (2), they will be handed to `/twt-pre-design` (which dispatches `/twt-content-fetch`) — do not re-ask for them later.
+Record all answers (merged with the `<provided>` values from Step 0·instr) as the **project brief**. Append each Q&A to the session-log Timeline. If a Figma link was given in (3) or by the instruction file, note it — it drives the **Figma-approach** question in Step 1·figma (express vs. design-source), which is a *source* decision spanning Pre-design/Design/Development, **not** a build-target choice. If real content sources were given in (2), they will be handed to `/twt-pre-design` (which dispatches `/twt-content-fetch`) — do not re-ask for them later.
 
 ## Step 1 — Choose phases
-**Auto mode:** run all four phases (Pre-design → Design → Development → QA), minus any the context clearly excludes (e.g. "QA only", "skip pre-design") and minus Pre-design/Design when the target resolves to Figma express. Skip the menu.
+**Auto mode:** run all four phases (Pre-design → Design → Development → QA), minus any the context clearly excludes (e.g. "QA only", "skip pre-design") and minus Pre-design/Design when a Figma link resolves the Figma-approach (Step 1·figma) to Express. Skip the menu.
 
-Otherwise ask via the **AskUserQuestion** tool (multi-select, header "Phases") which phases to run — all selected by default:
+If `site-instruction.md` already specified the phase set (Step 0·instr), use it — state it back ("From site-instruction.md: running …") and skip the menu. Otherwise ask via the **AskUserQuestion** tool (multi-select, header "Phases") which phases to run — all selected by default:
 - **Pre-design** — raw materials → `pre-design-brief.md` (brand, positioning, IA, curation)
 - **Design** — → `design-brief.md` (design system, components, layouts, mockups)
 - **Development** — promote the design into a built site (HTML or Elementor)
 - **QA** — audit the built output → `qa-report.md` + `gaps.md`
 Record the selected, ordered set.
 
-## Step 2 — Choose target / approach
-**Auto mode:** infer the target from the context and skip the menu — a Figma URL → **Figma express**; "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
+## Step 1·figma — Figma approach (only when a Figma link was provided)
+Figma is a **design source**, not a build method — having one affects Pre-design, Design, **and** Development, so it is decided here, separately from the build target (Step 2). Run this step only when intake (Step 0b Q3) captured a Figma link **and** the phase set includes Pre-design or Design.
 
-Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") how Development should build:
-- **Static HTML** — dependency-free `site/` (runs `/twt-develop --target html`)
-- **Elementor** — WordPress child theme (runs `/twt-develop --target elementor`)
-- **Figma express** — start from a Figma link via `/twt-site-dev` (skips Pre-design + Design)
-- **You decide** — I pick the best-fit (defaults to Static HTML; Figma express only when a Figma link is present; Elementor when the context/`conventions.md` indicates WordPress)
-If **Figma express** is chosen, tell the user Pre-design and Design will be skipped (express starts from Figma), drop them from the phase set, and continue.
+**Auto mode:** a Figma link → infer **Express** (drop Pre-design + Design, route Development through `/twt-site-dev`). Record the inference and reason for the final summary; skip the menu.
+
+If `site-instruction.md` already stated the Figma approach (Step 0·instr), use it (state it back) and skip the menu. Otherwise ask via the **AskUserQuestion** tool (single-select, header "Figma") how the Figma design should be used:
+- **Express** — build straight from Figma via `/twt-site-dev`; **skips Pre-design + Design**. Best when the Figma file is the finished design and you just want it built.
+- **Design source** — run the **full pipeline**, seeding the design system from Figma (Pre-design + Design still run, reading the Figma file). Best when the Figma is a starting point, not the final design.
+- **You decide** — I pick the best fit (defaults to **Design source** when Pre-design/Design were selected and the Figma looks partial; **Express** when the file is clearly a complete design).
+
+If **Express** is chosen, tell the user Pre-design and Design will be skipped, drop them from the phase set, and route Development through `/twt-site-dev`.
+
+## Step 2 — Choose build target
+The build target (how Development renders the site) is **independent** of whether a Figma design exists — both Express and the full pipeline still build to one of these. Ask only when Development is in the phase set.
+
+**Auto mode:** infer the target from the context and skip the menu — "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
+
+If `site-instruction.md` already named the build target (Step 0·instr), use it (state it back) and skip the menu. Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") how Development should build:
+- **Static HTML** — dependency-free `site/` (runs `/twt-develop --target html`, or `/twt-site-dev` with `--target html` under Express)
+- **Elementor** — WordPress child theme (runs `/twt-develop --target elementor`, or `/twt-site-dev` with `--target elementor` under Express)
+- **You decide** — I pick the best-fit (defaults to Static HTML; Elementor when the context/`conventions.md` indicates WordPress)
 
 ## Step 3 — Run the selected phases in order
 For each phase still selected, in pipeline order, dispatch its wrapper via the Agent tool, then run the Step 4 pause before moving on:
@@ -106,16 +140,18 @@ For each phase still selected, in pipeline order, dispatch its wrapper via the A
 
 Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward **the Step 0b project brief** (what/who, content sources, brand/design source, stage) plus any free-form `$ARGUMENTS` context as notes — this is the input the collect-mode sub-skills draft from, so pass it in full to every phase.
 
+Treat the **Content approval checklist** as a required pre-development sub-step, not as an optional report line: when Development is selected, dispatch `/twt-content-approval-checklist` immediately after Design has completed (or, for Figma express, inside `/twt-site-dev` before build). After the child returns, verify `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists. If it does not exist, do **not** start Development; report that the content-approval workbook failed to materialize and surface the child error/output so the user can fix the source or dependency. In auto mode this is still a hard prerequisite for Development because later approval implementation depends on the workbook path.
+
 **Visual-direction surfacing (interactive only, before Design).** When the Design phase is in the set, no Figma/exported design was provided, and this is **not** auto mode: after `/twt-design` returns, read `.twt-artifacts/design/decisions.md` for the open "Confirm site visual direction" decision and present it to the user via the **AskUserQuestion** tool (Approve / Adjust dials / Override / You decide — per `/twt-design` Step 1b). Then re-dispatch `/twt-design --only design-system … ` in refinement mode with the resolved direction so the confirmed `design-read.md` propagates before components/layouts/mockups bind to it. This is the rule-13 surfacing point — without it the visual direction silently stays inferred. **Auto mode skips this** (the proposed read is model-decided and logged in Step 5).
 
 **Pilot-page surfacing (interactive only, during Development via `/twt-develop`).** A full multi-page build is the most expensive part of the run, so check one page before committing to all. When Development builds via `/twt-develop` (not Figma express) and this is **not** auto mode: `/twt-develop` (dispatched with `subagent-collect`) builds only the **pilot page** and returns an open "Pilot page built — approve to build the rest" decision in `.twt-artifacts/<html-site|elementor-theme>/decisions.md` with the pilot's path and the list of remaining pages. Read it and present the gate to the user via the **AskUserQuestion** tool (single-select, header "Pilot"): **Build the remaining N pages** / **Add one more pilot page** / **Adjust the pilot** / **Stop here**. On approve, re-dispatch `/twt-develop --target <target> pilot-approved` (with `subagent-collect`) to promote the rest; on adjust/add, forward the feedback and re-dispatch, then re-surface; on stop, leave the remaining pages unbuilt and record it. Log each gate Q&A to the Timeline. **Auto mode skips this** — dispatch `/twt-develop auto …` so it builds all pages in one pass.
 
 Before dispatching a phase, check its prerequisite exists: Development (non-express) needs `.twt-artifacts/design/design-brief.md`; QA needs built output (`site/` or a theme). If a prerequisite is missing, raise it at the Step 4 pause instead of dispatching blindly (in auto mode: stop the pipeline there and report — never invent the missing input).
 
-For the **Content approval checklist** pseudo-phase, pass the design brief, layouts, mockups, design-system artifacts, asset manifest, and any user notes. If the target is **Figma express**, pass the Figma URL as the primary content source and instruct the child to extract the visible design copy into `current content`, including lorem ipsum, placeholder copy, draft links, image labels, video references, and SEO-looking text. If the workbook already exists, instruct the child to preserve approved content and fill only newly discovered scope. In interactive mode, surface this as the approval workspace before Development; the user may proceed with partial approvals, but unready rows will not be implemented.
+For the **Content approval checklist** pseudo-phase, pass the design brief, layouts, mockups, design-system artifacts, asset manifest, and any user notes. Include both canonical and legacy artifact locations when present: `.twt-artifacts/design/design-brief.md`, `.twt-artifacts/design/layout/layouts/`, `.twt-artifacts/design/layout/*.md`, `.twt-artifacts/design/mockup/pages/`, `.twt-artifacts/design/mockup/*.html`, `.twt-artifacts/design/mockup/index.html`, and pre-design sitemap/curation outlines. If the target is **Figma express**, pass the Figma URL as the primary content source and instruct the child to extract the visible design copy into `current content`, including lorem ipsum, placeholder copy, draft links, image labels, video references, and SEO-looking text. If the workbook already exists, instruct the child to preserve approved content and fill only newly discovered scope. In interactive mode, surface this as the approval workspace before Development; the user may proceed with partial approvals, but unready rows will not be implemented.
 
 ## Step 4 — Approval pause (after each phase)
-Read the just-finished phase's output and count any **outstanding BLOCKERs**:
+Read the just-finished phase's output and count any **outstanding BLOCKERs**. **Use the Read / Glob / Grep tools to read every artifact** (briefs, `validation-report.md`, `decisions.md`) — never a Bash `cat`/`grep`/`sed`/`for`-loop, and never `cd` into an absolute path; a compound shell read prompts the user on every run, whereas the file tools are silent. To scan a set of sibling files, Glob the pattern (e.g. `.twt-artifacts/pre-design/*/decisions.md`) then Read/Grep each.
 - Pre-design / Design: the `Outstanding BLOCKERs` section of `pre-design-brief.md` / `design-brief.md` (and the sub-area `validation-report.md`s).
 - Development: the builders' reported reuse/issues.
 - QA: the `verdict` and BLOCKER count in `.twt-artifacts/qa/qa-report.md` (+ the `gaps.md` items).

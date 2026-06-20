@@ -2,7 +2,7 @@
 name: twt-brand
 category: brand
 description: Orchestrate the brand fetch/define/validate skills in a single define→validate pass
-version: 1.1.2
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -46,7 +46,7 @@ If the user provided a source (in `$ARGUMENTS` or when asked), dispatch `/twt-br
 Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (i.e. it was itself dispatched by /twt-pre-design or /twt-site). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see step 2 below).
 
 Run **one** define → validate cycle — no iteration loop (§9):
-1. **Define (subagent):** dispatch `/twt-brand-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-brand-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+1. **Define (subagent):** dispatch `/twt-brand-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-brand-validate` rubric (§12), write the sibling `validation-report.md` in that exact full format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`. The fold-in MUST NOT write a simplified pass/fail checklist. It must include the weighted numeric Scorecard, Detailed brand component evaluation, Critical assessment, Before design proceeds, Decisions to confirm, Findings with Where/Problem/Recommendation, and Summary.
 2. **Surface (main thread only):** read `.twt-artifacts/pre-design/brand/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and re-dispatch define **once** to finalize (`status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
 3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-brand-validate` (Agent tool) once; read the Scorecard **Band**, **Health**, and BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
 4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once. A weak or sub-Pass brand is reported as known risk, not silently repaired and not used as an automatic hard stop.

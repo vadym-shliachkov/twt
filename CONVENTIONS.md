@@ -75,6 +75,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - Present every fixed-option choice with the **AskUserQuestion** tool — not numbered text menus. Use single-select for mutually-exclusive choices (mode, target, yes/no, use-as-is/refine/rebuild) and multi-select for non-exclusive ones (which phases, which findings). Give each question a short header and each option a label + description; don't add a manual "Other" option (the tool offers a free-type escape).
 - **Per-question "You decide".** Any single-select question that has a sensible model default must offer a **"You decide"** option (the model picks the best answer and proceeds). Selecting it resolves **only that question** — it never cascades to auto-resolving later questions in the same skill or downstream skills. Each subsequent question is still asked. (Fully unattended runs are a separate, explicit mode — e.g. site `auto` — not a side effect of one "You decide".)
 - Plain-text prompts remain only for **free-form input** (a URL, a name, notes, pasted content). Informational output (aborts, status tables, reports) is not a choice and stays plain text.
+- **Ask one question at a time.** When a skill needs several free-form answers (e.g. an intake interview), pose one question, wait for the answer, then ask the next — never stack multiple questions into a single prompt. A person answers more accurately, and gives you more to work with, one question at a time. (AskUserQuestion may batch up to a few *fixed-option* questions in one call when they're genuinely independent, but free-form prompts are always sequential.)
 - Transition note: skills authored before 2026-06-02 may still print numbered menus until the interactive-menu retrofit converts them; new skills must use AskUserQuestion from creation.
 - If a hard dependency is missing (e.g. `conventions.md` not found), **abort with a clear message** pointing to the skill that creates it
 
@@ -141,6 +142,13 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - Skills are deployed **flat** into `~/.claude/commands/` (or `.claude/skills/`); the marketplace's `templates/`, `CONVENTIONS.md`, and sibling skills **do not travel** with them. A skill must therefore carry **inline** every artifact format it writes (the `decisions.md`, `design-read.md`, asset-manifest, session-log, etc. schemas) — never reference a `templates/…` path at runtime.
 - A running skill operates **only inside the current project** (its working tree + `.twt-artifacts/`). It must **never** read outside the project — no sibling project folders, no home directory, no filesystem-wide `find` — to locate templates, conventions, or "format examples." Everything it needs is in the skill text or the project. The scope-guard hook is the backstop, not a license to reach out.
 - Exception: the export skills (`twt-export-*`) genuinely need `tools/export-*.mjs` + `templates/*-export-style.md` from the marketplace checkout. If those are missing they **stop with a clear message** — they never search the disk for them.
+
+## 15. Read artifacts with the file tools, never shell
+
+- To read or scan any artifact (`decisions.md`, `validation-report.md`, `tokens.md`, mockups, briefs, …), use the **Read / Glob / Grep** tools — **never** a Bash command (`cat`, `grep`, `sed`, `awk`, `head`, `tail`, or a `for`/`while` loop over files). A compound shell command (`cd "<abs>" && for f in */decisions.md; do cat "$f"; done`) cannot be statically matched by the permission allowlist, so it prompts the user on every run; the file tools are auto-scoped to the project and never prompt.
+- To read a **set** of sibling files (e.g. every sub-area's `decisions.md` or `validation-report.md`), **Glob** the pattern (`.twt-artifacts/pre-design/*/decisions.md`) to list them, then **Read** each, or **Grep** across them with a pattern — do not shell out to a loop.
+- Never `cd` into an absolute path or embed an absolute project path in a shell command. Paths in skills stay **project-relative** (`.twt-artifacts/...`); the file tools resolve them against the working directory.
+- Bash remains correct for genuine non-file work the file tools can't do — running `node`/`python` tools, `pdftotext`, installers, git. This rule is about *reading artifacts*, not banning Bash.
 
 ---
 

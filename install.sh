@@ -44,6 +44,32 @@ is_sub_skill() {
   esac
 }
 
+copy_command_with_version() {
+  local src="$1"
+  local dest="$2"
+  local version
+  version="$(awk -F':[[:space:]]*' '/^version:/ { print $2; exit }' "$src")"
+
+  if [ -z "$version" ]; then
+    cp "$src" "$dest"
+    return
+  fi
+
+  awk -v version="$version" '
+    BEGIN { in_fm = 0; done = 0; sub(/\r$/, "", version) }
+    { sub(/\r$/, "") }
+    NR == 1 && $0 == "---" { in_fm = 1 }
+    NR > 1 && in_fm && $0 == "---" { in_fm = 0 }
+    in_fm && !done && /^description:[[:space:]]*/ {
+      if ($0 !~ "\\(v" version "\\)") {
+        $0 = $0 " (v" version ")"
+      }
+      done = 1
+    }
+    { print }
+  ' "$src" > "$dest"
+}
+
 # On Git Bash / MSYS, node resolves "/c/..." paths as drive-relative; convert
 # them to native "C:/..." form. No-op on macOS/Linux.
 to_native() {
@@ -113,7 +139,7 @@ while IFS= read -r -d '' file; do
   else
     dest="$COMMANDS_DIR/$filename"
     if [ -f "$dest" ]; then echo "  Updating : /$cmd"; else echo "  Installing: /$cmd"; fi
-    cp "$file" "$dest"
+    copy_command_with_version "$file" "$dest"
     INSTALLED=$((INSTALLED + 1))
   fi
 done < <(find "$SKILLS_DIR" -name "*.md" -type f -print0 | sort -z)

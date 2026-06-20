@@ -2,7 +2,7 @@
 name: twt-design-system-validate
 category: design-system
 description: Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
-version: 1.2.1
+version: 1.3.1
 accepts_arguments: false
 inputs:
   - none (reads the design-system artifacts)
@@ -49,7 +49,7 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Token contrast / accessibility | 25 | Color token pairings meet WCAG AA (compute ratios from the token hex values). |
 | Scale coherence (type & space) | 20 | Type scale and spacing scale are consistent, rhythmic, not ad-hoc. |
 | Brand fidelity | 20 | Tokens reflect `brand-brief.md` palette/type, not generic defaults. |
-| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the atomic evolution — Subatomic (tokens) → Atoms → Molecules → Organisms — with **every** atom, molecule, and organism documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. BLOCKER if preview is token-only with no Atoms/Molecules/Organisms tiers; WARNING if a tier is present but omits documented components (list which are missing). |
+| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the atomic evolution — Subatomic (tokens) → Atoms → Molecules → Organisms — with **every** atom, molecule, and organism documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. BLOCKER if preview is token-only with no Atoms/Molecules/Organisms tiers; WARNING if a tier is present but omits documented components (count specimens per tier vs `tokens.md` Section 3.2/3.3/3.4 and list which are missing). **Also a BLOCKER if the preview is a marketing landing page / homepage mockup instead of a neutral specimen sheet** — i.e. it uses real project copy (real hero headline, value props, case-study/stat numbers, testimonials, CTA messaging), assembles a running homepage rather than an inventory of captioned specimens, wires a real nav, or includes `<script>`/GSAP/auto-advancing/scroll-triggered demos of "the site." The fix is to re-render organisms as isolated, neutrally-labeled specimens. |
 | Naming / structure hygiene | 15 | Token names are systematic and namespaced; no duplicate/conflicting definitions. |
 
 Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.

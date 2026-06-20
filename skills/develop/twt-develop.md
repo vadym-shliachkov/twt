@@ -18,7 +18,9 @@ reads:
   - .twt-artifacts/design/design-brief.md
   - .twt-artifacts/design/mockup/index.html
   - .twt-artifacts/design/mockup/pages/
+  - .twt-artifacts/design/mockup/*.html
   - .twt-artifacts/design/layout/layouts/
+  - .twt-artifacts/design/layout/*.md
   - .twt-artifacts/design/component/components.md
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/assets/manifest.md
@@ -63,7 +65,7 @@ Record the choice as `<target>` and continue.
 
 ## Step 2 — Read the Phase-2 design
 
-Read `.twt-artifacts/design/design-brief.md`, `.twt-artifacts/design/mockup/index.html` + `mockup/pages/*.html`, `layout/layouts/*.md`, `component/components.md`, the design-system spine `design-system/tokens.css`, and the asset manifest `.twt-artifacts/design/assets/manifest.md` (planned images/videos with exact filenames + alt).
+Read `.twt-artifacts/design/design-brief.md`, `.twt-artifacts/design/mockup/index.html` + page mockups from `mockup/pages/*.html` or the legacy/current fallback `mockup/*.html`, layouts from `layout/layouts/*.md` or `layout/*.md`, `component/components.md`, the design-system spine `design-system/tokens.css`, and the asset manifest `.twt-artifacts/design/assets/manifest.md` (planned images/videos with exact filenames + alt).
 
 If `design-brief.md` is absent, stop and tell the user: "No Phase-2 design found. Run /twt-design first, or use /twt-site-dev to start from a Figma link."
 
@@ -72,6 +74,8 @@ If `design-brief.md` is absent, stop and tell the user: "No Phase-2 design found
 Dispatch `/twt-content-approval-checklist` via the Agent tool with `subagent-collect`, passing the page list, layouts, mockups, design-system artifacts, content-fetch artifacts if present, and asset manifest as context. This creates or refreshes the stakeholder workbook in parallel with development so missing copy/media/SEO can be confirmed later.
 
 If the workbook already exists, instruct the child to preserve approved content and ready flags, and append/fill only newly discovered scope. Do not treat the workbook as an implementation input during this skill. Development proceeds with the content currently available in Figma/content fetch/design artifacts; later, after approval is complete, the user calls `/twt-content-approval-implement` explicitly to update corresponding blocks with approved content.
+
+After the child returns, verify `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists. If it is missing, stop before scaffold/build work and report the child output plus the source paths that were passed in. Do not silently continue without the workbook; Development may proceed with unapproved current content only after the approval artifact exists as the stakeholder review surface.
 
 ## Step 3 — Ensure scaffold
 
@@ -82,7 +86,7 @@ If the workbook already exists, instruct the child to preserve approved content 
 
 Pages are independent **except** for the shared files each builder appends to — HTML: `sections.css` / `general.css`, the inlined `partials/`, the `tokens.css` mirror; Elementor: `widgets.css` / `design-system.css`, the `$map` registry in `class-<slug>-elementor.php`, `wpml-config.xml`. Promoting every page fully in parallel would both **race** on those shared files and **defeat reuse-first** (each agent, starting from the same baseline, re-creates the same hero/CTA). So promote in phases, with a pilot checkpoint before the expensive full batch.
 
-Take the page list from `mockup/pages/` (respect any page scope from `$ARGUMENTS`). The **home/index** page — or the first page if there is no home — is the **foundation page** / **pilot**. The matching builder is:
+Take the page list from `mockup/pages/`, falling back to page-level `mockup/*.html` files except `index.html` (respect any page scope from `$ARGUMENTS`). The **home/index** page — or the first page if there is no home — is the **foundation page** / **pilot**. The matching builder is:
 - `<target>` = **html** → `/twt-html-block-creator`
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 

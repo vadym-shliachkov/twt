@@ -47,6 +47,28 @@ function Test-IsSubSkill([string]$BaseName) {
     return ($BaseName -match '-(define|validate)$') -or ($BaseName -eq 'twt-brand-fetch')
 }
 
+function Copy-CommandWithVersion([string]$Source, [string]$Destination) {
+    $text = Get-Content -Path $Source -Raw -Encoding UTF8
+    $versionMatch = [regex]::Match($text, '(?m)^version:\s*(.+?)\s*$')
+    if (-not $versionMatch.Success) {
+        Copy-Item -Path $Source -Destination $Destination -Force
+        return
+    }
+
+    $version = $versionMatch.Groups[1].Value.Trim()
+    $updated = [regex]::Replace(
+        $text,
+        '(?m)^description:[^\r\n]*',
+        {
+            param($m)
+            if ($m.Value -match [regex]::Escape("(v$version)")) { return $m.Value }
+            return "$($m.Value) (v$version)"
+        },
+        1
+    )
+    Set-Content -Path $Destination -Value $updated -Encoding UTF8
+}
+
 Write-Host ""
 Write-Host "  twt Skills Marketplace - Installer" -ForegroundColor Cyan
 Write-Host "  ----------------------------------"
@@ -92,7 +114,7 @@ Get-ChildItem -Path $SkillsDir -Filter "*.md" -Recurse |
             # Orchestrator / standalone tool: install as a slash command.
             $dest = Join-Path $CommandsDir $_.Name
             if (Test-Path $dest) { Write-Host "  Updating : /$cmd" } else { Write-Host "  Installing: /$cmd" }
-            Copy-Item -Path $_.FullName -Destination $dest -Force
+            Copy-CommandWithVersion -Source $_.FullName -Destination $dest
             $Installed++
         }
     }

@@ -54,7 +54,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
@@ -173,7 +173,9 @@ Create the content approval workbook that proves every page, shared header/foote
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/components.md
 - .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/
@@ -487,7 +489,7 @@ One-call curation workflow: define → validate in one pass (§9 — no iteratio
 ## /twt-design
 
 **Category:** design
-**Version:** 1.2.2
+**Version:** 1.2.4
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -583,7 +585,9 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - .twt-artifacts/design/design-brief.md
 - .twt-artifacts/design/mockup/index.html
 - .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
@@ -1189,7 +1193,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.3
+**Version:** 1.1.6
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1483,12 +1487,13 @@ Find every occurrence of a specific string across a website's pages and produce 
 ## /twt-site
 
 **Category:** site
-**Version:** 1.5.5
+**Version:** 1.7.0
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
 
 **Inputs:**
+- Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
 - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
@@ -1498,6 +1503,8 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
 
 **Reads:**
+- site-instruction.md
+- .twt-artifacts/site-instruction.md
 - .twt-artifacts/pre-design/pre-design-brief.md
 - .twt-artifacts/design/design-brief.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
@@ -1518,8 +1525,9 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 **Success criteria:**
 - Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
-- Figma-express target routes Development through `/twt-site-dev` and skips Pre-design + Design
+- Figma is a **design source**, not a build target: when a Figma link is provided, a dedicated **Figma-approach** question (Express vs. Design source) decides whether Pre-design + Design are skipped; the build target (HTML/Elementor) is asked separately. Express routes Development through `/twt-site-dev`
 - When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
+- An optional **`site-instruction.md`** (project root or `.twt-artifacts/`) is read first when present: its values pre-fill the intake, phase set, Figma approach, build target, and per-phase guidance, and the orchestrator asks only for what the file leaves unspecified
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 
 ---

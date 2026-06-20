@@ -2,7 +2,7 @@
 name: twt-design-system-define
 category: design-system
 description: Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
-version: 1.4.2
+version: 1.5.1
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -37,6 +37,7 @@ writes:
 **Non-goals:**
 - Doesn't generate page designs (Templates/Pages = the layout/mockup phases)
 - The preview renders **every** atom, molecule, and organism documented in Section 3 (one instance each, default state), organized by ascending atomic level — it shows **breadth + composition**. It is NOT the exhaustive **variant × state** catalog (button primary/secondary/ghost × hover/active/disabled, etc.), which is `/twt-component`'s `gallery.html` (**depth**)
+- The preview is a **styleguide / specimen sheet**, NOT a marketing landing page or a mockup of the actual site. It must not assemble a working homepage, use real headlines/value-props/case-study copy/stats, wire a real navigation, or run auto-advancing/scroll-triggered demos. Component instances carry **neutral placeholder labels** ("Button label", "Card title", "Body copy sample") — real page composition with real content is `/twt-layout` + `/twt-mockup`, not here
 - Doesn't write to a WordPress theme (that's Phase 3)
 - Doesn't apply changes to the source design — read-only on Figma
 - Doesn't hallucinate tokens, components, or states not present in the sources/brand-brief
@@ -519,9 +520,22 @@ Example shape:
 
 ## Step 10b — Generate `preview.html` (the atomic evolution, always)
 
-Write `.twt-artifacts/design/design-system/preview.html` — a styleguide that renders the **atomic evolution** entirely from `tokens.css` (so it can never drift from the tokens). It links `tokens.css` via `<link rel="stylesheet" href="tokens.css">` and uses `var(--…)` for **all** foundation values (color/type/space/radius/shadow/motion); only minimal structural layout CSS may be embedded. Lay it out as four ascending tiers, top to bottom, so a reader literally watches tokens grow into UI. **(In mode 5 — tokens only — render only Tier 1.)**
+Write `.twt-artifacts/design/design-system/preview.html` — a **styleguide / specimen sheet** that renders the **atomic evolution** entirely from `tokens.css` (so it can never drift from the tokens). It links `tokens.css` via `<link rel="stylesheet" href="tokens.css">` and uses `var(--…)` for **all** foundation values (color/type/space/radius/shadow/motion); only minimal structural layout CSS may be embedded. Lay it out as four ascending tiers, top to bottom, so a reader literally watches tokens grow into UI. **(In mode 5 — tokens only — render only Tier 1.)**
 
-Open with a one-line legend: `Subatomic particles → Atoms → Molecules → Organisms` and a note that each level is built only from the level above it and the tokens, and that **every** documented component appears here (one instance each); the exhaustive variant × state catalog lives in the component gallery.
+### This is a styleguide, not the website — hard rules
+The most common failure here is the preview drifting into a **marketing landing page / homepage mockup** for the real project. Do **not** do that. Specifically, the preview MUST NOT:
+- use real project copy — no real hero headline, value props, case-study/stat numbers, testimonials, or CTA messaging. Use **neutral placeholder labels**: "Button label", "Card title · default state", "Body copy sample — one line that demonstrates the body type token.", "Nav item".
+- assemble a working homepage or a real page flow (hero → features → proof → CTA → footer-with-real-links). Organisms are shown as **isolated, labeled specimens in an inventory grid**, each in a bordered/captioned cell — never stitched into a running page.
+- wire a real navigation, auto-advancing carousels, scroll-triggered reveals, count-up stats, or any JS demo of "the site." Motion is shown in Tier 1 as labeled token specimens only (a single hover/transition swatch is fine); the preview needs **no `<script>` and no GSAP/CDN**.
+A reader should see *the system's parts*, neutrally labeled — not a pitch for the client's business.
+
+### Completeness pre-check (do this before writing a line of HTML)
+The second failure is **missing components**. Build the exact inventory first, from the authoritative source:
+1. If `components.md` was/will be written (Step 11) or already exists, treat **its** atom/molecule/organism list as authoritative; otherwise use **Section 3.2/3.3/3.4 of `tokens.md`**.
+2. Write out the explicit list: every **atom** (3.2), every **molecule** (3.3), every **organism** (3.4), plus any **Inferred Components** (3.5, clearly marked "inferred").
+3. Render **one instance of each item on that list** — no omissions, no extras. After writing the file, re-count: the number of atom specimens must equal the count in 3.2, molecules 3.3, organisms 3.4. If they don't match, fix the preview before finishing. Note the counts in the Step 12 completion summary.
+
+Open with a one-line legend: `Subatomic particles → Atoms → Molecules → Organisms` and a note that each level is built only from the level above it and the tokens, that this is a **specimen sheet (not the site)**, and that **every** documented component appears here (one instance each); the exhaustive variant × state catalog lives in the component gallery.
 
 ### Tier 1 — Subatomic particles (the tokens)
 One subsection per foundation category present in `tokens.md` (skip none):
@@ -540,7 +554,7 @@ Render **every atom** documented in Section 3.2 (at minimum: button — with its
 Render **every molecule** from Section 3.3 — one instance each — each one **visibly composing the atoms above** (e.g. *search bar* = input atom + button atom; *form row* = label atom + input atom; *card header* = avatar atom + title + action button). Caption each with **which atoms it composes**.
 
 ### Tier 4 — Organisms
-Render **one instance of every organism** documented in Section 3.4 — each **composing molecules/atoms** (e.g. *site header* = logo + nav-item molecules + button atom; *hero* = heading + body + CTA button + media slot; *pricing card*; *footer*). Caption each with **which molecules/atoms it composes**. Render them all, default state — this tier is the project's organism inventory, not a single showcase. (Each component's full variant × state matrix is the component gallery's job, not the preview's.)
+Render **one instance of every organism** documented in Section 3.4 as **separate, captioned specimens in an inventory grid** — each in its own bordered cell with a heading and a composition caption. Do **not** stack them into a running page. Each composes molecules/atoms (e.g. *site header* = logo + nav-item molecules + button atom; *hero* = heading + body + CTA button + media slot; *pricing card*; *footer*), but uses **neutral placeholder content**, not the project's real headlines, stats, or links. Caption each with **which molecules/atoms it composes**. Render them all, default state — this tier is the project's organism **inventory**, not a homepage showcase. (Each component's full variant × state matrix is the component gallery's job, not the preview's.)
 
 ### Closing cross-links
 - **Exhaustive catalog:** a note + link to `../component/gallery.html` — "This preview shows **breadth**: every component once, organized by atomic level (the evolution). For **depth** — each component with all its variants and states — see the component gallery." If that file doesn't exist yet, render the noted placeholder: "Run /twt-component to populate the exhaustive component gallery." (Pipeline order builds the design system before components.)

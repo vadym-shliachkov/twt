@@ -2,7 +2,7 @@
 name: twt-design
 category: design
 description: Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.2.2
+version: 1.2.4
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -91,7 +91,7 @@ Dispatch `/twt-mockup` (Agent tool) **with `subagent-collect`**, then surface.
 **Surfacing protocol (CONVENTIONS rule 13):** After each sub-area returns, read its `.twt-artifacts/design/<area>/decisions.md`. If `status: open` and this wrapper is NOT in collect mode (no `subagent-collect` in its own `$ARGUMENTS`), present the open questions / proposed rules via the **AskUserQuestion** tool in the main thread, then re-dispatch that sub-area's define in refinement mode with the answers to finalize (`status: resolved`). If `/twt-design` was itself dispatched with `subagent-collect` (e.g. by `/twt-site`), bubble the merged decisions upward instead of asking (nested-subagent bubbling).
 
 ## Step 6 — Synthesize the brief (thin pointer-index)
-The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize tokens, components, layouts, or mockups. Phase 3 reads the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/design/design-brief.md`:
+The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize tokens, components, layouts, or mockups. **Use the file tools, never a shell command:** Glob `.twt-artifacts/design/*/validation-report.md` to list the reports, then Read each (or Grep across them) — do **not** `cd` into the folder or run a `cat`/`grep`/`for` loop, which forces a permission prompt every run. Same for gathering sibling `decisions.md` files. Phase 3 reads the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/design/design-brief.md`:
 ```
 ---
 generated: <YYYY-MM-DD>
