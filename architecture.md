@@ -1785,7 +1785,7 @@ flowchart TB
 ### /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*

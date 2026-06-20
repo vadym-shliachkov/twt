@@ -1425,7 +1425,7 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 ## /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS, every widget registered in `$map`, WPML coverage for translatable fields, PHP syntax, and CSS scoping. Does NOT audit content (Elementor content lives in the WordPress DB, not in files — use live `/twt-qa <url>` for that).

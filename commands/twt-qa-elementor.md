@@ -1,8 +1,8 @@
 ---
 name: twt-qa-elementor
 category: qa
-description: (v1.0.1) Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
-version: 1.0.1
+description: (v1.1.0) Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
@@ -38,7 +38,16 @@ writes:
 Find the theme at the path in `$ARGUMENTS`, else auto-detect `wp-content/themes/hello-elementor-*`. If none exists, abort: "No Elementor theme found — build it (Phase 3) or audit a static site instead." Read `.twt-artifacts/elementor-theme/conventions.md` (for slug + rules) and `tokens.md` (for the mirror check).
 
 ## Step 2 — Run checks
-- **BLOCKER** — a widget PHP file in `inc/elementor/widgets/` whose class is not registered in the `$map` of `class-<slug>-elementor.php`; a hex/px/font **literal** in `widgets.css` or `design-system.css` (token-only violation — except inside the `:root{}` token definitions); a PHP syntax error (run `php -l` per file if `php` is available; otherwise flag as "lint not run — php unavailable"); an unscoped CSS selector (not wrapped in the `:where(.<slug>-chrome, .<slug>-homepage)` scope) that would leak globally.
+
+For the **token-only CSS** check, gather the literal counts deterministically — don't hand-scan `widgets.css`/`design-system.css`. Run the bundled scanner in elementor mode; it returns exact `hex_literals`, `length_literals`, `font_literals`, and `undefined_var_refs` with `file:line` locations, already ignoring literals that are token *definitions* (values inside `--x:` / `:root{}`):
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" tokens "$CLAUDE_PROJECT_DIR" elementor
+```
+
+Use its `counts`/`findings[]` for the Token-only CSS criterion. The **other checks are not scriptable** and stay yours: widget-`$map` registration, `php -l`, WPML coverage, and CSS scoping all require reading the PHP/XML structure. Then classify:
+
+- **BLOCKER** — a widget PHP file in `inc/elementor/widgets/` whose class is not registered in the `$map` of `class-<slug>-elementor.php`; a hex/px/font **literal** in `widgets.css` or `design-system.css` (scanner's counts — token-only violation, definitions already excluded); a PHP syntax error (run `php -l` per file if `php` is available; otherwise flag as "lint not run — php unavailable"); an unscoped CSS selector (not wrapped in the `:where(.<slug>-chrome, .<slug>-homepage)` scope) that would leak globally.
 - **WARNING** — a translatable text control with no entry in `wpml-config.xml`; a widget shipping `'default' =>` demo content on TEXT/TEXTAREA/MEDIA/REPEATER (violates the no-demo-content rule); a widget missing `register_section_spacing()`.
 - **SUGGESTION** — a token in `tokens.md` not mirrored into `design-system.css`.
 

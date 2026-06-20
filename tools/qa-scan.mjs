@@ -9,9 +9,12 @@
 // prose from the evidence. The model still owns judgment (severity, "is this px
 // literal sanctioned?"); the script owns the counting.
 //
-//   node qa-scan.mjs <check> <projectDir>
+//   node qa-scan.mjs <check> <projectDir> [variant]
 //     <check>       tokens | links | content | a11y
 //     <projectDir>  the target project root (built site/ or mockup fallback)
+//     [variant]     tokens only: "elementor" scans the Hello-Elementor child
+//                   theme's CSS (widgets.css / design-system.css) instead of
+//                   the static site — for /twt-qa-elementor's token-only check
 //
 // LOCAL MODE ONLY. Live (URL) audits stay model-driven via WebFetch — this script
 // is never the right tool for a served URL.
@@ -29,8 +32,9 @@ const CAP = 40; // max findings emitted per kind (counts are always exact)
 
 const check = process.argv[2];
 const projectDir = process.argv[3];
+const variant = (process.argv[4] || '').trim();
 if (!check || !projectDir || !['tokens', 'links', 'content', 'a11y'].includes(check)) {
-  console.error('usage: qa-scan.mjs <tokens|links|content|a11y> <projectDir>');
+  console.error('usage: qa-scan.mjs <tokens|links|content|a11y> <projectDir> [elementor]');
   process.exit(2);
 }
 const ART = join(projectDir, '.twt-artifacts');
@@ -47,6 +51,20 @@ function listFiles(dir, ext) {
     else if (e.name.toLowerCase().endsWith(ext)) out.push(p);
   }
   return out;
+}
+// Hello-Elementor child theme CSS: the token-only files the elementor audit cares
+// about (widgets.css / design-system.css), found anywhere under the theme dir.
+function locateElementorCss() {
+  const themesRoot = join(projectDir, 'wp-content', 'themes');
+  if (!existsSync(themesRoot)) return { html: [], css: [], base: null };
+  let themeDir = null;
+  for (const e of readdirSync(themesRoot, { withFileTypes: true })) {
+    if (e.isDirectory() && e.name.startsWith('hello-elementor-')) { themeDir = join(themesRoot, e.name); break; }
+  }
+  if (!themeDir) return { html: [], css: [], base: null };
+  const all = listFiles(themeDir, '.css');
+  const named = all.filter((f) => /(?:^|[\\/])(widgets|design-system)\.css$/i.test(f));
+  return { html: [], css: named.length ? named : all, base: themeDir };
 }
 function locate() {
   const siteDir = join(projectDir, 'site');
@@ -298,8 +316,13 @@ function runA11y(html) {
 }
 
 // ---- dispatch ----------------------------------------------------------------
-const { html, css, base } = locate();
-if (!base) { console.log(`qa-scan ${check}: no built HTML/CSS found (looked in site/ and .twt-artifacts/design/mockup/). Local audit needs built source.`); process.exit(0); }
+const elementorTokens = check === 'tokens' && variant === 'elementor';
+const { html, css, base } = elementorTokens ? locateElementorCss() : locate();
+if (!base) {
+  const where = elementorTokens ? 'wp-content/themes/hello-elementor-*/' : 'site/ and .twt-artifacts/design/mockup/';
+  console.log(`qa-scan ${check}${elementorTokens ? ' (elementor)' : ''}: no ${elementorTokens ? 'theme CSS' : 'built HTML/CSS'} found (looked in ${where}). Local audit needs built source.`);
+  process.exit(0);
+}
 
 let result, sources;
 if (check === 'tokens') { sources = css; result = runTokens(css); }
