@@ -12,7 +12,24 @@ A collection of Claude Code slash commands you can install once and use across a
 
 ## Quick Start
 
-### macOS / Linux
+### Native plugin (recommended)
+
+If your Claude Code build supports `/plugin` commands:
+
+```
+/plugin marketplace add vadym-shliachkov/twt
+/plugin install twt@twt-marketplace
+```
+
+Then **restart Claude Code** (CLI or Desktop). All `/twt-*` commands are immediately available.
+
+After the plugin is active, run `/twt-setup` once in any project to merge the curated permission allowlist into that project's `settings.json` — this cuts the "Do you want to proceed?" prompts during pipeline runs.
+
+### Manual / legacy install
+
+For users not on a `/plugin`-capable build, clone the repo and run the installer:
+
+#### macOS / Linux
 
 ```bash
 git clone <your-repo-url> twt
@@ -20,7 +37,7 @@ cd twt
 bash install.sh
 ```
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 
 ```powershell
 git clone <your-repo-url> twt
@@ -32,42 +49,11 @@ After installing, **restart Claude Code** (CLI or Desktop) so it picks up the ne
 
 ---
 
-## Installation details
-
-The installer recursively scans `skills/` for all `*.md` skill files and copies them flat into:
-
-| Platform | Target directory |
-|----------|-----------------|
-| macOS / Linux | `~/.claude/commands/` |
-| Windows | `%USERPROFILE%\.claude\commands\` |
-
-This is the standard location that both the **Claude Code CLI** and the **Claude Code Desktop app** read from. No extra configuration required.
-
-### Project-local install + scope guard
-
-Install the skills into a single project instead of globally:
-
-```bash
-# macOS / Linux
-bash install.sh --target /path/to/project
-
-# Windows
-.\install.ps1 -Target C:\path\to\project
-```
-
-A project-local install also seeds a **scope guard** into `<project>\.claude\settings.json`: a
-`PreToolUse` hook (`.claude/hooks/twt-scope-guard.js`) that **auto-allows any tool call that stays
-inside the project folder** and leaves anything reaching **outside** it to the normal approval prompt.
-This removes the flood of repeated "Do you want to proceed?" prompts during a pipeline run while still
-asking before anything touches a sibling project, a parent directory, or the wider filesystem.
-
-The guard never denies outright — on any uncertainty it simply falls back to the normal prompt, so it
-can only ever cost an extra confirmation, never an unwanted auto-approval. It needs **Node.js** (the hook
-is a small Node script). Pass `--no-scope-guard` / `-NoScopeGuard` to skip it.
-
----
-
 ## Uninstalling
+
+**Plugin install:** `/plugin remove twt` and restart.
+
+**Legacy install:**
 
 ```bash
 # macOS / Linux
@@ -81,9 +67,9 @@ bash uninstall.sh
 
 ## Using on a new Claude account
 
-1. Clone this repo on the new machine
-2. Run the installer
-3. Done — commands are account-agnostic; they live in the local `~/.claude/` directory
+**Plugin install:** run the two `/plugin` commands above on the new machine — no cloning required.
+
+**Legacy install:** clone the repo on the new machine, run the installer. Commands are account-agnostic; they live in the local `~/.claude/` directory.
 
 ---
 
@@ -145,45 +131,33 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 ```
 twt/
 ├── README.md              ← you are here
-├── SKILLS.md              ← full command reference
-├── install.sh             ← macOS / Linux installer
-├── install.ps1            ← Windows installer
-├── uninstall.sh           ← macOS / Linux uninstaller
-├── uninstall.ps1          ← Windows uninstaller
-└── skills/                ← all skill files, organised by category
-    └── content/           ← content fetching & extraction skills
-        ├── README.md      ← category description
-        └── twt-fetch-content-site.md
+├── SKILLS.md              ← full command reference (auto-generated)
+├── architecture.md        ← skill graph (auto-generated)
+├── commands/              ← orchestrators + standalone tools (slash commands)
+│   └── twt-*.md           ← one file per command, flat — no subfolders
+├── skills/                ← sub-skills (model-invoked only, not in / menu)
+│   └── twt-<name>-<role>/ ← one directory per sub-skill
+│       └── SKILL.md
+├── hooks/                 ← bundled plugin hooks
+│   └── hooks.json         ← scope-guard + debug tracer (activated by plugin)
+├── tools/                 ← Node scripts invoked from skill bodies
+├── install.sh             ← macOS / Linux legacy installer
+├── install.ps1            ← Windows legacy installer
+├── uninstall.sh           ← macOS / Linux legacy uninstaller
+└── uninstall.ps1          ← Windows legacy uninstaller
 ```
 
-Add new categories by creating a new subfolder under `skills/`. The installer
-picks up any `*.md` file found anywhere inside `skills/` automatically.
+Category is expressed only via the `category:` frontmatter field — there are no per-category subfolders.
 
 ---
 
 ## Adding a new skill
 
-1. Choose the right category folder under `skills/` (or create a new one)
-2. Create `twt-<your-skill>.md` inside it
-3. Write the skill prompt (use `$ARGUMENTS` for anything the user types after the command name)
-4. Run the installer again — the new command is deployed immediately
-5. Add a row to [SKILLS.md](SKILLS.md) and the category `README.md`
-
-### Skill file template
-
-```markdown
-# /twt-your-skill-name
-
-One-line description of what this skill does.
-
----
-
-## Step 1 — ...
-
-[Instructions for Claude to follow when this command is invoked]
-
-Arguments passed by the user: $ARGUMENTS
-```
+1. **Orchestrator / standalone tool:** create `commands/twt-<name>.md`
+2. **Sub-skill** (`*-define`, `*-validate`, or `*-fetch`): create `skills/twt-<name>-<role>/SKILL.md`
+3. Fill all frontmatter fields (none are optional; use `[]` for empty lists)
+4. Write the Intent block (Purpose / Non-goals / Success criteria), then `## Step N` body
+5. Run `/twt-marketplace-docs` — it stamps `(vX.Y.Z)` into each skill's `description:` and regenerates `SKILLS.md`, `architecture.md`, and the README table
 
 ---
 

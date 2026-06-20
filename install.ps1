@@ -1,4 +1,4 @@
-# twt - Skills Marketplace Installer
+# twt - Skills Marketplace Installer  [LEGACY FALLBACK — prefer: /plugin marketplace add vadym-shliachkov/twt]
 # Works on Windows (PowerShell 5+ and PowerShell Core).
 #
 # Usage:
