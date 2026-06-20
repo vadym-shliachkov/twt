@@ -62,7 +62,7 @@ copy_command_with_version() {
     NR > 1 && in_fm && $0 == "---" { in_fm = 0 }
     in_fm && !done && /^description:[[:space:]]*/ {
       if ($0 !~ "\\(v" version "\\)") {
-        $0 = $0 " (v" version ")"
+        sub(/^description:[[:space:]]*/, "&(v" version ") ")
       }
       done = 1
     }

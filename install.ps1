@@ -62,11 +62,15 @@ function Copy-CommandWithVersion([string]$Source, [string]$Destination) {
         {
             param($m)
             if ($m.Value -match [regex]::Escape("(v$version)")) { return $m.Value }
-            return "$($m.Value) (v$version)"
+            return ($m.Value -replace '^(description:\s*)', "`${1}(v$version) ")
         },
         1
     )
-    Set-Content -Path $Destination -Value $updated -Encoding UTF8
+    # Write UTF-8 *without* a BOM. Windows PowerShell 5.1's `Set-Content -Encoding UTF8`
+    # prepends a BOM, which shifts the opening `---` off byte 0 and breaks Claude Code's
+    # frontmatter parser -- the slash menu then falls back to showing the first raw line
+    # (`---`) instead of the description. UTF8Encoding($false) = no BOM, on both PS 5.1 and Core.
+    [System.IO.File]::WriteAllText($Destination, $updated, (New-Object System.Text.UTF8Encoding($false)))
 }
 
 Write-Host ""
