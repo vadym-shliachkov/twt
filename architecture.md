@@ -69,6 +69,7 @@ flowchart TB
     twt_spec_define["/twt-spec-define"]:::skill
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
+    twt_text_analysis["/twt-text-analysis"]:::skill
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -147,6 +148,7 @@ flowchart TB
     twt_content_validate -.-> twt_qa_content
     twt_pre_design -.-> twt_site
     twt_design -.-> twt_site
+    twt_text_analysis -.-> twt_site
     twt_develop -.-> twt_site
     twt_site_dev -.-> twt_site
     twt_content_approval_checklist -.-> twt_site
@@ -189,6 +191,7 @@ flowchart TB
 - /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
+- /twt-text-analysis - Block-by-block text-quality analysis (10 metrics) with a scored report and optional rewrite — manual review or automatic
 
 ### curation
 
@@ -280,7 +283,7 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, an always-on dispatch trace, and a prominent content-approval callout
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
 
 ### site-dev
 
@@ -1887,7 +1890,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.8.0
+**Version:** 1.9.0
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1896,7 +1899,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
 
 **Feeds into:**
 - Hard consumers: none
@@ -1915,6 +1918,7 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/site-log.md |  |
+| .twt-artifacts/content/text-analysis/ |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-site-dev
@@ -2048,6 +2052,36 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 
+### /twt-text-analysis
+
+**Category:** content
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-site
+
+**Reads:**
+- the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
+- .twt-artifacts/content/text-analysis/config.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md |  |
+| .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md |  |
+| .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md |  |
+| .twt-artifacts/content/text-analysis/config.md |  |
+| the subject file in place (only with explicit user consent) |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -2107,12 +2141,13 @@ flowchart TB
 | /twt-qa-links | none | none |
 | /twt-search-site | none | WebFetch |
 | /twt-setup | none | none |
-| /twt-site | none | twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
+| /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
 | /twt-site-dev | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
+| /twt-text-analysis | none | none |
 
 ## Artifact namespace summary
 

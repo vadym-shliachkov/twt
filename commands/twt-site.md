@@ -1,8 +1,8 @@
 ---
 name: twt-site
 category: site
-description: (v1.8.0) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, an always-on dispatch trace, and a prominent content-approval callout
-version: 1.8.0
+description: (v1.9.0) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+version: 1.9.0
 accepts_arguments: true
 inputs:
   - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -13,6 +13,7 @@ dependencies:
   soft:
     - twt-pre-design
     - twt-design
+    - twt-text-analysis
     - twt-develop
     - twt-site-dev
     - twt-content-approval-checklist
@@ -27,6 +28,7 @@ reads:
   - .twt-artifacts/qa/gaps.md
 writes:
   - .twt-artifacts/site-log.md
+  - .twt-artifacts/content/text-analysis/
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
@@ -133,11 +135,14 @@ If `site-instruction.md` already named the build target (Step 0·instr), use it 
 For each phase still selected, in pipeline order, dispatch its wrapper via the Agent tool, then run the Step 4 pause before moving on:
 - **Pre-design** → `/twt-pre-design`
 - **Design** → `/twt-design`
+- **Content quality (text-analysis)** → `/twt-text-analysis` (sub-step — runs after Design whenever Design is in the phase set; see the dedicated paragraph below)
 - **Content approval checklist** → `/twt-content-approval-checklist` (whenever Development is selected; for Figma express, pass the Figma URL so current design copy, lorem/placeholder text, links, and media references are captured into the workbook before build)
 - **Development** → `/twt-develop` (forwarding the chosen `--target`; it builds with currently available content and leaves approval implementation for a later explicit call) **or** `/twt-site-dev` (Figma express; it reuses/refines the workbook and builds with current Figma content)
 - **QA** → `/twt-qa`
 
 Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward **the Step 0b project brief** (what/who, content sources, brand/design source, stage) plus any free-form `$ARGUMENTS` context as notes — this is the input the collect-mode sub-skills draft from, so pass it in full to every phase.
+
+**Content quality (text-analysis) — sub-step after Design.** Whenever the **Design** phase is in the set (so real page copy exists), dispatch `/twt-text-analysis` after Design returns and **before** the Content approval checklist, so the workbook captures quality-checked copy. This is a **full-workflow-only** step — `/twt-site-dev` (Figma express) does **not** run it. Target each page's drafted copy: the curation outlines `.twt-artifacts/pre-design/curation/outlines/*.md` (preferred editable source) and, if present, the mockup copy under `.twt-artifacts/design/mockup/`. Dispatch per page with `subagent-collect`; the child writes `analysis-report.md` + `optimized.md` under `.twt-artifacts/content/text-analysis/<page-slug>/` and a sibling `decisions.md`, but **never edits the source non-destructively** (collect mode applies suggested copy only to its own `optimized.md`). **Interactive:** at the next gate, surface a one-line per-page quality summary (document Overall + how many blocks scored < 85); the user applies improvements through the normal content-approval / `/twt-content-optimize` flow. **Auto mode:** dispatch `/twt-text-analysis auto …` so blocks below 85 are rewritten and the improved copy is available for the content-approval workbook. It is non-destructive to built mockups and never blocks the run — a failed/empty analysis is reported, not fatal. Log the dispatch in the Timeline.
 
 Treat the **Content approval checklist** as a required pre-development sub-step, not as an optional report line: when Development is selected, dispatch `/twt-content-approval-checklist` immediately after Design has completed (or, for Figma express, inside `/twt-site-dev` before build). After the child returns, verify `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists. If it does not exist, do **not** start Development; report that the content-approval workbook failed to materialize and surface the child error/output so the user can fix the source or dependency. In auto mode this is still a hard prerequisite for Development because later approval implementation depends on the workbook path.
 
