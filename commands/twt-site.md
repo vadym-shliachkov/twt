@@ -1,14 +1,13 @@
 ---
 name: twt-site
 category: site
-description: (v1.7.1) Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
-version: 1.7.1
+description: (v1.8.0) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, an always-on dispatch trace, and a prominent content-approval callout
+version: 1.8.0
 accepts_arguments: true
 inputs:
   - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
   - Optional notes, a live URL, or a hint of which phase to start from
   - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-  - Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
 dependencies:
   hard: []
   soft:
@@ -28,7 +27,6 @@ reads:
   - .twt-artifacts/qa/gaps.md
 writes:
   - .twt-artifacts/site-log.md
-  - .twt-artifacts/site-debug.md (only with --log)
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
@@ -57,15 +55,16 @@ writes:
 ## Step 0 — Mode
 If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat everything after it as free-form context (notes, a live or Figma URL, target hints like "elementor" or "html"). In auto mode this skill asks **nothing** — no AskUserQuestion, no plain-text prompts, no approval requests; every decision comes from that context, the existing `.twt-artifacts/` state, and the defaults named below. Without the leading `auto`, run interactively as before.
 
-## Step 0·log — Debug tracer (`--log`)
-If `$ARGUMENTS` contains the token `--log`, enable the **debug tracer** and **strip the token** from `$ARGUMENTS` (so it isn't forwarded to children or parsed as context). The tracer is bundled in the plugin at `${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js`.
+## Step 0·trace — Arm the dispatch tracer (always)
+The run trace is **always on** — no flag. It captures every skill the run touches (twt phase wrappers dispatched via the Agent/Task tool, **and** any other Skill-tool call — other plugins, superpowers, system skills), each with its WHY and wall-time, and folds them into `site-log.md` at the end. The tracer is bundled at `${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js`.
 
-- **Arm it now** (Bash): `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --arm "site $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks begin appending a live trace — every dispatched skill (at any nesting depth) with its WHY, plus boxed user choices — to `.twt-artifacts/site-debug.md`. Without `--log` the hooks stay completely inert.
-- **If that hook file is missing** (twt was installed globally, not into this project), tell the user `--log` needs a project install (`install.ps1 -Target .` or `bash install.sh --target .`) and continue **without** debug logging — never block the run.
-- **When armed, prefix every dispatch prompt (Step 3) with a `WHY:` line** — `WHY: <one-line reason this phase/skill is being called now>` — so the trace records real intent instead of a guessed snippet.
+- **Arm it now** (Bash): `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --arm "site $ARGUMENTS"`. This drops a sentinel so the already-wired `PreToolUse`/`PostToolUse` hooks (matching `Task|Agent|Skill|AskUserQuestion`) record events to `.twt-artifacts/.twt-debug/events.jsonl` for the whole run. The hooks are **inert in any session where the sentinel is absent**, so this affects only this run.
+- **If that hook file is missing** (twt was installed globally without bundled hooks), continue **without** the trace — never block the run; the curated Timeline (Step 0a) still gives the dispatch narrative.
+- **Prefix every dispatch prompt (Step 3) with a `WHY:` line** — `WHY: <one-line reason this phase/skill is being called now>` — so the trace records real intent instead of a guessed snippet.
+- **There is no token column.** Per-skill token usage is not exposed to hooks; wall-time is the honest cost proxy. Do not promise token counts.
 
 ## Step 0a — Open the session log
-Start a session log at `.twt-artifacts/site-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail.
+Start a session log at `.twt-artifacts/site-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 2), and the user's free-form Requested context. Then **keep the Timeline live for the whole run**: append one numbered entry for **every** question you ask (the phases menu, the target menu, the visual-direction surfacing, each per-phase gate, and any surfaced child `decisions.md` question) with the user's answer — or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)` — and one entry for **every** phase wrapper you dispatch (`[step]` + the skill name + a **one-sentence** why). This logging is **not** skipped in auto mode — auto runs especially need the trail. (This curated Timeline is the human narrative; the **exhaustive** dispatch trace — every skill including non-twt ones, with wall-time — is auto-captured by the tracer armed in Step 0·trace and folded into this same file at Step 5, so you don't hand-list every Skill call here.)
 
 ## Step 0·instr — Project instruction file (read first if present)
 Before the intake interview, check whether the project provides a **`site-instruction.md`** — look first at the project root (`./site-instruction.md`), then `.twt-artifacts/site-instruction.md`. **Use the Glob/Read tools, never a shell command.**
@@ -166,8 +165,8 @@ Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
 When BLOCKERs are present, the option descriptions should recommend the right remedy and name the blocker count — for an unconfirmed-visual-direction BLOCKER that remedy is **Discuss visual direction** (a human pick, not a re-run, which can't resolve it). Continue the pipeline on **Proceed**, or after **Discuss visual direction** resolves.
 
 ## Step 5 — Final summary & finalize the log
-If the debug tracer was armed (`--log`), **first** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it appends the wall-time cost table (per-phase rollup + per-skill leaf, with shares) to `.twt-artifacts/site-debug.md` and disarms the hooks. Do this even on an early stop, so a partial run still gets its trace summarized.
+**First**, finalize the curated session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-log.md`. Do all `site-log.md` edits **before** the next step (the summarizer appends to end-of-file).
 
-Then finalize the session log: ensure every question/answer and every dispatched phase wrapper is in the Timeline, then fill the run's **Outcome** block (phases completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-log.md`.
+**Then** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it folds the **full dispatch trace** (every Task/Agent dispatch and every Skill call — twt + any other plugin/superpowers/system skill, each with its WHY and wall-time) plus the **wall-time cost tables** (by phase + by skill) into `.twt-artifacts/site-log.md` as a final `### Dispatch trace` section under this run, then disarms the hooks. Do this **even on an early stop**, so a partial run still gets its trace folded. (If the tracer was never armed — hook missing — skip; the curated Timeline still stands.) There is no token column (not available to hooks).
 
-Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, `content-approval-checklist.xlsx`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, any outstanding BLOCKERs or unready content rows the user chose to defer, and **the log location** (`.twt-artifacts/site-log.md`; plus `.twt-artifacts/site-debug.md` with the dispatch trace + cost table when `--log` was used). Make clear that content approval is a parallel process: after stakeholders finish the workbook, run `/twt-content-approval-implement` to update the corresponding blocks/pages. In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.
+Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, and any outstanding BLOCKERs or unready content rows the user chose to defer. **Call out the content-approval workbook explicitly** when Development ran: state its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and its row count on its own line (it is easy to miss under the `content-approval/` subdir), and make clear content approval is a **parallel** process — after stakeholders finish the workbook, run `/twt-content-approval-implement` to apply approved rows to the built blocks/pages. Point to **the single log** at `.twt-artifacts/site-log.md` (curated Timeline + auto-folded dispatch trace & cost). In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.

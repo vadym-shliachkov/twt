@@ -1,8 +1,8 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: (v1.4.1) Phase 3 express — from a Figma link, build/update the design system and jump to development
-version: 1.4.1
+description: (v1.5.0) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
+version: 1.5.0
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -60,6 +60,9 @@ If `$ARGUMENTS` contains a Figma URL, use it; otherwise ask for one — **except
 ## Step 0a — Open the session log
 Start a session log at `.twt-artifacts/site-dev-log.md` (create the file/dir if missing) by **appending** a new `## Run <ISO timestamp>` section in the session-log format (a `# Session log` heading, then per invocation a `## Run <ISO timestamp>` section with **Command** / **Mode** (interactive|auto) / **Target** / **Requested** (one-line context) fields, a `### Timeline` of numbered entries — each either `[question] <header>` with the asked text + answer, or `[step] <phase>` with the skill used + a one-sentence why (in auto mode record `auto-decision: <value> (from <evidence|default>)`) — and a `### Outcome` block: phases/steps completed · outstanding BLOCKERs · key artifact paths) — never rewrite earlier runs. Record Command, Mode (interactive/auto), Target (tbd until Step 1), and the user's free-form Requested context. Then **keep the Timeline live for the rest of the run**: append one numbered entry for **every** question you ask (the question text + the user's answer, or, in auto mode, the inferred `auto-decision: <value> (from <evidence|default>)`) and one for **every** skill you dispatch (`[step]` + the skill name + a **one-sentence** why). Surfaced child `decisions.md` questions and their answers are logged the same way. This logging is **not** skipped in auto mode — auto runs especially need the trail.
 
+## Step 0b — Arm the dispatch tracer (always)
+Arm the always-on run trace (no flag): run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --arm "site-dev $ARGUMENTS"`. The label includes `site-dev`, so the tracer folds its output into `site-dev-log.md` (not `site-log.md`). The `Task|Agent|Skill|AskUserQuestion` hooks then record every dispatch — twt builders **and** any other Skill-tool call — to `.twt-artifacts/.twt-debug/events.jsonl`; it is inert in any session without the sentinel. If the hook file is missing (global install without bundled hooks), continue without the trace. **Prefix every dispatch prompt with a `WHY:` line** so the trace records real intent. There is no token column (not exposed to hooks).
+
 ## Step 1 — Target menu
 
 **Auto mode:** infer `<target>` and skip the menu — "elementor"/"wordpress" in the context or an existing `.twt-artifacts/elementor-theme/conventions.md` → **elementor**; an existing `.twt-artifacts/html-site/conventions.md` → **html**; otherwise default **html**. Record the inference and its reason.
@@ -101,6 +104,8 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 - `<target>` = **html** → `/twt-html-block-creator`
 
 ## Step 5 — Report & finalize the log
-First finalize the session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`.
+**First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).
 
-Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), that approved workbook content was not auto-applied, and **the log location** (`.twt-artifacts/site-dev-log.md`). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-site-dev` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).
+**Then** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it folds the full dispatch trace (every Task/Agent dispatch and Skill call — twt + any other plugin/system skill, with WHY + wall-time) plus the wall-time cost tables into `.twt-artifacts/site-dev-log.md`, then disarms. Do this even on an early stop. (If never armed — hook missing — skip.) No token column (not available to hooks).
+
+Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), and that approved workbook content was not auto-applied. **Call out the content-approval workbook explicitly** — its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and row count on its own line — and that approved rows apply only when `/twt-content-approval-implement` is run. Point to **the single log** at `.twt-artifacts/site-dev-log.md` (curated Timeline + auto-folded dispatch trace & cost). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-site-dev` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).
