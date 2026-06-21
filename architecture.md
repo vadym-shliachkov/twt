@@ -72,6 +72,8 @@ flowchart TB
     twt_content_fetch_pdf -.-> twt_brand_fetch
     twt_brand_define --> twt_brand_validate
     twt_design_system_define -.-> twt_content_approval_checklist
+    twt_layout_define -.-> twt_content_approval_checklist
+    twt_mockup_define -.-> twt_content_approval_checklist
     twt_content_approval_checklist --> twt_content_approval_implement
     twt_html_block_creator -.-> twt_content_approval_implement
     twt_elementor_block_creator -.-> twt_content_approval_implement
@@ -448,14 +450,14 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-layout, twt-mockup
+- Soft: twt-design-system-define, twt-layout-define, twt-mockup-define
 
 **Feeds into:**
 - Hard consumers: twt-content-approval-implement
@@ -482,7 +484,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -1249,7 +1251,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
@@ -1334,7 +1336,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
@@ -1951,7 +1953,7 @@ flowchart TB
 | /twt-brand-validate | twt-brand-define | none |
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
-| /twt-content-approval-checklist | none | twt-design-system-define, twt-layout, twt-mockup |
+| /twt-content-approval-checklist | none | twt-design-system-define, twt-layout-define, twt-mockup-define |
 | /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator |
 | /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc |
 | /twt-content-fetch-doc | none | twt-content-fetch |

@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: (v1.0.1) Create a human-readable XLSX content approval checklist for every project page
-version: 1.0.1
+description: (v1.1.1) Create a human-readable XLSX content approval checklist for every project page
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -10,8 +10,8 @@ dependencies:
   hard: []
   soft:
     - twt-design-system-define
-    - twt-layout
-    - twt-mockup
+    - twt-layout-define
+    - twt-mockup-define
 reads:
   - Figma URL or Figma design context supplied via $ARGUMENTS
   - .twt-artifacts/design/design-system/tokens.md
@@ -37,13 +37,13 @@ writes:
 **Non-goals:**
 - Does not write approved content into the site; use `/twt-content-approval-implement` for that.
 - Does not invent final approved content; inferred or recommended values stay in `recommended content` until the user approves them.
-- Does not create extra non-page worksheets; the workbook sheet count must match the project page count.
+- Does not create cover, index, or summary sheets; the only non-page worksheets are the two dedicated `Shared header` and `Shared footer` sheets.
 
 **Success criteria:**
-- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has exactly one worksheet per project page.
+- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
-- Shared header/footer content, page body fields, text, links, images, videos, and SEO metadata rows are present and readable by a human reviewer.
+- Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
 - Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, and next steps.
 
 ---
@@ -90,7 +90,7 @@ Put source values found in Figma/design/mockups into `current content` exactly e
 
 ## Step 3 - Build the workbook structure
 
-Create `.twt-artifacts/content-approval/content-approval-checklist.xlsx` with exactly one worksheet per discovered page. Do not add cover, index, hidden, or summary sheets.
+Create `.twt-artifacts/content-approval/content-approval-checklist.xlsx` with one worksheet per discovered page, **plus two dedicated shared worksheets**: `Shared header` (placed first) and `Shared footer` (placed last). Do not add cover, index, hidden, or summary sheets.
 
 Every worksheet uses this exact six-column header, in this order:
 
@@ -108,26 +108,43 @@ For media rows, use links or paths in `approved content`:
 - Videos: hosted URL, embed URL/code, transcript/caption requirement, thumbnail path, and poster alt text.
 - Documents/downloads: file path or URL plus link label.
 
-## Step 4 - Include required row groups
+## Step 4 - Group rows into labeled block sections
 
-For each page worksheet, include these row groups in a readable order:
-1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed.
-2. `Shared header`: logo text/image, navigation labels, navigation URLs, utility links, language/social/search items, and global CTA.
-3. Page-specific blocks from the design/layout, each with all dynamic text, links, image/video/file assets, form labels, placeholders, validation messages, and microcopy.
-4. `Shared footer`: footer navigation, contact details, legal links, newsletter/signup copy, social links, copyright, and any compliance text.
+Header and footer are global, so they get their **own** worksheets and must **not** be repeated on any page worksheet.
 
-If header or footer differs by page, reflect the actual page variant on that worksheet. If it is shared globally, repeat the same rows on every worksheet so the sheet count still equals the page count.
+**Page worksheets** — for each discovered page, include these row groups in a readable order, and include **no** header or footer rows:
+1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed (these are per-page, so they stay on the page sheet).
+2. Page-specific blocks from the design/layout, each with all dynamic text, links, image/video/file assets, form labels, placeholders, validation messages, and microcopy.
+
+**`Shared header` worksheet** — captured once, here only: logo text/image, navigation labels, navigation URLs, utility links, language/social/search items, and the global CTA.
+
+**`Shared footer` worksheet** — captured once, here only: footer navigation, contact details, legal links, newsletter/signup copy, social links, copyright, and any compliance text.
+
+If a specific page uses a header or footer **variant** that differs from the global one, record that difference as extra rows on the `Shared header` / `Shared footer` sheet and name the affected page(s) in `Block name` (for example `Header — checkout (no nav)`) — never scatter header/footer rows back onto page worksheets.
+
+### Section layout (the part that makes it readable)
+
+Do not emit one flat, undivided list of rows — that is what makes the sheet hard to scan. Instead lay **every** worksheet (pages and the two shared sheets) out as a sequence of clearly separated block sections, top to bottom in the page's reading order:
+
+1. **Section banner row** — one row per block that opens the block. Write the block name in `Block name` (e.g. `Hero`, `Pricing cards`, `Primary navigation`), leave `field type` **blank**, and style it as a full-width banner (Step 5). The blank `field type` is what marks it as a divider, not data, so the implement step skips it.
+2. **Field rows** — the block's fields immediately under its banner, one field per row, ordered by family for scannability: `text:*`, then `link:*`, then `image:*` / `video:*` / `file:*`, then `form:*`. Each field row repeats its block name in `Block name` (so every row stays self-describing for sorting/filtering and for the implement mapping).
+3. **Spacer row** — one empty row after each block's field rows, before the next banner, so blocks breathe.
+
+Keep `Block name` consistent between a block's banner and its field rows — the banner is the human divider; the repeated column value is the machine key.
 
 ## Step 5 - Make it readable for humans
 
 Use `openpyxl` styling so the workbook is review-friendly:
-- Freeze the header row and apply autofilter.
-- Set useful widths: block and field columns compact; content columns wide with wrapped text.
-- Use a bold high-contrast header fill, thin borders, vertical top alignment, and alternating row shading.
-- Apply data validation on the ready column with only `true,false`.
-- Default every ready value to `false`.
-- Highlight rows where approved content is blank or ready is `false`.
+- Freeze the header row (sections scroll under a fixed column header).
+- Set useful widths: `Block name` and `field type` compact; the three content columns wide with wrapped text.
+- **Section banner rows:** merge `Block name`→`ready` across the row, bold, larger, white text on a strong block-accent fill, with a thick top border — so each block is unmistakably separated from the one above.
+- **Field rows:** thin borders, vertical top alignment, and gentle alternating shading *within* each section (restart the alternation at every banner so the zebra never bleeds across a divider). De-emphasize the repeated `Block name` cell (lighter text) so the banner stays the dominant label.
+- **Spacer rows:** no fill, no border — pure whitespace between sections.
+- Apply data validation on the ready column with only `true,false`; default every ready value to `false` (skip these on banner/spacer rows).
+- Highlight field rows where approved content is blank or ready is `false`.
 - Keep long text wrapped; do not shrink text into unreadability.
+
+Prefer the clear section layout over a sheet-wide autofilter — interspersed banner and spacer rows make a single autofilter range misleading; if you add filtering, scope it so banners/spacers are not swept into it.
 
 Avoid LLM-oriented clutter. The workbook is for stakeholders to scan, fill, approve, and hand back.
 
@@ -135,8 +152,8 @@ Avoid LLM-oriented clutter. The workbook is for stakeholders to scan, fill, appr
 
 Write `.twt-artifacts/content-approval/content-approval-checklist-report.md` with:
 - Workbook path.
-- Page count and worksheet names.
-- Total row count and rows by field family: text, link, image, video, file, form, SEO.
+- Page count, the two shared worksheets (`Shared header`, `Shared footer`), and all worksheet names.
+- Block-section count per worksheet, plus total row count and rows by field family: text, link, image, video, file, form, SEO.
 - Source artifacts used and missing source artifacts.
 - Any assumptions or inferred blocks that need human review.
 - Next step: fill `approved content`, set ready cells to `true`, then run `/twt-content-approval-implement`.

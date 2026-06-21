@@ -210,7 +210,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -220,7 +220,7 @@ Create the content approval workbook that proves every page, shared header/foote
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-layout, twt-mockup
+- Soft: twt-design-system-define, twt-layout-define, twt-mockup-define
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
@@ -241,13 +241,13 @@ Create the content approval workbook that proves every page, shared header/foote
 **Non-goals:**
 - Does not write approved content into the site; use `/twt-content-approval-implement` for that.
 - Does not invent final approved content; inferred or recommended values stay in `recommended content` until the user approves them.
-- Does not create extra non-page worksheets; the workbook sheet count must match the project page count.
+- Does not create cover, index, or summary sheets; the only non-page worksheets are the two dedicated `Shared header` and `Shared footer` sheets.
 
 **Success criteria:**
-- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has exactly one worksheet per project page.
+- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
-- Shared header/footer content, page body fields, text, links, images, videos, and SEO metadata rows are present and readable by a human reviewer.
+- Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
 - Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, and next steps.
 
 ---
@@ -255,7 +255,7 @@ Create the content approval workbook that proves every page, shared header/foote
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.

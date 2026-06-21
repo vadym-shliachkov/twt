@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-implement
 category: content
-description: (v1.0.1) Apply ready approved XLSX content into the built site or development artifacts
-version: 1.0.1
+description: (v1.1.1) Apply ready approved XLSX content into the built site or development artifacts
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -77,6 +77,8 @@ Read the target conventions before editing target files.
 For every worksheet, read only the exact columns:
 `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 
+A row with a blank `field type` is a section banner or a spacer (the checklist lays each block out as a labeled section) — skip these silently: do not count or report them.
+
 Normalize readiness leniently: `true`, `yes`, `1`, and boolean TRUE mean ready; everything else means not ready. A row is implementable only when ready is true and approved content is not blank.
 
 Classify each implementable row by `field type` prefix:
@@ -92,12 +94,12 @@ Skip and report rows that are not ready, have blank approved content, use an unk
 
 ## Step 4 - Map workbook rows to site structure
 
-Use worksheet name as the page key. Map rows by the combination of page, block name, and field type. Prefer exact stable identifiers already present in page layouts, mockups, generated HTML comments, Elementor widget names, component names, or SEO metadata keys.
+Use worksheet name as the page key, **except** the two dedicated `Shared header` and `Shared footer` worksheets, which map to the global header/footer partials rather than a page. Map page rows by the combination of page, block name, and field type. Prefer exact stable identifiers already present in page layouts, mockups, generated HTML comments, Elementor widget names, component names, or SEO metadata keys.
 
-For shared `Shared header` and `Shared footer` rows:
+The `Shared header` and `Shared footer` worksheets are the single source for global header/footer content — page worksheets no longer carry header/footer rows. For their rows:
 - Apply the same approved value to the reusable partial/template/widget if one exists.
 - If no shared partial exists, apply to every page that contains the matching header/footer value.
-- If worksheets disagree on the same shared field, do not choose a winner; skip the field and report the conflict.
+- A row whose `Block name` marks a page-specific variant (for example `Header — checkout (no nav)`) applies only to the named page(s); apply the base rows everywhere else.
 
 For media:
 - Update `src`, `href`, embed URL/code, poster, thumbnail, alt, caption, and transcript/caption notes where matching fields exist.
