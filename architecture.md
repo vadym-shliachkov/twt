@@ -69,6 +69,7 @@ flowchart TB
     twt_spec_define["/twt-spec-define"]:::skill
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
+    twt_text_analysis["/twt-text-analysis"]:::skill
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -147,6 +148,7 @@ flowchart TB
     twt_content_validate -.-> twt_qa_content
     twt_pre_design -.-> twt_site
     twt_design -.-> twt_site
+    twt_text_analysis -.-> twt_site
     twt_develop -.-> twt_site
     twt_site_dev -.-> twt_site
     twt_content_approval_checklist -.-> twt_site
@@ -176,7 +178,7 @@ flowchart TB
 ### component
 
 - /twt-component - Orchestrate component define/validate in a single define→validate pass
-- /twt-component-define - Define component specs (components.md) and render a token-driven gallery.html
+- /twt-component-define - Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
 - /twt-component-validate - Read-only critique of components.md and gallery.html into validation-report.md
 
 ### content
@@ -189,6 +191,7 @@ flowchart TB
 - /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
+- /twt-text-analysis - Block-by-block text-quality analysis (10 metrics) with a scored report and optional rewrite — manual review or automatic
 
 ### curation
 
@@ -203,8 +206,8 @@ flowchart TB
 ### design-system
 
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass
-- /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and preview.html (atomic-evolution preview)
-- /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
+- /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
+- /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
 
 ### develop
 
@@ -280,11 +283,11 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
 
 ### site-dev
 
-- /twt-site-dev - Phase 3 express — from a Figma link, build/update the design system and jump to development
+- /twt-site-dev - Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
 
 ### spec
 
@@ -428,7 +431,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -854,7 +857,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.5.1
+**Version:** 1.6.0
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -890,7 +893,7 @@ flowchart TB
 ### /twt-design-system-validate
 
 **Category:** design-system
-**Version:** 1.3.1
+**Version:** 1.4.0
 
 **Inputs:**
 - none (reads the design-system artifacts)
@@ -1887,17 +1890,16 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.7.1
+**Version:** 1.9.0
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
 
 **Feeds into:**
 - Hard consumers: none
@@ -1916,13 +1918,13 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/site-log.md |  |
-| .twt-artifacts/site-debug.md (only with --log) |  |
+| .twt-artifacts/content/text-analysis/ |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.4.1
+**Version:** 1.5.0
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2050,6 +2052,36 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 
+### /twt-text-analysis
+
+**Category:** content
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-site
+
+**Reads:**
+- the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
+- .twt-artifacts/content/text-analysis/config.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md |  |
+| .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md |  |
+| .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md |  |
+| .twt-artifacts/content/text-analysis/config.md |  |
+| the subject file in place (only with explicit user consent) |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -2109,12 +2141,13 @@ flowchart TB
 | /twt-qa-links | none | none |
 | /twt-search-site | none | WebFetch |
 | /twt-setup | none | none |
-| /twt-site | none | twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
+| /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
 | /twt-site-dev | none | twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
+| /twt-text-analysis | none | none |
 
 ## Artifact namespace summary
 
@@ -2130,7 +2163,6 @@ flowchart TB
   pre-design/
   qa/
   search/
-  site-debug.md/
   site-dev-log.md/
   site-instruction.md/
   site-log.md/

@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.1) Define component specs (components.md) and render a token-driven gallery.html
-version: 1.3.1
+description: (v1.3.2) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.2
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -27,7 +27,7 @@ writes:
 
 ## Intent
 
-**Purpose:** Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **canonical atomic level (Atoms → Molecules → Organisms)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by atomic level); here every component appears with all its variants and states.
+**Purpose:** Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
 
 **Non-goals:**
 - Doesn't invent components the IA/outlines don't need
@@ -60,7 +60,7 @@ If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinemen
 Record the choice and continue.
 
 ## Step 3 — Determine the component set
-Derive the needed components from `sitemap.md` section types and the `outlines/`, and **bucket each by canonical atomic level**: **Atoms** (button, input, label, badge, icon, divider, chip), **Molecules** (nav-item, form-row, search-bar, card-header), **Organisms** (header, footer, hero, card, CTA strip, accordion). If `.twt-artifacts/design/design-system/tokens.md` Section 3 already lists an atomic hierarchy, reuse those names so the catalog and the design-system preview agree. Use `$ARGUMENTS` to scope to specific components when given. List the set and confirm with the user.
+Derive the needed components from `sitemap.md` section types and the `outlines/`, and **bucket each by component-hierarchy level**: **Primitives** (button, input, label, badge, icon, divider, chip), **Components** (nav-item, form-row, search-bar, card-header), **Modules** (header, footer, hero, card, CTA strip, accordion). If `.twt-artifacts/design/design-system/tokens.md` Section 3 already lists the hierarchy (§3.2 Primitives / §3.3 Components / §3.4 Modules), reuse those names so the catalog and the design-system preview agree. Use `$ARGUMENTS` to scope to specific components when given. List the set and confirm with the user.
 
 ## Step 4 — Specify each component
 For each component, write to `components.md`:
@@ -74,7 +74,7 @@ Mark anything inferred. Never use a value that isn't a token.
 **No-Figma anti-slop polish.** When the design wasn't driven by a Figma/exported source, apply the external design skills (per `references/external-design-skills.md`; read `design-read.md` for the dials, and project-local auto-install the skills if missing). From `design-taste-frontend`: **§4.4** use cards only where elevation conveys real hierarchy and lock to one corner-radius scale; **§4.5** specify the **full** interactive-state cycle (loading/empty/error, not just the happy path) and verify button text meets WCAG AA against its background; **§3.C** keep icons from one family. From `emil-design-eng`: specify the **hover / focus / `:active`** micro-interaction per interactive component as motion tokens (custom easing, short durations, `scale(0.97)`-style press feedback, reduced-motion fallback) — recorded as the component's documented motion, not invented foundation values.
 
 ## Step 5 — Render `gallery.html` (exhaustive catalog)
-Write `gallery.html`: a single page that links `../design-system/tokens.css`, then renders each component with **all variants and all states**, grouped under **Atoms / Molecules / Organisms** headings (matching the design-system preview's levels). Use only `var(--…)` for foundation values — no hardcoded colours/spacing. A small embedded `<style>` block for gallery layout only is fine. At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../design-system/preview.html` shows **breadth** — every component once, by atomic level (the evolution).
+Write `gallery.html`: a single page that links `../design-system/tokens.css`, then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings (matching the design-system preview's levels). Use only `var(--…)` for foundation values — no hardcoded colours/spacing. A small embedded `<style>` block for gallery layout only is fine. At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../design-system/preview.html` shows **breadth** — every component once, by level (the evolution).
 
 ## Step 6 — Report
 List components written, both file paths, and what to run next (`/twt-component-validate` or `/twt-layout`).

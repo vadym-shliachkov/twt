@@ -11,7 +11,7 @@
         ]
       },
       {
-        "matcher": "Task|AskUserQuestion",
+        "matcher": "Task|Agent|Skill|AskUserQuestion",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Task|AskUserQuestion",
+        "matcher": "Task|Agent|Skill|AskUserQuestion",
         "hooks": [
           {
             "type": "command",

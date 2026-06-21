@@ -47,10 +47,11 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses between phases |
-| [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development |
+| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout |
+| [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
+| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (10 metrics) with a scored report and optional rewrite — manual review or automatic |
 
 ---
 ## /twt-brand
@@ -1561,7 +1562,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.7.1
+**Version:** 1.9.0
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -1570,11 +1571,10 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
 - Optional notes, a live URL, or a hint of which phase to start from
 - Optional first token `auto` — fully unattended run; everything after it is free-form context (notes, URLs, target hints)
-- Optional `--log` flag — write a hook-driven debug trace (every dispatched skill + WHY + wall-time cost %, plus boxed user choices) to `.twt-artifacts/site-debug.md`
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
 
 **Reads:**
 - site-instruction.md
@@ -1587,7 +1587,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 
 **Writes:**
 - .twt-artifacts/site-log.md
-- .twt-artifacts/site-debug.md (only with --log)
+- .twt-artifacts/content/text-analysis/
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**
@@ -1609,7 +1609,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.4.1
+**Version:** 1.5.0
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -1715,3 +1715,45 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 - Every existing pipeline artifact is reported as FRESH / STALE / NO-INPUTS-PRESENT, with the newer input named for each STALE one
 - A re-run plan ordered upstream→downstream (so re-running a parent doesn't leave the user chasing freshly-staled children)
 - Honest about what it can't see (e.g. external Figma sources have no local mtime)
+
+---
+
+## /twt-text-analysis
+
+**Category:** content
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **10 metrics**, produce a scored report that explains every weakness, suggest improved versions where needed, and (optionally) rewrite the content automatically.
+
+**Inputs:**
+- Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
+- .twt-artifacts/content/text-analysis/config.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+
+**Writes:**
+- .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
+- .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
+- .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md
+- .twt-artifacts/content/text-analysis/config.md
+- the subject file in place (only with explicit user consent)
+
+**Non-goals:**
+- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules)
+- Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/text-analysis/<subject-slug>/optimized.md` first
+- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation`; this skill judges and improves the **writing quality** of given text
+- Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
+
+**Success criteria:**
+- The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
+- Each block carries all **10 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** when a rewrite is warranted
+- **Manual mode** shows every block needing change and waits for the user's action (KEEP_ORIGINAL / USE_SUGGESTED / USE_AND_ENABLE_AUTO / CUSTOM) before applying anything
+- **Automatic mode** rewrites every block scoring below 85 and outputs the report, per-block scores, a change summary, and the final optimized content — no approval required
+- Rewrite guardrails hold: meaning, facts, and legal wording survive verbatim unless the user explicitly allowed changes

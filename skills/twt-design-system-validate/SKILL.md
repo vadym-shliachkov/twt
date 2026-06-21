@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-validate
 category: design-system
-description: (v1.3.1) Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md
-version: 1.3.1
+description: (v1.4.0) Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
+version: 1.4.0
 accepts_arguments: false
 inputs:
   - none (reads the design-system artifacts)
@@ -41,15 +41,18 @@ writes:
 ## Step 1 — Load artifacts (hard dependency)
 Read `.twt-artifacts/design/design-system/tokens.md`. If absent, abort: "No design system found — run /twt-design-system-define first." Do not create it. Also read `tokens.css` and `preview.html` if present, and `brand-brief.md` if present (for brand fidelity checks).
 
+### Step 1a — Deterministic contrast evidence (read-only)
+If `tokens.css` exists, run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR" --check`. The `--check` flag computes the WCAG contrast matrix and prints a ` ```json ` block **without writing any file** (stays within rule 11 read-only). Parse `contrast_failures[]` — each entry is an **intended** text/surface pairing below AA 4.5:1 for normal text. Use this as the authoritative contrast evidence for the rubric's accessibility criterion instead of estimating ratios by eye. If the script is unavailable (global install), fall back to computing ratios from the token hex values yourself.
+
 ## Step 2 — Score the rubric (evaluative, with evidence)
 Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weights are fixed and sum to 100:
 
 | Criterion | Weight | What "good" means |
 |-----------|-------:|-------------------|
-| Token contrast / accessibility | 25 | Color token pairings meet WCAG AA (compute ratios from the token hex values). |
+| Token contrast / accessibility | 25 | Intended text/surface token pairings meet WCAG AA (use the `gen-preview --check` `contrast_failures[]` from Step 1a). **BLOCKER** if any intended text-on-surface pair fails AA 4.5:1 for normal text — this is the gate that must stop a low-contrast system reaching QA. Score ≤2 when failures exist. |
 | Scale coherence (type & space) | 20 | Type scale and spacing scale are consistent, rhythmic, not ad-hoc. |
 | Brand fidelity | 20 | Tokens reflect `brand-brief.md` palette/type, not generic defaults. |
-| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the atomic evolution — Subatomic (tokens) → Atoms → Molecules → Organisms — with **every** atom, molecule, and organism documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. BLOCKER if preview is token-only with no Atoms/Molecules/Organisms tiers; WARNING if a tier is present but omits documented components (count specimens per tier vs `tokens.md` Section 3.2/3.3/3.4 and list which are missing). **Also a BLOCKER if the preview is a marketing landing page / homepage mockup instead of a neutral specimen sheet** — i.e. it uses real project copy (real hero headline, value props, case-study/stat numbers, testimonials, CTA messaging), assembles a running homepage rather than an inventory of captioned specimens, wires a real nav, or includes `<script>`/GSAP/auto-advancing/scroll-triggered demos of "the site." The fix is to re-render organisms as isolated, neutrally-labeled specimens. |
+| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the evolution — Tokens → Primitives → Components → Modules — with **every** Primitive, Component, and Module documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. The preview is `gen-preview.mjs`-generated, so check that **no `<!-- gp:fill … -->` slots remain unfilled** (any left = incomplete) and specimen counts match §3.2/§3.3/§3.4. BLOCKER if preview is token-only with no Primitives/Components/Modules tiers, or if any `gp:fill` slot is still empty; WARNING if a tier omits documented components. **Also a BLOCKER if the preview is a marketing landing page / homepage mockup instead of a neutral specimen sheet** — i.e. it uses real project copy (real hero headline, value props, case-study/stat numbers, testimonials, CTA messaging), assembles a running homepage rather than an inventory of captioned specimens, wires a real nav, or includes `<script>`/GSAP/auto-advancing/scroll-triggered demos of "the site." The fix is to re-render Modules as isolated, neutrally-labeled specimens. |
 | Naming / structure hygiene | 15 | Token names are systematic and namespaced; no duplicate/conflicting definitions. |
 
 Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.

@@ -1,26 +1,33 @@
 #!/usr/bin/env node
 /**
- * twt-debug-log — opt-in debug tracer for /twt-site --log.
+ * twt-run-trace — always-on dispatch tracer for /twt-site and /twt-site-dev.
+ *
+ * (Formerly the opt-in `--log` debug tracer. It is now armed automatically by the
+ * site orchestrators at the start of a run and summarized at the end — no flag.)
  *
  * Three modes:
- *   1. --arm "<label>"     create the sentinel + open a fresh debug log section.
- *   2. (stdin JSON)        PreToolUse / PostToolUse handler (Task + AskUserQuestion).
- *   3. --summarize         append the wall-time cost table, then disarm.
+ *   1. --arm "<label>"     create the sentinel + reset the event log.
+ *   2. (stdin JSON)        PreToolUse / PostToolUse handler (Task + Skill + AskUserQuestion).
+ *   3. --summarize         render the full dispatch trace + wall-time cost table
+ *                          into .twt-artifacts/site-log.md, then disarm.
  *
  * It is INERT unless armed: every hook invocation first checks for the sentinel
  * at <project>/.twt-artifacts/.twt-debug/active.json and exits 0 silently if it
- * is absent. So normal sessions (no --log) are completely unaffected.
+ * is absent. So any non-site session is completely unaffected — the orchestrators
+ * arm it only for their own runs; nothing else writes .twt-artifacts.
  *
- * Cost is a WALL-TIME PROXY for token spend, not a token count — Claude Code
- * does not expose per-subagent token usage to hooks, and subagent tool calls do
- * not appear in the parent transcript. Elapsed time per dispatch is the best
- * signal a hook can capture; treat the percentages as relative, not exact.
+ * COVERAGE: captures EVERY skill/subagent the run touches — twt phase wrappers
+ * (dispatched via the Task/Agent tool) AND any other Skill-tool call (other
+ * plugins, superpowers, system skills) — each with its WHY (tool input) and
+ * wall-time. There is intentionally NO token column: Claude Code does not expose
+ * per-subagent token usage to hooks, and subagent tool calls do not appear in the
+ * parent transcript. Wall-time is the honest cost proxy; treat shares as relative.
  *
- * Never throws out of the top level — any failure exits 0 so it can never break
- * a run (same safety posture as twt-scope-guard).
+ * Never throws out of the top level — any failure exits 0 so it can never break a
+ * run (same safety posture as twt-scope-guard).
  *
- * Output (human): <project>/.twt-artifacts/site-debug.md
- * Output (machine, for --summarize): <project>/.twt-artifacts/.twt-debug/events.jsonl
+ * Output (human): folded into <project>/.twt-artifacts/site-log.md at --summarize.
+ * Output (machine): <project>/.twt-artifacts/.twt-debug/events.jsonl (run scratch).
  */
 'use strict';
 
@@ -37,13 +44,19 @@ const DBG_DIR = path.join(ROOT, '.twt-artifacts', '.twt-debug');
 const SENTINEL = path.join(DBG_DIR, 'active.json');
 const EVENTS = path.join(DBG_DIR, 'events.jsonl');
 const STATE = path.join(DBG_DIR, 'state.json');
-const LOG_MD = path.join(ROOT, '.twt-artifacts', 'site-debug.md');
+// The trace is folded into the single user-facing run log (site-log.md for
+// /twt-site; site-dev-log.md for /twt-site-dev — chosen via the --arm label).
+function logMd() {
+  const label = (readJson(SENTINEL, {}) || {}).label || 'site';
+  const file = /site-dev/.test(label) ? 'site-dev-log.md' : 'site-log.md';
+  return path.join(ROOT, '.twt-artifacts', file);
+}
 
 // ---- tiny helpers --------------------------------------------------------
 
 function readJson(p, dflt) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return dflt; } }
 function writeJson(p, o) { try { fs.writeFileSync(p, JSON.stringify(o)); } catch {} }
-function appendMd(s) { try { fs.appendFileSync(LOG_MD, s); } catch {} }
+function appendMd(file, s) { try { fs.appendFileSync(file, s); } catch {} }
 function appendEvent(o) { try { fs.appendFileSync(EVENTS, JSON.stringify(o) + '\n'); } catch {} }
 function armed() { return fs.existsSync(SENTINEL); }
 function nowIso() { return new Date().toISOString(); }
@@ -58,21 +71,21 @@ function fmtDur(ms) {
 // Map every worker skill to the phase that owns it, for the rolled-up table.
 const PHASE_OF = (name) => {
   const n = String(name).replace(/^\//, '');
-  if (n === 'twt-site') return 'orchestrator';
+  if (n === 'twt-site' || n === 'twt-site-dev') return 'orchestrator';
   if (/^twt-(content|brand|spec|positioning|ia|curation|pre-design)/.test(n)) return 'pre-design';
   if (/^twt-(design$|design-system|component|layout|mockup|design)/.test(n)) return 'design';
-  if (/^twt-(develop|html|elementor|content-approval|site-dev)/.test(n)) return 'development';
+  if (/^twt-(develop|html|elementor|content-approval)/.test(n)) return 'development';
   if (/^twt-qa/.test(n)) return 'qa';
-  return 'other';
+  if (/^twt-/.test(n)) return 'other-twt';
+  return 'external'; // superpowers / figma / system / other plugins
 };
 
 // Pull the dispatched skill name + a one-line "why" out of a Task prompt.
 function parseDispatch(input) {
   const prompt = (input && (input.prompt || input.description)) || '';
   const text = String(prompt);
-  const skillM = text.match(/\/twt-[a-z0-9-]+/);
-  const skill = skillM ? skillM[0] : (input && input.subagent_type ? input.subagent_type : 'task');
-  // explicit "WHY: ..." marker wins; else first non-empty, non-boilerplate line.
+  const skillM = text.match(/\/?twt-[a-z0-9-]+/);
+  const skill = skillM ? skillM[0].replace(/^\//, '') : (input && input.subagent_type ? input.subagent_type : 'task');
   let why = '';
   const whyM = text.match(/WHY:\s*(.+)/i);
   if (whyM) why = whyM[1].trim();
@@ -84,6 +97,15 @@ function parseDispatch(input) {
   return { skill, why };
 }
 
+// Pull skill name + why out of a Skill-tool call.
+function parseSkill(input) {
+  const skill = (input && (input.skill || input.name)) || 'skill';
+  let why = (input && (input.args || input.arguments || '')) || '';
+  why = String(why).replace(/\s+/g, ' ').trim();
+  if (why.length > 160) why = why.slice(0, 157) + '…';
+  return { skill: String(skill), why };
+}
+
 // ---- modes ---------------------------------------------------------------
 
 function arm(label) {
@@ -92,13 +114,7 @@ function arm(label) {
   writeJson(SENTINEL, { runId, started: nowIso(), label: label || 'site' });
   writeJson(STATE, { open: 0, stack: [] });
   try { fs.writeFileSync(EVENTS, ''); } catch {}
-  appendMd(
-    `\n\n## Debug run ${nowIso()} — \`${label || 'site'}\`\n\n` +
-    `> Hook-driven trace. \`▶\` dispatch · \`✔\` done · boxed = user choice. ` +
-    `Cost is a **wall-time proxy** for token spend (see summary).\n\n` +
-    `### Trace\n\n`
-  );
-  process.stdout.write('twt-debug-log: armed (run ' + runId + ')\n');
+  process.stdout.write('twt-run-trace: armed (run ' + runId + ')\n');
 }
 
 function handleHook() {
@@ -111,51 +127,45 @@ function handleHook() {
   const resp = payload.tool_response || payload.toolResponse;
   const state = readJson(STATE, { open: 0, stack: [] });
 
-  if (ev === 'PreToolUse' && tool === 'Task') {
+  if (ev === 'PreToolUse' && (tool === 'Task' || tool === 'Agent')) {
     const { skill, why } = parseDispatch(input);
     const depth = state.open + 1;
-    const indent = '  '.repeat(state.open);
-    appendMd(`${indent}\`▶ ${hms()}\` ·D${depth}· **${skill}**\n${indent}    ↳ ${why || '(no context parsed)'}\n`);
     state.stack.push({ skill, t0: Date.now() });
     state.open += 1;
     writeJson(STATE, state);
-    appendEvent({ ev: 'dispatch', skill, why, depth, t0: Date.now() });
-  } else if (ev === 'PostToolUse' && tool === 'Task') {
+    appendEvent({ ev: 'dispatch', kind: 'task', skill, why, depth, t0: Date.now(), ts: hms() });
+  } else if (ev === 'PostToolUse' && (tool === 'Task' || tool === 'Agent')) {
     const { skill } = parseDispatch(input);
     let elapsed = null;
     for (let i = state.stack.length - 1; i >= 0; i--) {
       if (state.stack[i].skill === skill) { elapsed = Date.now() - state.stack[i].t0; state.stack.splice(i, 1); break; }
     }
     state.open = Math.max(0, state.open - 1);
-    const indent = '  '.repeat(state.open);
-    appendMd(`${indent}\`✔ ${hms()}\` **${skill}**  (${fmtDur(elapsed)})\n`);
     writeJson(STATE, state);
-    appendEvent({ ev: 'done', skill, elapsed });
+    appendEvent({ ev: 'done', kind: 'task', skill, elapsed, ts: hms() });
+  } else if (ev === 'PreToolUse' && tool === 'Skill') {
+    const { skill, why } = parseSkill(input);
+    appendEvent({ ev: 'dispatch', kind: 'skill', skill, why, depth: state.open + 1, t0: Date.now(), ts: hms() });
+  } else if (ev === 'PostToolUse' && tool === 'Skill') {
+    const { skill } = parseSkill(input);
+    appendEvent({ ev: 'done', kind: 'skill', skill, elapsed: null, ts: hms() });
   } else if (ev === 'PreToolUse' && tool === 'AskUserQuestion') {
     const qs = (input && input.questions) || [];
-    let block = `\n\`\`\`text\n┌─ USER ─────────────────────────────────\n`;
-    for (const q of qs) {
-      const hdr = q.header ? `[${q.header}] ` : '';
-      block += `│ ❓ ${hdr}${(q.question || '').slice(0, 90)}\n`;
-    }
-    block += `└─────────────────────────────────────────\n\`\`\`\n`;
-    appendMd(block);
-    appendEvent({ ev: 'ask', questions: qs.map((q) => q.header || q.question || '') });
+    appendEvent({ ev: 'ask', questions: qs.map((q) => ({ header: q.header || '', question: (q.question || '').slice(0, 110) })), ts: hms() });
   } else if (ev === 'PostToolUse' && tool === 'AskUserQuestion') {
-    // tool_response carries the user's selection(s).
     let answers = '';
     try {
       const r = typeof resp === 'string' ? JSON.parse(resp) : resp;
       const a = (r && (r.answers || r)) || {};
       answers = Object.entries(a).map(([k, v]) => `${k} → ${v}`).join(' · ');
     } catch { answers = typeof resp === 'string' ? resp.slice(0, 200) : ''; }
-    appendMd(`\`\`\`text\n  ✅ ${answers || '(answer recorded)'}\n\`\`\`\n`);
-    appendEvent({ ev: 'answer', answers });
+    appendEvent({ ev: 'answer', answers, ts: hms() });
   }
 }
 
 function summarize() {
-  if (!armed()) { process.stdout.write('twt-debug-log: not armed — nothing to summarize\n'); return; }
+  if (!armed()) { process.stdout.write('twt-run-trace: not armed — nothing to summarize\n'); return; }
+  const LOG = logMd();
   const events = [];
   try {
     for (const l of fs.readFileSync(EVENTS, 'utf8').split('\n')) {
@@ -163,43 +173,67 @@ function summarize() {
     }
   } catch {}
 
+  // ---- render the chronological dispatch trace (every skill, any source) ----
+  let trace = '';
+  let depth = 0;
+  for (const e of events) {
+    if (e.ev === 'dispatch') {
+      const indent = '  '.repeat(Math.max(0, depth));
+      const tag = e.kind === 'skill' ? 'skill' : 'task';
+      trace += `${indent}- \`▶ ${e.ts || ''}\` **${e.skill}** _(${tag})_ — ${e.why || '(no context)'}\n`;
+      if (e.kind === 'task') depth += 1;
+    } else if (e.ev === 'done') {
+      if (e.kind === 'task') depth = Math.max(0, depth - 1);
+      const indent = '  '.repeat(Math.max(0, depth));
+      if (e.elapsed != null) trace += `${indent}  \`✔ ${e.ts || ''}\` ${e.skill} (${fmtDur(e.elapsed)})\n`;
+    } else if (e.ev === 'ask') {
+      const indent = '  '.repeat(Math.max(0, depth));
+      const heads = (e.questions || []).map((q) => q.header || q.question).join(' · ');
+      trace += `${indent}- \`❓ ${e.ts || ''}\` ${heads}\n`;
+    } else if (e.ev === 'answer') {
+      const indent = '  '.repeat(Math.max(0, depth));
+      if (e.answers) trace += `${indent}  \`✅\` ${e.answers}\n`;
+    }
+  }
+
+  // ---- cost tables (wall-time proxy) ----
   const per = new Map(); // skill -> {ms, calls}
   for (const e of events) {
     if (e.ev === 'dispatch') {
-      const r = per.get(e.skill) || { ms: 0, calls: 0 };
-      r.calls += 1; per.set(e.skill, r);
+      const r = per.get(e.skill) || { ms: 0, calls: 0 }; r.calls += 1; per.set(e.skill, r);
     } else if (e.ev === 'done' && e.elapsed != null) {
-      const r = per.get(e.skill) || { ms: 0, calls: 0 };
-      r.ms += e.elapsed; per.set(e.skill, r);
+      const r = per.get(e.skill) || { ms: 0, calls: 0 }; r.ms += e.elapsed; per.set(e.skill, r);
     }
   }
   const total = [...per.values()].reduce((a, b) => a + b.ms, 0) || 1;
   const pct = (ms) => ((ms / total) * 100).toFixed(1).padStart(5) + '%';
-
-  // phase rollup
   const phase = new Map();
   for (const [skill, r] of per) {
     const p = PHASE_OF(skill);
     const pr = phase.get(p) || { ms: 0, calls: 0 };
     pr.ms += r.ms; pr.calls += r.calls; phase.set(p, pr);
   }
-
   const leafRows = [...per.entries()].sort((a, b) => b[1].ms - a[1].ms)
     .map(([s, r]) => `| ${s} | ${r.calls} | ${fmtDur(r.ms)} | ${pct(r.ms)} |`).join('\n');
   const phaseRows = [...phase.entries()].sort((a, b) => b[1].ms - a[1].ms)
     .map(([p, r]) => `| ${p} | ${r.calls} | ${fmtDur(r.ms)} | ${pct(r.ms)} |`).join('\n');
+  const dispatches = events.filter((e) => e.ev === 'dispatch').length;
 
-  appendMd(
-    `\n### Cost summary (wall-time proxy)\n\n` +
-    `_Not token counts — hooks can't see subagent tokens. Wall-time per dispatch, ` +
-    `as a relative proxy. Total tracked: ${fmtDur(total)} across ${events.filter((e) => e.ev === 'dispatch').length} dispatches._\n\n` +
-    `**By phase (rolled up):**\n\n| phase | calls | time | share |\n|---|---:|---:|---:|\n${phaseRows}\n\n` +
-    `**By skill (leaf):**\n\n| skill | calls | time | share |\n|---|---:|---:|---:|\n${leafRows}\n`
+  appendMd(LOG,
+    `\n### Dispatch trace — every skill called (auto-captured)\n\n` +
+    `_Hook-captured chronological trace of every Task/Agent dispatch and Skill call ` +
+    `(twt + any other plugin / superpowers / system skill), each with its WHY and wall-time._\n\n` +
+    (trace || '_(no dispatches captured)_\n') +
+    `\n#### Cost (wall-time proxy — NOT token counts)\n\n` +
+    `_Per-skill token usage is not exposed to hooks; wall-time per dispatch is the relative proxy. ` +
+    `Total tracked: ${fmtDur(total)} across ${dispatches} dispatches._\n\n` +
+    `**By phase:**\n\n| phase | calls | time | share |\n|---|---:|---:|---:|\n${phaseRows}\n\n` +
+    `**By skill:**\n\n| skill | calls | time | share |\n|---|---:|---:|---:|\n${leafRows}\n`
   );
 
-  // disarm: keep the log + events for reference, remove the sentinel.
+  // disarm: keep events.jsonl for reference, remove the sentinel.
   try { fs.unlinkSync(SENTINEL); } catch {}
-  process.stdout.write('twt-debug-log: summarized + disarmed. See .twt-artifacts/site-debug.md\n');
+  process.stdout.write('twt-run-trace: trace + cost folded into ' + path.basename(LOG) + '; disarmed.\n');
 }
 
 // ---- dispatch ------------------------------------------------------------
