@@ -36,8 +36,8 @@ writes:
 
 **Non-goals:**
 - Doesn't generate page designs (Templates/Pages = the layout/mockup phases)
-- The preview renders **every** Primitive, Component, and Module documented in Section 3 (one instance each, default state), organized by ascending level — it shows **breadth + composition**. It is NOT the exhaustive **variant × state** catalog (button primary/secondary/ghost × hover/active/disabled, etc.), which is `/twt-component`'s `gallery.html` (**depth**)
-- The preview is **script-generated** (`gen-preview.mjs`) so its structure is identical across projects; the model only fills neutral component specimens into the generator's slots. It is a **styleguide / specimen sheet**, NOT a marketing landing page or a mockup of the actual site. It must not assemble a working homepage, use real headlines/value-props/case-study copy/stats, wire a real navigation, or run auto-advancing/scroll-triggered demos. Component instances carry **neutral placeholder labels** ("Button label", "Card title", "Body copy sample") — real page composition with real content is `/twt-layout` + `/twt-mockup`, not here
+- The preview renders **every** Primitive, Component, and Module documented in Section 3 (one instance each, default state), organized by ascending level — it shows **breadth + composition**. It is NOT the exhaustive **variant × state** catalog (button primary/secondary/ghost × hover/active/disabled, etc.), which is `/twt-component-define`'s `gallery.html` (**depth**)
+- The preview is **script-generated** (`gen-preview.mjs`) so its structure is identical across projects; the model only fills neutral component specimens into the generator's slots. It is a **styleguide / specimen sheet**, NOT a marketing landing page or a mockup of the actual site. It must not assemble a working homepage, use real headlines/value-props/case-study copy/stats, wire a real navigation, or run auto-advancing/scroll-triggered demos. Component instances carry **neutral placeholder labels** ("Button label", "Card title", "Body copy sample") — real page composition with real content is `/twt-layout-define` + `/twt-mockup-define`, not here
 - Doesn't write to a WordPress theme (that's Phase 3)
 - Doesn't apply changes to the source design — read-only on Figma
 - Doesn't hallucinate tokens, components, or states not present in the sources/brand-brief
@@ -294,7 +294,7 @@ For each level, document what is required:
 | **Component** (search bar, form row, card header, nav item, media object, input-with-label) | which **Primitives** it composes · composition logic · interaction rules · layout behavior |
 | **Module** (site header, hero, pricing card, footer, feature section, complex form, modal, card) | which **Components/Primitives** it composes · structure · responsive adaptation · reusable arrangement rules (e.g. "hero pairs heading + body + CTA + media slot") |
 
-State each item's composition (which lower-level parts it's made of) so the **evolution** from token → Primitive → Component → Module is explicit. Where a component is implied but not visible in the sources, list it under an **Inferred Components** section instead of inventing variants for it. (Templates and Pages — full layouts and real-content page builds — are produced later by `/twt-layout` and `/twt-mockup`, not here.)
+State each item's composition (which lower-level parts it's made of) so the **evolution** from token → Primitive → Component → Module is explicit. Where a component is implied but not visible in the sources, list it under an **Inferred Components** section instead of inventing variants for it. (Templates and Pages — full layouts and real-content page builds — are produced later by `/twt-layout-define` and `/twt-mockup-define`, not here.)
 
 ---
 
@@ -550,7 +550,7 @@ For each `<!-- gp:fill <Name> … -->` slot the generator left in Tiers 2–4, r
 - A reader should see *the system's parts*, neutrally labeled — not a pitch for the client's business.
 
 ### 3. Verify completeness
-The generator emits exactly one cell per documented component, so counts are correct by construction. Confirm you filled **every** `gp:fill` slot (search the file — none should remain) and that the rendered counts match §3.2 / §3.3 / §3.4. Note the counts in the Step 12 summary. The closing cross-links (component gallery for depth; `/twt-layout` + `/twt-mockup` for templates & pages) are emitted by the generator.
+The generator emits exactly one cell per documented component, so counts are correct by construction. Confirm you filled **every** `gp:fill` slot (search the file — none should remain) and that the rendered counts match §3.2 / §3.3 / §3.4. Note the counts in the Step 12 summary. The closing cross-links (component gallery for depth; `/twt-layout-define` + `/twt-mockup-define` for templates & pages) are emitted by the generator.
 
 ## Step 10c — Contrast gate (always)
 

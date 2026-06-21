@@ -97,4 +97,4 @@ Generated: <ISO timestamp>  ·  Validator: /twt-mockup-validate
 Write ONLY this file.
 
 ## Step 4 — Report
-State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-mockup-define (or /twt-mockup to loop automatically)."
+State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-mockup-define (or re-run /twt-design, which folds the mockup define→validate pass)."

@@ -10,9 +10,12 @@ dependencies:
   hard: []
   soft:
     - twt-design-system
-    - twt-component
-    - twt-layout
-    - twt-mockup
+    - twt-component-define
+    - twt-component-validate
+    - twt-layout-define
+    - twt-layout-validate
+    - twt-mockup-define
+    - twt-mockup-validate
 reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/component/components.md
@@ -40,7 +43,7 @@ writes:
 
 **Non-goals:**
 - Doesn't do development or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area orchestrator (rule 5)
+- Doesn't reproduce sub-area logic — dispatches the design-system orchestrator, or (for component, layout, mockup, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -78,13 +81,22 @@ A real brand-brief/spec decision still wins over taste defaults — the gate is 
 Dispatch `/twt-design-system` (Agent tool) **with `subagent-collect`**, forwarding any design sources. (Skip if excluded by flags.) Then **surface** per the protocol below.
 
 ## Step 3 — Components
-Dispatch `/twt-component` (Agent tool) **with `subagent-collect`**, then surface.
+Components have **no standalone command** — run the single define→validate pass inline here (the same one-pass policy the former `twt-component` wrapper applied, CONVENTIONS §9):
+1. Dispatch `/twt-component-define` (Agent tool) with `subagent-collect` → it writes `components.md` + `gallery.html`, plus a `decisions.md` (`status: open`) for any choice it had to make.
+2. Dispatch `/twt-component-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/component/validation-report.md` (Step 6 reads this).
+3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run — no score-chasing loop.
 
 ## Step 4 — Layouts
-Dispatch `/twt-layout` (Agent tool) **with `subagent-collect`**, then surface.
+Layouts have **no standalone command** — same inline single define→validate pass:
+1. Dispatch `/twt-layout-define` (Agent tool) with `subagent-collect` → it writes `layouts/<page>.md` and a `decisions.md`.
+2. Dispatch `/twt-layout-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/layout/validation-report.md`.
+3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run.
 
 ## Step 5 — Mockups
-Dispatch `/twt-mockup` (Agent tool) **with `subagent-collect`**, then surface.
+Mockups have **no standalone command** — same inline single define→validate pass:
+1. Dispatch `/twt-mockup-define` (Agent tool) with `subagent-collect` → it writes `pages/<page>.html`, `index.html`, `styles.css` and a `decisions.md`.
+2. Dispatch `/twt-mockup-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/mockup/validation-report.md`.
+3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run.
 
 (Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`.)
 

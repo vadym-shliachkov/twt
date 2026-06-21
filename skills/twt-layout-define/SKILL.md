@@ -29,7 +29,7 @@ writes:
 **Purpose:** For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
 
 **Non-goals:**
-- Doesn't render HTML (that's `/twt-mockup`)
+- Doesn't render HTML (that's `/twt-mockup-define`)
 - Doesn't define components (consumes `components.md`)
 - Doesn't invent content — maps to Phase-1 outlines
 
@@ -42,7 +42,7 @@ writes:
 ---
 
 ## Step 1 — Dependency check
-Read `sitemap.md`, `outlines/`, and `components.md`. If `components.md` is missing, abort: "No component library — run /twt-component first." If `sitemap.md` is missing, abort: "No sitemap — run the IA step (/twt-pre-design, or /twt-ia-define) first."
+Read `sitemap.md`, `outlines/`, and `components.md`. If `components.md` is missing, abort: "No component library — run /twt-component-define first." If `sitemap.md` is missing, abort: "No sitemap — run the IA step (/twt-pre-design, or /twt-ia-define) first."
 
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
 If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the per-page layout specs (`layouts/<page>.md`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/layout/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. Then write the drafts and return the decisions block in your report. Do not loop on the user. **Stay in-project:** work only inside this project — never read files outside it (no sibling project folders, no home directory) to find templates, conventions, or format examples; every format you need is specified in this skill.
@@ -80,4 +80,4 @@ Wait for all the page agents to finish before reporting.
 After the page layouts are written, scan them for sections that call for an image or video. For each, add a row to `.twt-artifacts/design/assets/manifest.md` (create it in the asset-manifest format — frontmatter `generated`/`phase: design`/`area: assets`, a `# Asset manifest` heading, and a table with columns id | type (image|video) | filename (kebab-case, web format) | placement (page → section → slot) | spec (dimensions/aspect/treatment) | alt | source (generate|stock|provided) | generation_prompt if absent; append missing rows, dedupe by `filename`). Run this **serially in this parent skill** (not in the parallel Step-4 agents) so the shared manifest is never written concurrently. Each row: stable `id`, `type` (image|video), exact `filename` (kebab-case, web format), `placement` (page → section → slot), `spec` (dimensions/aspect/treatment), `alt`, `source` (generate|stock|provided), and a concrete `generation_prompt`. Plan only — never claim a real asset exists; client-supplied ones are `source: provided`. Do not generate binaries.
 
 ## Step 6 — Report
-List the layout files written, the asset rows added to the manifest, and what to run next (`/twt-layout-validate` or `/twt-mockup`).
+List the layout files written, the asset rows added to the manifest, and what to run next (`/twt-layout-validate`, then `/twt-mockup-define`).

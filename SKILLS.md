@@ -10,7 +10,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 |---------|----------|-------------|
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
-| [/twt-component](#twt-component) | component | Orchestrate component define/validate in a single define→validate pass |
+| [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
+| [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page |
 | [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
 | [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
@@ -35,9 +36,11 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
-| [/twt-layout](#twt-layout) | layout | Orchestrate layout define/validate in a single define→validate pass |
+| [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
+| [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate in a single define→validate pass |
+| [/twt-mockup-define](#twt-mockup-define) | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
+| [/twt-mockup-validate](#twt-mockup-validate) | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | [/twt-project-intake](#twt-project-intake) | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
@@ -124,37 +127,83 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 
 ---
 
-## /twt-component
+## /twt-component-define
 
 **Category:** component
-**Version:** 1.1.2
+**Version:** 1.3.2
 **Accepts arguments:** yes
 
-One-call component workflow: define → validate in one pass (§9 — no iteration loop).
+Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
 
 **Inputs:**
-- Optional: which components to scope to
+- Optional: which components to (re)define; otherwise derive from IA/outlines
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-component-define, twt-component-validate
+- Soft: none
 
 **Reads:**
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
 - .twt-artifacts/design/component/validation-report.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/component/gallery.html
+- .twt-artifacts/design/component/decisions.md
 
 **Non-goals:**
-- Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
-- Doesn't loop unbounded or auto-downgrade severity
-- Not required for standalone use — each sub-skill works on its own
+- Doesn't invent components the IA/outlines don't need
+- Doesn't hardcode foundation values — components reference tokens from `tokens.css`
+- Doesn't re-render the breadth evolution showcase (every component once, by level) — that's the design-system `preview.html`; this is the full variant/state catalog (depth)
+- Doesn't build production code (Phase 3 owns that)
 
 **Success criteria:**
-- Produces/refines `components.md` + `gallery.html` and a current `validation-report.md`
-- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
-- On exit, states final Band + Health and whether BLOCKERs remain
+- `components.md` documents each component with anatomy · variants · states · tokens · responsive behavior
+- `gallery.html` renders every component/variant/state and links `../design-system/tokens.css`
+- Idempotent: refines an existing `components.md` (reading `validation-report.md`) instead of overwriting (rule 10)
+
+---
+
+## /twt-component-validate
+
+**Category:** component
+**Version:** 1.0.1
+**Accepts arguments:** no
+
+Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
+
+**Inputs:**
+- none (reads the component artifacts)
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/component/gallery.html
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/pre-design/ia/sitemap.md
+
+**Writes:**
+- .twt-artifacts/design/component/validation-report.md
+
+**Non-goals:**
+- Doesn't modify `components.md` or `gallery.html` (read-only; rule 11)
+- Doesn't fix findings — that's `/twt-component-define`'s job
+- Doesn't invent missing components, only flags them
+
+**Success criteria:**
+- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
+- Every finding has Where / Problem / Recommendation, with Problem citing evidence
+- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
+- If `components.md` is missing, aborts pointing to `/twt-component-define`
 
 ---
 
@@ -549,7 +598,7 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system, twt-component, twt-layout, twt-mockup
+- Soft: twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -572,7 +621,7 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Non-goals:**
 - Doesn't do development or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area orchestrator (rule 5)
+- Doesn't reproduce sub-area logic — dispatches the design-system orchestrator, or (for component, layout, mockup, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -1141,37 +1190,82 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 
 ---
 
-## /twt-layout
+## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.1.2
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
-One-call layout workflow: define → validate in one pass (§9 — no iteration loop).
+For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
 
 **Inputs:**
-- Optional: which page(s) to scope to
+- Optional: which page(s) to (re)define; otherwise all sitemap pages
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-layout-define, twt-layout-validate
+- Soft: none
 
 **Reads:**
-- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
 - .twt-artifacts/design/layout/validation-report.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/layout/decisions.md
+- .twt-artifacts/design/assets/manifest.md
 
 **Non-goals:**
-- Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
-- Doesn't loop unbounded or auto-downgrade severity
-- Not required for standalone use — each sub-skill works on its own
+- Doesn't render HTML (that's `/twt-mockup-define`)
+- Doesn't define components (consumes `components.md`)
+- Doesn't invent content — maps to Phase-1 outlines
 
 **Success criteria:**
-- Produces/refines `layouts/<page>.md` files and a current `validation-report.md`
-- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
-- On exit, states final Band + Health and whether BLOCKERs remain
+- One `layouts/<page-slug>.md` per sitemap page
+- Every section names component(s) that exist in `components.md` and maps to an outline section
+- All three breakpoints (desktop/tablet/mobile) defined per section
+- Idempotent: refines existing layout files (reading `validation-report.md`) (rule 10)
+
+---
+
+## /twt-layout-validate
+
+**Category:** layout
+**Version:** 1.0.1
+**Accepts arguments:** no
+
+Read-only critique of the page layouts — section order & hierarchy, component-slot fit, content-map completeness, responsive intent, and IA consistency — written to `validation-report.md`.
+
+**Inputs:**
+- none (reads the layout artifacts)
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/design/component/components.md
+
+**Writes:**
+- .twt-artifacts/design/layout/validation-report.md
+
+**Non-goals:**
+- Doesn't modify any layout file (read-only; rule 11)
+- Doesn't fix findings — that's `/twt-layout-define`'s job
+- Doesn't author new layouts
+
+**Success criteria:**
+- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
+- Every finding has Where / Problem / Recommendation, with Problem citing evidence
+- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
+- If `layouts/` is empty, aborts pointing to `/twt-layout-define`
 
 ---
 
@@ -1214,37 +1308,91 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 
 ---
 
-## /twt-mockup
+## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.1.2
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
-One-call mockup workflow: define → validate in one pass (§9 — no iteration loop).
+Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
 
 **Inputs:**
-- Optional: which page(s) to scope to
+- Optional: which page(s) to (re)render; otherwise all layouts
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-mockup-define, twt-mockup-validate
+- Soft: none
 
 **Reads:**
-- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/pre-design/spec/specification.md
+- .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
 - .twt-artifacts/design/mockup/validation-report.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/index.html
+- .twt-artifacts/design/mockup/styles.css
+- .twt-artifacts/design/mockup/decisions.md
+- .twt-artifacts/design/assets/manifest.md
 
 **Non-goals:**
-- Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
-- Doesn't loop unbounded or auto-downgrade severity
-- Not required for standalone use — each sub-skill works on its own
+- Doesn't create production WordPress/Elementor output (Phase 3)
+- Doesn't introduce new colour/type/spacing primitives — those come from `tokens.css`
+- Doesn't use lorem/placeholder where real Phase-1 content exists
 
 **Success criteria:**
-- Produces/refines `pages/<page>.html`, `index.html`, `styles.css` and a current `validation-report.md`
-- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
-- On exit, states final Band + Health and whether BLOCKERs remain
+- One `pages/<page-slug>.html` per layout, linking `../design-system/tokens.css` and `../styles.css` (relative to `pages/`)
+- All three breakpoints handled in CSS; real content from outlines/inventory
+- `index.html` links every page mockup
+- Idempotent: re-renders only requested pages, refines (reading `validation-report.md`) (rule 10)
+
+---
+
+## /twt-mockup-validate
+
+**Category:** mockup
+**Version:** 1.1.1
+**Accepts arguments:** no
+
+Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.
+
+**Inputs:**
+- none (reads the mockup artifacts)
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/index.html
+- .twt-artifacts/design/mockup/styles.css
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
+
+**Writes:**
+- .twt-artifacts/design/mockup/validation-report.md
+
+**Non-goals:**
+- Doesn't modify any mockup file (read-only; rule 11)
+- Doesn't fix findings — that's `/twt-mockup-define`'s job
+- Doesn't re-render pages
+
+**Success criteria:**
+- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
+- Every finding has Where / Problem / Recommendation, with Problem citing evidence
+- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
+- If `pages/` is empty, aborts pointing to `/twt-mockup-define`
 
 ---
 

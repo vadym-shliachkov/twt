@@ -77,4 +77,4 @@ Mark anything inferred. Never use a value that isn't a token.
 Write `gallery.html`: a single page that links `../design-system/tokens.css`, then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings (matching the design-system preview's levels). Use only `var(--…)` for foundation values — no hardcoded colours/spacing. A small embedded `<style>` block for gallery layout only is fine. At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../design-system/preview.html` shows **breadth** — every component once, by level (the evolution).
 
 ## Step 6 — Report
-List components written, both file paths, and what to run next (`/twt-component-validate` or `/twt-layout`).
+List components written, both file paths, and what to run next (`/twt-component-validate`, then `/twt-layout-define`).

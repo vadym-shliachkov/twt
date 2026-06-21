@@ -52,15 +52,16 @@ proceeds past BLOCKERs without your say-so.
     ├── /twt-content-fetch           ← A: dispatches site/pdf/doc fetchers
     ├── /twt-brand                   ← B: [fetch] → define → validate (bounded loop)
     ├── /twt-positioning             ← D: define → validate (bounded loop)
-    ├── /twt-ia                      ← E: define → validate (single pass)
-    └── /twt-curation                ← C: define → validate (single pass)
+    ├── /twt-ia-define → -validate   ← E: single define→validate pass (no standalone command)
+    └── /twt-curation-define → -validate ← C: single define→validate pass (no standalone command)
               │
               └── synthesizes → .twt-artifacts/pre-design/pre-design-brief.md
 ```
 
-Every skill is also callable standalone. To fix one area after validation, run its
-`*-define` skill (it reads the sibling `validation-report.md`), or run the bare
-`/twt-<area>` orchestrator to run one define→validate pass automatically (§9 single-pass).
+To fix one area after validation, run its `*-define` skill (it reads the sibling
+`validation-report.md`). Areas with a standalone command (brand, positioning) can also be
+re-run via that orchestrator; areas folded into the phase (IA, curation) re-run via
+`/twt-pre-design --only <area>` (§9 single-pass).
 
 ## Phase 2 — Design (pre-design brief → Phase-3 build brief)
 
@@ -68,9 +69,9 @@ Every skill is also callable standalone. To fix one area after validation, run i
 /twt-design                          ← one call runs the whole phase in order
     │
     ├── /twt-design-system           ← tokens.md + tokens.css + preview.html  [SHARED SPINE]
-    ├── /twt-component               ← components.md + gallery.html
-    ├── /twt-layout                  ← layouts/<page>.md
-    └── /twt-mockup                  ← pages/<page>.html (responsive, real content)
+    ├── /twt-component-define → -validate ← components.md + gallery.html (no standalone command)
+    ├── /twt-layout-define → -validate    ← layouts/<page>.md (no standalone command)
+    └── /twt-mockup-define → -validate    ← pages/<page>.html, responsive (no standalone command)
               │
               └── synthesizes → .twt-artifacts/design/design-brief.md
 ```
@@ -79,9 +80,9 @@ The design system is the cross-phase **shared source of truth** at `.twt-artifac
 — Development reads it whether or not a full Design phase ran. `/twt-design-system` has two entry modes:
 greenfield (derive from the Phase-1 brand-brief) or analyse-existing (Figma/screenshots/live site).
 
-Every skill is callable standalone. To fix one area after validation, run its `*-define` skill (it reads the
-sibling `validation-report.md`), or run the bare `/twt-<area>` orchestrator to run one define→validate
-pass automatically (§9 single-pass). All HTML artifacts link the single `tokens.css`.
+To fix one area after validation, run its `*-define` skill (it reads the sibling `validation-report.md`).
+`/twt-design-system` has a standalone command; component, layout, and mockup are folded into the phase —
+re-run a single one via `/twt-design --only <area>` (§9 single-pass). All HTML artifacts link the single `tokens.css`.
 
 ## Phase 3 — Development (design brief OR Figma → built site)
 

@@ -12,7 +12,6 @@ flowchart TB
     twt_brand_define["/twt-brand-define"]:::skill
     twt_brand_fetch["/twt-brand-fetch"]:::skill
     twt_brand_validate["/twt-brand-validate"]:::skill
-    twt_component["/twt-component"]:::skill
     twt_component_define["/twt-component-define"]:::skill
     twt_component_validate["/twt-component-validate"]:::skill
     twt_content_approval_checklist["/twt-content-approval-checklist"]:::skill
@@ -41,11 +40,9 @@ flowchart TB
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
     twt_ia_validate["/twt-ia-validate"]:::skill
-    twt_layout["/twt-layout"]:::skill
     twt_layout_define["/twt-layout-define"]:::skill
     twt_layout_validate["/twt-layout-validate"]:::skill
     twt_marketplace_docs["/twt-marketplace-docs"]:::skill
-    twt_mockup["/twt-mockup"]:::skill
     twt_mockup_define["/twt-mockup-define"]:::skill
     twt_mockup_validate["/twt-mockup-validate"]:::skill
     twt_positioning["/twt-positioning"]:::skill
@@ -74,11 +71,7 @@ flowchart TB
     twt_brand_fetch -.-> twt_brand_define
     twt_content_fetch_pdf -.-> twt_brand_fetch
     twt_brand_define --> twt_brand_validate
-    twt_component_define -.-> twt_component
-    twt_component_validate -.-> twt_component
     twt_design_system_define -.-> twt_content_approval_checklist
-    twt_layout -.-> twt_content_approval_checklist
-    twt_mockup -.-> twt_content_approval_checklist
     twt_content_approval_checklist --> twt_content_approval_implement
     twt_html_block_creator -.-> twt_content_approval_implement
     twt_elementor_block_creator -.-> twt_content_approval_implement
@@ -96,9 +89,12 @@ flowchart TB
     twt_curation_define --> twt_curation_validate
     twt_content_validate -.-> twt_curation_validate
     twt_design_system -.-> twt_design
-    twt_component -.-> twt_design
-    twt_layout -.-> twt_design
-    twt_mockup -.-> twt_design
+    twt_component_define -.-> twt_design
+    twt_component_validate -.-> twt_design
+    twt_layout_define -.-> twt_design
+    twt_layout_validate -.-> twt_design
+    twt_mockup_define -.-> twt_design
+    twt_mockup_validate -.-> twt_design
     twt_design_system_define -.-> twt_design_system
     twt_design_system_validate -.-> twt_design_system
     twt_html_site_creator -.-> twt_develop
@@ -118,10 +114,6 @@ flowchart TB
     twt_positioning_define -.-> twt_ia_define
     twt_content_fetch -.-> twt_ia_define
     twt_ia_define --> twt_ia_validate
-    twt_layout_define -.-> twt_layout
-    twt_layout_validate -.-> twt_layout
-    twt_mockup_define -.-> twt_mockup
-    twt_mockup_validate -.-> twt_mockup
     twt_positioning_define -.-> twt_positioning
     twt_positioning_validate -.-> twt_positioning
     twt_brand_define -.-> twt_positioning_define
@@ -172,7 +164,6 @@ flowchart TB
 
 ### component
 
-- /twt-component - Orchestrate component define/validate in a single define→validate pass
 - /twt-component-define - Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
 - /twt-component-validate - Read-only critique of components.md and gallery.html into validation-report.md
 
@@ -236,7 +227,6 @@ flowchart TB
 
 ### layout
 
-- /twt-layout - Orchestrate layout define/validate in a single define→validate pass
 - /twt-layout-define - Define per-page layout specs (section order, component slots, content map, breakpoints)
 - /twt-layout-validate - Read-only critique of per-page layout specs into validation-report.md
 
@@ -247,7 +237,6 @@ flowchart TB
 
 ### mockup
 
-- /twt-mockup - Orchestrate mockup define/validate in a single define→validate pass
 - /twt-mockup-define - Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
 - /twt-mockup-validate - Read-only critique of page mockups (token links, real content, responsiveness, a11y)
 
@@ -397,30 +386,6 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/brand/validation-report.md |  |
 
-### /twt-component
-
-**Category:** component
-**Version:** 1.1.2
-
-**Inputs:**
-- Optional: which components to scope to
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-component-define, twt-component-validate
-
-**Feeds into:**
-- Hard consumers: none
-- Soft consumers: twt-design
-
-**Reads:**
-- .twt-artifacts/design/component/components.md
-- .twt-artifacts/design/component/validation-report.md
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-
 ### /twt-component-define
 
 **Category:** component
@@ -435,7 +400,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-component
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -467,7 +432,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-component
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/design/component/components.md
@@ -770,7 +735,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system, twt-component, twt-layout, twt-mockup
+- Soft: twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -1270,30 +1235,6 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/ia/validation-report.md |  |
 
-### /twt-layout
-
-**Category:** layout
-**Version:** 1.1.2
-
-**Inputs:**
-- Optional: which page(s) to scope to
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-layout-define, twt-layout-validate
-
-**Feeds into:**
-- Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design
-
-**Reads:**
-- .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/layout/validation-report.md
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-
 ### /twt-layout-define
 
 **Category:** layout
@@ -1308,7 +1249,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-layout
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
@@ -1339,7 +1280,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-layout
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
@@ -1379,30 +1320,6 @@ flowchart TB
 | architecture.md |  |
 | README.md (marked block only) |  |
 
-### /twt-mockup
-
-**Category:** mockup
-**Version:** 1.1.2
-
-**Inputs:**
-- Optional: which page(s) to scope to
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-mockup-define, twt-mockup-validate
-
-**Feeds into:**
-- Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design
-
-**Reads:**
-- .twt-artifacts/design/mockup/pages/
-- .twt-artifacts/design/mockup/validation-report.md
-
-**Writes:**
-| Path | Notes |
-|------|-------|
-
 ### /twt-mockup-define
 
 **Category:** mockup
@@ -1417,7 +1334,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-mockup
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
@@ -1453,7 +1370,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-mockup
+- Soft consumers: twt-design
 
 **Reads:**
 - .twt-artifacts/design/mockup/pages/
@@ -2032,7 +1949,6 @@ flowchart TB
 | /twt-brand-define | none | twt-brand-fetch |
 | /twt-brand-fetch | none | twt-content-fetch-pdf, figma-mcp, WebFetch |
 | /twt-brand-validate | twt-brand-define | none |
-| /twt-component | none | twt-component-define, twt-component-validate |
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
 | /twt-content-approval-checklist | none | twt-design-system-define, twt-layout, twt-mockup |
@@ -2045,7 +1961,7 @@ flowchart TB
 | /twt-content-validate | none | twt-content-fetch-site |
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
-| /twt-design | none | twt-design-system, twt-component, twt-layout, twt-mockup |
+| /twt-design | none | twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
@@ -2061,11 +1977,9 @@ flowchart TB
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-content-fetch |
 | /twt-ia-validate | twt-ia-define | none |
-| /twt-layout | none | twt-layout-define, twt-layout-validate |
 | /twt-layout-define | none | none |
 | /twt-layout-validate | none | none |
 | /twt-marketplace-docs | none | none |
-| /twt-mockup | none | twt-mockup-define, twt-mockup-validate |
 | /twt-mockup-define | none | none |
 | /twt-mockup-validate | none | none |
 | /twt-positioning | none | twt-positioning-define, twt-positioning-validate |

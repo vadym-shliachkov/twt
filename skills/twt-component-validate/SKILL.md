@@ -91,4 +91,4 @@ Generated: <ISO timestamp>  ·  Validator: /twt-component-validate
 Write ONLY this file.
 
 ## Step 4 — Report
-State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-component-define (or /twt-component to loop automatically)."
+State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-component-define (or re-run /twt-design, which folds the component define→validate pass)."

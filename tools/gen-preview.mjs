@@ -376,7 +376,7 @@ const html = `<!doctype html>
   ${tier1}
   ${tiers234}
   <section class="gp-tier">
-    <p class="gp-legend">Exhaustive catalog → <code>../component/gallery.html</code> (run /twt-component if absent). Templates &amp; Pages → /twt-layout and /twt-mockup.</p>
+    <p class="gp-legend">Exhaustive catalog → <code>../component/gallery.html</code> (run /twt-component-define if absent). Templates &amp; Pages → /twt-layout-define and /twt-mockup-define.</p>
   </section>
 </div>
 </body>

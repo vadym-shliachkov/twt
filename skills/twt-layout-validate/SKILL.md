@@ -91,4 +91,4 @@ Generated: <ISO timestamp>  ·  Validator: /twt-layout-validate
 Write ONLY this file.
 
 ## Step 4 — Report
-State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-layout-define (or /twt-layout to loop automatically)."
+State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-layout-define (or re-run /twt-design, which folds the layout define→validate pass)."

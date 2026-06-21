@@ -44,7 +44,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 |---------|----------|-------------|
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-brand-fetch | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
-| /twt-component | component | Orchestrate component define/validate in a single define→validate pass |
+| /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
+| /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page |
 | /twt-content-approval-implement | content | Apply ready approved XLSX content into the built site or development artifacts |
 | /twt-content-fetch | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
@@ -69,9 +70,11 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
 | /twt-ia-validate | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
-| /twt-layout | layout | Orchestrate layout define/validate in a single define→validate pass |
+| /twt-layout-define | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
+| /twt-layout-validate | layout | Read-only critique of per-page layout specs into validation-report.md |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| /twt-mockup | mockup | Orchestrate mockup define/validate in a single define→validate pass |
+| /twt-mockup-define | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
+| /twt-mockup-validate | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | /twt-project-intake | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
