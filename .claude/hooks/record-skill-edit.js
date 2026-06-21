@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
  * PostToolUse (Write|Edit) hook.
- * Records the path of any edited skill file (skills/<category>/twt-*.md) into a
- * per-session queue. Does NOT modify any file — the Stop hook does the bump once
- * per turn so multiple edits to one skill only bump the version once.
+ * Records the path of any edited skill file into a per-session queue. "Skill file"
+ * means the current plugin layout: a sub-skill (skills/twt-<name>/SKILL.md) or a
+ * command/orchestrator (commands/twt-<name>.md) — both carry `version:` frontmatter.
+ * Does NOT modify any file — the Stop hook does the bump once per turn so multiple
+ * edits to one skill only bump the version once. (Script fs-writes, e.g. gen-docs,
+ * don't go through the Edit/Write tool, so they never trip this hook.)
  */
 const fs = require('fs');
 const os = require('os');
@@ -21,9 +24,11 @@ const fp =
   '';
 if (!fp) process.exit(0);
 
-// Only skill files: .../skills/<category>/twt-<name>.md
+// Only skill files in the current plugin layout:
+//   skills/twt-<name>/SKILL.md   (sub-skills)
+//   commands/twt-<name>.md       (orchestrators / standalone tools)
 const norm = fp.replace(/\\/g, '/');
-if (!/(^|\/)skills\/[^/]+\/twt-[^/]+\.md$/.test(norm)) process.exit(0);
+if (!/(^|\/)(skills\/twt-[^/]+\/SKILL\.md|commands\/twt-[^/]+\.md)$/.test(norm)) process.exit(0);
 
 const session = String(data.session_id || 'nosession').replace(/[^a-zA-Z0-9_-]/g, '_');
 const queue = path.join(os.tmpdir(), `twt-bump-${session}.txt`);
