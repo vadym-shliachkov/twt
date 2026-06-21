@@ -30,7 +30,7 @@ writes:
 **Non-goals:**
 - Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules)
 - Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/text-analysis/<subject-slug>/optimized.md` first
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation`; this skill judges and improves the **writing quality** of given text
+- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges and improves the **writing quality** of given text
 - Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
 
 **Success criteria:**

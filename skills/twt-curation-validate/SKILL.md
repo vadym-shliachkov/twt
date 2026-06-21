@@ -96,4 +96,4 @@ Generated: <ISO timestamp>  ·  Validator: /twt-curation-validate
 Write ONLY this file.
 
 ## Step 4 — Report
-Print BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-curation-define (or /twt-curation to loop automatically)."
+Print BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-curation-define (or re-run /twt-pre-design, which folds the curation define→validate pass)."

@@ -1,8 +1,8 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: (v1.1.6) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.1.6
+description: (v1.2.0) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+version: 1.2.0
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -13,8 +13,10 @@ dependencies:
     - twt-brand
     - twt-spec
     - twt-positioning
-    - twt-ia
-    - twt-curation
+    - twt-ia-define
+    - twt-ia-validate
+    - twt-curation-define
+    - twt-curation-validate
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/spec/specification.md
@@ -40,7 +42,7 @@ writes:
 
 **Non-goals:**
 - Doesn't do design, development, or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area orchestrator (rule 5)
+- Doesn't reproduce sub-area logic — dispatches each sub-area's orchestrator, or (for IA + curation, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -78,12 +80,18 @@ Wait for both to finish before Step 4 (Positioning depends on both). Surface any
 Dispatch `/twt-positioning`.
 
 ## Step 5 — IA (E)
-Dispatch `/twt-ia`.
+IA and curation have **no standalone command** — run their single define→validate pass inline here (the same one-pass policy the former `twt-ia` / `twt-curation` wrappers applied, CONVENTIONS §9):
+1. Dispatch `/twt-ia-define` (Agent tool) with `subagent-collect`, forwarding the project brief. It writes `sitemap.md` + `functional-scope.md`, plus a `decisions.md` (`status: open`) for any choice it had to make.
+2. Dispatch `/twt-ia-validate` (Agent tool) with `subagent-collect` → it writes `.twt-artifacts/pre-design/ia/validation-report.md` (Band/Health + findings). Required: Step 7 reads this report.
+3. **Surface (rule 13):** if `decisions.md` is `status: open` **and** `/twt-pre-design` is **not** itself in collect mode, present the open questions / proposed rules via the **AskUserQuestion** tool here, then re-dispatch `/twt-ia-define subagent-collect <answers>` to finalize (`status: resolved`) and re-run `/twt-ia-validate` to refresh the report. If `/twt-pre-design` **is** in collect mode (dispatched by `/twt-site`), **bubble** the merged decisions upward instead of asking. At most **one** BLOCKER-driven re-run — no score-chasing loop.
 
 ## Step 6 — Curation (C)
-Dispatch `/twt-curation`.
+Curation depends on IA's `sitemap.md`, so it runs after Step 5. Same inline single define→validate pass:
+1. Dispatch `/twt-curation-define` (Agent tool) with `subagent-collect`, forwarding the project brief → it writes `inventory.md` + `outlines/<page-slug>.md` and a `decisions.md`.
+2. Dispatch `/twt-curation-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/pre-design/curation/validation-report.md`.
+3. **Surface / bubble** exactly as Step 5 sub-step 3 (rule 13); at most one BLOCKER-driven re-run.
 
-(Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`.)
+(Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`. `--only ia` / `--only curation` runs just that inline pass.)
 
 ## Step 7 — Synthesize the brief (thin pointer-index)
 The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize the artifacts. **Use the file tools, never a shell command:** Glob `.twt-artifacts/pre-design/*/validation-report.md` to list the reports, then Read each (or Grep across them for verdict/BLOCKER lines) — do **not** `cd` into the folder or run a `cat`/`grep`/`for` loop, which forces a permission prompt on every run. The same applies wherever you gather a set of sibling `decisions.md` files. Downstream skills read the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/pre-design/pre-design-brief.md`:

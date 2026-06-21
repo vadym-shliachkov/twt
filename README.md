@@ -53,7 +53,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-content-fetch-site | content | Fetch a website's content and save as clean Markdown |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | /twt-content-validate | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| /twt-curation | curation | Orchestrate curation define/validate in a single define→validate pass |
+| /twt-curation-define | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
+| /twt-curation-validate | curation | Critique curation against brand voice and IA; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
@@ -66,7 +67,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-export-template-create | export | Create reusable export templates from brand or user style instructions |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
-| /twt-ia | ia | Orchestrate IA define/validate in a single define→validate pass |
+| /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
+| /twt-ia-validate | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | /twt-layout | layout | Orchestrate layout define/validate in a single define→validate pass |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | /twt-mockup | mockup | Orchestrate mockup define/validate in a single define→validate pass |

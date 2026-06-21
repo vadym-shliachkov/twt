@@ -42,7 +42,7 @@ writes:
 ---
 
 ## Step 1 — Dependency check
-Read `sitemap.md`, `outlines/`, and `components.md`. If `components.md` is missing, abort: "No component library — run /twt-component first." If `sitemap.md` is missing, abort: "No sitemap — run /twt-ia first."
+Read `sitemap.md`, `outlines/`, and `components.md`. If `components.md` is missing, abort: "No component library — run /twt-component first." If `sitemap.md` is missing, abort: "No sitemap — run the IA step (/twt-pre-design, or /twt-ia-define) first."
 
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
 If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the per-page layout specs (`layouts/<page>.md`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/layout/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. Then write the drafts and return the decisions block in your report. Do not loop on the user. **Stay in-project:** work only inside this project — never read files outside it (no sibling project folders, no home directory) to find templates, conventions, or format examples; every format you need is specified in this skill.

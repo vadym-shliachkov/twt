@@ -27,7 +27,7 @@ writes:
 **Purpose:** Produce the canonical `specification.md` — the project's **north-star intent**: vision & goals, functional requirements (capability-level), and — most important — the **visual style** and **motion/animation** direction. Built through a brainstorming-style interview that runs until every field is filled, or refined from an existing spec.
 
 **Non-goals:**
-- Doesn't produce the detailed per-page feature breakdown (that's `/twt-ia`, which derives from this spec)
+- Doesn't produce the detailed per-page feature breakdown (that's the IA step — `/twt-ia-define` — which derives from this spec)
 - Doesn't critique its own output (that's `/twt-spec-validate`)
 - Doesn't extract from external sources itself — it reads what `/twt-content-fetch`, `/twt-brand`, and (optionally) Figma already produced
 - Never overwrites `specification.md` without explicit user consent

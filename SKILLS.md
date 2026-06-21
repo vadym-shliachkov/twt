@@ -19,7 +19,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-content-validate](#twt-content-validate) | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| [/twt-curation](#twt-curation) | curation | Orchestrate curation define/validate in a single define→validate pass |
+| [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
+| [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice and IA; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
@@ -32,7 +33,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-template-create](#twt-export-template-create) | export | Create reusable export templates from brand or user style instructions |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
-| [/twt-ia](#twt-ia) | ia | Orchestrate IA define/validate in a single define→validate pass |
+| [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
+| [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | [/twt-layout](#twt-layout) | layout | Orchestrate layout define/validate in a single define→validate pass |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | [/twt-mockup](#twt-mockup) | mockup | Orchestrate mockup define/validate in a single define→validate pass |
@@ -263,7 +265,7 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 
 **Non-goals:**
 - Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc`)
-- Doesn't curate, judge, or restructure content (that's `/twt-curation`)
+- Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
 **Success criteria:**
@@ -454,38 +456,83 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 
 ---
 
-## /twt-curation
+## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.2.2
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
-One-call curation workflow: define → validate in one pass (§9 — no iteration loop).
+Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
 
 **Inputs:**
-- Optional; runs define then the bounded validate loop
+- Optional answers; otherwise interactive
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-curation-define, twt-curation-validate, twt-content-optimize
+- Soft: twt-content-fetch, twt-brand-define, twt-ia-define
+
+**Reads:**
+- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/validation-report.md
+
+**Writes:**
+- .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/outlines/<page-slug>.md
+- .twt-artifacts/pre-design/curation/decisions.md
+
+**Non-goals:**
+- Doesn't fetch content (reads content-fetch outputs)
+- Doesn't define the sitemap (reads it from IA)
+- Doesn't critique itself; never overwrites without consent
+
+**Success criteria:**
+- `inventory.md` lists every fetched item with a KEEP/SKIP/ELEVATE decision and a target page (or none)
+- One `outlines/<page-slug>.md` exists for each page in `sitemap.md`
+- Every outline section carries drafted, on-brand transformed copy (or a `> GAP` marker) — never a raw source excerpt
+- Outlines contain final-intent **transformed copy**, not source excerpts; verbatim-mirrored copy is a curation defect (see `twt-curation-validate`'s 'Copy transformed not mirrored' criterion)
+- Re-run enters refinement mode
+
+---
+
+## /twt-curation-validate
+
+**Category:** curation
+**Version:** 1.1.1
+**Accepts arguments:** no
+
+Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
+
+**Inputs:**
+- (none — reads curation artifacts and upstream)
+
+**Dependencies:**
+- Hard: twt-curation-define
+- Soft: twt-content-validate
 
 **Reads:**
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/pre-design/curation/validation-report.md
-- .twt-artifacts/pre-design/curation/decisions.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/ia/sitemap.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/pre-design/curation/validation-report.md
 
 **Non-goals:**
-- Dispatches sub-skills (rule 5); no inline logic
-- No unbounded loop, no auto-downgrade
+- Writes only its own `validation-report.md` (rule 11); never edits inventory.md or any outline
+- Recommends fixes, doesn't apply them
+- Doesn't re-curate or rewrite outlines
 
 **Success criteria:**
-- Produces/refines `inventory.md` + `outlines/` + current `validation-report.md`
-- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
-- On exit, states final Band + Health and whether BLOCKERs remain
+- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
+- Every finding has Where / Problem / Recommendation, with Problem citing evidence
+- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
+- Aborts to `/twt-curation-define` if `inventory.md` is missing
 
 ---
 
@@ -1017,37 +1064,80 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 
 ---
 
-## /twt-ia
+## /twt-ia-define
 
 **Category:** ia
-**Version:** 1.1.2
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
-One-call IA workflow: define → validate in one pass (§9 — no iteration loop).
+Produce the canonical site structure — `sitemap.md` (page hierarchy with purpose + CTA) and `functional-scope.md` (global/per-page features and integrations) — from scratch or refined.
 
 **Inputs:**
-- Optional; runs define then the bounded validate loop
+- Optional answers; otherwise interactive
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-ia-define, twt-ia-validate
+- Soft: twt-positioning-define, twt-content-fetch
 
 **Reads:**
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/content-fetch/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/ia/validation-report.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/ia/functional-scope.md
+- .twt-artifacts/pre-design/ia/decisions.md
 
 **Non-goals:**
-- Dispatches sub-skills (rule 5); no inline logic
-- No unbounded loop, no auto-downgrade of severity
+- Doesn't decide per-item content keep/skip (that's `/twt-curation-define`)
+- Doesn't design pages or pick components
+- Doesn't critique itself; never overwrites without consent
 
 **Success criteria:**
-- Produces/refines `sitemap.md` + `functional-scope.md` + current `validation-report.md`
-- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
-- On exit, states whether BLOCKERs remain
+- Both `sitemap.md` and `functional-scope.md` exist with all sections populated or TBD
+- Every page has a stated purpose and primary CTA
+- Re-run enters refinement mode for both files
+
+---
+
+## /twt-ia-validate
+
+**Category:** ia
+**Version:** 1.0.1
+**Accepts arguments:** no
+
+Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them against a weighted rubric, find coverage gaps, navigation problems, unclear page purposes, scope omissions, and positioning misalignment, and write a structured `validation-report.md` recommending fixes.
+
+**Inputs:**
+- (none — reads IA artifacts and upstream)
+
+**Dependencies:**
+- Hard: twt-ia-define
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/ia/functional-scope.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/content-fetch/
+
+**Writes:**
+- .twt-artifacts/pre-design/ia/validation-report.md
+
+**Non-goals:**
+- Writes only its own `validation-report.md` (rule 11); never edits sitemap.md or functional-scope.md
+- Recommends fixes, doesn't apply them
+- Doesn't redesign the sitemap or rewrite the functional scope
+
+**Success criteria:**
+- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
+- Every finding has Where / Problem / Recommendation, with Problem citing evidence
+- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
+- If BOTH `sitemap.md` and `functional-scope.md` are missing, aborts pointing to `/twt-ia-define`
 
 ---
 
@@ -1194,7 +1284,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.1.6
+**Version:** 1.2.0
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1204,7 +1294,7 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia, twt-curation
+- Soft: twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1225,7 +1315,7 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 **Non-goals:**
 - Doesn't do design, development, or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area orchestrator (rule 5)
+- Doesn't reproduce sub-area logic — dispatches each sub-area's orchestrator, or (for IA + curation, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -1748,7 +1838,7 @@ Analyze text quality using Information Style and UX-writing principles — split
 **Non-goals:**
 - Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules)
 - Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/text-analysis/<subject-slug>/optimized.md` first
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation`; this skill judges and improves the **writing quality** of given text
+- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges and improves the **writing quality** of given text
 - Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
 
 **Success criteria:**

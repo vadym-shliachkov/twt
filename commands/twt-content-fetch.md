@@ -26,7 +26,7 @@ writes:
 
 **Non-goals:**
 - Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc`)
-- Doesn't curate, judge, or restructure content (that's `/twt-curation`)
+- Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
 **Success criteria:**

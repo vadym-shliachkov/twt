@@ -92,4 +92,4 @@ Generated: <ISO timestamp>  ·  Validator: /twt-ia-validate
 Write ONLY this file.
 
 ## Step 4 — Report
-Print BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-ia-define (or /twt-ia to loop automatically)."
+Print BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-ia-define (or re-run /twt-pre-design, which folds the IA define→validate pass)."
