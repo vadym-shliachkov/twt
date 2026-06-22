@@ -12,7 +12,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
-| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page |
+| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
 | [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
 | [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
@@ -52,17 +52,17 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout |
+| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase review reports, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (10 metrics) with a scored report and optional rewrite — manual review or automatic |
+| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic |
 
 ---
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
@@ -130,7 +130,7 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.2
+**Version:** 1.3.3
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -210,7 +210,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -248,14 +248,15 @@ Create the content approval workbook that proves every page, shared header/foote
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
 - Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
-- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, and next steps.
+- Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
+- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, **the pages synthesised from collections/taxonomies**, and next steps.
 
 ---
 
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
@@ -294,7 +295,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
@@ -588,7 +589,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.2.4
+**Version:** 1.2.5
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -634,7 +635,7 @@ Drive the whole design phase end to end — design-system → component → layo
 ## /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate in one pass (§9 — no iteration loop). This is the shared, cross-phase design-system spine.
@@ -668,7 +669,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.2
+**Version:** 1.3.3
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -1193,7 +1194,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1311,7 +1312,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1345,6 +1346,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 - Doesn't create production WordPress/Elementor output (Phase 3)
 - Doesn't introduce new colour/type/spacing primitives — those come from `tokens.css`
 - Doesn't use lorem/placeholder where real Phase-1 content exists
+- Doesn't shell out to transform the HTML it writes — **no `perl -pe`/`sed -i` in-place edits, no `cat > x.mjs <<EOF … node x.mjs` heredoc scripts, no `cmd1 && cmd2` chains**. Edit pages with the **Edit** tool and read them with Read/Glob/Grep; those throwaway shell forms trip the obfuscation guard and prompt the user on every run, whereas the file tools are silent. (E.g. to swap an em-dash for a middot across pages, use Edit per file, not a `perl` loop.)
 
 **Success criteria:**
 - One `pages/<page-slug>.html` per layout, linking `../design-system/tokens.css` and `../styles.css` (relative to `pages/`)
@@ -1399,7 +1401,7 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 ## /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 One-call positioning workflow: define → validate in one pass (§9 — no iteration loop).
@@ -1432,7 +1434,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1517,7 +1519,7 @@ Convert messy project notes, links, Figma references, document paths, and constr
 ## /twt-qa
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 One-call QA: pick the mode (local files, or live crawl if a URL is given), run the applicable audits, then aggregate a `qa-report.md` (with a PASS/FAIL verdict) and synthesize a client-ready `gaps.md` punch-list of outstanding content and links.
@@ -1800,7 +1802,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.9.0
+**Version:** 1.10.1
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -1825,6 +1827,9 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 
 **Writes:**
 - .twt-artifacts/site-log.md
+- .twt-artifacts/pre-design/phase-review.md
+- .twt-artifacts/design/phase-review.md
+- .twt-artifacts/<html-site|elementor-theme>/phase-review.md
 - .twt-artifacts/content/text-analysis/
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
@@ -1890,7 +1895,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 ## /twt-spec
 
 **Category:** spec
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 One-call spec workflow: define (interview into the north-star `specification.md`) → validate in one pass (§9 — no iteration loop).
@@ -1959,10 +1964,10 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
-Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **10 metrics**, produce a scored report that explains every weakness, suggest improved versions where needed, and (optionally) rewrite the content automatically.
+Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), produce a scored report that explains every weakness, suggest improved versions where needed, and (optionally) rewrite the content automatically.
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
@@ -1991,7 +1996,8 @@ Analyze text quality using Information Style and UX-writing principles — split
 
 **Success criteria:**
 - The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
-- Each block carries all **10 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** when a rewrite is warranted
+- Each block carries all **11 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** only when a rewrite is warranted (a block scoring ≥ 85 carries **no** Suggested Version block at all)
+- Slogan-style or "bold statement" copy that asserts a problem or benefit **without any proof** (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the **Substantiation** metric makes the critique bite instead of rewarding punchy emptiness
 - **Manual mode** shows every block needing change and waits for the user's action (KEEP_ORIGINAL / USE_SUGGESTED / USE_AND_ENABLE_AUTO / CUSTOM) before applying anything
 - **Automatic mode** rewrites every block scoring below 85 and outputs the report, per-block scores, a change summary, and the final optimized content — no approval required
 - Rewrite guardrails hold: meaning, facts, and legal wording survive verbatim unless the user explicitly allowed changes

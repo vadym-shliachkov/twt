@@ -1,8 +1,8 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: (v1.2.0) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.2.0
+description: (v1.2.1) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+version: 1.2.1
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -35,6 +35,10 @@ writes:
 ---
 
 # /twt-pre-design
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by `/twt-site` or another orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch in the steps below** — twt sub-skills **and** any external skill you load (figma, design-taste-frontend, emil-design-eng, superpowers, …) — run this one Bash line so the complete skill-call tree reaches the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
 ## Intent
 

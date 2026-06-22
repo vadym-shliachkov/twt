@@ -5,23 +5,30 @@
  * (Formerly the opt-in `--log` debug tracer. It is now armed automatically by the
  * site orchestrators at the start of a run and summarized at the end — no flag.)
  *
- * Three modes:
+ * Four modes:
  *   1. --arm "<label>"     create the sentinel + reset the event log.
  *   2. (stdin JSON)        PreToolUse / PostToolUse handler (Task + Skill + AskUserQuestion).
- *   3. --summarize         render the full dispatch trace + wall-time cost table
+ *   3. --event "<line>"    EXPLICIT self-log from a skill running inside a subagent
+ *                          (where the PreToolUse hook does NOT fire). Line form:
+ *                          "dispatch <skill> | <why>"  or  "done <skill>".
+ *   4. --summarize         render the full dispatch trace + wall-time cost table
  *                          into .twt-artifacts/site-log.md, then disarm.
  *
- * It is INERT unless armed: every hook invocation first checks for the sentinel
- * at <project>/.twt-artifacts/.twt-debug/active.json and exits 0 silently if it
- * is absent. So any non-site session is completely unaffected — the orchestrators
- * arm it only for their own runs; nothing else writes .twt-artifacts.
+ * It is INERT unless armed: every hook/event invocation first checks for the
+ * sentinel at <project>/.twt-artifacts/.twt-debug/active.json and exits 0 silently
+ * if it is absent. So any non-site session is completely unaffected — the
+ * orchestrators arm it only for their own runs; nothing else writes .twt-artifacts.
  *
- * COVERAGE: captures EVERY skill/subagent the run touches — twt phase wrappers
- * (dispatched via the Task/Agent tool) AND any other Skill-tool call (other
- * plugins, superpowers, system skills) — each with its WHY (tool input) and
- * wall-time. There is intentionally NO token column: Claude Code does not expose
- * per-subagent token usage to hooks, and subagent tool calls do not appear in the
- * parent transcript. Wall-time is the honest cost proxy; treat shares as relative.
+ * COVERAGE: the PreToolUse/PostToolUse hooks only fire in the MAIN thread, so they
+ * capture the top-level orchestrator's own dispatches + its AskUserQuestion prompts.
+ * Tool calls made INSIDE a dispatched subagent do NOT trigger the parent's hooks —
+ * so every orchestrator that itself runs as a subagent self-logs each child it
+ * dispatches via `--event` (including non-twt Skill calls: figma, superpowers,
+ * frontend-design, etc.). A skill self-logs only when it was itself dispatched
+ * (collect mode) — when run top-level the hook already covers it, so no double
+ * count. Together that yields the full skill-call tree. There is intentionally NO
+ * token column: Claude Code does not expose per-subagent token usage; wall-time
+ * (hook-captured top-level only) is the honest cost proxy — treat shares as relative.
  *
  * Never throws out of the top level — any failure exits 0 so it can never break a
  * run (same safety posture as twt-scope-guard).
@@ -117,6 +124,29 @@ function arm(label) {
   process.stdout.write('twt-run-trace: armed (run ' + runId + ')\n');
 }
 
+// Explicit self-log from a skill running inside a subagent (hooks don't fire there).
+// Line form: "dispatch <skill> | <why>"  or  "done <skill>".
+function event(line) {
+  if (!armed()) return; // inert unless a site run armed the trace
+  const text = String(line || '').trim();
+  const m = text.match(/^(dispatch|ask|done)\b\s*(.*)$/i);
+  if (!m) return;
+  const verb = m[1].toLowerCase();
+  const rest = m[2].trim();
+  const state = readJson(STATE, { open: 0, stack: [] });
+  if (verb === 'dispatch') {
+    const [skillPart, whyPart] = rest.split('|');
+    const skill = (skillPart || 'skill').trim().replace(/^\//, '') || 'skill';
+    let why = (whyPart || '').trim();
+    if (why.length > 160) why = why.slice(0, 157) + '…';
+    const kind = /^twt-/.test(skill) ? 'task' : 'skill';
+    appendEvent({ ev: 'dispatch', kind, skill, why, depth: state.open + 1, t0: Date.now(), ts: hms(), self: true });
+  } else if (verb === 'done') {
+    const skill = rest.trim().replace(/^\//, '');
+    appendEvent({ ev: 'done', kind: 'task', skill, elapsed: null, ts: hms(), self: true });
+  }
+}
+
 function handleHook() {
   if (!armed()) return; // inert
   let payload = {};
@@ -178,12 +208,16 @@ function summarize() {
   let depth = 0;
   for (const e of events) {
     if (e.ev === 'dispatch') {
-      const indent = '  '.repeat(Math.max(0, depth));
+      // Self-logged dispatches (from inside a subagent) have no paired `done`, so
+      // they must NOT mutate the hook-tracked depth — render them one level in and
+      // tag them so the trace stays a complete, non-corrupted list.
+      const indent = '  '.repeat(Math.max(0, depth + (e.self ? 1 : 0)));
       const tag = e.kind === 'skill' ? 'skill' : 'task';
-      trace += `${indent}- \`▶ ${e.ts || ''}\` **${e.skill}** _(${tag})_ — ${e.why || '(no context)'}\n`;
-      if (e.kind === 'task') depth += 1;
+      const mark = e.self ? '· ' : '';
+      trace += `${indent}- \`▶ ${e.ts || ''}\` ${mark}**${e.skill}** _(${tag})_ — ${e.why || '(no context)'}\n`;
+      if (e.kind === 'task' && !e.self) depth += 1;
     } else if (e.ev === 'done') {
-      if (e.kind === 'task') depth = Math.max(0, depth - 1);
+      if (e.kind === 'task' && !e.self) depth = Math.max(0, depth - 1);
       const indent = '  '.repeat(Math.max(0, depth));
       if (e.elapsed != null) trace += `${indent}  \`✔ ${e.ts || ''}\` ${e.skill} (${fmtDur(e.elapsed)})\n`;
     } else if (e.ev === 'ask') {
@@ -241,6 +275,7 @@ function summarize() {
 try {
   const arg = process.argv[2];
   if (arg === '--arm') arm(process.argv.slice(3).join(' '));
+  else if (arg === '--event') event(process.argv.slice(3).join(' '));
   else if (arg === '--summarize') summarize();
   else handleHook();
 } catch {

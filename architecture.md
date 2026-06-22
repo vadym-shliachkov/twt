@@ -171,7 +171,7 @@ flowchart TB
 
 ### content
 
-- /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page
+- /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
 - /twt-content-approval-implement - Apply ready approved XLSX content into the built site or development artifacts
 - /twt-content-fetch - Detect provided sources and dispatch to the right content-fetch sub-skill
 - /twt-content-fetch-doc - Extract a Word/Google Doc's content and save as clean Markdown
@@ -179,7 +179,7 @@ flowchart TB
 - /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
-- /twt-text-analysis - Block-by-block text-quality analysis (10 metrics) with a scored report and optional rewrite — manual review or automatic
+- /twt-text-analysis - Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic
 
 ### curation
 
@@ -267,7 +267,7 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase review reports, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
 
 ### site-dev
 
@@ -288,7 +288,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -391,7 +391,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.2
+**Version:** 1.3.3
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -450,7 +450,7 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -484,7 +484,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -514,7 +514,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, and document paths/URLs
@@ -730,7 +730,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.2.4
+**Version:** 1.2.5
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -767,7 +767,7 @@ flowchart TB
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -791,7 +791,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.6.0
+**Version:** 1.7.1
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -854,7 +854,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.2
+**Version:** 1.3.3
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -1240,7 +1240,7 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -1325,7 +1325,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1392,7 +1392,7 @@ flowchart TB
 ### /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1470,7 +1470,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1536,7 +1536,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -1751,7 +1751,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.9.0
+**Version:** 1.10.1
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1779,6 +1779,9 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/site-log.md |  |
+| .twt-artifacts/pre-design/phase-review.md |  |
+| .twt-artifacts/design/phase-review.md |  |
+| .twt-artifacts/<html-site|elementor-theme>/phase-review.md |  |
 | .twt-artifacts/content/text-analysis/ |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
@@ -1814,7 +1817,7 @@ flowchart TB
 ### /twt-spec
 
 **Category:** spec
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
@@ -1916,7 +1919,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
@@ -2009,6 +2012,7 @@ flowchart TB
 
 ```
 .twt-artifacts/
+  <html-site|elementor-theme>/
   content/
   content-approval/
   design/

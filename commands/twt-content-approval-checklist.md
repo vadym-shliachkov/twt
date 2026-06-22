@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: (v1.1.1) Create a human-readable XLSX content approval checklist for every project page
-version: 1.1.2
+description: (v1.2.1) Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+version: 1.2.1
 accepts_arguments: true
 inputs:
   - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -44,7 +44,8 @@ writes:
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
 - Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
-- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, and next steps.
+- Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
+- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, **the pages synthesised from collections/taxonomies**, and next steps.
 
 ---
 
@@ -88,6 +89,18 @@ Read available design-system and layout artifacts to infer the content scope:
 
 Put source values found in Figma/design/mockups into `current content` exactly enough for review, even when the value is lorem ipsum, placeholder copy, a draft CTA, or a fake URL. Use `recommended content` for the model's proposed replacement or for notes such as `Needs approved final copy`, `Needs final asset URL`, or `Looks like lorem ipsum - replace before ready`. Mark inferred rows as recommendations, not approvals.
 
+### Step 2a - Expand collections/taxonomies into real pages (do not treat a listing as flat text)
+
+A block like **Work**, **Portfolio**, **Projects**, **Case studies**, **Services**, **Blog**, **News**, **Team**, or **Products** is **not** a single text section — it is a *collection* backed by a **taxonomy** (its category / filter labels). Filter chips such as `filter_labels: All · Branding · Web · Strategy` are the **taxonomy terms**, and each item in the collection (and usually each category) is its **own page** that needs content approval. Recognising this is the difference between approving "a Work section" and approving the site that Work section actually implies.
+
+When you detect a collection block (a repeating card/list of items, especially one paired with category/filter labels), expand it before building the workbook:
+
+1. **Promote the taxonomy.** Add the collection's category/filter terms as approvable rows on the listing page's sheet under a `Taxonomy` block — one row per term (`taxonomy:term` field type), so a human approves the actual category set (names, order, which "All"/default) rather than leaving filter labels as decorative copy. Note where new terms are still needed.
+2. **Add a detail-page worksheet.** Generate at least one **item detail page** worksheet (e.g. `Work — project detail`) representing the template every collection item uses: title, role/meta, hero/media, body sections, gallery, links, prev/next, SEO. If concrete items are known (from the sitemap, Figma frames, or content sources), add a worksheet per known item (named uniquely, 31-char limit); if only the pattern is known, add one representative `… — detail (template)` worksheet and note in the report how many real item pages it stands in for.
+3. **Add category/archive pages when the IA implies them.** If filtering navigates to per-category archive URLs (not just client-side filtering on one page), add a `… — category (archive)` worksheet for the category template too, and capture its SEO fields.
+
+Use the sitemap (`pre-design/ia/sitemap.md`) and curation outlines (`pre-design/curation/`) as the source of truth for which detail/category pages exist; fall back to the layout/mockup if the sitemap is silent. Record every page you synthesised this way (and why) in the Step 6 report so the user can confirm the expanded page set is correct.
+
 ## Step 3 - Build the workbook structure
 
 Create `.twt-artifacts/content-approval/content-approval-checklist.xlsx` with one worksheet per discovered page, **plus two dedicated shared worksheets**: `Shared header` (placed first) and `Shared footer` (placed last). Do not add cover, index, hidden, or summary sheets.
@@ -112,9 +125,10 @@ For media rows, use links or paths in `approved content`:
 
 Header and footer are global, so they get their **own** worksheets and must **not** be repeated on any page worksheet.
 
-**Page worksheets** — for each discovered page, include these row groups in a readable order, and include **no** header or footer rows:
+**Page worksheets** — for each discovered page (including the detail/category pages synthesised in Step 2a), include these row groups in a readable order, and include **no** header or footer rows:
 1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed (these are per-page, so they stay on the page sheet).
 2. Page-specific blocks from the design/layout, each with all dynamic text, links, image/video/file assets, form labels, placeholders, validation messages, and microcopy.
+3. For a **collection/listing page** (per Step 2a): a `Taxonomy` block whose rows are the category/filter terms (`taxonomy:term`), so the approved category set is explicit — not buried in a filter-chip text field. For an **item-detail / category-archive page**: the full template field set (title, role/meta, hero/media, body sections, gallery, links, prev/next) so the per-item content is approvable like any other page.
 
 **`Shared header` worksheet** — captured once, here only: logo text/image, navigation labels, navigation URLs, utility links, language/social/search items, and the global CTA.
 
@@ -155,6 +169,7 @@ Write `.twt-artifacts/content-approval/content-approval-checklist-report.md` wit
 - Page count, the two shared worksheets (`Shared header`, `Shared footer`), and all worksheet names.
 - Block-section count per worksheet, plus total row count and rows by field family: text, link, image, video, file, form, SEO.
 - Source artifacts used and missing source artifacts.
+- **Collections/taxonomies expanded:** each collection block detected, the taxonomy terms promoted, and the detail/category worksheets synthesised from it (with how many real item pages a `(template)` worksheet represents).
 - Any assumptions or inferred blocks that need human review.
 - Next step: fill `approved content`, set ready cells to `true`, then run `/twt-content-approval-implement`.
 

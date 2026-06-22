@@ -302,22 +302,35 @@ function renderContrast() {
   return `<table class="gp-ct"><thead><tr><th>Text</th><th>Surface</th><th>Ratio</th><th>WCAG</th></tr></thead><tbody>${body}</tbody></table>${note}`;
 }
 
-function tierShells(title, tier, items, kind) {
+// `wide` (used for Modules / Tier 4): modules are full-section compositions —
+// rendering them in the same narrow auto-fill grid as primitives/components
+// squeezes a hero/footer/CTA-band into a ~280px cell where it cannot be judged.
+// Wide mode lays them out one-per-row at full container width with room to breathe.
+function tierShells(title, tier, items, kind, wide = false) {
   if (!items.length) return `<section class="gp-tier"><p class="gp-tag">${tier}</p><h2 class="gp-th">${title}</h2><p class="gp-legend">No ${kind} documented in §3.</p></section>`;
-  const cells = items.map((it) =>
-    `<div class="gp-cell" data-component="${esc(it.name)}">\n` +
-    `      <!-- gp:fill ${esc(it.name)} — render one neutral specimen built only from var(--…) tokens; replace this comment -->\n` +
-    `      <span class="gp-cap"><b>${esc(it.name)}</b>${it.note ? ' — ' + esc(it.note) : ''}</span>\n` +
-    `    </div>`).join('\n    ');
+  const cellCls = wide ? 'gp-cell gp-cell-wide' : 'gp-cell';
+  // Wide (module) cells put the label on top so the full-width specimen reads as the body;
+  // narrow (primitive/component) cells keep the label beneath the specimen as before.
+  const cell = (it) => wide
+    ? `<div class="${cellCls}" data-component="${esc(it.name)}">\n` +
+      `      <span class="gp-cap gp-cap-top"><b>${esc(it.name)}</b>${it.note ? ' — ' + esc(it.note) : ''}</span>\n` +
+      `      <!-- gp:fill ${esc(it.name)} — render one neutral specimen built only from var(--…) tokens; replace this comment -->\n` +
+      `    </div>`
+    : `<div class="${cellCls}" data-component="${esc(it.name)}">\n` +
+      `      <!-- gp:fill ${esc(it.name)} — render one neutral specimen built only from var(--…) tokens; replace this comment -->\n` +
+      `      <span class="gp-cap"><b>${esc(it.name)}</b>${it.note ? ' — ' + esc(it.note) : ''}</span>\n` +
+      `    </div>`;
+  const cells = items.map(cell).join('\n    ');
+  const invCls = wide ? 'gp-inv gp-inv-wide' : 'gp-inv';
   return `<section class="gp-tier"><p class="gp-tag">${tier}</p><h2 class="gp-th">${esc(title)}</h2>` +
-    `<p class="gp-legend">${items.length} ${kind}, each composed from the tier${tier === 'Tier 2' ? ' below (Tokens)' : ' below'}. Neutral specimens only — not the real site.</p>` +
-    `<div class="gp-inv">\n    ${cells}\n  </div></section>`;
+    `<p class="gp-legend">${items.length} ${kind}, each composed from the tier${tier === 'Tier 2' ? ' below (Tokens)' : ' below'}. Neutral specimens only — not the real site.${wide ? ' Each module spans the full width so its real proportions can be evaluated.' : ''}</p>` +
+    `<div class="${invCls}">\n    ${cells}\n  </div></section>`;
 }
 
 const tiers234 = tokensOnly ? '' : [
   tierShells('Primitives', 'Tier 2', inv.primitives, 'primitives'),
   tierShells('Components', 'Tier 3', inv.components, 'components'),
-  tierShells('Modules', 'Tier 4', inv.modules, 'modules'),
+  tierShells('Modules', 'Tier 4', inv.modules, 'modules', true),
 ].join('\n');
 
 const html = `<!doctype html>
@@ -362,8 +375,12 @@ const html = `<!doctype html>
   .gp-mo:hover{transform:translateY(-6px)}
   .gp-grid{font-size:.85rem;color:var(--color-label, #777)}
   .gp-inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  /* Modules (Tier 4): one per row, full container width, taller, so a hero/footer/CTA band shows real proportions */
+  .gp-inv-wide{display:block}
   .gp-cell{border:1px solid var(--border, #e5e5e5);border-radius:12px;padding:20px;background:var(--surface-page, #fff)}
+  .gp-cell-wide{width:100%;margin-bottom:24px;padding:28px}
   .gp-cap{display:block;margin-top:12px;font-size:.78rem;color:var(--color-label, #888)}
+  .gp-cap-top{margin-top:0;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border, #e5e5e5)}
   .gp-cap b{color:var(--color-heading, #222)}
 </style>
 </head>

@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.6.0) Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
-version: 1.6.0
+description: (v1.7.1) Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
+version: 1.7.1
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -29,6 +29,10 @@ writes:
 ---
 
 # /twt-design-system-define
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before you load any external skill** (figma, design-taste-frontend, emil-design-eng, superpowers, …) or dispatch any sub-agent, run this one Bash line so those calls reach the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
 ## Intent
 
@@ -541,6 +545,8 @@ The script prints a ` ```json ` block to stdout with `counts` and `contrast_fail
 
 ### 2. Fill the component slots
 For each `<!-- gp:fill <Name> … -->` slot the generator left in Tiers 2–4, replace the comment with **one neutral specimen** of that component, built **only** from `var(--…)` tokens. This is the model-owned part — the only HTML you author by hand.
+
+> **Fill with the Edit tool — never a throwaway script.** Replace each `gp:fill` slot using the **Edit** tool (one Edit per slot, matching the slot comment). **Do NOT** write a `.mjs`/`.js`/heredoc helper (e.g. `cat > fill.mjs <<'EOF' … node fill.mjs`) to bulk-fill the slots, and **do NOT** write your own contrast script — `gen-preview.mjs` already computed every WCAG ratio and returned them in its JSON (read `contrast_failures[]` from that, Step 10b.1/10c). Throwaway heredoc scripts contain quotes + braces, which trips the shell-obfuscation guard and forces a permission prompt on every run; the bundled `gen-preview.mjs` and the Edit tool do the same job silently. The **only** Bash this step runs is the single `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" …` invocation from 10b.1 — keep all other inspection on the file tools (Read/Glob/Grep), never `cat`/`grep`/`find`/`for`-loops or `cmd1 && cmd2` chains, which can't be allowlisted and prompt every time.
 
 **Hard rules for the specimens (a styleguide, not the website):**
 - **Neutral placeholder labels only** — no real hero headline, value props, case-study/stat numbers, testimonials, or CTA copy. Use "Button label", "Card title · default state", "Body copy sample — one line that demonstrates the body type token.", "Nav item".

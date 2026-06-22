@@ -1,8 +1,8 @@
 ---
 name: twt-qa
 category: qa
-description: (v1.0.1) Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
-version: 1.0.1
+description: (v1.0.2) Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -26,6 +26,10 @@ writes:
 ---
 
 # /twt-qa
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by `/twt-site` or another orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch in the steps below** — twt sub-skills **and** any external skill you load (figma, design-taste-frontend, emil-design-eng, superpowers, …) — run this one Bash line so the complete skill-call tree reaches the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
 ## Intent
 

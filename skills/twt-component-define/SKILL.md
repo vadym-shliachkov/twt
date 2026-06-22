@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.2) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.2
+description: (v1.3.3) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.3
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -24,6 +24,10 @@ writes:
 ---
 
 # /twt-component-define
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before you load any external skill** (figma, design-taste-frontend, emil-design-eng, superpowers, …) or dispatch any sub-agent, run this one Bash line so those calls reach the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
 ## Intent
 

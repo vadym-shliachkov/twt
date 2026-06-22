@@ -1,8 +1,8 @@
 ---
 name: twt-mockup-define
 category: mockup
-description: (v1.2.1) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
-version: 1.2.1
+description: (v1.2.2) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to (re)render; otherwise all layouts
@@ -29,6 +29,10 @@ writes:
 
 # /twt-mockup-define
 
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before you load any external skill** (figma, design-taste-frontend, emil-design-eng, superpowers, …) or dispatch any sub-agent, run this one Bash line so those calls reach the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
+
 ## Intent
 
 **Purpose:** Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -37,6 +41,7 @@ writes:
 - Doesn't create production WordPress/Elementor output (Phase 3)
 - Doesn't introduce new colour/type/spacing primitives — those come from `tokens.css`
 - Doesn't use lorem/placeholder where real Phase-1 content exists
+- Doesn't shell out to transform the HTML it writes — **no `perl -pe`/`sed -i` in-place edits, no `cat > x.mjs <<EOF … node x.mjs` heredoc scripts, no `cmd1 && cmd2` chains**. Edit pages with the **Edit** tool and read them with Read/Glob/Grep; those throwaway shell forms trip the obfuscation guard and prompt the user on every run, whereas the file tools are silent. (E.g. to swap an em-dash for a middot across pages, use Edit per file, not a `perl` loop.)
 
 **Success criteria:**
 - One `pages/<page-slug>.html` per layout, linking `../design-system/tokens.css` and `../styles.css` (relative to `pages/`)

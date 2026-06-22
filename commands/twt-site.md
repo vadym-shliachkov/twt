@@ -1,8 +1,8 @@
 ---
 name: twt-site
 category: site
-description: (v1.9.0) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
-version: 1.9.0
+description: (v1.10.1) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase review reports, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+version: 1.10.1
 accepts_arguments: true
 inputs:
   - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -28,6 +28,9 @@ reads:
   - .twt-artifacts/qa/gaps.md
 writes:
   - .twt-artifacts/site-log.md
+  - .twt-artifacts/pre-design/phase-review.md
+  - .twt-artifacts/design/phase-review.md
+  - .twt-artifacts/<html-site|elementor-theme>/phase-review.md
   - .twt-artifacts/content/text-analysis/
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
@@ -96,13 +99,22 @@ Otherwise, before choosing phases, collect the brief (free-form input stays plai
 2. **Content sources** *(plain-text prompt)*: "Paste anything I should build from — live site URL(s), PDF or doc paths, or type `none`. I'll ingest whatever you give me." Record each source.
 3. **Brand / design source** *(plain-text prompt)*: "Any brand or design materials? A brand book, a Figma link, existing colors/fonts — paste a path/URL, or `none`."
 4. **Stage** *(AskUserQuestion, single-select, header "Stage")*: **New build** (from scratch) · **Redesign** (replace an existing site) · **Extend** (add to an existing build) · **You decide**.
+5. **Design status** *(AskUserQuestion, single-select, header "Design")* — ask explicitly so the run never forces a finished design back through Pre-design/Design:
+   - **Design it for me** — no finished design yet; run Pre-design + Design normally (default).
+   - **Already done — Figma** — there is a finished Figma design to build from. This **skips Pre-design + Design** and routes Development through `/twt-site-dev` (Express). If no Figma link was captured in Q3, ask for it now (plain text). Equivalent to choosing **Express** at Step 1·figma — don't ask the Figma-approach question again.
+   - **Already done — existing artifacts** — a design already exists on disk (`.twt-artifacts/design/design-brief.md` / `design-system/`) or as an exported reference. This **skips the Design phase**; Development reuses the existing design. (Confirm the artifacts exist with Glob/Read; if they don't, fall back to running Design.)
+   - **You decide** — infer from the presence of a Figma link, existing `.twt-artifacts/design/` artifacts, or a provided design reference; default to **Design it for me** when nothing is found.
+
+   Record the answer as `<design-status>`. It overrides the default phase set in Step 1 (a "done" answer drops Pre-design+Design or Design) and pre-resolves Step 1·figma (a Figma "done" answer = Express). Skip this question if `site-instruction.md` already states the design is supplied/finished.
 
 Record all answers (merged with the `<provided>` values from Step 0·instr) as the **project brief**. Append each Q&A to the session-log Timeline. If a Figma link was given in (3) or by the instruction file, note it — it drives the **Figma-approach** question in Step 1·figma (express vs. design-source), which is a *source* decision spanning Pre-design/Design/Development, **not** a build-target choice. If real content sources were given in (2), they will be handed to `/twt-pre-design` (which dispatches `/twt-content-fetch`) — do not re-ask for them later.
 
 ## Step 1 — Choose phases
 **Auto mode:** run all four phases (Pre-design → Design → Development → QA), minus any the context clearly excludes (e.g. "QA only", "skip pre-design") and minus Pre-design/Design when a Figma link resolves the Figma-approach (Step 1·figma) to Express. Skip the menu.
 
-If `site-instruction.md` already specified the phase set (Step 0·instr), use it — state it back ("From site-instruction.md: running …") and skip the menu. Otherwise ask via the **AskUserQuestion** tool (multi-select, header "Phases") which phases to run — all selected by default:
+**Honor `<design-status>` from Step 0b first.** If the user said the design is **already done — Figma**, set the Figma approach to Express (Step 1·figma becomes a no-op) and drop **Pre-design + Design** from the default set. If **already done — existing artifacts**, drop **Design** (and Pre-design unless the user still wants it). State the adjustment back ("Design is already done — skipping …") before showing or finalizing the phase set.
+
+If `site-instruction.md` already specified the phase set (Step 0·instr), use it — state it back ("From site-instruction.md: running …") and skip the menu. Otherwise ask via the **AskUserQuestion** tool (multi-select, header "Phases") which phases to run — all selected by default (minus any dropped by `<design-status>`):
 - **Pre-design** — raw materials → `pre-design-brief.md` (brand, positioning, IA, curation)
 - **Design** — → `design-brief.md` (design system, components, layouts, mockups)
 - **Development** — promote the design into a built site (HTML or Elementor)
@@ -111,6 +123,8 @@ Record the selected, ordered set.
 
 ## Step 1·figma — Figma approach (only when a Figma link was provided)
 Figma is a **design source**, not a build method — having one affects Pre-design, Design, **and** Development, so it is decided here, separately from the build target (Step 2). Run this step only when intake (Step 0b Q3) captured a Figma link **and** the phase set includes Pre-design or Design.
+
+**If `<design-status>` (Step 0b) already resolved this** — "Already done — Figma" means Express — skip this question entirely; Pre-design + Design are already dropped and Development routes through `/twt-site-dev`.
 
 **Auto mode:** a Figma link → infer **Express** (drop Pre-design + Design, route Development through `/twt-site-dev`). Record the inference and reason for the final summary; skip the menu.
 
@@ -160,6 +174,27 @@ Read the just-finished phase's output and count any **outstanding BLOCKERs**. **
 - Development: the builders' reported reuse/issues.
 - QA: the `verdict` and BLOCKER count in `.twt-artifacts/qa/qa-report.md` (+ the `gaps.md` items).
 
+### Step 4a — Write the phase review (after Pre-design, Design, and Development)
+Before the gate, distil what the phase's validators found into a **short, scannable review** the user can actually act on — not a wall of validation prose. Aggregate the findings you just read (every sub-area `validation-report.md`, the brief's Outstanding BLOCKERs, and the builders' reported issues) and write **`.twt-artifacts/<phase>/phase-review.md`** (`<phase>` = `pre-design` / `design` / the build dir `html-site` or `elementor-theme`). Use the Write tool. Structure it exactly as:
+
+```markdown
+# <Phase> review — <ISO timestamp>
+
+One line: <N BLOCKERs · M WARNINGs · K suggestions> across <areas reviewed>.
+
+| # | Severity | Problem | Why it matters | Suggested fix | Your decision / ✅ approve |
+|---|----------|---------|----------------|---------------|---------------------------|
+| 1 | BLOCKER  | <one concrete problem — name the artifact/area> | <1–2 sentences: the concrete consequence if shipped as-is> | <the specific change to make, or "—" if none> | <leave blank — user writes accept / fix / ignore, or ✅> |
+```
+
+Rules for the table:
+- **One row per real problem**, ordered BLOCKER → WARNING → SUGGESTION. Do **not** list things that passed — only what needs a decision. If a phase has zero findings, write a single row stating "No issues found — review and approve" so the user still gets an explicit checkpoint.
+- `Problem` is a concrete statement, not a metric dump (good: "Hero copy is lorem ipsum on Home"; bad: "content fidelity 60%"). `Why it matters` is 1–2 sentences of consequence. `Suggested fix` is the specific action or `—`.
+- The last column is **left blank for the user** — it is their answer/approval area; never pre-fill it.
+- Keep the whole table tight; if there are many low findings, keep the top BLOCKERs/WARNINGs as rows and roll the rest into one final "Other minor suggestions (N)" row.
+
+After writing it, in interactive mode point the user to the file path on its own line at the gate ("Phase review: `.twt-artifacts/<phase>/phase-review.md` — N BLOCKERs, M WARNINGs; edit the last column to record your decisions"). In auto mode still **write** the review (it's the unattended run's audit trail), and reference it in the final summary.
+
 **Auto mode — no gate:** auto-proceed to the next phase. Resolve any aggregated `decisions.md` open questions yourself: prefer an answer derivable from the free-form context, else accept the child's proposed/model-decided assumption, re-dispatch the relevant `*-define` in refinement mode with those answers (clearing `decisions.md` → resolved), and log every auto-decision for the final summary. BLOCKERs don't stop the run — record them as **deferred** and continue; stop only when the next phase's hard prerequisite is missing. Never re-run a phase more than once on the same inputs.
 
 Otherwise ask via the **AskUserQuestion** tool (single-select, header "Next"):
@@ -174,4 +209,4 @@ When BLOCKERs are present, the option descriptions should recommend the right re
 
 **Then** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it folds the **full dispatch trace** (every Task/Agent dispatch and every Skill call — twt + any other plugin/superpowers/system skill, each with its WHY and wall-time) plus the **wall-time cost tables** (by phase + by skill) into `.twt-artifacts/site-log.md` as a final `### Dispatch trace` section under this run, then disarms the hooks. Do this **even on an early stop**, so a partial run still gets its trace folded. (If the tracer was never armed — hook missing — skip; the curated Timeline still stands.) There is no token column (not available to hooks).
 
-Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, the built `site/` or theme, `qa-report.md`, `gaps.md`), the QA verdict if QA ran, and any outstanding BLOCKERs or unready content rows the user chose to defer. **Call out the content-approval workbook explicitly** when Development ran: state its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and its row count on its own line (it is easy to miss under the `content-approval/` subdir), and make clear content approval is a **parallel** process — after stakeholders finish the workbook, run `/twt-content-approval-implement` to apply approved rows to the built blocks/pages. Point to **the single log** at `.twt-artifacts/site-log.md` (curated Timeline + auto-folded dispatch trace & cost). In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.
+Then report to the user: which phases ran, where each artifact lives (`pre-design-brief.md`, `design-brief.md`, the built `site/` or theme, `qa-report.md`, `gaps.md`), **the per-phase review files** (`.twt-artifacts/<phase>/phase-review.md`) the user should still triage, the QA verdict if QA ran, and any outstanding BLOCKERs or unready content rows the user chose to defer. **Call out the content-approval workbook explicitly** when Development ran: state its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and its row count on its own line (it is easy to miss under the `content-approval/` subdir), and make clear content approval is a **parallel** process — after stakeholders finish the workbook, run `/twt-content-approval-implement` to apply approved rows to the built blocks/pages. Point to **the single log** at `.twt-artifacts/site-log.md` (curated Timeline + auto-folded dispatch trace & cost). In auto mode additionally list **every auto-decision** (what was decided, from what evidence, or "default") and **every deferred BLOCKER** — this list is the user's review checklist for the unattended run.

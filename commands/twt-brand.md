@@ -1,8 +1,8 @@
 ---
 name: twt-brand
 category: brand
-description: (v1.1.3) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
-version: 1.1.3
+description: (v1.1.4) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
+version: 1.1.4
 accepts_arguments: true
 inputs:
   - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -19,6 +19,10 @@ writes: []
 ---
 
 # /twt-brand
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by `/twt-site` or another orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch in the steps below** — twt sub-skills **and** any external skill you load (figma, design-taste-frontend, emil-design-eng, superpowers, …) — run this one Bash line so the complete skill-call tree reaches the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
 ## Intent
 
