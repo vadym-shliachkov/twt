@@ -823,7 +823,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.7.1
+**Version:** 1.7.2
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
