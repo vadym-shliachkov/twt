@@ -267,7 +267,7 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase review reports, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
 
 ### site-dev
 
@@ -1751,7 +1751,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.10.1
+**Version:** 1.11.1
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1782,13 +1782,15 @@ flowchart TB
 | .twt-artifacts/pre-design/phase-review.md |  |
 | .twt-artifacts/design/phase-review.md |  |
 | .twt-artifacts/<html-site|elementor-theme>/phase-review.md |  |
+| .twt-artifacts/reports/index.html |  |
+| .twt-artifacts/reports/ (copied headline reports) |  |
 | .twt-artifacts/content/text-analysis/ |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.0
+**Version:** 1.5.1
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2022,6 +2024,7 @@ flowchart TB
   intake/
   pre-design/
   qa/
+  reports/
   search/
   site-dev-log.md/
   site-instruction.md/

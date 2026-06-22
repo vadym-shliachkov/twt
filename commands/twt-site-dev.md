@@ -1,8 +1,8 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: (v1.5.0) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
-version: 1.5.0
+description: (v1.5.1) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
+version: 1.5.1
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -106,6 +106,8 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 ## Step 5 — Report & finalize the log
 **First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).
 
+**Then** regenerate the consolidated review dashboard (Bash, single command): `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-report.mjs" "$CLAUDE_PROJECT_DIR"` — it gathers any `phase-review.md` and the QA report into `.twt-artifacts/reports/` (copies + an on-brand `index.html` with open decisions surfaced at the top). Convenience view, never a gate — if it errors, continue.
+
 **Then** run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --summarize` — it folds the full dispatch trace (every Task/Agent dispatch and Skill call — twt + any other plugin/system skill, with WHY + wall-time) plus the wall-time cost tables into `.twt-artifacts/site-dev-log.md`, then disarms. Do this even on an early stop. (If never armed — hook missing — skip.) No token column (not available to hooks).
 
-Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), and that approved workbook content was not auto-applied. **Call out the content-approval workbook explicitly** — its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and row count on its own line — and that approved rows apply only when `/twt-content-approval-implement` is run. Point to **the single log** at `.twt-artifacts/site-dev-log.md` (curated Timeline + auto-folded dispatch trace & cost). In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-site-dev` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).
+Then state to the user: target chosen, whether the spine was created or updated, whether the content approval workbook was created or reused, whether a scaffold was run, what the builder produced (with paths), and that approved workbook content was not auto-applied. **Call out the content-approval workbook explicitly** — its full path `.twt-artifacts/content-approval/content-approval-checklist.xlsx` and row count on its own line — and that approved rows apply only when `/twt-content-approval-implement` is run. Point to **the single log** at `.twt-artifacts/site-dev-log.md` (curated Timeline + auto-folded dispatch trace & cost) and, on its own line, the consolidated review dashboard **`.twt-artifacts/reports/index.html`**. In auto mode additionally list **every auto-decision** (target inference, resolved child decisions, defaults applied) — the user's review checklist for the unattended run. Point to the next call (`/twt-site-dev` for another block, `/twt-content-approval-implement` after approvals, or the builder directly).
