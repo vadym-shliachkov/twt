@@ -537,6 +537,8 @@ After `tokens.css` exists (Step 10a) and the component inventory is written to `
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR"
 ```
 
+**Run this command directly — do not first hunt for the tool.** `${CLAUDE_PLUGIN_ROOT}` is always set at runtime and the generator always lives at `tools/gen-preview.mjs` under it; do **not** `ls`/`find` the plugin cache to locate it, and do **not** run it with `--help` to discover its CLI (its only args are the project dir and the optional `--mode`/`--check` flags named here). Those exploratory reads of the install dir are unnecessary and slow the run. If the single invocation errors, report the error — don't go spelunking.
+
 (In **mode 5 — tokens only**, append `--mode tokens-only` to render only Tier 1.) `$CLAUDE_PROJECT_DIR` is the target project root (same convention as the qa-scan tools); if unset, pass the project root explicitly. The script reads `tokens.css` (authoritative), resolves every `var()` alias and rgba, and writes `preview.html` with:
 - **Tier 1 — Tokens** (100% scripted): live color swatches (name · resolved value · alias chain), the **WCAG contrast matrix** for intended text/surface pairs, type specimens, spacing bars, radius tiles, shadow cards, motion swatches, grid list.
 - **Tiers 2–4 — Primitives / Components / Modules** (scripted shells): one captioned cell per item parsed from §3.2 / §3.3 / §3.4, each with a `<!-- gp:fill <Name> … -->` slot and a composition caption.

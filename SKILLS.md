@@ -12,10 +12,11 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
-| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
+| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
-| [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
+| [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
 | [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
+| [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
@@ -56,7 +57,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic |
+| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes |
 
 ---
 ## /twt-brand
@@ -210,7 +211,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -220,10 +221,12 @@ Create the content approval workbook that proves every page, shared header/foote
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-layout-define, twt-mockup-define
+- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
+- .twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md
+- .twt-artifacts/content/text-analysis/<page-slug>/optimized.md
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/components.md
 - .twt-artifacts/design/layout/layouts/
@@ -247,6 +250,8 @@ Create the content approval workbook that proves every page, shared header/foote
 - `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
+- Discovered text copy is run through `/twt-text-analysis` (analysis-only) and, where a block scored below the rewrite threshold, its **suggested version** is placed in that field's `recommended content` so reviewers see a quality-improved option next to the current copy.
+- The `ready to implement` cell is colored by its value — **green when `true`, pink when `false`** — and that single cell is the only readiness signal (rows are not blanket-highlighted).
 - Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
 - Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
 - Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, **the pages synthesised from collections/taxonomies**, and next steps.
@@ -295,17 +300,17 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
 
 **Inputs:**
-- Any mix of site URLs, PDF paths, and document paths/URLs
+- Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc
+- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma
 
 **Reads:**
 - <provided sources>
@@ -314,7 +319,7 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 - .twt-artifacts/pre-design/content-fetch/_manifest.md
 
 **Non-goals:**
-- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc`)
+- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma`)
 - Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
@@ -356,6 +361,41 @@ Pull a Word or Google Doc's content into the working directory as clean, frontma
 - Output appears under `.twt-artifacts/pre-design/content-fetch/doc/<filename>/`
 - `index.md` has frontmatter (source, title, fetched-at)
 - Heading hierarchy and lists preserved
+
+---
+
+## /twt-content-fetch-figma
+
+**Category:** content
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Pull a Figma design's **visible text content** — headings, body copy, button/CTA labels, nav items, microcopy, list items, and any captured link/media labels — into the working directory as clean, frontmatter-tagged Markdown, the same shape the other `content-fetch` skills produce. This lets a Figma file feed brand, positioning, IA, curation, and the content-approval checklist exactly like fetched site or PDF content.
+
+**Inputs:**
+- A Figma file or frame URL (figma.com/design/… or figma.com/file/…, with or without a node-id)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Reads:**
+- <figma-url> (via the Figma MCP read tools)
+
+**Writes:**
+- .twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md
+- .twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md
+
+**Non-goals:**
+- Not a design importer — it does **not** extract tokens, components, layout, or build anything (that's the Design phase / `/twt-site-dev`). It captures **text content only**.
+- Doesn't approve, curate, or rewrite copy — placeholder/lorem text is captured as-is so a human can judge it later (curation / content-approval).
+- Doesn't write into Figma — read-only. (`use_figma` and its mandatory `figma-use` skill are not needed here.)
+
+**Success criteria:**
+- Output appears under `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/`, one Markdown file per top-level frame/page/screen.
+- Every file has frontmatter (source Figma URL, frame name, node-id, fetched-at).
+- Lorem ipsum / placeholder copy is preserved verbatim and flagged, not silently dropped.
+- An `_index.md` lists every frame written, so downstream skills (and `/twt-content-fetch`) can discover the set.
 
 ---
 
@@ -1802,7 +1842,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.11.1
+**Version:** 1.11.3
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -1968,13 +2008,13 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
-Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), produce a scored report that explains every weakness, suggest improved versions where needed, and (optionally) rewrite the content automatically.
+Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.
 
 **Inputs:**
-- Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+- Optional subject (file path or pasted text); optional scope hint
 
 **Dependencies:**
 - Hard: none
@@ -1982,26 +2022,21 @@ Analyze text quality using Information Style and UX-writing principles — split
 
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-- .twt-artifacts/content/text-analysis/config.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
 - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
 - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
-- .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md
-- .twt-artifacts/content/text-analysis/config.md
-- the subject file in place (only with explicit user consent)
 
 **Non-goals:**
-- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules)
-- Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/text-analysis/<subject-slug>/optimized.md` first
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges and improves the **writing quality** of given text
+- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing the suggested copy is a **different call** — `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
+- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules — these still bind the *suggested* versions it writes)
+- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges the **writing quality** of given text
 - Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
 
 **Success criteria:**
 - The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
 - Each block carries all **11 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** only when a rewrite is warranted (a block scoring ≥ 85 carries **no** Suggested Version block at all)
 - Slogan-style or "bold statement" copy that asserts a problem or benefit **without any proof** (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the **Substantiation** metric makes the critique bite instead of rewarding punchy emptiness
-- **Manual mode** shows every block needing change and waits for the user's action (KEEP_ORIGINAL / USE_SUGGESTED / USE_AND_ENABLE_AUTO / CUSTOM) before applying anything
-- **Automatic mode** rewrites every block scoring below 85 and outputs the report, per-block scores, a change summary, and the final optimized content — no approval required
-- Rewrite guardrails hold: meaning, facts, and legal wording survive verbatim unless the user explicitly allowed changes
+- Two artifacts are written and **nothing else changes**: `analysis-report.md` (the scored critique) and `optimized.md` (the suggested rewrites assembled into one document, clearly labelled as *proposed, not applied*). The subject file is left untouched in every mode.
+- The suggested versions honor the Rewrite rules: meaning, facts, and legal wording survive verbatim; missing facts are flagged with `> NEEDS:` markers, never invented

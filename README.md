@@ -46,10 +46,11 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-brand-fetch | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
-| /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
+| /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | /twt-content-approval-implement | content | Apply ready approved XLSX content into the built site or development artifacts |
-| /twt-content-fetch | content | Detect provided sources and dispatch to the right content-fetch sub-skill |
+| /twt-content-fetch | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
 | /twt-content-fetch-doc | content | Extract a Word/Google Doc's content and save as clean Markdown |
+| /twt-content-fetch-figma | content | Extract a Figma file's visible text content and save as clean Markdown |
 | /twt-content-fetch-pdf | content | Extract a PDF's text content and save as clean Markdown |
 | /twt-content-fetch-site | content | Fetch a website's content and save as clean Markdown |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
@@ -90,7 +91,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| /twt-text-analysis | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic |
+| /twt-text-analysis | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes |
 <!-- TWT_SKILLS_TABLE_END -->
 
 ---

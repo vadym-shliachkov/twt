@@ -26,17 +26,29 @@ const path = require('path');
 
 // Curated allowlist. Read-only / build-utility Bash the skills + bundled tools
 // run, plus WebFetch (content-fetch-site, live QA) and the Figma read MCP tools.
-// Space form (e.g. "Bash(cat *)") matches the format already proven in this
-// repo's own settings.json. The scope-guard still gates anything path-escaping.
+//
+// Use Claude Code's canonical *colon-prefix* form — `Bash(ls:*)` means "any
+// command starting with `ls `". This is what reliably matches; the older space
+// form (`Bash(ls *)`) does NOT consistently match commands that carry flags,
+// quotes, or absolute paths, which is why sub-skills that run the bundled
+// generators against the plugin cache (e.g. `node "<plugin>/tools/gen-preview.mjs"`,
+// or `ls`/`find`/`grep` over the install dir) kept triggering per-call
+// filesystem-read approvals mid-pipeline. Both forms are seeded for the utility
+// commands so an already-seeded project that re-runs /twt-setup gains the
+// working colon form without losing anything. The scope-guard still gates
+// anything path-escaping a write.
+const BASH_UTILS = [
+  'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
+  'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext',
+];
 const ALLOW = [
-  'Bash(ls *)', 'Bash(cat *)', 'Bash(grep *)', 'Bash(rg *)', 'Bash(echo *)',
-  'Bash(mkdir *)', 'Bash(wc *)', 'Bash(find *)', 'Bash(head *)', 'Bash(tail *)',
-  'Bash(node *)', 'Bash(npx *)', 'Bash(python *)', 'Bash(python3 *)',
-  'Bash(pdfinfo *)', 'Bash(pdftotext *)',
+  ...BASH_UTILS.map((c) => `Bash(${c}:*)`),
+  ...BASH_UTILS.map((c) => `Bash(${c} *)`),
   'WebFetch(domain:*)',
   'mcp__plugin_figma_figma__get_design_context',
   'mcp__plugin_figma_figma__get_screenshot',
   'mcp__plugin_figma_figma__get_metadata',
+  'mcp__plugin_figma_figma__get_variable_defs',
   'mcp__plugin_figma_figma__whoami',
 ];
 

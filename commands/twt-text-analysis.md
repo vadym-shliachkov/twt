@@ -1,45 +1,40 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.1.1) Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic
-version: 1.1.1
+description: (v1.2.1) Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
+version: 1.2.1
 accepts_arguments: true
 inputs:
-  - Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+  - Optional subject (file path or pasted text); optional scope hint
 dependencies:
   hard: []
   soft: []
 reads:
   - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-  - .twt-artifacts/content/text-analysis/config.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
 writes:
   - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
   - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
-  - .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md
-  - .twt-artifacts/content/text-analysis/config.md
-  - the subject file in place (only with explicit user consent)
 ---
 
 # /twt-text-analysis
 
 ## Intent
 
-**Purpose:** Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), produce a scored report that explains every weakness, suggest improved versions where needed, and (optionally) rewrite the content automatically.
+**Purpose:** Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.
 
 **Non-goals:**
-- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules)
-- Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/text-analysis/<subject-slug>/optimized.md` first
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges and improves the **writing quality** of given text
+- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing the suggested copy is a **different call** — `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
+- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules — these still bind the *suggested* versions it writes)
+- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges the **writing quality** of given text
 - Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
 
 **Success criteria:**
 - The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
 - Each block carries all **11 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** only when a rewrite is warranted (a block scoring ≥ 85 carries **no** Suggested Version block at all)
 - Slogan-style or "bold statement" copy that asserts a problem or benefit **without any proof** (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the **Substantiation** metric makes the critique bite instead of rewarding punchy emptiness
-- **Manual mode** shows every block needing change and waits for the user's action (KEEP_ORIGINAL / USE_SUGGESTED / USE_AND_ENABLE_AUTO / CUSTOM) before applying anything
-- **Automatic mode** rewrites every block scoring below 85 and outputs the report, per-block scores, a change summary, and the final optimized content — no approval required
-- Rewrite guardrails hold: meaning, facts, and legal wording survive verbatim unless the user explicitly allowed changes
+- Two artifacts are written and **nothing else changes**: `analysis-report.md` (the scored critique) and `optimized.md` (the suggested rewrites assembled into one document, clearly labelled as *proposed, not applied*). The subject file is left untouched in every mode.
+- The suggested versions honor the Rewrite rules: meaning, facts, and legal wording survive verbatim; missing facts are flagged with `> NEEDS:` markers, never invented
 
 ---
 
@@ -47,8 +42,8 @@ Arguments passed to this command: $ARGUMENTS
 
 ---
 
-## Step 1 — Subject, mode & settings
-Parse `$ARGUMENTS` (strip and remember a `subagent-collect` token first — collect mode, see Step 6):
+## Step 1 — Subject & settings
+Parse `$ARGUMENTS` (strip and remember a `subagent-collect` token first — collect mode, see Step 6). The legacy `auto`/`manual` mode tokens are **accepted but ignored** — this skill never applies changes, so there is no apply mode to choose; do **not** ask a mode question.
 - A path to an existing file → read it as the subject.
 - Something that **looks like** a path (extension/slashes) but doesn't exist → don't analyze the path string; say the file wasn't found and prompt for a correction (in collect mode, write the question to `decisions.md` and stop).
 - An `http(s)://` URL → abort with: "Fetch the page first with `/twt-content-fetch-site`, then analyze the saved markdown."
@@ -56,19 +51,6 @@ Parse `$ARGUMENTS` (strip and remember a `subagent-collect` token first — coll
 - Empty → prompt (plain text, free-form): "Paste the text to analyze, or give a file path." In collect mode, write the missing-subject question to `decisions.md` and stop.
 
 Derive a kebab-case `<subject-slug>` (file name sans extension, or the first words of pasted text). If the subject is pasted text, persist it verbatim to `.twt-artifacts/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
-
-Read `.twt-artifacts/content/text-analysis/config.md` for persisted settings (create it in this shape if absent; parse leniently):
-```yaml
-auto_optimize: true | false   # set true by USE_AND_ENABLE_AUTO; auto mode applies rewrites without approval
-```
-
-Resolve the **mode** — precedence: arguments > config > ask:
-- `auto` in `$ARGUMENTS`, or `auto_optimize: true` in config → **Automatic mode**.
-- `manual` in `$ARGUMENTS` → **Manual review mode**.
-- Otherwise ask via the **AskUserQuestion** tool (single-select, header "Mode"):
-  - **Manual review** — score every block, show suggestions, and wait for my action before changing anything (default).
-  - **Automatic** — score and auto-rewrite every block below 85, then report; no approval.
-  - **You decide** — I pick (defaults to Manual review).
 
 Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present — brand voice is **context, not a metric**: copy that is intentionally on-voice isn't penalised as cliché unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
 
@@ -147,32 +129,17 @@ Suggested Version:
 
 Open the report with a header (subject label · mode · document Overall · block count · how many blocks scored < 85) and a one-row-per-block summary table (`| Block | Type | Overall | Recommendation |`). A block scoring ≥ 85 still appears (Scores + "No rewrite required"), but with no Weaknesses list padding and no Suggested Version section.
 
-## Step 6 — Apply (mode-dependent)
+## Step 6 — Write the outputs (analysis only — never apply)
+This skill is **read-only with respect to the subject**. In every mode — standalone, collect, or however it was invoked — it does exactly this and **never asks whether to apply or replace anything**:
 
-### Collect mode (`subagent-collect` in `$ARGUMENTS`)
-Never call AskUserQuestion. Produce the report (Step 5) and write the **optimized** content to `optimized.md` (apply suggested versions for every block < 85; keep 85+ blocks verbatim). Record the open decisions — mode, and "apply optimized copy to the source file?" — in `.twt-artifacts/content/text-analysis/<subject-slug>/decisions.md` (frontmatter `status: open`; `## Open questions` with options + model-leaning), and return the summary. Do not loop on the user.
+1. Write the report (Step 5) to `analysis-report.md`.
+2. Assemble the suggested rewrites into `optimized.md`: for each block scoring **< 85** use its Suggested Version; for blocks scoring ≥ 85 keep the original verbatim. Open the file with a clear banner — `> Proposed rewrites — NOT applied. Implement with /twt-content-optimize (file) or /twt-content-approval-implement (build).` — so it can never be mistaken for the live copy.
+3. **Do not** modify the subject file. **Do not** offer to. There is no "apply" question, no "replace source file" question, and no persisted auto-apply setting.
 
-### Manual review mode
-Show **every block requiring a change** (Overall < 85): its Original, Problems (weaknesses), Metrics, and Suggested Version. After showing all of them, ask via the **AskUserQuestion** tool (single-select, header "Apply"):
-- **KEEP_ORIGINAL** — leave all text unchanged; write the report only.
-- **USE_SUGGESTED** — apply all suggested versions.
-- **USE_AND_ENABLE_AUTO** — apply all suggested versions **and** persist `auto_optimize: true` to `config.md` so future runs optimize automatically.
-- **CUSTOM** — I'll take additional instructions.
-- **You decide** — I apply the suggestions I'm confident improve the text (skipping risky/ambiguous ones) and report exactly what changed.
+If a previous `optimized.md` exists, just regenerate it (it is a derived artifact, safe to overwrite). The optional `auto`/`manual` tokens change nothing here.
 
-A free-typed answer (or **CUSTOM**) is treated as constraints — examples: "keep marketing tone", "rewrite only headings", "do not shorten", "keep formal language", "apply only block 2 and 4". **Re-run the analysis under those restrictions** (re-score and regenerate suggested versions honoring them), then show the blocks and ask again (max 2 such loops, then report and stop).
-
-After applying, write the result to `optimized.md`. Then ask via **AskUserQuestion** (single-select, header "Source file") whether to **also replace the source file in place** — only when the subject was a file, never in collect mode, never defaulting to yes.
-
-### Automatic mode
-Automatically rewrite every block scoring **< 85** (Rewrite rules apply), leave 85+ blocks unchanged, and write `optimized.md`. Output, with **no approval**: (1) the overall report, (2) per-block scores, (3) a summary of changes, (4) the final optimized content. In-place source replacement is still **not** automatic — if the subject was a file, mention the optimized path and that `/twt-text-analysis <file> manual` (or an explicit consent) is needed to overwrite the source.
-
-## Step 7 — Write outputs & persist settings
-- `analysis-report.md` and (when any rewrite was applied) `optimized.md` live under `.twt-artifacts/content/text-analysis/<subject-slug>/`. If a previous run's `optimized.md` exists, confirm before overwriting (rule 10 spirit) — except in collect/auto where it is regenerated.
-- Persist any settings change (`auto_optimize`) to `.twt-artifacts/content/text-analysis/config.md`.
-
-## Step 8 — Report
-State: mode used **and where it came from** (argument / config / asked), the document Overall, how many blocks were below 85 and how many were rewritten, the files written (paths), whether the source file was replaced in place, and any persisted setting. If the mode came from `auto_optimize: true`, add: "Automatic optimization is persisted in `.twt-artifacts/content/text-analysis/config.md` — pass `manual` to override once, or edit the file to switch back."
+## Step 7 — Report
+State: the document Overall, how many blocks scored below 85, the two files written (`analysis-report.md`, `optimized.md`) with their paths, and — explicitly — that **no source text was changed**. End with the next-step pointer: "To implement these suggestions, run `/twt-content-optimize <file>` (to rewrite a text file) or, for built pages, approve the copy and run `/twt-content-approval-implement`."
 
 ---
 

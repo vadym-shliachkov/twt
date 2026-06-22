@@ -1,19 +1,22 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: (v1.2.1) Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
-version: 1.2.1
+description: (v1.3.1) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+version: 1.3.1
 accepts_arguments: true
 inputs:
   - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
 dependencies:
   hard: []
   soft:
+    - twt-text-analysis
     - twt-design-system-define
     - twt-layout-define
     - twt-mockup-define
 reads:
   - Figma URL or Figma design context supplied via $ARGUMENTS
+  - .twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md
+  - .twt-artifacts/content/text-analysis/<page-slug>/optimized.md
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/components.md
   - .twt-artifacts/design/layout/layouts/
@@ -43,6 +46,8 @@ writes:
 - `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
+- Discovered text copy is run through `/twt-text-analysis` (analysis-only) and, where a block scored below the rewrite threshold, its **suggested version** is placed in that field's `recommended content` so reviewers see a quality-improved option next to the current copy.
+- The `ready to implement` cell is colored by its value — **green when `true`, pink when `false`** — and that single cell is the only readiness signal (rows are not blanket-highlighted).
 - Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
 - Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
 - Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, **the pages synthesised from collections/taxonomies**, and next steps.
@@ -101,6 +106,19 @@ When you detect a collection block (a repeating card/list of items, especially o
 
 Use the sitemap (`pre-design/ia/sitemap.md`) and curation outlines (`pre-design/curation/`) as the source of truth for which detail/category pages exist; fall back to the layout/mockup if the sitemap is silent. Record every page you synthesised this way (and why) in the Step 6 report so the user can confirm the expanded page set is correct.
 
+### Step 2b - Run text-analysis to fill `recommended content`
+
+Quality-check the discovered copy before building the workbook, and use the result to seed the `recommended content` column. `/twt-text-analysis` is **analysis-only** — it never edits anything; it just scores each text block and proposes an improved version where the block falls below the rewrite threshold. Per CONVENTIONS rule 5, **dispatch it via the Agent tool — do not re-implement its scoring.**
+
+For each discovered page (and the two shared sheets), do this:
+
+1. **Assemble that page's text copy** into one markdown buffer — the headline/body/CTA/microcopy strings you pulled into `current content` from the mockup, layout, curation outline, or Figma — and persist it to `.twt-artifacts/content/text-analysis/<page-slug>/source.md` (so the child analyzes a file on disk). Skip non-text rows (links, images, videos, SEO slugs); text-analysis judges prose, not URLs.
+2. **Dispatch** `/twt-text-analysis` on that file with the `subagent-collect` token (no questions, no apply). Issue the per-page dispatches as a single parallel batch where practical — each writes to its own `<page-slug>/` folder, so there is no write conflict.
+3. **Read back** `.twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md` (and `optimized.md`) with the Read tool. For every block that carries a **Suggested Version** (i.e. scored below the threshold), put that suggested text into the matching field's **`recommended content`** cell. Match blocks to fields by their text — a block whose original equals the `current content` of a field maps to that field.
+4. Where a block scored at/above the threshold (no Suggested Version), leave `recommended content` as the normal note (`Needs approved final copy`, etc.) — do not fabricate a suggestion. Where text-analysis flagged a `> NEEDS: …` gap, surface that note in `recommended content` so the reviewer knows what fact is missing.
+
+If text-analysis is unavailable or returns nothing for a page, continue without it — the workbook still builds; just fall back to the standard `recommended content` notes. Record in the Step 6 report how many fields received a text-analysis suggestion.
+
 ## Step 3 - Build the workbook structure
 
 Create `.twt-artifacts/content-approval/content-approval-checklist.xlsx` with one worksheet per discovered page, **plus two dedicated shared worksheets**: `Shared header` (placed first) and `Shared footer` (placed last). Do not add cover, index, hidden, or summary sheets.
@@ -155,7 +173,7 @@ Use `openpyxl` styling so the workbook is review-friendly:
 - **Field rows:** thin borders, vertical top alignment, and gentle alternating shading *within* each section (restart the alternation at every banner so the zebra never bleeds across a divider). De-emphasize the repeated `Block name` cell (lighter text) so the banner stays the dominant label.
 - **Spacer rows:** no fill, no border — pure whitespace between sections.
 - Apply data validation on the ready column with only `true,false`; default every ready value to `false` (skip these on banner/spacer rows).
-- Highlight field rows where approved content is blank or ready is `false`.
+- **Color only the `ready to implement` cell** by its value: a **green** fill when the cell is `true`, a **pink/red** fill when it is `false`. Do **not** pink the whole row and do **not** color any other column based on readiness — the single last-column cell is the only at-a-glance status signal. Re-evaluate the fill whenever the value changes (it is set by the cell's literal `true`/`false`); banner and spacer rows get no readiness fill.
 - Keep long text wrapped; do not shrink text into unreadability.
 
 Prefer the clear section layout over a sheet-wide autofilter — interspersed banner and spacer rows make a single autofilter range misleading; if you add filtering, scope it so banners/spacers are not swept into it.
@@ -169,6 +187,7 @@ Write `.twt-artifacts/content-approval/content-approval-checklist-report.md` wit
 - Page count, the two shared worksheets (`Shared header`, `Shared footer`), and all worksheet names.
 - Block-section count per worksheet, plus total row count and rows by field family: text, link, image, video, file, form, SEO.
 - Source artifacts used and missing source artifacts.
+- **Text-analysis pass:** how many pages were analyzed and how many `recommended content` cells were filled with a text-analysis suggested version (and any pages skipped because the analysis was unavailable/empty).
 - **Collections/taxonomies expanded:** each collection block detected, the taxonomy terms promoted, and the detail/category worksheets synthesised from it (with how many real item pages a `(template)` worksheet represents).
 - Any assumptions or inferred blocks that need human review.
 - Next step: fill `approved content`, set ready cells to `true`, then run `/twt-content-approval-implement`.

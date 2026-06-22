@@ -18,6 +18,7 @@ flowchart TB
     twt_content_approval_implement["/twt-content-approval-implement"]:::skill
     twt_content_fetch["/twt-content-fetch"]:::skill
     twt_content_fetch_doc["/twt-content-fetch-doc"]:::skill
+    twt_content_fetch_figma["/twt-content-fetch-figma"]:::skill
     twt_content_fetch_pdf["/twt-content-fetch-pdf"]:::skill
     twt_content_fetch_site["/twt-content-fetch-site"]:::skill
     twt_content_optimize["/twt-content-optimize"]:::skill
@@ -71,6 +72,7 @@ flowchart TB
     twt_brand_fetch -.-> twt_brand_define
     twt_content_fetch_pdf -.-> twt_brand_fetch
     twt_brand_define --> twt_brand_validate
+    twt_text_analysis -.-> twt_content_approval_checklist
     twt_design_system_define -.-> twt_content_approval_checklist
     twt_layout_define -.-> twt_content_approval_checklist
     twt_mockup_define -.-> twt_content_approval_checklist
@@ -80,7 +82,9 @@ flowchart TB
     twt_content_fetch_site -.-> twt_content_fetch
     twt_content_fetch_pdf -.-> twt_content_fetch
     twt_content_fetch_doc -.-> twt_content_fetch
+    twt_content_fetch_figma -.-> twt_content_fetch
     twt_content_fetch -.-> twt_content_fetch_doc
+    twt_content_fetch -.-> twt_content_fetch_figma
     twt_content_fetch -.-> twt_content_fetch_pdf
     twt_content_fetch -.-> twt_content_fetch_site
     twt_content_validate --> twt_content_optimize
@@ -171,15 +175,16 @@ flowchart TB
 
 ### content
 
-- /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+- /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
 - /twt-content-approval-implement - Apply ready approved XLSX content into the built site or development artifacts
-- /twt-content-fetch - Detect provided sources and dispatch to the right content-fetch sub-skill
+- /twt-content-fetch - Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
 - /twt-content-fetch-doc - Extract a Word/Google Doc's content and save as clean Markdown
+- /twt-content-fetch-figma - Extract a Figma file's visible text content and save as clean Markdown
 - /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
 - /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
-- /twt-text-analysis - Block-by-block text-quality analysis (11 metrics incl. substantiation) with a scored report and optional rewrite — manual review or automatic
+- /twt-text-analysis - Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
 
 ### curation
 
@@ -450,14 +455,14 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.3.1
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-layout-define, twt-mockup-define
+- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define
 
 **Feeds into:**
 - Hard consumers: twt-content-approval-implement
@@ -465,6 +470,8 @@ flowchart TB
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
+- .twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md
+- .twt-artifacts/content/text-analysis/<page-slug>/optimized.md
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/components.md
 - .twt-artifacts/design/layout/layouts/
@@ -514,18 +521,18 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
-- Any mix of site URLs, PDF paths, and document paths/URLs
+- Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc
+- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-fetch-doc, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design
+- Soft consumers: twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design
 
 **Reads:**
 - <provided sources>
@@ -559,6 +566,31 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md |  |
 | .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md |  |
+
+### /twt-content-fetch-figma
+
+**Category:** content
+**Version:** 1.0.1
+
+**Inputs:**
+- A Figma file or frame URL (figma.com/design/… or figma.com/file/…, with or without a node-id)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-content-fetch
+
+**Reads:**
+- <figma-url> (via the Figma MCP read tools)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md |  |
+| .twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md |  |
 
 ### /twt-content-fetch-pdf
 
@@ -1751,7 +1783,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.11.1
+**Version:** 1.11.3
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1921,10 +1953,10 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 
 **Inputs:**
-- Optional subject (file path or pasted text); optional mode (auto|manual); optional scope hint
+- Optional subject (file path or pasted text); optional scope hint
 
 **Dependencies:**
 - Hard: none
@@ -1932,11 +1964,10 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-site
+- Soft consumers: twt-content-approval-checklist, twt-site
 
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-- .twt-artifacts/content/text-analysis/config.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
@@ -1944,9 +1975,6 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md |  |
 | .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md |  |
-| .twt-artifacts/content/text-analysis/<subject-slug>/decisions.md |  |
-| .twt-artifacts/content/text-analysis/config.md |  |
-| the subject file in place (only with explicit user consent) |  |
 
 ## Cross-skill dependency table
 
@@ -1958,10 +1986,11 @@ flowchart TB
 | /twt-brand-validate | twt-brand-define | none |
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
-| /twt-content-approval-checklist | none | twt-design-system-define, twt-layout-define, twt-mockup-define |
+| /twt-content-approval-checklist | none | twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define |
 | /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator |
-| /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc |
+| /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma |
 | /twt-content-fetch-doc | none | twt-content-fetch |
+| /twt-content-fetch-figma | none | twt-content-fetch |
 | /twt-content-fetch-pdf | none | twt-content-fetch |
 | /twt-content-fetch-site | none | WebFetch, twt-content-fetch |
 | /twt-content-optimize | twt-content-validate | none |

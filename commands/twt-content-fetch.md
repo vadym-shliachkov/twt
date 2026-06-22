@@ -1,17 +1,18 @@
 ---
 name: twt-content-fetch
 category: content
-description: (v1.0.1) Detect provided sources and dispatch to the right content-fetch sub-skill
-version: 1.0.1
+description: (v1.1.1) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
+version: 1.1.1
 accepts_arguments: true
 inputs:
-  - Any mix of site URLs, PDF paths, and document paths/URLs
+  - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
 dependencies:
   hard: []
   soft:
     - twt-content-fetch-site
     - twt-content-fetch-pdf
     - twt-content-fetch-doc
+    - twt-content-fetch-figma
 reads:
   - <provided sources>
 writes:
@@ -29,7 +30,7 @@ writes:
 **Purpose:** Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
 
 **Non-goals:**
-- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc`)
+- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma`)
 - Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
@@ -41,16 +42,17 @@ writes:
 ---
 
 ## Step 1 — Gather sources
-Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — site URLs, PDF paths, and/or document paths/URLs (one per line):". Wait.
+Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — site URLs, PDF paths, document paths/URLs, and/or Figma links (one per line):". Wait.
 
 ## Step 2 — Classify each source
-- starts with `http://`/`https://` and not a Google Doc → **site**
+- contains `figma.com` (a `/design/…` or `/file/…` URL) → **figma**
+- starts with `http://`/`https://` and not a Google Doc or Figma URL → **site**
 - ends with `.pdf` → **pdf**
 - ends with `.docx`/`.doc`/`.md`/`.txt`, or is a Google Doc URL → **doc**
 - otherwise → **unrecognized** (collect for the report; do not dispatch)
 
 ## Step 3 — Dispatch (in parallel)
-For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, or `/twt-content-fetch-doc`), passing the source as its argument. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own disjoint output folder (`site/<domain>/`, `pdf/<filename>/`, `doc/<filename>/`), so there is no write conflict: **issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest.
+For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, `/twt-content-fetch-doc`, or `/twt-content-fetch-figma`), passing the source as its argument. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own disjoint output folder (`site/<domain>/`, `pdf/<filename>/`, `doc/<filename>/`, `figma/<file-key>/`), so there is no write conflict: **issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest.
 
 ## Step 4 — Write the manifest
 Write `.twt-artifacts/pre-design/content-fetch/_manifest.md`:
@@ -64,7 +66,7 @@ sources: <count>
 
 | Source | Type | Skill | Output |
 |--------|------|-------|--------|
-| <src> | site/pdf/doc | /twt-content-fetch-<type> | <output folder> |
+| <src> | site/pdf/doc/figma | /twt-content-fetch-<type> | <output folder> |
 
 ## Unrecognized
 - <src> — reason

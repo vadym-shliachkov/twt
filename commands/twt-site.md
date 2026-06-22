@@ -1,8 +1,8 @@
 ---
 name: twt-site
 category: site
-description: (v1.11.1) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
-version: 1.11.1
+description: (v1.11.3) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+version: 1.11.3
 accepts_arguments: true
 inputs:
   - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -125,8 +125,12 @@ If `site-instruction.md` already specified the phase set (Step 0·instr), use it
 - **QA** — audit the built output → `qa-report.md` + `gaps.md`
 Record the selected, ordered set.
 
+**Gate every Development-specific question on this set.** If **Development is NOT selected** (e.g. the user picked only Pre-design and/or Design), then for the rest of this run you must **not** ask — and must **skip outright** — the build-target question (Step 2), the Figma **Express** path (Express only matters when something gets built), the content-approval checklist sub-step, the `/twt-develop`/`/twt-site-dev` dispatch, and the pilot-page gate. A Pre-design+Design run produces briefs and a design only; it never asks about Static HTML vs. Elementor. State this back once ("Development isn't selected — skipping build-target and content-approval questions") so the skip is visible, then move on.
+
 ## Step 1·figma — Figma approach (only when a Figma link was provided)
 Figma is a **design source**, not a build method — having one affects Pre-design, Design, **and** Development, so it is decided here, separately from the build target (Step 2). Run this step only when intake (Step 0b Q3) captured a Figma link **and** the phase set includes Pre-design or Design.
+
+**If Development is not in the phase set, do not offer Express.** Express exists only to route a build through `/twt-site-dev`; with nothing being built it is meaningless. In that case treat the Figma link purely as a **Design source** (no question needed) and continue.
 
 **If `<design-status>` (Step 0b) already resolved this** — "Already done — Figma" means Express — skip this question entirely; Pre-design + Design are already dropped and Development routes through `/twt-site-dev`.
 
@@ -140,7 +144,9 @@ If `site-instruction.md` already stated the Figma approach (Step 0·instr), use 
 If **Express** is chosen, tell the user Pre-design and Design will be skipped, drop them from the phase set, and route Development through `/twt-site-dev`.
 
 ## Step 2 — Choose build target
-The build target (how Development renders the site) is **independent** of whether a Figma design exists — both Express and the full pipeline still build to one of these. Ask only when Development is in the phase set.
+The build target (how Development renders the site) is **independent** of whether a Figma design exists — both Express and the full pipeline still build to one of these.
+
+**Hard guard:** ask this **only when Development is in the phase set**. If Development was not selected in Step 1, **skip this entire step** — do not ask Static HTML vs. Elementor, and do not infer a target. There is nothing to build, so the build target is irrelevant.
 
 **Auto mode:** infer the target from the context and skip the menu — "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
 
@@ -160,7 +166,7 @@ For each phase still selected, in pipeline order, dispatch its wrapper via the A
 
 Dispatch every phase wrapper with `subagent-collect` (rule 13) and forward **the Step 0b project brief** (what/who, content sources, brand/design source, stage) plus any free-form `$ARGUMENTS` context as notes — this is the input the collect-mode sub-skills draft from, so pass it in full to every phase.
 
-**Content quality (text-analysis) — sub-step after Design.** Whenever the **Design** phase is in the set (so real page copy exists), dispatch `/twt-text-analysis` after Design returns and **before** the Content approval checklist, so the workbook captures quality-checked copy. This is a **full-workflow-only** step — `/twt-site-dev` (Figma express) does **not** run it. Target each page's drafted copy: the curation outlines `.twt-artifacts/pre-design/curation/outlines/*.md` (preferred editable source) and, if present, the mockup copy under `.twt-artifacts/design/mockup/`. Dispatch per page with `subagent-collect`; the child writes `analysis-report.md` + `optimized.md` under `.twt-artifacts/content/text-analysis/<page-slug>/` and a sibling `decisions.md`, but **never edits the source non-destructively** (collect mode applies suggested copy only to its own `optimized.md`). **Interactive:** at the next gate, surface a one-line per-page quality summary (document Overall + how many blocks scored < 85); the user applies improvements through the normal content-approval / `/twt-content-optimize` flow. **Auto mode:** dispatch `/twt-text-analysis auto …` so blocks below 85 are rewritten and the improved copy is available for the content-approval workbook. It is non-destructive to built mockups and never blocks the run — a failed/empty analysis is reported, not fatal. Log the dispatch in the Timeline.
+**Content quality (text-analysis) — sub-step after Design.** Whenever the **Design** phase is in the set (so real page copy exists), dispatch `/twt-text-analysis` after Design returns and **before** the Content approval checklist, so the workbook captures quality-checked copy. This is a **full-workflow-only** step — `/twt-site-dev` (Figma express) does **not** run it. Target each page's drafted copy: the curation outlines `.twt-artifacts/pre-design/curation/outlines/*.md` (preferred editable source) and, if present, the mockup copy under `.twt-artifacts/design/mockup/`. Dispatch per page with `subagent-collect`; the child writes `analysis-report.md` + `optimized.md` under `.twt-artifacts/content/text-analysis/<page-slug>/` and **never edits the source** — `/twt-text-analysis` is analysis-only, so `optimized.md` holds *proposed* rewrites that are applied later only through the content-approval / `/twt-content-optimize` flow. **Interactive:** at the next gate, surface a one-line per-page quality summary (document Overall + how many blocks scored < 85); the user applies improvements through the normal content-approval / `/twt-content-optimize` flow. **Auto mode:** dispatch `/twt-text-analysis auto …` so blocks below 85 are rewritten and the improved copy is available for the content-approval workbook. It is non-destructive to built mockups and never blocks the run — a failed/empty analysis is reported, not fatal. Log the dispatch in the Timeline.
 
 Treat the **Content approval checklist** as a required pre-development sub-step, not as an optional report line: when Development is selected, dispatch `/twt-content-approval-checklist` immediately after Design has completed (or, for Figma express, inside `/twt-site-dev` before build). After the child returns, verify `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists. If it does not exist, do **not** start Development; report that the content-approval workbook failed to materialize and surface the child error/output so the user can fix the source or dependency. In auto mode this is still a hard prerequisite for Development because later approval implementation depends on the workbook path.
 
