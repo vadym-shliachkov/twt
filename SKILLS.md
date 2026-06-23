@@ -13,7 +13,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-block-map](#twt-block-map) | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
+| [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, screenshots, or public X material into raw notes |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
@@ -279,13 +279,13 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
-Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
+Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site, public X material) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
 
 **Inputs:**
-- A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
+- A brand book (PDF), Figma URL, screenshots, live site URL, or public X material — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
 
 **Dependencies:**
 - Hard: none

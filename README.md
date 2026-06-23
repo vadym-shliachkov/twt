@@ -47,7 +47,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-block-map | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
+| /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, screenshots, or public X material into raw notes |
 | /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |

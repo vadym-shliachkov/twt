@@ -257,7 +257,7 @@ flowchart TB
 
 - /twt-brand - Orchestrate the brand fetch/define/validate skills in a single define→validate pass
 - /twt-brand-define - Build or refine the canonical brand-brief.md through guided dialogue
-- /twt-brand-fetch - Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
+- /twt-brand-fetch - Extract brand attributes and provided logo assets from a brand book, Figma, screenshots, or public X material into raw notes
 - /twt-brand-validate - Critique brand-brief.md and write a validation-report.md (read-only critic)
 
 ### component
@@ -649,10 +649,10 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
-- A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
+- A brand book (PDF), Figma URL, screenshots, live site URL, or public X material — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
 
 **Dependencies:**
 - Hard: none
