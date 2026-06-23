@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node 'C:\\Work\\~marketplace\\.codex\\hooks\\check-docs-on-skill-edit.js'"
+          },
+          {
+            "type": "command",
+            "command": "node 'C:\\Work\\~marketplace\\.codex\\hooks\\record-skill-edit.js'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node 'C:\\Work\\~marketplace\\.codex\\hooks\\bump-skill-versions.js'"
+          }
+        ]
+      }
+    ]
+  }
+}
