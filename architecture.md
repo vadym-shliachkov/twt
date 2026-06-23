@@ -27,6 +27,7 @@ flowchart TB
     twt_curation_validate["/twt-curation-validate"]:::skill
     twt_design["/twt-design"]:::skill
     twt_design_system["/twt-design-system"]:::skill
+    twt_design_system_audit["/twt-design-system-audit"]:::skill
     twt_design_system_define["/twt-design-system-define"]:::skill
     twt_design_system_validate["/twt-design-system-validate"]:::skill
     twt_develop["/twt-develop"]:::skill
@@ -103,6 +104,10 @@ flowchart TB
     twt_mockup_validate -.-> twt_design
     twt_design_system_define -.-> twt_design_system
     twt_design_system_validate -.-> twt_design_system
+    twt_brand -.-> twt_design_system_audit
+    twt_design_system_define -.-> twt_design_system_audit
+    twt_design_system_validate -.-> twt_design_system_audit
+    twt_content_fetch_figma -.-> twt_design_system_audit
     twt_html_site_creator -.-> twt_develop
     twt_html_block_creator -.-> twt_develop
     twt_elementor_theme_creator -.-> twt_develop
@@ -198,6 +203,7 @@ flowchart TB
 ### design-system
 
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass
+- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes a canonical system when none is given and reports the exact page+block that drifts
 - /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
 - /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
 
@@ -304,7 +310,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-pre-design
+- Soft consumers: twt-design-system-audit, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -581,7 +587,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-fetch
+- Soft consumers: twt-content-fetch, twt-design-system-audit
 
 **Reads:**
 - <figma-url> (via the Figma MCP read tools)
@@ -820,6 +826,39 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 
+### /twt-design-system-audit
+
+**Category:** design-system
+**Version:** 1.0.0
+
+**Inputs:**
+- A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS (figma URL, site URL, tokens path, --brand)
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/design/design-system-audit/audit-report.md |  |
+| .twt-artifacts/design/design-system-audit/canonical-blocks.md |  |
+| .twt-artifacts/design/design-system-audit/quality-report.md |  |
+| .twt-artifacts/design/design-system-audit/audit.json |  |
+| .twt-artifacts/design/design-system-audit/blocks.json |  |
+| .twt-artifacts/design/design-system-audit/pages/ |  |
+| .twt-artifacts/design/design-system-audit/synthesized-design-system/ |  |
+
 ### /twt-design-system-define
 
 **Category:** design-system
@@ -834,7 +873,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
+- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-design-system-audit, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -870,7 +909,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design-system
+- Soft consumers: twt-design-system, twt-design-system-audit
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -1999,6 +2038,7 @@ flowchart TB
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
 | /twt-design | none | twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate |
+| /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
