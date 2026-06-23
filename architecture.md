@@ -203,7 +203,7 @@ flowchart TB
 ### design-system
 
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass
-- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes a canonical system when none is given and reports the exact page+block that drifts
+- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes the canonical system when none is given and produces an HTML report with per-block visuals naming the exact page+block that drifts
 - /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
 - /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
 
@@ -829,7 +829,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -851,13 +851,18 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
+| .twt-artifacts/design/design-system-audit/audit-report.html |  |
 | .twt-artifacts/design/design-system-audit/audit-report.md |  |
 | .twt-artifacts/design/design-system-audit/canonical-blocks.md |  |
 | .twt-artifacts/design/design-system-audit/quality-report.md |  |
+| .twt-artifacts/design/design-system-audit/quality.json |  |
 | .twt-artifacts/design/design-system-audit/audit.json |  |
 | .twt-artifacts/design/design-system-audit/blocks.json |  |
+| .twt-artifacts/design/design-system-audit/visuals.json |  |
 | .twt-artifacts/design/design-system-audit/pages/ |  |
-| .twt-artifacts/design/design-system-audit/synthesized-design-system/ |  |
+| .twt-artifacts/design/design-system-audit/shots/ |  |
+| .twt-artifacts/design/design-system-audit/previews/ |  |
+| .twt-artifacts/design/design-system/  # conditional — synthesized canonical DS when none exists |  |
 
 ### /twt-design-system-define
 

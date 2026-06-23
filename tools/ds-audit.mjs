@@ -44,6 +44,7 @@ for (let i = 1; i < argv.length; i++) {
 const OUT = flags.out ? String(flags.out) : '.twt-artifacts/design/design-system-audit';
 const MAX = flags.max ? parseInt(flags.max, 10) || 20 : 20;
 const TOKENS_PATH = flags.tokens ? String(flags.tokens) : null;
+const DS_SOURCE = flags['ds-source'] ? String(flags['ds-source']) : null; // provided | synthesized
 
 function die(msg) { console.error('ds-audit: ' + msg); process.exit(1); }
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
@@ -92,6 +93,20 @@ function extractLinks(html, base) {
     } catch { /* ignore */ }
   }
   return out;
+}
+
+// Absolute hrefs of every <link rel=stylesheet> on a page (resolved against
+// the page URL) — consumed by ds-shots.mjs's embed-preview fallback.
+function stylesheetHrefs(html, base) {
+  const out = [];
+  const linkRe = /<link\b[^>]*\brel=["']?stylesheet["']?[^>]*>/gi;
+  const hrefRe = /\bhref=["']([^"']+)["']/i;
+  for (const ln of html.match(linkRe) || []) {
+    const h = ln.match(hrefRe);
+    if (!h) continue;
+    try { out.push(new URL(h[1], base).href); } catch { /* ignore */ }
+  }
+  return [...new Set(out)];
 }
 
 async function collectCss(html, base) {
@@ -313,27 +328,90 @@ function tokenValueSet(tokensCss) {
   return vals;
 }
 
+// A stable CSS-ish selector for a block instance (also used by ds-shots).
+function blockSel(inst) {
+  return inst.tag
+    + (inst.classes.length ? '.' + inst.classes.join('.') : '')
+    + (inst.id ? '#' + inst.id : '');
+}
+
+// Per-instance deviation scan. Returns:
+//   deltas      — string[] (unchanged shape: human prose, one per delta)
+//   deltas_typed— [{ type, severity, text }] (v2: adds the reason category)
+//   reason_types— deduped category set
+//   tier        — OK | SUGGESTION | WARNING | BLOCKER (the skill's tiering rule)
+//   match       — 0..100
 function deviations(instance, canon, tokenVals) {
-  const out = [];
-  const check = (field, label) => {
+  const typed = [];
+  const hasTokens = tokenVals && tokenVals.size > 0;
+  const check = (field, label, type) => {
     for (const v of instance.styles[field]) {
       if (!canon[field].includes(v)) {
-        const tokenHint = tokenVals && !tokenVals.has(v) ? ' — not a defined token value' : '';
-        out.push(`${label} \`${v}\` differs from canonical (${canon[field].join(', ') || 'none'})${tokenHint}`);
+        // Raw value where a token exists for that category → BLOCKER; else an
+        // off-scale / undocumented variant → WARNING (downgraded to SUGGESTION
+        // below when the overall match stays high).
+        const rawWhereToken = hasTokens && !tokenVals.has(v);
+        const tokenHint = rawWhereToken ? ' — not a defined token value' : '';
+        typed.push({
+          type,
+          severity: rawWhereToken ? 'BLOCKER' : 'WARNING',
+          text: `${label} \`${v}\` differs from canonical (${canon[field].join(', ') || 'none'})${tokenHint}`,
+        });
       }
     }
   };
-  check('colors', 'color');
-  check('spacing', 'spacing');
-  check('fontSizes', 'font-size');
-  check('radius', 'radius');
+  check('colors', 'color', 'color');
+  check('spacing', 'spacing', 'spacing');
+  check('fontSizes', 'font-size', 'font-size');
+  check('radius', 'radius', 'radius');
   for (const k of ['headings', 'buttons', 'images']) {
     const a = instance.structure[k] || 0, b = canon.structure[k] || 0;
-    if (Math.abs(a - b) >= 2) out.push(`structure: ${k}=${a} vs canonical ${b}`);
+    if (Math.abs(a - b) >= 2) {
+      typed.push({ type: 'structure', severity: 'BLOCKER', text: `structure: ${k}=${a} vs canonical ${b}` });
+    }
   }
+  const deltas = typed.map((t) => t.text);
   const checked = 4 + 3;
-  const match = Math.max(0, Math.round((1 - out.length / (checked + out.length || 1)) * 100));
-  return { deltas: out, match };
+  const match = Math.max(0, Math.round((1 - deltas.length / (checked + deltas.length || 1)) * 100));
+  const tier = tierFor(typed, match);
+  const reason_types = [...new Set(typed.map((t) => t.type))];
+  return { deltas, deltas_typed: typed, reason_types, tier, match };
+}
+
+// Severity rollup for one instance: any structural omission or raw-value-where-
+// a-token-exists → BLOCKER; otherwise a mostly-matching instance is a
+// SUGGESTION, a clearly off one a WARNING; no deltas → OK.
+function tierFor(typed, match) {
+  if (!typed.length) return 'OK';
+  if (typed.some((t) => t.severity === 'BLOCKER')) return 'BLOCKER';
+  return match >= 80 ? 'SUGGESTION' : 'WARNING';
+}
+
+// DS stats for the report's "design-system review" — counts from the resolved
+// tokens.css (deduped --var defs, bucketed by name/value) + cluster count.
+function dsStats(tokensCss, componentCount, source) {
+  const stats = {
+    token_count: 0, color_count: 0, type_size_count: 0,
+    space_count: 0, radius_count: 0, component_count: componentCount || 0,
+    source: source || (tokensCss ? 'provided' : 'none'),
+  };
+  if (!tokensCss) return stats;
+  const looksColor = /#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/i;
+  const re = /(--[a-z0-9-]+)\s*:\s*([^;]+);/gi;
+  const seen = new Set();
+  let m;
+  while ((m = re.exec(tokensCss))) {
+    const name = m[1].toLowerCase();
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const val = m[2].toLowerCase();
+    stats.token_count++;
+    if (/color|brand|ink|\bbg\b|background|\bfg\b|foreground|surface|accent|border|fill|swatch/.test(name) || looksColor.test(val)) stats.color_count++;
+    else if (/radius|rounded|corner/.test(name)) stats.radius_count++;
+    else if (/space|gap|gutter|inset|\bpad|margin/.test(name)) stats.space_count++;
+    else if (/font-size|\btext|type-|\bfs-|\bsize/.test(name) && /\d/.test(val)) stats.type_size_count++;
+  }
+  return stats;
 }
 
 function qualitySignals(allCss, tokensCss) {
@@ -362,27 +440,36 @@ function qualitySignals(allCss, tokensCss) {
 }
 
 // ── assemble ─────────────────────────────────────────────────────────────────
-function buildReport(blocks, allCss, tokensCss, extra = {}) {
+function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
   const tokenVals = tokenValueSet(tokensCss);
   const clusters = clusterBlocks(blocks);
   const clusterOut = [];
   const deviationsOut = [];
+  const blockStatus = []; // one entry per instance (drifting AND OK) — full matrix
   let matchSum = 0, matchN = 0;
   for (const cl of clusters) {
     const canon = canonicalStyles(cl);
+    const example = { page: cl.members[0].page, block: blockSel(cl.members[0]) };
     clusterOut.push({
       id: cl.id, role: cl.role, instances: cl.members.length,
       pages: [...new Set(cl.members.map((m) => m.page))],
+      example,
       canonical: canon,
     });
     for (const inst of cl.members) {
       const dv = deviations(inst, canon, tokenVals);
       matchSum += dv.match; matchN++;
+      const sel = blockSel(inst);
+      blockStatus.push({
+        page: inst.page, block: sel, cluster: cl.id, role: cl.role,
+        match: dv.match, tier: dv.tier,
+        reason_types: dv.reason_types, reasons: dv.deltas,
+      });
       if (dv.deltas.length) {
         deviationsOut.push({
-          cluster: cl.id, role: cl.role, page: inst.page,
-          block: inst.tag + (inst.classes.length ? '.' + inst.classes.join('.') : '') + (inst.id ? '#' + inst.id : ''),
-          match: dv.match, deltas: dv.deltas,
+          cluster: cl.id, role: cl.role, page: inst.page, block: sel,
+          match: dv.match, tier: dv.tier, reason_types: dv.reason_types,
+          deltas: dv.deltas, deltas_typed: dv.deltas_typed,
         });
       }
     }
@@ -398,10 +485,13 @@ function buildReport(blocks, allCss, tokensCss, extra = {}) {
       deviating_instances: deviationsOut.length,
       ...extra,
     },
+    ds_stats: dsStats(tokensCss, clusters.length, opts.dsSource),
     canonical_blocks: clusterOut,
     deviations: deviationsOut.sort((a, b) => a.match - b.match),
+    block_status: blockStatus,
     quality_signals: qualitySignals(allCss.replace(tokensOnly, ''), tokensCss),
   };
+  if (opts.pageStylesheets) result.page_stylesheets = opts.pageStylesheets;
   return result;
 }
 
@@ -424,6 +514,7 @@ async function runSite() {
   const blocks = [];
   let allCss = '';
   const jsPages = [];
+  const pageStylesheets = {}; // page URL → { slug, stylesheets:[abs hrefs] }
   while (queue.length && visited.size < MAX) {
     const url = queue.shift();
     if (visited.has(url) || !sameHost(url, start)) continue;
@@ -434,6 +525,7 @@ async function runSite() {
     allCss += '\n' + css;
     const slug = slugify(url);
     fs.writeFileSync(path.join(pagesDir, slug + '.html'), res.body);
+    pageStylesheets[url] = { slug, stylesheets: stylesheetHrefs(res.body, url) };
     if (looksJsRendered(res.body)) jsPages.push(url);
     for (const b of blocksFromPage(url, res.body, css)) blocks.push(b);
     for (const link of extractLinks(res.body, url)) if (!visited.has(link)) queue.push(link);
@@ -442,7 +534,7 @@ async function runSite() {
     crawled: visited.size,
     js_rendered_pages: jsPages,
     confidence: jsPages.length ? 'low (JS-rendered pages present — static analysis is partial)' : 'static',
-  });
+  }, { pageStylesheets, dsSource: DS_SOURCE || (tokensCss ? 'provided' : 'none') });
   fs.writeFileSync(path.join(outDir, 'blocks.json'), JSON.stringify({ blocks }, null, 2) + '\n');
   emit(result, outDir);
 }
@@ -459,7 +551,7 @@ function runAnalyze() {
   }));
   const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;
   const css = parsed.css || tokensCss || '';
-  emit(buildReport(blocks, css, tokensCss), OUT);
+  emit(buildReport(blocks, css, tokensCss, {}, { dsSource: DS_SOURCE || (tokensCss ? 'provided' : 'none') }), OUT);
 }
 
 (async () => {

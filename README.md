@@ -59,7 +59,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-curation-validate | curation | Critique curation against brand voice and IA; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass |
-| /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes a canonical system when none is given and reports the exact page+block that drifts |
+| /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes the canonical system when none is given and produces an HTML report with per-block visuals naming the exact page+block that drifts |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
