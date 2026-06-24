@@ -64,7 +64,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
 One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
@@ -212,7 +212,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.3.1
+**Version:** 1.3.2
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -262,7 +262,7 @@ Create the content approval workbook that proves every page, shared header/foote
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
@@ -301,7 +301,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
@@ -472,7 +472,7 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-optimize
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Improve a text using the `/twt-content-validate` rubric as the rating engine — score before, rewrite (whole-text in auto mode, or per-suggestion with user review in manual mode), score after, and report the delta with the reasoning behind every change.
@@ -630,7 +630,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.2.5
+**Version:** 1.2.6
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -676,7 +676,7 @@ Drive the whole design phase end to end — design-system → component → layo
 ## /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate in one pass (§9 — no iteration loop). This is the shared, cross-phase design-system spine.
@@ -710,7 +710,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **10 weighted quality metrics** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
@@ -758,7 +758,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.3
+**Version:** 1.3.4
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -807,7 +807,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 ## /twt-elementor-block-creator
 
 **Category:** elementor
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Build an Elementor widget or full-page template that follows the project's existing theme architecture (read from `conventions.md`). Applies reuse-first strategy: reuse existing widgets where possible, extend if close, create new only when nothing fits.
@@ -857,7 +857,7 @@ Build an Elementor widget or full-page template that follows the project's exist
 ## /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** no
 
 Scaffold a Hello Elementor child theme and write the canonical project conventions file (`conventions.md`) that downstream `/twt-elementor-*` skills depend on. Run once per WordPress project.
@@ -901,7 +901,7 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 ## /twt-export
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven.
@@ -1116,7 +1116,7 @@ Create a named, reusable export template that later document and presentation ex
 ## /twt-html-block-creator
 
 **Category:** html
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Build a static HTML page or a single section into the scaffolded `site/`, inlining the shared partials, reusing existing sections first, and styling with token-only CSS. Promotes a Phase-2 mockup when one is provided, or builds from Figma/screenshots/notes.
@@ -1161,7 +1161,7 @@ Build a static HTML page or a single section into the scaffolded `site/`, inlini
 ## /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** no
 
 Scaffold a dependency-free static HTML/CSS site once per project and write the canonical `conventions.md` that `/twt-html-block-creator` loads. Chrome (header/footer/nav) lives once in `partials/`; `tokens.css` is mirrored from the design-system spine. Run once per static-site project.
@@ -1490,7 +1490,7 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 ## /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 One-call positioning workflow: define → validate in one pass (§9 — no iteration loop).
@@ -1523,7 +1523,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1567,7 +1567,7 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 ## /twt-project-intake
 
 **Category:** intake
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Convert messy project notes, links, Figma references, document paths, and constraints into a clear `site-instruction.md` that `/twt-site` can read before its intake interview. This gives the full pipeline a reusable, human-editable brief instead of making each phase infer intent from scattered notes.
@@ -1608,7 +1608,7 @@ Convert messy project notes, links, Figma references, document paths, and constr
 ## /twt-qa
 
 **Category:** qa
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 One-call QA: pick the mode (local files, or live crawl if a URL is given), run the applicable audits, then aggregate a `qa-report.md` (with a PASS/FAIL verdict) and synthesize a client-ready `gaps.md` punch-list of outstanding content and links.
@@ -1646,7 +1646,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 ## /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Read-only accessibility audit of the built HTML (local) or the rendered pages (live, best-effort) — image alt text, heading order, landmarks, form labels, and WCAG AA contrast for declared color pairs.
@@ -1680,7 +1680,7 @@ Read-only accessibility audit of the built HTML (local) or the rendered pages (l
 ## /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Read-only audit of content & information-architecture fidelity — every sitemap page exists, each page's sections match the Phase-1 outlines, and the content is real (no lorem/placeholder, no empty slots). Works on local HTML files or, given a URL, on the rendered site (the only way to see Elementor content).
@@ -1718,7 +1718,7 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 ## /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Read-only audit of design & token fidelity on the **source** files — CSS is token-only (no hex/px/font literals), every custom property used is defined in `tokens.css`, and each page's section structure includes the components its layout requires.
@@ -1755,7 +1755,7 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 ## /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS, every widget registered in `$map`, WPML coverage for translatable fields, PHP syntax, and CSS scoping. Does NOT audit content (Elementor content lives in the WordPress DB, not in files — use live `/twt-qa <url>` for that).
@@ -1789,7 +1789,7 @@ Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS
 ## /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Read-only audit of link integrity (internal links/anchors resolve, nav consistent) and — in local mode — declared responsive tiers (960/720/600/480) and fixed-width risks. Detects dead and placeholder links for the gaps punch-list.
@@ -1824,7 +1824,7 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 ## /twt-search-site
 
 **Category:** search
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Find every occurrence of a specific string across a website's pages and produce a report listing the exact page URLs where it appears, with up to 100 characters of surrounding text before and after each match for context. Standalone utility — not part of the four-phase pipeline.
@@ -1891,7 +1891,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.11.3
+**Version:** 1.11.4
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -1945,7 +1945,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.1
+**Version:** 1.5.2
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -1988,7 +1988,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 ## /twt-spec
 
 **Category:** spec
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 One-call spec workflow: define (interview into the north-star `specification.md`) → validate in one pass (§9 — no iteration loop).
@@ -2057,7 +2057,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.

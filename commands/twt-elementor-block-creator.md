@@ -1,8 +1,8 @@
 ---
 name: twt-elementor-block-creator
 category: elementor
-description: (v1.2.1) Build an Elementor widget or full-page template following project conventions
-version: 1.2.1
+description: (v1.2.2) Build an Elementor widget or full-page template following project conventions
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - widget description or page description
@@ -71,6 +71,13 @@ This skill:
 **Reuse first. Create new only when needed.**
 
 ---
+
+## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
+Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
+- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
+- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
+- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
 
 ## Step 1 — Introduction
 

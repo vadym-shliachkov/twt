@@ -1,8 +1,8 @@
 ---
 name: twt-site
 category: site
-description: (v1.11.3) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
-version: 1.11.3
+description: (v1.11.4) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+version: 1.11.4
 accepts_arguments: true
 inputs:
   - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -63,6 +63,13 @@ writes:
 
 ## Step 0 — Mode
 If the **first token** of `$ARGUMENTS` is `auto`, enable **auto mode**: strip the token and treat everything after it as free-form context (notes, a live or Figma URL, target hints like "elementor" or "html"). In auto mode this skill asks **nothing** — no AskUserQuestion, no plain-text prompts, no approval requests; every decision comes from that context, the existing `.twt-artifacts/` state, and the defaults named below. Without the leading `auto`, run interactively as before.
+
+## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
+Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
+- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
+- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
+- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
 
 ## Step 0·trace — Arm the dispatch tracer (always)
 The run trace is **always on** — no flag. It captures every skill the run touches (twt phase wrappers dispatched via the Agent/Task tool, **and** any other Skill-tool call — other plugins, superpowers, system skills), each with its WHY and wall-time, and folds them into `site-log.md` at the end. The tracer is bundled at `${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js`.
@@ -125,7 +132,7 @@ If `site-instruction.md` already specified the phase set (Step 0·instr), use it
 - **QA** — audit the built output → `qa-report.md` + `gaps.md`
 Record the selected, ordered set.
 
-**Gate every Development-specific question on this set.** If **Development is NOT selected** (e.g. the user picked only Pre-design and/or Design), then for the rest of this run you must **not** ask — and must **skip outright** — the build-target question (Step 2), the Figma **Express** path (Express only matters when something gets built), the content-approval checklist sub-step, the `/twt-develop`/`/twt-site-dev` dispatch, and the pilot-page gate. A Pre-design+Design run produces briefs and a design only; it never asks about Static HTML vs. Elementor. State this back once ("Development isn't selected — skipping build-target and content-approval questions") so the skip is visible, then move on.
+**Set the build gate now — it is binding for the rest of the run.** Compute `<development-selected>` = is **Development** in the final, ordered set? **If `<development-selected>` is false** (e.g. the user picked only Pre-design and/or Design), you **MUST NOT** — under any default, inference, or habit — ask about or pick a build target. Concretely, **skip these outright and never revisit them**: the Figma **Express** path (Step 1·figma — Express only matters when something is built), the **build-target question (Step 2)** — do **not** present Static HTML vs. Elementor at all — the content-approval checklist sub-step, the `/twt-develop` / `/twt-site-dev` dispatch, and the pilot-page gate. A Pre-design and/or Design run produces briefs and a design only; **it never asks Static HTML vs. Elementor.** State this back once ("Development isn't selected — skipping the build target and content-approval steps") so the skip is visible, then go straight to the selected phases (Step 3). If you ever find yourself about to render the build-target question while `<development-selected>` is false, **stop** — that is the exact bug this gate exists to prevent.
 
 ## Step 1·figma — Figma approach (only when a Figma link was provided)
 Figma is a **design source**, not a build method — having one affects Pre-design, Design, **and** Development, so it is decided here, separately from the build target (Step 2). Run this step only when intake (Step 0b Q3) captured a Figma link **and** the phase set includes Pre-design or Design.
@@ -146,7 +153,7 @@ If **Express** is chosen, tell the user Pre-design and Design will be skipped, d
 ## Step 2 — Choose build target
 The build target (how Development renders the site) is **independent** of whether a Figma design exists — both Express and the full pipeline still build to one of these.
 
-**Hard guard:** ask this **only when Development is in the phase set**. If Development was not selected in Step 1, **skip this entire step** — do not ask Static HTML vs. Elementor, and do not infer a target. There is nothing to build, so the build target is irrelevant.
+**Hard guard (binding):** this step runs **only when `<development-selected>` (Step 1) is true**. If Development was not selected, **skip this entire step** — do **not** render the Static HTML vs. Elementor question, do not infer a target, do not mention it. There is nothing to build, so the build target is irrelevant. If you are about to ask it while `<development-selected>` is false, stop — that is the bug this guard prevents.
 
 **Auto mode:** infer the target from the context and skip the menu — "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
 

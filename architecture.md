@@ -299,7 +299,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -461,7 +461,7 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -497,7 +497,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -527,7 +527,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -652,7 +652,7 @@ flowchart TB
 ### /twt-content-optimize
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional mode (auto|manual) and level (light|standard|aggressive)
@@ -768,7 +768,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.2.5
+**Version:** 1.2.6
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -805,7 +805,7 @@ flowchart TB
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -829,7 +829,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -930,7 +930,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.3
+**Version:** 1.3.4
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -966,7 +966,7 @@ flowchart TB
 ### /twt-elementor-block-creator
 
 **Category:** elementor
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - widget description or page description
@@ -1004,7 +1004,7 @@ flowchart TB
 ### /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - project name
@@ -1038,7 +1038,7 @@ flowchart TB
 ### /twt-export
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
@@ -1191,7 +1191,7 @@ flowchart TB
 ### /twt-html-block-creator
 
 **Category:** html
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - page or section description; optional Figma URL; optional Phase-2 mockup/layout; screenshots/notes
@@ -1225,7 +1225,7 @@ flowchart TB
 ### /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - project name (asked); short slug (auto-derived, user confirms); output root (default ./site)
@@ -1468,7 +1468,7 @@ flowchart TB
 ### /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -1546,7 +1546,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1581,7 +1581,7 @@ flowchart TB
 ### /twt-project-intake
 
 **Category:** intake
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`
@@ -1612,7 +1612,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -1641,7 +1641,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1667,7 +1667,7 @@ flowchart TB
 ### /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1696,7 +1696,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -1725,7 +1725,7 @@ flowchart TB
 ### /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
@@ -1751,7 +1751,7 @@ flowchart TB
 ### /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1778,7 +1778,7 @@ flowchart TB
 ### /twt-search-site
 
 **Category:** search
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Search string (first argument; wrap in quotes if it contains spaces)
@@ -1827,7 +1827,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.11.3
+**Version:** 1.11.4
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1866,7 +1866,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.1
+**Version:** 1.5.2
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -1895,7 +1895,7 @@ flowchart TB
 ### /twt-spec
 
 **Category:** spec
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
@@ -1997,7 +1997,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

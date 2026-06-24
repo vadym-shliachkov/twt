@@ -1,8 +1,8 @@
 ---
 name: twt-qa-design
 category: qa
-description: (v1.1.0) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
-version: 1.1.0
+description: (v1.1.1) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
+version: 1.1.1
 accepts_arguments: true
 inputs:
   - Optional local path; a URL is rejected (source-only audit)
@@ -36,6 +36,13 @@ writes:
 - Flags every raw literal in token-only CSS and every undefined custom property reference
 
 ---
+
+## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
+Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
+- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
+- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
+- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
 
 ## Step 1 — Mode guard
 If `$ARGUMENTS` contains an `http(s)://` URL, write `.twt-artifacts/qa/design-report.md` containing only: "Design/token fidelity is a source-only audit — run `/twt-qa` locally (no URL) to check token compliance." Then stop.
