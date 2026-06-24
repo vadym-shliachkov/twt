@@ -22,7 +22,7 @@
 const fs = require('fs');
 
 function readStdin() {
-  try { return fs.readFileSync(0, 'utf8'); } catch { return ''; }
+  try { return fs.readFileSync(0, 'utf8'); } catch (e) { return ''; }
 }
 
 /**
@@ -84,7 +84,7 @@ function defer() { process.exit(0); } // no output -> normal permission flow
 
 function main() {
   let data;
-  try { data = JSON.parse(readStdin() || '{}'); } catch { return defer(); }
+  try { data = JSON.parse(readStdin() || '{}'); } catch (e) { return defer(); }
 
   const root = canon(process.env.CLAUDE_PROJECT_DIR || process.cwd());
   if (!root) return defer();
@@ -103,13 +103,20 @@ function main() {
   if (tool === 'Bash') {
     const cmd = String(inp.command || '');
     // Absolute-path tokens: POSIX "/x..." or Windows "C:/x" / "C:\x".
-    // The leading lookbehind requires a token boundary so we don't match the
-    // inner "/sub" of a relative path like "dir/sub" (those stay in-project).
+    // We require a token boundary before the path so we don't match the inner
+    // "/sub" of a relative path like "dir/sub" (those stay in-project). The
+    // boundary is matched as a leading group `(?:^|[^pathchar])` rather than a
+    // lookbehind, so this parses on older Node too (lookbehind needs Node 9+).
     // The first char after the slash/drive must be a real path char, so we
     // also skip awk/sed/grep regexes like /^foo/ or \.\./ that contain "/".
-    const re = /(?<![A-Za-z0-9._~/\\-])(?:[A-Za-z]:[\\/]|\/)[A-Za-z0-9._~][^\s"'`<>|;)&]*/g;
-    const found = cmd.match(re) || [];
-    for (const raw of found) {
+    const re = /(?:^|[^A-Za-z0-9._~/\\-])((?:[A-Za-z]:[\\/]|\/)[A-Za-z0-9._~][^\s"'`<>|;)&]*)/g;
+    let m;
+    while ((m = re.exec(cmd)) !== null) {
+      const raw = m[1];
+      // Advance one char past this match's start so a single shared delimiter
+      // can still bound the next token (mirrors the old zero-width lookbehind);
+      // re-examining a token is harmless, missing one is not.
+      re.lastIndex = m.index + 1;
       if (!looksLikePath(raw)) continue;
       const c = canon(raw);
       if (!c.startsWith('/')) continue;
