@@ -40,6 +40,7 @@ const path = require('path');
 const BASH_UTILS = [
   'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
   'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext',
+  'cd', 'sed', 'sort', 'uniq', 'bc',
 ];
 const ALLOW = [
   ...BASH_UTILS.map((c) => `Bash(${c}:*)`),
