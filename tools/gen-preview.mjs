@@ -257,7 +257,7 @@ function swatchPrimitive(t) {
   const dups = primNearDups.get(t.name);
   const dupTag = dups && dups.length
     ? `<span class="gp-dup">≈ near-dup: ${dups.map((n) => esc(n)).join(', ')}</span>` : '';
-  return `<div class="gp-sw${dups ? ' gp-sw-dup' : ''}">` +
+  return `<div class="gp-sw">` +
     `<div class="gp-chip" style="background:var(${t.name})"></div>` +
     `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>${dupTag}</div></div>`;
 }
@@ -475,7 +475,6 @@ const html = `<!doctype html>
   .gp-sub3{font-size:.75rem;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-label,#888)}
   .gp-cnt{font-size:.72rem;font-weight:400;letter-spacing:0;color:var(--color-label,#aaa);margin-left:6px}
   .gp-alias{font-size:.72rem;color:var(--color-label,#888);font-style:italic;margin-top:2px}
-  .gp-sw-dup .gp-chip{outline:2px solid #f59e0b;outline-offset:-2px}
   .gp-dup{display:block;font-size:.7rem;color:#b45309;margin-top:3px}
   .gp-sw-sem{opacity:.95}
   .gp-ct{border-collapse:collapse;font-size:.82rem;margin:8px 0}

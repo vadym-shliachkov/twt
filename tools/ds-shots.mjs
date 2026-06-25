@@ -101,11 +101,21 @@ function extractBlockHtml(html, sel) {
 // ── stylesheet fetching + caching ─────────────────────────────────────────
 const styleCache = new Map(); // url → css string | null
 
-async function fetchText(url) {
+async function fetchText(url, hops = 0) {
+  if (hops > 4) return null;
   return new Promise((resolve) => {
     try {
       const mod = url.startsWith('https') ? https : http;
       const req = mod.get(url, { timeout: 8000 }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          res.resume();
+          try {
+            const loc = res.headers.location;
+            const abs = loc.startsWith('http') ? loc : new URL(loc, url).href;
+            resolve(fetchText(abs, hops + 1));
+          } catch { resolve(null); }
+          return;
+        }
         if (res.statusCode !== 200) { res.resume(); resolve(null); return; }
         const chunks = [];
         res.on('data', (c) => chunks.push(c));
@@ -209,7 +219,7 @@ ${outer}
 async function tryPlaywright(targets, audit, shotsDir, name, visuals, captured) {
   let pw;
   try { pw = await import('playwright'); }
-  catch { log('playwright not installed — using HTML-embed fallback'); return false; }
+  catch { log('playwright npm package not installed — using HTML-embed fallback.\n  Note: the Claude Code playwright plugin (MCP) is a browser-automation tool for Claude,\n  not the npm package this script needs. To enable screenshots:\n    npm install playwright && npx playwright install chromium'); return false; }
   let browser;
   try { browser = await pw.chromium.launch(); }
   catch (e) { log('chromium launch failed (' + (e && e.message) + ') — using fallback'); return false; }
