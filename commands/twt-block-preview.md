@@ -9,8 +9,7 @@ inputs:
   - OR --audit <dir> to run batch block-capture for an existing audit dir
 dependencies:
   hard: []
-  soft:
-    - twt-design-system-audit
+  soft: []
 reads:
   - $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
   - <audit-dir>/audit.json  (batch mode only)

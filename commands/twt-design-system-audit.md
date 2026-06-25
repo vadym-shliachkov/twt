@@ -13,6 +13,7 @@ dependencies:
     - twt-design-system-define
     - twt-design-system-validate
     - twt-content-fetch-figma
+    - twt-block-preview
 reads:
   - $ARGUMENTS (figma URL, site URL, tokens path, --brand)
   - .twt-artifacts/pre-design/brand/brand-brief.md

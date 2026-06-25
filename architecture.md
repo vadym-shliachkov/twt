@@ -68,7 +68,6 @@ flowchart TB
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
     twt_text_analysis["/twt-text-analysis"]:::skill
-    twt_design_system_audit -.-> twt_block_preview
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -110,6 +109,7 @@ flowchart TB
     twt_design_system_define -.-> twt_design_system_audit
     twt_design_system_validate -.-> twt_design_system_audit
     twt_content_fetch_figma -.-> twt_design_system_audit
+    twt_block_preview -.-> twt_design_system_audit
     twt_html_site_creator -.-> twt_develop
     twt_html_block_creator -.-> twt_develop
     twt_elementor_theme_creator -.-> twt_develop
@@ -311,11 +311,11 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-audit
+- Soft: none
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-design-system-audit
 
 **Reads:**
 - $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
@@ -872,11 +872,11 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma
+- Soft: twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-block-preview
+- Soft consumers: none
 
 **Reads:**
 - $ARGUMENTS (figma URL, site URL, tokens path, --brand)
@@ -2063,7 +2063,7 @@ flowchart TB
 
 | Skill | Hard deps | Soft deps |
 |-------|-----------|-----------|
-| /twt-block-preview | none | twt-design-system-audit |
+| /twt-block-preview | none | none |
 | /twt-brand | none | twt-brand-fetch, twt-brand-define, twt-brand-validate |
 | /twt-brand-define | none | twt-brand-fetch |
 | /twt-brand-fetch | none | twt-content-fetch-pdf, figma-mcp, WebFetch |
@@ -2083,7 +2083,7 @@ flowchart TB
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
 | /twt-design | none | twt-design-system, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define |
-| /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma |
+| /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |

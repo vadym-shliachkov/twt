@@ -76,7 +76,7 @@ Take a playwright-powered screenshot of any HTML file or live URL — either the
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-audit
+- Soft: none
 
 **Reads:**
 - $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
@@ -761,7 +761,7 @@ Audit how good a design system is **and** how consistently a real design follows
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma
+- Soft: twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview
 
 **Reads:**
 - $ARGUMENTS (figma URL, site URL, tokens path, --brand)
