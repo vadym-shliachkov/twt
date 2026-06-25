@@ -58,7 +58,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-curation-define | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
 | /twt-curation-validate | curation | Critique curation against brand voice and IA; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
-| /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then build the component catalog (standalone) |
+| /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |

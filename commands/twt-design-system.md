@@ -1,8 +1,8 @@
 ---
 name: twt-design-system
 category: design-system
-description: (v1.2.1) Orchestrate design-system define/validate in a single define→validate pass, then build the component catalog (standalone)
-version: 1.2.1
+description: (v1.3.1) Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
+version: 1.3.1
 accepts_arguments: true
 inputs:
   - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -16,8 +16,8 @@ reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/validation-report.md
 writes:
-  - .twt-artifacts/design/component/components.md  # standalone only — via /twt-component-define
-  - .twt-artifacts/design/component/gallery.html   # standalone only — via /twt-component-define
+  - .twt-artifacts/design/component/components.md  # via /twt-component-define (always)
+  - .twt-artifacts/design/component/gallery.html   # via /twt-component-define (always)
 ---
 
 # /twt-design-system
@@ -37,7 +37,7 @@ writes:
 
 **Success criteria:**
 - Produces/refines `tokens.md`, `tokens.css`, a **tokens-only** `preview.html` (the component catalog lives in the gallery, linked from preview) and a current `validation-report.md`
-- **Standalone runs also build the component catalog** (`component/components.md` + `gallery.html`) via `/twt-component-define`, so "the design system" is complete in one call. In **collect mode** this is skipped — the parent orchestrator (`/twt-design`, `/twt-site`) owns the component step, so the catalog is built exactly once.
+- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
@@ -62,11 +62,10 @@ Run **one** define → validate cycle — no iteration loop (§9):
 3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-design-system-validate` once; read the Scorecard **Band**, **Health**, BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
 4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once.
 
-## Step 2b — Build the component catalog (standalone only)
-A complete design system includes its component catalog, not just tokens. `preview.html` is now **tokens-only**; the full Primitives/Components/Modules catalog (breadth + variant × state depth) lives in `component/gallery.html`, which preview links to.
+## Step 2b — Build the component catalog (always)
+A complete design system includes its component catalog, not just tokens. `preview.html` is **tokens-only**; the full Primitives/Components/Modules catalog (breadth + variant × state depth) lives in `component/gallery.html`, which preview links to.
 
-- **NOT in collect mode (standalone `/twt-design-system`):** after the design system is finalized, dispatch `/twt-component-define` (Agent tool) so `component/components.md` + `gallery.html` are produced from the just-written tokens. It reuses the `tokens.md §3` Primitive/Component/Module names so the catalog and the design system agree. Best-effort — if it cannot run, note it and continue; never block the design-system result on it.
-- **In collect mode** (`subagent-collect` — dispatched by `/twt-design` or `/twt-site`): **skip this step.** The parent orchestrator already runs the component define→validate pass, so building it here would double-run it.
+After the design system is finalized, always dispatch `/twt-component-define` (Agent tool) — regardless of mode, standalone or collect — so `component/components.md` + `gallery.html` are produced from the just-written tokens. Pass `subagent-collect` when this orchestrator is itself in collect mode. It reuses the `tokens.md §3` Primitive/Component/Module names so the catalog and the design system agree. Best-effort — if it cannot run, note it and continue; never block the design-system result on it.
 
 ## Step 3 — Report
-State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). When the component catalog was built (Step 2b, standalone), name `component/gallery.html` + `components.md` as part of the delivered design system, and point to the tokens-only `preview.html` (which links the gallery). If decisions remain unresolved or Band < Pass, present them and the human-decision options (provide design sources / accept and edit directly / defer) — never auto-fix.
+State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). Name `component/gallery.html` + `components.md` as part of the delivered design system (always built in Step 2b), and point to the tokens-only `preview.html` (which links the gallery). If decisions remain unresolved or Band < Pass, present them and the human-decision options (provide design sources / accept and edit directly / defer) — never auto-fix.

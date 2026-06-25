@@ -1,8 +1,8 @@
 ---
 name: twt-design
 category: design
-description: (v1.2.6) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.2.6
+description: (v1.3.1) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+version: 1.3.1
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -10,7 +10,6 @@ dependencies:
   hard: []
   soft:
     - twt-design-system
-    - twt-component-define
     - twt-component-validate
     - twt-layout-define
     - twt-layout-validate
@@ -91,11 +90,10 @@ A real brand-brief/spec decision still wins over taste defaults — the gate is 
 ## Step 2 — Design system
 Dispatch `/twt-design-system` (Agent tool) **with `subagent-collect`**, forwarding any design sources. (Skip if excluded by flags.) Then **surface** per the protocol below.
 
-## Step 3 — Components
-Components have **no standalone command** — run the single define→validate pass inline here (the same one-pass policy the former `twt-component` wrapper applied, CONVENTIONS §9):
-1. Dispatch `/twt-component-define` (Agent tool) with `subagent-collect` → it writes `components.md` + `gallery.html`, plus a `decisions.md` (`status: open`) for any choice it had to make.
-2. Dispatch `/twt-component-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/component/validation-report.md` (Step 6 reads this).
-3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run — no score-chasing loop.
+## Step 3 — Components (validate)
+`/twt-design-system` (Step 2) already built the component catalog (`components.md` + `gallery.html`) via `/twt-component-define`. Run only the validate pass here (CONVENTIONS §9 — one define + one validate, no double-define):
+1. Dispatch `/twt-component-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/component/validation-report.md` (Step 6 reads this).
+2. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run — no score-chasing loop.
 
 ## Step 4 — Layouts
 Layouts have **no standalone command** — same inline single define→validate pass:

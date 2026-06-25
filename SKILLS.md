@@ -24,7 +24,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
 | [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice and IA; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
-| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then build the component catalog (standalone) |
+| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
@@ -630,7 +630,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.2.6
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -640,7 +640,7 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
+- Soft: twt-design-system, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -676,7 +676,7 @@ Drive the whole design phase end to end — design-system → component → layo
 ## /twt-design-system
 
 **Category:** design-system
-**Version:** 1.2.1
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate in one pass (§9 — no iteration loop). This is the shared, cross-phase design-system spine.
@@ -693,8 +693,8 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 - .twt-artifacts/design/design-system/validation-report.md
 
 **Writes:**
-- .twt-artifacts/design/component/components.md  # standalone only — via /twt-component-define
-- .twt-artifacts/design/component/gallery.html   # standalone only — via /twt-component-define
+- .twt-artifacts/design/component/components.md  # via /twt-component-define (always)
+- .twt-artifacts/design/component/gallery.html   # via /twt-component-define (always)
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -703,7 +703,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 **Success criteria:**
 - Produces/refines `tokens.md`, `tokens.css`, a **tokens-only** `preview.html` (the component catalog lives in the gallery, linked from preview) and a current `validation-report.md`
-- **Standalone runs also build the component catalog** (`component/components.md` + `gallery.html`) via `/twt-component-define`, so "the design system" is complete in one call. In **collect mode** this is skipped — the parent orchestrator (`/twt-design`, `/twt-site`) owns the component step, so the catalog is built exactly once.
+- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
@@ -712,7 +712,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.2.1
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **10 weighted quality metrics** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
@@ -1950,7 +1950,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.2
+**Version:** 1.5.4
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -1961,7 +1961,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
@@ -1971,6 +1971,8 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Writes:**
 - .twt-artifacts/site-dev-log.md
+- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/component/gallery.html
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**

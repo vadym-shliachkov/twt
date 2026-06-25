@@ -1,8 +1,8 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: (v1.5.2) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
-version: 1.5.2
+description: (v1.5.4) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
+version: 1.5.4
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -11,6 +11,7 @@ dependencies:
   hard: []
   soft:
     - twt-design-system-define
+    - twt-component-define
     - twt-elementor-theme-creator
     - twt-elementor-block-creator
     - twt-html-site-creator
@@ -24,6 +25,8 @@ reads:
   - .twt-artifacts/html-site/conventions.md
 writes:
   - .twt-artifacts/site-dev-log.md
+  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/component/gallery.html
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 
@@ -88,6 +91,8 @@ Capture the Figma URL (from `$ARGUMENTS` or prompt). Dispatch `/twt-design-syste
 Pass through the priority rule: an existing project design system is the baseline; tokens are **extended, never replaced**; use refinement mode if `tokens.md` already exists.
 
 Wait for it to finish; confirm `.twt-artifacts/design/design-system/tokens.css` exists.
+
+Then dispatch `/twt-component-define` (Agent tool) with `subagent-collect` to build the component catalog (`component/components.md` + `gallery.html`) from the just-written tokens. A complete design system requires all primitives, components, and modules — not just tokens. Surface any `decisions.md` questions the same way as for design-system above.
 
 ## Step 2a — Content approval workbook
 
