@@ -201,6 +201,11 @@ function swatches() {
   const out = cols.map((t) => `<div class="swatch" title="${esc(t.name)}: ${esc(t.val)}"><span style="background:${esc(t.val)}"></span><code>${esc(t.name)}</code></div>`);
   return `<div class="swatches">${out.join('')}</div>`;
 }
+const METRICS_LEGEND = `<div class="metrics-legend">
+  <div class="ml-item"><span class="ml-label">Weight</span><span class="ml-desc">How much this metric contributes to the overall DS quality score. Higher weight = greater impact on the final number.</span></div>
+  <div class="ml-item"><span class="ml-label">Score</span><span class="ml-desc">How well the design system performs on this metric (0–100%). Below 60% is highlighted as a concern.</span></div>
+</div>`;
+
 function qualityTable() {
   if (quality && Array.isArray(quality.metrics) && quality.metrics.length) {
     const rows = quality.metrics.map((q) => `<tr>
@@ -213,7 +218,7 @@ function qualityTable() {
           ${ca.strength ? '<div><b>Strength:</b> ' + esc(ca.strength) + '</div>' : ''}
           ${ca.weakness ? '<div><b>Weakness:</b> ' + esc(ca.weakness) + '</div>' : ''}
           ${ca.fix ? '<div><b>Highest-impact fix:</b> ' + esc(ca.fix) + '</div>' : ''}</div>` : '';
-    return `<table class="grid"><thead><tr><th>Metric</th><th class="r">Weight</th><th class="r">Score</th><th>Evidence / note</th></tr></thead><tbody>${rows}</tbody></table>${caHtml}`;
+    return `${METRICS_LEGEND}<table class="grid"><thead><tr><th>Metric</th><th class="r">Weight</th><th class="r">Score</th><th>Evidence / note</th></tr></thead><tbody>${rows}</tbody></table>${caHtml}`;
   }
   const sig = [
     ['Token coverage', (signals.token_coverage_pct || 0) + '%'],
@@ -314,17 +319,10 @@ function blockCard(b) {
     ? `<ul class="deltas">${deltas.map((x) => `<li>${enrichDelta(x)}</li>`).join('')}</ul>`
     : '<p class="ok small">Matches the design system — no drift.</p>';
   const isOk = b.tier === 'OK';
-  // Show canonical ("how it should look") only when the difference is visually
-  // perceptible — subtle radius or font-size-only diffs look identical in the
-  // panel and just add confusion. When canonical is suppressed, "now" goes
-  // full-width via the .single modifier.
-  const showCanonical = !isOk && isSignificant(b);
   const previews = isOk ? '' : `
-    <div class="ba${!showCanonical ? ' single' : ''}">
-      <figure class="ba-now"><figcaption>How it looks now <span class="muted">(this instance)</span></figcaption>
+    <div class="ba single">
+      <figure class="ba-now"><figcaption>Block preview <span class="muted">(this instance)</span></figcaption>
         <div class="pane">${thumb(own, 'fullpv')}</div></figure>
-      ${showCanonical ? `<figure class="ba-should"><figcaption>How it should look <span class="muted">(canonical${ref && ref.match != null ? ' · ' + ref.match + '% best instance' : ''})</span></figcaption>
-        <div class="pane">${thumb(refV, 'fullpv')}</div></figure>` : ''}
     </div>`;
   return `<article class="block ${tierClass(b.tier)}" id="${esc(slugify(b.block))}">
     <header class="bhead">
@@ -427,6 +425,11 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .okwrap{margin-top:18px}.okwrap>summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .oklist{list-style:none;padding:0;margin:10px 0;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .oklist li{display:flex;align-items:center;gap:8px}
+/* metrics legend */
+.metrics-legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 12px;padding:12px 14px;background:var(--soft);border:1px solid var(--line);border-radius:8px}
+.ml-item{display:flex;align-items:baseline;gap:8px;font-size:13px}
+.ml-label{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+.ml-desc{color:var(--ink)}
 `;
 
 function htmlShell(title, body) {
@@ -446,7 +449,6 @@ const homeBody = `
 
   <h2>Design-system review</h2>
   <p>${dsLine()}</p>
-  ${swatches()}
   ${qualityTable()}
 
   <h2>Pages</h2>
