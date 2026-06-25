@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.4.5) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
-version: 1.4.5
+description: (v1.4.6) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+version: 1.4.6
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -183,22 +183,13 @@ Source: <figma url | site url>  ·  Baseline: <provided DS | synthesized from de
 
 ## Step 7b — Generate block visuals
 
-**Detect Playwright first.** Run (Bash):
-```bash
-node -e "import('playwright').then(()=>process.exit(0),()=>process.exit(1))"
+Dispatch the block-preview skill in batch mode:
+
 ```
-- **Exit 0 (installed):** run `ds-shots` normally — it will take Playwright screenshots and fall back to HTML-embed only for blocks it couldn't capture:
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>"
-```
-- **Exit 1 (not installed):** ask via the **AskUserQuestion** tool (single-select, header "Block visuals"):
-  - **Install Playwright** — show the user: `npm install -D playwright && npx playwright install chromium`. Once confirmed, re-run the detection check; if now installed, run `ds-shots` normally. If the install fails or the user skips, fall back to the HTML option below.
-  - **Use HTML previews** — run with the `--html-only` flag, which fetches and inlines each page's stylesheets so the preview renders faithfully without a browser:
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --html-only
+/twt-block-preview --audit <OUT>
 ```
 
-The script writes `<OUT>/shots/` (PNGs), `<OUT>/previews/` (self-contained HTML embeds with inlined styles), and `<OUT>/visuals.json`. A block that can't be captured gets no thumbnail — the report still renders. (Figma-only audits with no saved `pages/` produce no embeds.)
+Use the Agent tool to invoke `twt-block-preview` with argument `--audit <OUT>`. Wait for it to complete. It handles playwright detection, screenshot capture, HTML-embed fallback, and reports the summary line (N screenshots, M embeds, K missing). The result is `<OUT>/visuals.json` consumed by Step 7c.
 
 ## Step 7c — Generate the HTML report (headline deliverable)
 
