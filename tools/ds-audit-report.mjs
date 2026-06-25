@@ -289,6 +289,19 @@ function unify() {
   return rows ? `<ul class="unify">${rows}</ul>` : '<p class="ok">No near-duplicate components need converging.</p>';
 }
 
+// Canonical comparison is only worth showing when the human can perceive the
+// difference. Subtle radius tweaks or minor font-size drifts look identical at
+// display size; showing two identical-looking panels just adds noise.
+function isSignificant(b) {
+  if (b.tier === 'BLOCKER') return true;
+  if (b.tier !== 'WARNING') return false;
+  const rt = new Set(b.reason_types || []);
+  if (!rt.size) return false;
+  if (rt.size === 1 && rt.has('font-size')) return false;
+  if (rt.size === 1 && rt.has('radius')) return false;
+  return true;
+}
+
 // ── per-page: one fused card per block ───────────────────────────────────────
 function blockCard(b) {
   const dev = devByPageBlock.get(vid(b.page, b.block));
@@ -301,13 +314,17 @@ function blockCard(b) {
     ? `<ul class="deltas">${deltas.map((x) => `<li>${enrichDelta(x)}</li>`).join('')}</ul>`
     : '<p class="ok small">Matches the design system — no drift.</p>';
   const isOk = b.tier === 'OK';
-  // OK blocks: compact (no before/after — there's nothing to compare).
+  // Show canonical ("how it should look") only when the difference is visually
+  // perceptible — subtle radius or font-size-only diffs look identical in the
+  // panel and just add confusion. When canonical is suppressed, "now" goes
+  // full-width via the .single modifier.
+  const showCanonical = !isOk && isSignificant(b);
   const previews = isOk ? '' : `
-    <div class="ba">
+    <div class="ba${!showCanonical ? ' single' : ''}">
       <figure class="ba-now"><figcaption>How it looks now <span class="muted">(this instance)</span></figcaption>
         <div class="pane">${thumb(own, 'fullpv')}</div></figure>
-      <figure class="ba-should"><figcaption>How it should look <span class="muted">(canonical${ref && ref.match != null ? ' · ' + ref.match + '% best instance' : ''})</span></figcaption>
-        <div class="pane">${thumb(refV, 'fullpv')}</div></figure>
+      ${showCanonical ? `<figure class="ba-should"><figcaption>How it should look <span class="muted">(canonical${ref && ref.match != null ? ' · ' + ref.match + '% best instance' : ''})</span></figcaption>
+        <div class="pane">${thumb(refV, 'fullpv')}</div></figure>` : ''}
     </div>`;
   return `<article class="block ${tierClass(b.tier)}" id="${esc(slugify(b.block))}">
     <header class="bhead">
@@ -399,11 +416,13 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .near{color:var(--ok);font-weight:600}.near code{background:#e8f5ef}
 /* full-width before/after */
 .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.ba.single{grid-template-columns:1fr}
 @media (max-width:720px){.ba{grid-template-columns:1fr}}
 .ba figure{margin:0}.ba figcaption{font-size:12px;font-weight:600;margin-bottom:6px}
 .ba-now figcaption{color:var(--blocker)}.ba-should figcaption{color:var(--ok)}
-.pane{height:420px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-.pane img,.pane iframe{width:100%;height:100%;border:0;display:block;object-fit:cover;object-position:top}
+.pane{height:420px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;outline:none}
+.pane img{width:100%;height:100%;border:0;display:block;object-fit:contain;object-position:top center}
+.pane iframe{width:100%;height:100%;border:0;display:block;outline:none}
 .noimg{display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:12px;background:var(--soft)}
 .okwrap{margin-top:18px}.okwrap>summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .oklist{list-style:none;padding:0;margin:10px 0;display:flex;flex-direction:column;gap:6px;font-size:13px}

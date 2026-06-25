@@ -170,15 +170,30 @@ async function writePreview(target, audit, previewsDir, name) {
     }),
   )).filter(Boolean);
 
+  // Extract :root CSS variable definitions from the page's inline <style>
+  // blocks. These define custom properties (--ink, --silver, etc.) that
+  // component classes reference but that aren't in any linked stylesheet.
+  const inlineVarDefs = [];
+  const inlineStyleRe = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+  let ism;
+  while ((ism = inlineStyleRe.exec(html))) {
+    const rootRe = /:root\s*\{([^}]+)\}/g;
+    let rm;
+    while ((rm = rootRe.exec(ism[1]))) inlineVarDefs.push(rm[1]);
+  }
+  const rootVarsBlock = inlineVarDefs.length ? `<style>:root{${inlineVarDefs.join('')}}</style>` : '';
+
   const doc = `<!doctype html>
 <html><head>
   <meta charset="utf-8">
   <base href="${target.page}">
+  ${rootVarsBlock}
   ${styleBlocks.join('\n  ')}
   <style>
-    html,body{margin:0;padding:20px;background:#fff}
+    html,body{margin:0;padding:0;background:#fff}
     *{box-sizing:border-box}
-    img,svg,video,canvas{max-width:100%;height:auto}
+    img,video{max-width:100% !important;height:auto !important}
+    svg,canvas{max-width:100% !important}
     /* Block lifted out of its parent — restore a sane content width */
     body>*{max-width:1200px;margin-inline:auto}
   </style>

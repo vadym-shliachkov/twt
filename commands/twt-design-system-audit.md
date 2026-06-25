@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.4.1) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
-version: 1.4.1
+description: (v1.4.2) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+version: 1.4.2
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -136,7 +136,7 @@ Run only when a DS was **provided or synthesized**. Score each metric **0–100%
 | # | Metric | Weight | What "good" means / evidence |
 |---|--------|-------:|------------------------------|
 | 1 | Token coverage | 14 | Color/type/space/radius/shadow/motion are tokenized, not ad-hoc — `quality_signals.token_coverage_pct`. |
-| 2 | Scale coherence (type & space) | 10 | Type & spacing follow a rhythmic scale, few arbitrary steps — `distinct_lengths` vs a sane scale + judgment. |
+| 2 | Scale coherence (type, space & radius) | 10 | Type, spacing, and radius all follow rhythmic scales with meaningful visual differentiation. Radius values within 5 px of each other (e.g., 8 px and 12 px) are perceptually identical at normal display size — a two-radius system with that gap has effectively one step; score this low and call it out explicitly in the critical assessment. Use `distinct_lengths` as a signal, then apply judgment. |
 | 3 | Color system rigor | 12 | Structured roles (bg/surface/text/border/accent), neutral ramp, state tints, one disciplined accent — judgment. |
 | 4 | Accessibility / contrast | 16 | Intended text/surface pairs meet WCAG AA — `gen-preview --check` `contrast_failures[]`. Any failure caps this low. |
 | 5 | Naming & structure hygiene | 6 | Systematic, namespaced names; no duplicates — `undefined_var_refs`, `duplicate_token_defs`. |

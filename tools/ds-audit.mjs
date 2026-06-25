@@ -231,6 +231,12 @@ function styleFingerprint(rules, classes, id, tag) {
   return { colors, spacing, fontSizes, radius, shadow };
 }
 function uniqLower(arr) { return [...new Set(arr.map((x) => String(x).toLowerCase().trim()))]; }
+function lenToPx(v) {
+  const m = String(v).trim().match(/^(-?\d*\.?\d+)(px|rem|em)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  return (m[2] || 'px').toLowerCase() === 'px' ? n : n * 16;
+}
 // Canonicalize a color/length value so cosmetic formatting differences don't
 // read as drift: collapse whitespace, expand short hex (#abc → #aabbcc), and
 // pad leading-dot decimals (rgba(…,.5) → rgba(…,0.5)). Both the token set and
@@ -427,12 +433,23 @@ function deviations(instance, canon, tokenVals) {
       const v = normVal(raw);
       if (hasTokens) {
         if (tokenVals.has(v)) continue; // value is part of the design system → OK
+        // Radius: tolerate ±4 px — values like 8 px vs 12 px are visually
+        // near-identical at typical display size and shouldn't inflate the report.
+        if (type === 'radius') {
+          const rpx = lenToPx(raw);
+          if (rpx != null && [...tokenVals].some(tv => { const tpx = lenToPx(tv); return tpx != null && Math.abs(tpx - rpx) <= 4; })) continue;
+        }
         typed.push({
           type, severity: type === 'color' ? colorSeverity(raw) : (SEVERITY_BY_TYPE[type] || 'WARNING'),
           text: `${label} \`${raw}\` is not a design-system token value`,
         });
       } else {
         if (canonNorm.has(v)) continue; // matches the cluster's dominant value
+        // Radius: tolerate ±4 px vs the cluster's canonical radius
+        if (type === 'radius') {
+          const rpx = lenToPx(raw);
+          if (rpx != null && (canon[field] || []).some(cv => { const cpx = lenToPx(cv); return cpx != null && Math.abs(cpx - rpx) <= 4; })) continue;
+        }
         const shown = (canon[field] || []).slice(0, 3).join(', ');
         typed.push({
           type, severity: type === 'color' ? 'BLOCKER' : 'WARNING',
