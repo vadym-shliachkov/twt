@@ -303,7 +303,7 @@ flowchart TB
 ### /twt-block-preview
 
 **Category:** design-system
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags
@@ -865,7 +865,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.4.6
+**Version:** 1.4.7
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)

@@ -1,8 +1,8 @@
 ---
 name: twt-block-preview
 category: design-system
-description: (v1.0.0) Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
-version: 1.0.0
+description: (v1.0.1) Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags

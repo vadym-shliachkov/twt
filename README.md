@@ -42,6 +42,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 <!-- TWT_SKILLS_TABLE_START -->
 | command | category | description |
 |---------|----------|-------------|
+| /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-brand-fetch | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
