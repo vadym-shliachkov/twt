@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.1.2) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes the canonical system when none is given and produces an HTML report with per-block visuals naming the exact page+block that drifts
-version: 1.1.2
+description: (v1.2.1) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+version: 1.2.1
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -19,7 +19,8 @@ reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/tokens.css
 writes:
-  - .twt-artifacts/design/design-system-audit/audit-report.html
+  - .twt-artifacts/design/design-system-audit/audit-report.html      # homepage — page list + per-page issue counts
+  - .twt-artifacts/design/design-system-audit/audit-<page-slug>.html  # one per page — only that page's block cards
   - .twt-artifacts/design/design-system-audit/audit-report.md
   - .twt-artifacts/design/design-system-audit/canonical-blocks.md
   - .twt-artifacts/design/design-system-audit/quality-report.md
@@ -46,9 +47,11 @@ writes:
 - The deterministic extraction/clustering/scoring/visuals/HTML report are done by the bundled scripts — this skill adds judgment (the *why*, recommendations, the design-taste metrics), it does not re-implement parsing, screenshotting, or report HTML in the model.
 
 **Success criteria:**
-- `.twt-artifacts/design/design-system-audit/audit-report.html` is the **headline deliverable**: a scorecard (DS quality /100 when scored, consistency %, drifting-block count), a **design-system review** (token/color/type/space/radius/component stats + the 10-metric scorecard), a **full page matrix** — every page (linked) and every block with status + reason chips + a thumbnail — and tiered **findings** (BLOCKER / WARNING / SUGGESTION) each showing the drifting block next to its canonical example. The `.md` reports remain as machine/diff-friendly companions.
+- The **headline deliverable** is a multi-page HTML report. `audit-report.html` is the **homepage**: a scorecard (DS quality /100 when scored, consistency %, drifting-block count), a **design-system review** (token/color/type/space/radius/component stats + the 10-metric scorecard + a swatch row) that reads as part of the audit, and a **list of every page** with its per-page BLOCKER/WARNING/SUGGESTION/OK counts, ordered worst-first and linked. Each page link opens `audit-<page-slug>.html`, which contains **only that page's blocks** — each as a single **fused card** combining status + reason chips + slimmed deltas (with the nearest token named) + the block **as it looks now next to how it should look** (canonical), both full-width. There is **no separate canonical-component gallery and no separate matrix/findings split** — everything about a block lives in one card. The `.md` reports remain as machine/diff-friendly companions.
+- Block names match the design system: every block carries a **literal name** (e.g. "Hero", "Diagnostic section", "Site header") plus its selector, so the audit and the design system speak the same language.
+- Drift is measured against the **design system's token values** (not a per-cluster union); a value that is a token is OK, a raw/off-scale value drifts. Severity is calibrated (raw opaque color = BLOCKER; translucent tint / off-scale spacing-type-radius = WARNING) so the report isn't a wall of BLOCKERs.
 - Near-duplicate blocks are collapsed into one canonical block; the divergent instances are flagged, not treated as separate components.
-- When no DS is provided, the canonical system is synthesized **into** `.twt-artifacts/design/design-system/` and the audit runs against it; an existing DS is never clobbered.
+- When no DS is provided, the canonical system is synthesized **into** `.twt-artifacts/design/design-system/` **and cleaned** (preview/contrast issues fixed) before the audit runs against it; an existing **provided** DS is never clobbered — its issues are reported, not fixed.
 
 ---
 
@@ -82,8 +85,10 @@ If a brand source was given **or** `brand-brief.md` already exists: dispatch `/t
 
 ## Step 3 — Decide DS mode
 
-- **DS provided or `.twt-artifacts/design/design-system/tokens.css` exists** → set `<tokens>` to that `tokens.css` and `<ds-source>` = `provided`. Run the **Quality pass** (Step 6) and the **Consistency pass** (Steps 4–5, 7) against it. Never overwrite it.
-- **No DS** → **synthesize** the canonical one (Step 4c) into `.twt-artifacts/design/design-system/` before the consistency pass, then set `<tokens>` to that `tokens.css` and `<ds-source>` = `synthesized`.
+The audit's posture toward the design system depends on **who owns it**:
+
+- **DS provided or `.twt-artifacts/design/design-system/tokens.css` exists** → set `<tokens>` to that `tokens.css` and `<ds-source>` = `provided`. Run the **Quality pass** (Step 6) and the **Consistency pass** (Steps 4–5, 7) against it. **Report-only — never modify it.** If the provided DS has problems (preview/contrast/coverage), record them in the quality report and findings as issues to fix separately; do **not** edit the user's tokens. This is the user's artifact; the audit critiques, it doesn't rewrite.
+- **No DS** → **synthesize and clean** the canonical one (Step 4c) into `.twt-artifacts/design/design-system/` before the consistency pass, then set `<tokens>` to that `tokens.css` and `<ds-source>` = `synthesized`. Because the audit *owns* a synthesized baseline, it must be in good shape before it's used as the yardstick — Step 4c addresses its issues (re-runs the preview, clears contrast BLOCKERs) rather than measuring every block against a flawed baseline.
 
 ## Step 4 — Capture the blocks
 
@@ -104,8 +109,15 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit.mjs" site "<site-url>" --out "<OUT>" 
 ```
 It writes `<OUT>/pages/` (raw pages), `<OUT>/blocks.json`, and `<OUT>/audit.json`, and prints a ` ```json ` summary. The `audit.json` carries `summary`, `ds_stats` (token/color/type/space/radius/component counts + `source`), `canonical_blocks[]` (each with an `example` instance), `deviations[]` (typed deltas + `tier` + `reason_types`), `block_status[]` (every instance — drifting **and** OK — for the full matrix), `page_stylesheets`, and `quality_signals`. If `summary.js_rendered_pages` is non-empty, note in the report that those pages are **low-confidence** under static analysis (JS-rendered) and recommend a Playwright re-run when available.
 
-### Step 4c — Synthesize the canonical DS (only when no DS exists)
-Dispatch `/twt-design-system-define` via the Agent tool (with `subagent-collect`) in **analyse-existing** mode, pointing it at the Figma URL or the captured `<OUT>/pages/`, and let it write the **canonical** `.twt-artifacts/design/design-system/` (tokens.md, tokens.css, preview.html). It is refinement-aware: it only runs here because no DS existed, so it creates rather than clobbers. This generalizes the real design into the consistent token + component layer it implies. Set `<tokens>` to `.twt-artifacts/design/design-system/tokens.css` and `<ds-source>` = `synthesized`. State clearly in the report that the baseline is **synthesized from the audited design**, so every deviation is "drift from the design's own dominant pattern," which is exactly the point when the design is inconsistent.
+### Step 4c — Synthesize **and clean** the canonical DS (only when no DS exists)
+Dispatch `/twt-design-system-define` via the Agent tool (with `subagent-collect`) in **analyse-existing** mode, pointing it at the Figma URL or the captured `<OUT>/pages/`, and let it write the **canonical** `.twt-artifacts/design/design-system/` (tokens.md, tokens.css, tokens-only preview.html). It is refinement-aware: it only runs here because no DS existed, so it creates rather than clobbers. This generalizes the real design into the consistent token + component layer it implies.
+
+**Then clean it before using it as the yardstick.** A synthesized baseline is the audit's own artifact, so its quality is the audit's responsibility — don't measure every block against a flawed system:
+- Read the define run's returned JSON / `decisions.md`. If `contrast_failures[]` is non-empty (intended text/surface pairs below AA) or the run reports other BLOCKER-level DS issues, **re-dispatch `/twt-design-system-define` once** in refinement mode to resolve them (darken text tokens to clear AA, fix duplicate/undefined token defs). This is the "rerun the design system and address its issues before auditing" step — but only for a **synthesized** DS (a **provided** DS is reported on, never modified — Step 3).
+- The preview is regenerated by `gen-preview.mjs` as part of define (tokens-only, with correct spacing bars + the component-gallery link). You do not hand-edit it.
+- Optionally (best-effort) dispatch `/twt-component-define` (`subagent-collect`) so the synthesized DS also has its component gallery; if it can't run, note it and continue — never block the audit on it.
+
+Set `<tokens>` to `.twt-artifacts/design/design-system/tokens.css` and `<ds-source>` = `synthesized`. State clearly in the report that the baseline is **synthesized from the audited design (and cleaned)**, so every deviation is "drift from the design's own dominant pattern," which is exactly the point when the design is inconsistent.
 
 ## Step 5 — Score consistency (deterministic)
 
@@ -158,16 +170,16 @@ Source: <figma url | site url>  ·  Baseline: <provided DS | synthesized from de
 - Consistency: <consistency_pct>%  ·  <deviating_instances> drifting block(s) across <pages> pages / <clusters> components
 
 ## Mismatch findings
-### [BLOCKER|WARNING|SUGGESTION] <role> drifts on <page>
-- Where: <page> · <block selector/name> (cluster <id>, match <match>%)
-- Problem: <the deltas — verbatim from audit.json>
-- Why it doesn't match: <1–2 sentences: which canonical/token rule it breaks and the consequence>
+### [BLOCKER|WARNING|SUGGESTION] <literal name> drifts on <page>
+- Where: <page> · <literal name> `<block selector>` (cluster <id>, match <match>%)
+- Problem: <the deltas — verbatim from audit.json (already slimmed/capped)>
+- Why it doesn't match: <1–2 sentences: which token rule it breaks and the consequence>
 - Recommendation: <the specific change — e.g. replace #1a73e8 with var(--color-accent); use --space-4 (16px) not 18px>
 
 ## Unify these (near-duplicate components)
 - <cluster id> <role>: same component appears on <pages> with drift — converge on the canonical (canonical-blocks.md).
 ```
-**Tiering:** a deviation is a **BLOCKER** when it breaks a defined token/contrast rule (raw color where a token exists, a contrast-failing pair, a structural omission of a required region); **WARNING** when it's off-scale or an undocumented variant; **SUGGESTION** for minor drift. The script already assigns each `deviations[]`/`block_status[]` entry a `tier` and `reason_types` by exactly this rule — use them; don't re-derive. Drive the `.md` findings from `deviations[]` (sorted worst-match first); the HTML report (Step 7c) renders the full matrix from `block_status[]` so no page collapses into an "Other minor drift" line there — the `.md` may still roll a long tail into one row for brevity. If `deviations[]` is empty, write "No block-level drift — the design follows its system consistently."
+**Tiering:** a deviation is a **BLOCKER** when it breaks a token rule that matters (a raw **opaque** color where a palette exists, or a structural omission of a required region); **WARNING** when it's a translucent tint/overlay off-palette, off-scale spacing/type/radius, or an undocumented variant; **SUGGESTION** for minor drift. The script already assigns each `deviations[]`/`block_status[]` entry a `name`, `tier`, and `reason_types` by exactly this rule — use them; don't re-derive. Drive the `.md` findings from `deviations[]` (sorted worst-match first), naming the literal `name`; the HTML report (Step 7c) renders every page's blocks as per-page card files from `block_status[]`. If `deviations[]` is empty, write "No block-level drift — the design follows its system consistently."
 
 ## Step 7b — Generate block visuals
 
@@ -179,12 +191,12 @@ It writes `<OUT>/shots/` (PNGs), `<OUT>/previews/` (HTML embeds), and `<OUT>/vis
 
 ## Step 7c — Generate the HTML report (headline deliverable)
 
-Run the report generator. It reads `audit.json` (+ `visuals.json` and, when present, `quality.json` and the resolved `tokens.css`) and writes the self-contained `audit-report.html`.
+Run the report generator. It reads `audit.json` (+ `visuals.json` and, when present, `quality.json` and the resolved `tokens.css`) and writes a **multi-file** report: `audit-report.html` (the homepage — scorecard, design-system review, and the page list with per-page BLOCKER/WARNING/SUGGESTION/OK counts) plus one `audit-<page-slug>.html` per page (only that page's blocks, each a fused card with the now-vs-should-look visuals). Pass `--tokens` so the homepage shows the swatch row and the per-block deltas name the nearest token.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit-report.mjs" --out "<OUT>" [--tokens "<tokens>"]
 ```
-This is the human deliverable; the `.md` reports stay as companions. Do not hand-write the HTML.
+This is the human deliverable; the `.md` reports stay as companions. Do not hand-write the HTML, and do not re-introduce a separate canonical-component gallery (that lives in the design system now).
 
 ## Step 8 — Report
 
-State: the sources audited, baseline (provided vs **synthesized into the canonical DS**), DS-quality weighted overall (if run), consistency %, the count of drifting blocks and the worst offenders (page + block), any low-confidence (JS-rendered) pages, and the artifact paths under `.twt-artifacts/design/design-system-audit/` — leading with **`audit-report.html`** as the thing to open. If the canonical DS was synthesized, say so and point to `.twt-artifacts/design/design-system/`. Note that fixing is a separate step (`/twt-design-system-define` to evolve the system; rebuild blocks to match).
+State: the sources audited, baseline (provided vs **synthesized into the canonical DS, then cleaned**), DS-quality weighted overall (if run), consistency %, the count of drifting blocks and the worst offenders (literal name + page), any low-confidence (JS-rendered) pages, and the artifact paths under `.twt-artifacts/design/design-system-audit/` — leading with **`audit-report.html`** (the homepage) as the thing to open, and noting that each page has its own `audit-<slug>.html` reachable from it. If the canonical DS was synthesized, say so (and whether cleanup re-ran define) and point to `.twt-artifacts/design/design-system/`. If a **provided** DS had issues, say they're reported but **not** modified. Note that fixing the *audited design* is a separate step (`/twt-design-system-define` to evolve the system; rebuild blocks to match).

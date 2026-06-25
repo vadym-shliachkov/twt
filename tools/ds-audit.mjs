@@ -78,6 +78,19 @@ function fetchUrl(target, redirects = 0) {
 
 function sameHost(a, b) { try { return new URL(a).host === new URL(b).host; } catch { return false; } }
 
+// Canonicalize a page URL so `https://site.com` and `https://site.com/` (and
+// `/about` vs `/about/`) don't crawl as two separate pages — which doubled the
+// home page and inflated the page/cluster counts. Drops hash + query and the
+// trailing slash (except the bare root).
+function normUrl(u) {
+  try {
+    const x = new URL(u);
+    x.hash = ''; x.search = '';
+    if (x.pathname.length > 1) x.pathname = x.pathname.replace(/\/+$/, '');
+    return x.href;
+  } catch { return u; }
+}
+
 function extractLinks(html, base) {
   const out = [];
   const re = /<a\b[^>]*\bhref=["']([^"'#]+)["']/gi;
@@ -89,7 +102,7 @@ function extractLinks(html, base) {
       const ext = u.pathname.toLowerCase();
       if (/\.(pdf|zip|jpg|jpeg|png|gif|svg|webp|css|js|ico|woff2?|ttf|mp4|xml)$/.test(ext)) continue;
       if (/^(mailto|tel|javascript):/.test(m[1])) continue;
-      out.push(u.href);
+      out.push(normUrl(u.href));
     } catch { /* ignore */ }
   }
   return out;
@@ -218,6 +231,18 @@ function styleFingerprint(rules, classes, id, tag) {
   return { colors, spacing, fontSizes, radius, shadow };
 }
 function uniqLower(arr) { return [...new Set(arr.map((x) => String(x).toLowerCase().trim()))]; }
+// Canonicalize a color/length value so cosmetic formatting differences don't
+// read as drift: collapse whitespace, expand short hex (#abc → #aabbcc), and
+// pad leading-dot decimals (rgba(…,.5) → rgba(…,0.5)). Both the token set and
+// the per-instance values are compared through this, so a token written
+// `rgba(255, 255, 255, 0.5)` matches a use of `rgba(255,255,255,.5)`.
+function normVal(v) {
+  let s = String(v).toLowerCase().trim().replace(/\s+/g, '');
+  const hm = s.match(/^#([0-9a-f]{3,4})$/);
+  if (hm) s = '#' + hm[1].split('').map((c) => c + c).join('');
+  s = s.replace(/([(,])\.(\d)/g, '$1' + '0.$2');
+  return s;
+}
 
 function looksJsRendered(html) {
   const body = (html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i) || [, ''])[1];
@@ -322,8 +347,8 @@ function tokenValueSet(tokensCss) {
   const re = /--[a-z0-9-]+\s*:\s*([^;]+);/gi;
   let m;
   while ((m = re.exec(tokensCss))) {
-    for (const v of (m[1].match(COLOR_RE) || [])) vals.add(v.toLowerCase().trim());
-    for (const v of (m[1].match(LEN_RE) || [])) vals.add(v.toLowerCase().trim());
+    for (const v of (m[1].match(COLOR_RE) || [])) vals.add(normVal(v));
+    for (const v of (m[1].match(LEN_RE) || [])) vals.add(normVal(v));
   }
   return vals;
 }
@@ -335,27 +360,85 @@ function blockSel(inst) {
     + (inst.id ? '#' + inst.id : '');
 }
 
+// A human-readable label for a cluster, shown next to the selector so the
+// report reads "Diagnostic section" / "Site header" rather than only
+// `section.sec.vfi.reveal#diagnostic`. Specific roles use a role noun
+// (qualified by a meaningful id); the generic "section" role is named from its
+// id or a non-utility class.
+const ROLE_NOUN = {
+  nav: 'Navigation', header: 'Site header', footer: 'Footer', hero: 'Hero',
+  cards: 'Card grid', cta: 'Call-to-action', features: 'Features section',
+  testimonial: 'Testimonial', form: 'Form', pricing: 'Pricing', section: 'Section',
+};
+const GENERIC_CLASS = /^(rows?|cols?|wrap|wrapper|inner|outer|container|grid|flex|sec|section|block|content|main|reveal|active|solid|child|items?|box|area|el|js|is|has)([-_]|$)/i;
+function humanize(s) {
+  return String(s).replace(/[-_]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function friendlyName(cl) {
+  const roleNoun = ROLE_NOUN[cl.role] || 'Section';
+  const inst = cl.members[0] || {};
+  const id = inst.id || '';
+  const idHint = (id && /[a-z]/i.test(id) && !/^[0-9]/.test(id) && !GENERIC_CLASS.test(id)) ? humanize(id) : '';
+  if (cl.role === 'section') {
+    if (idHint) return `${idHint} section`;
+    const cls = (inst.classes || []).find((c) => c.length > 3 && !GENERIC_CLASS.test(c));
+    return cls ? `${humanize(cls)} section` : 'Section';
+  }
+  if (idHint && !idHint.toLowerCase().includes(cl.role)) return `${roleNoun} · ${idHint}`;
+  return roleNoun;
+}
+
 // Per-instance deviation scan. Returns:
 //   deltas      — string[] (unchanged shape: human prose, one per delta)
 //   deltas_typed— [{ type, severity, text }] (v2: adds the reason category)
 //   reason_types— deduped category set
 //   tier        — OK | SUGGESTION | WARNING | BLOCKER (the skill's tiering rule)
 //   match       — 0..100
+// When a design system exists, "drift" means a value that is NOT in the design
+// system — measured against the token values in tokens.css, not against a
+// per-cluster union of whatever the instances happen to use. (The old union
+// approach flagged ~55% of blocks and emitted useless "differs from canonical
+// (none)" deltas; comparing to the actual tokens is both accurate and slim.)
+// Without a DS, fall back to the cluster's dominant pattern.
+//
+// Severity follows the audit tiering rule: a raw color where a palette exists
+// is a BLOCKER; off-scale spacing/type/radius is a WARNING; a structural
+// omission relative to the component's norm is a BLOCKER.
+const SEVERITY_BY_TYPE = { color: 'BLOCKER', spacing: 'WARNING', 'font-size': 'WARNING', radius: 'WARNING' };
+// Alpha of a color value (1 = opaque). Used to tier color drift: an opaque
+// off-palette color is a real palette violation (BLOCKER); a translucent value
+// is almost always an overlay/tint/shadow, which is lower-stakes (WARNING) and
+// shouldn't flood the report with BLOCKERs.
+function colorAlpha(v) {
+  let m = String(v).match(/^(?:rgba?|hsla?)\(([^)]+)\)$/i);
+  if (m) { const p = m[1].split(/[,/\s]+/).filter(Boolean); return p.length >= 4 ? parseFloat(p[3]) : 1; }
+  m = String(v).match(/^#([0-9a-f]{4}|[0-9a-f]{8})$/i);
+  if (m) { const h = m[1]; const a = h.length === 4 ? parseInt(h[3] + h[3], 16) : parseInt(h.slice(6, 8), 16); return a / 255; }
+  return 1;
+}
+function colorSeverity(raw) { return colorAlpha(raw) < 0.85 ? 'WARNING' : 'BLOCKER'; }
 function deviations(instance, canon, tokenVals) {
   const typed = [];
   const hasTokens = tokenVals && tokenVals.size > 0;
   const check = (field, label, type) => {
-    for (const v of instance.styles[field]) {
-      if (!canon[field].includes(v)) {
-        // Raw value where a token exists for that category → BLOCKER; else an
-        // off-scale / undocumented variant → WARNING (downgraded to SUGGESTION
-        // below when the overall match stays high).
-        const rawWhereToken = hasTokens && !tokenVals.has(v);
-        const tokenHint = rawWhereToken ? ' — not a defined token value' : '';
+    const canonNorm = hasTokens ? null : new Set((canon[field] || []).map(normVal));
+    for (const raw of instance.styles[field]) {
+      const v = normVal(raw);
+      if (hasTokens) {
+        if (tokenVals.has(v)) continue; // value is part of the design system → OK
         typed.push({
-          type,
-          severity: rawWhereToken ? 'BLOCKER' : 'WARNING',
-          text: `${label} \`${v}\` differs from canonical (${canon[field].join(', ') || 'none'})${tokenHint}`,
+          type, severity: type === 'color' ? colorSeverity(raw) : (SEVERITY_BY_TYPE[type] || 'WARNING'),
+          text: `${label} \`${raw}\` is not a design-system token value`,
+        });
+      } else {
+        if (canonNorm.has(v)) continue; // matches the cluster's dominant value
+        const shown = (canon[field] || []).slice(0, 3).join(', ');
+        typed.push({
+          type, severity: type === 'color' ? 'BLOCKER' : 'WARNING',
+          text: shown
+            ? `${label} \`${raw}\` is off the component norm (${shown}${canon[field].length > 3 ? '…' : ''})`
+            : `${label} \`${raw}\` has no shared norm across this component`,
         });
       }
     }
@@ -367,7 +450,7 @@ function deviations(instance, canon, tokenVals) {
   for (const k of ['headings', 'buttons', 'images']) {
     const a = instance.structure[k] || 0, b = canon.structure[k] || 0;
     if (Math.abs(a - b) >= 2) {
-      typed.push({ type: 'structure', severity: 'BLOCKER', text: `structure: ${k}=${a} vs canonical ${b}` });
+      typed.push({ type: 'structure', severity: 'BLOCKER', text: `structure: ${k}=${a} vs the component norm of ${b}` });
     }
   }
   const deltas = typed.map((t) => t.text);
@@ -442,6 +525,10 @@ function qualitySignals(allCss, tokensCss) {
 // ── assemble ─────────────────────────────────────────────────────────────────
 function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
   const tokenVals = tokenValueSet(tokensCss);
+  // Cap per-block delta lists so a block with dozens of off-token values can't
+  // bloat audit.json (and the report) — keep the match score from the full
+  // count, store a bounded list with an overflow marker.
+  const capList = (arr, n = 12) => (arr.length <= n ? arr : [...arr.slice(0, n), `+${arr.length - n} more`]);
   const clusters = clusterBlocks(blocks);
   const clusterOut = [];
   const deviationsOut = [];
@@ -449,9 +536,10 @@ function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
   let matchSum = 0, matchN = 0;
   for (const cl of clusters) {
     const canon = canonicalStyles(cl);
+    const name = friendlyName(cl);
     const example = { page: cl.members[0].page, block: blockSel(cl.members[0]) };
     clusterOut.push({
-      id: cl.id, role: cl.role, instances: cl.members.length,
+      id: cl.id, role: cl.role, name, instances: cl.members.length,
       pages: [...new Set(cl.members.map((m) => m.page))],
       example,
       canonical: canon,
@@ -461,15 +549,15 @@ function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
       matchSum += dv.match; matchN++;
       const sel = blockSel(inst);
       blockStatus.push({
-        page: inst.page, block: sel, cluster: cl.id, role: cl.role,
+        page: inst.page, block: sel, name, cluster: cl.id, role: cl.role,
         match: dv.match, tier: dv.tier,
-        reason_types: dv.reason_types, reasons: dv.deltas,
+        reason_types: dv.reason_types, reasons: capList(dv.deltas),
       });
       if (dv.deltas.length) {
         deviationsOut.push({
-          cluster: cl.id, role: cl.role, page: inst.page, block: sel,
+          cluster: cl.id, role: cl.role, name, page: inst.page, block: sel,
           match: dv.match, tier: dv.tier, reason_types: dv.reason_types,
-          deltas: dv.deltas, deltas_typed: dv.deltas_typed,
+          deltas: capList(dv.deltas),
         });
       }
     }
@@ -505,8 +593,8 @@ function emit(result, outDir) {
 
 // ── subcommands ──────────────────────────────────────────────────────────────
 async function runSite() {
-  const start = positional[0];
-  if (!start) die('site <url> required');
+  const start = normUrl(positional[0]);
+  if (!positional[0]) die('site <url> required');
   const outDir = OUT, pagesDir = path.join(outDir, 'pages');
   ensureDir(pagesDir);
   const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;

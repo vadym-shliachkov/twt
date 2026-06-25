@@ -42,6 +42,13 @@ const projectDir = process.argv[2];
 const tokensOnly = process.argv.includes('--mode') &&
   process.argv[process.argv.indexOf('--mode') + 1] === 'tokens-only';
 const checkOnly = process.argv.includes('--check');
+// preview.html now documents TOKENS ONLY by default; the full
+// Primitives/Components/Modules catalog lives in the component gallery
+// (/twt-component-define → component/gallery.html), which preview links to.
+// Pass --with-components to also inline the component shells (legacy behavior).
+const withComponents = process.argv.includes('--with-components') && !tokensOnly;
+// Where the component gallery lives, relative to preview.html.
+const COMPONENTS_HREF = '../component/gallery.html';
 if (!projectDir) {
   console.error('usage: gen-preview.mjs <projectDir> [--mode tokens-only]');
   process.exit(2);
@@ -285,10 +292,29 @@ function renderType(t) {
   return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
     `<div style="font-size:var(${t.name});${lh}">Ag — the quick brown fox</div></div>`;
 }
+// Resolve a length token to a pixel number so the spacing bars have real,
+// distinguishable widths. Most projects express spacing in rem/em (e.g.
+// `0.25rem`…`6.25rem`); the old px-only check fell through to width:100% for
+// every one of them, so all bars rendered identical full-width translucent
+// blocks (the "weird spacing" bug). Handle px/rem/em/pt and clamp the drawn
+// width so an outsized step (e.g. --space-hero) doesn't overflow the row.
+function lengthToPx(val) {
+  const m = String(val).trim().match(/^(-?\d*\.?\d+)\s*(px|rem|em|pt)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  const unit = (m[2] || 'px').toLowerCase();
+  if (unit === 'rem' || unit === 'em') return n * 16;
+  if (unit === 'pt') return n * (96 / 72);
+  return n;
+}
 function renderSpace(t) {
-  const px = /^(\d+)px$/.test(t.resolved) ? t.resolved : null;
-  const w = px ? `width:${t.resolved}` : 'width:100%;opacity:.5';
-  return `<div class="gp-bar-row"><span>${esc(t.name)} · ${esc(t.resolved)}</span><div class="gp-bar" style="${w}"></div></div>`;
+  const SPACE_BAR_MAX = 520; // px — drawn-width cap so big steps stay in the row
+  const px = lengthToPx(t.resolved);
+  const w = px != null
+    ? `width:${Math.max(1, Math.min(px, SPACE_BAR_MAX))}px`
+    : 'width:100%;opacity:.5';
+  const over = px != null && px > SPACE_BAR_MAX ? ' <span class="gp-bar-over">(clamped)</span>' : '';
+  return `<div class="gp-bar-row"><span>${esc(t.name)} · ${esc(t.resolved)}${over}</span><div class="gp-bar" style="${w}"></div></div>`;
 }
 function renderContrast() {
   if (!textSet.length || !surfaceSet.length) return `<p class="gp-legend">No text/surface token roles detected to pair.</p>`;
@@ -327,11 +353,20 @@ function tierShells(title, tier, items, kind, wide = false) {
     `<div class="${invCls}">\n    ${cells}\n  </div></section>`;
 }
 
-const tiers234 = tokensOnly ? '' : [
+const tiers234 = withComponents ? [
   tierShells('Primitives', 'Tier 2', inv.primitives, 'primitives'),
   tierShells('Components', 'Tier 3', inv.components, 'components'),
   tierShells('Modules', 'Tier 4', inv.modules, 'modules', true),
-].join('\n');
+].join('\n') : '';
+
+// A prominent pointer to the component gallery (the breadth/depth catalog),
+// since preview.html no longer inlines the component shells by default.
+const compCount = inv.primitives.length + inv.components.length + inv.modules.length;
+const componentsLink = withComponents ? '' : `
+  <div class="gp-complink">
+    <span><b>Components</b> — ${compCount ? compCount + ' documented ' : ''}Primitives · Components · Modules live in the component gallery, built from these tokens. This sheet stays tokens-only.</span>
+    <a href="${esc(COMPONENTS_HREF)}">Open component gallery →</a>
+  </div>`;
 
 const html = `<!doctype html>
 <html lang="en">
@@ -350,8 +385,12 @@ const html = `<!doctype html>
   .gp-tag{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--color-label, #888);margin:0 0 4px;font-weight:600}
   .gp-th{font-size:1.6rem;margin:0 0 8px}
   .gp-sub{font-size:1rem;margin:32px 0 12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-label, #888)}
-  .gp-legend{font-size:.85rem;color:var(--color-label, #777);max-width:70ch}
+  .gp-legend{font-size:.85rem;color:var(--color-label, #777);max-width:110ch}
   .gp-legend code{font-family:ui-monospace,Menlo,monospace;font-size:.85em}
+  .gp-bar-over{color:var(--color-label, #aaa);font-style:italic}
+  .gp-complink{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:8px 0 0;padding:18px 22px;border:1px solid var(--border, #e5e5e5);border-radius:12px;background:var(--surface-panel, #f7f8fa)}
+  .gp-complink b{font-size:1rem}
+  .gp-complink a{display:inline-block;padding:9px 16px;border-radius:8px;background:var(--color-heading, #16181d);color:var(--surface-page, #fff);text-decoration:none;font-size:.85rem;font-weight:600;white-space:nowrap}
   .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
   .gp-sw{border:1px solid var(--border, #e5e5e5);border-radius:8px;overflow:hidden}
   .gp-chip{display:block;height:72px;width:100%}
@@ -388,12 +427,13 @@ const html = `<!doctype html>
 <div class="gp-wrap">
   <header class="gp-head">
     <h1>${esc(projName)} — Design System</h1>
-    <p class="gp-legend">Specimen sheet (not the site). <b>Tokens → Primitives → Components → Modules</b> — each level built only from the level above it and the tokens. Every component appears once here (breadth); the exhaustive variant × state catalog is the component gallery (depth). Generated by <code>gen-preview.mjs</code>.</p>
+    <p class="gp-legend">Token specimen sheet (not the site) — every design token rendered live from <code>tokens.css</code>${withComponents ? ', followed by neutral Primitive/Component/Module specimens' : ''}. The full component catalog (breadth + variant × state depth) lives in the component gallery. Generated by <code>gen-preview.mjs</code>.</p>
   </header>
+  ${componentsLink}
   ${tier1}
   ${tiers234}
   <section class="gp-tier">
-    <p class="gp-legend">Exhaustive catalog → <code>../component/gallery.html</code> (run /twt-component-define if absent). Templates &amp; Pages → /twt-layout-define and /twt-mockup-define.</p>
+    <p class="gp-legend">Component catalog → <code>${esc(COMPONENTS_HREF)}</code> (run /twt-component-define if absent). Templates &amp; Pages → /twt-layout-define and /twt-mockup-define.</p>
   </section>
 </div>
 </body>

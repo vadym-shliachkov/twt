@@ -24,8 +24,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
 | [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice and IA; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
-| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass |
-| [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes the canonical system when none is given and produces an HTML report with per-block visuals naming the exact page+block that drifts |
+| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then build the component catalog (standalone) |
+| [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
@@ -676,7 +676,7 @@ Drive the whole design phase end to end — design-system → component → layo
 ## /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.4
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 One-call design-system workflow: define (greenfield from `brand-brief.md`, or analyse existing design sources) → validate in one pass (§9 — no iteration loop). This is the shared, cross-phase design-system spine.
@@ -686,14 +686,15 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-design-system-validate
+- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/validation-report.md
 
 **Writes:**
-- (none)
+- .twt-artifacts/design/component/components.md  # standalone only — via /twt-component-define
+- .twt-artifacts/design/component/gallery.html   # standalone only — via /twt-component-define
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -701,7 +702,8 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 - Not required for standalone use — each sub-skill works on its own
 
 **Success criteria:**
-- Produces/refines `tokens.md`, `tokens.css`, `preview.html` and a current `validation-report.md`
+- Produces/refines `tokens.md`, `tokens.css`, a **tokens-only** `preview.html` (the component catalog lives in the gallery, linked from preview) and a current `validation-report.md`
+- **Standalone runs also build the component catalog** (`component/components.md` + `gallery.html`) via `/twt-component-define`, so "the design system" is complete in one call. In **collect mode** this is skipped — the parent orchestrator (`/twt-design`, `/twt-site`) owns the component step, so the catalog is built exactly once.
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
@@ -710,7 +712,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.1.2
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **10 weighted quality metrics** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
@@ -729,7 +731,8 @@ Audit how good a design system is **and** how consistently a real design follows
 - .twt-artifacts/design/design-system/tokens.css
 
 **Writes:**
-- .twt-artifacts/design/design-system-audit/audit-report.html
+- .twt-artifacts/design/design-system-audit/audit-report.html      # homepage — page list + per-page issue counts
+- .twt-artifacts/design/design-system-audit/audit-<page-slug>.html  # one per page — only that page's block cards
 - .twt-artifacts/design/design-system-audit/audit-report.md
 - .twt-artifacts/design/design-system-audit/canonical-blocks.md
 - .twt-artifacts/design/design-system-audit/quality-report.md
@@ -749,9 +752,11 @@ Audit how good a design system is **and** how consistently a real design follows
 - The deterministic extraction/clustering/scoring/visuals/HTML report are done by the bundled scripts — this skill adds judgment (the *why*, recommendations, the design-taste metrics), it does not re-implement parsing, screenshotting, or report HTML in the model.
 
 **Success criteria:**
-- `.twt-artifacts/design/design-system-audit/audit-report.html` is the **headline deliverable**: a scorecard (DS quality /100 when scored, consistency %, drifting-block count), a **design-system review** (token/color/type/space/radius/component stats + the 10-metric scorecard), a **full page matrix** — every page (linked) and every block with status + reason chips + a thumbnail — and tiered **findings** (BLOCKER / WARNING / SUGGESTION) each showing the drifting block next to its canonical example. The `.md` reports remain as machine/diff-friendly companions.
+- The **headline deliverable** is a multi-page HTML report. `audit-report.html` is the **homepage**: a scorecard (DS quality /100 when scored, consistency %, drifting-block count), a **design-system review** (token/color/type/space/radius/component stats + the 10-metric scorecard + a swatch row) that reads as part of the audit, and a **list of every page** with its per-page BLOCKER/WARNING/SUGGESTION/OK counts, ordered worst-first and linked. Each page link opens `audit-<page-slug>.html`, which contains **only that page's blocks** — each as a single **fused card** combining status + reason chips + slimmed deltas (with the nearest token named) + the block **as it looks now next to how it should look** (canonical), both full-width. There is **no separate canonical-component gallery and no separate matrix/findings split** — everything about a block lives in one card. The `.md` reports remain as machine/diff-friendly companions.
+- Block names match the design system: every block carries a **literal name** (e.g. "Hero", "Diagnostic section", "Site header") plus its selector, so the audit and the design system speak the same language.
+- Drift is measured against the **design system's token values** (not a per-cluster union); a value that is a token is OK, a raw/off-scale value drifts. Severity is calibrated (raw opaque color = BLOCKER; translucent tint / off-scale spacing-type-radius = WARNING) so the report isn't a wall of BLOCKERs.
 - Near-duplicate blocks are collapsed into one canonical block; the divergent instances are flagged, not treated as separate components.
-- When no DS is provided, the canonical system is synthesized **into** `.twt-artifacts/design/design-system/` and the audit runs against it; an existing DS is never clobbered.
+- When no DS is provided, the canonical system is synthesized **into** `.twt-artifacts/design/design-system/` **and cleaned** (preview/contrast issues fixed) before the audit runs against it; an existing **provided** DS is never clobbered — its issues are reported, not fixed.
 
 ---
 

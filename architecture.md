@@ -104,6 +104,7 @@ flowchart TB
     twt_mockup_validate -.-> twt_design
     twt_design_system_define -.-> twt_design_system
     twt_design_system_validate -.-> twt_design_system
+    twt_component_define -.-> twt_design_system
     twt_brand -.-> twt_design_system_audit
     twt_design_system_define -.-> twt_design_system_audit
     twt_design_system_validate -.-> twt_design_system_audit
@@ -202,9 +203,9 @@ flowchart TB
 
 ### design-system
 
-- /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass
-- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes the canonical system when none is given and produces an HTML report with per-block visuals naming the exact page+block that drifts
-- /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated preview.html (Tokens→Primitives→Components→Modules + WCAG contrast gate)
+- /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass, then build the component catalog (standalone)
+- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+- /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
 - /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
 
 ### develop
@@ -413,7 +414,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-design, twt-design-system
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -805,14 +806,14 @@ flowchart TB
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.1.4
+**Version:** 1.2.1
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-design-system-validate
+- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define
 
 **Feeds into:**
 - Hard consumers: none
@@ -825,11 +826,13 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
+| .twt-artifacts/design/component/components.md  # standalone only — via /twt-component-define |  |
+| .twt-artifacts/design/component/gallery.html   # standalone only — via /twt-component-define |  |
 
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.1.2
+**Version:** 1.2.1
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -851,7 +854,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/design-system-audit/audit-report.html |  |
+| .twt-artifacts/design/design-system-audit/audit-report.html      # homepage — page list + per-page issue counts |  |
+| .twt-artifacts/design/design-system-audit/audit-<page-slug>.html  # one per page — only that page's block cards |  |
 | .twt-artifacts/design/design-system-audit/audit-report.md |  |
 | .twt-artifacts/design/design-system-audit/canonical-blocks.md |  |
 | .twt-artifacts/design/design-system-audit/quality-report.md |  |
@@ -867,7 +871,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.7.2
+**Version:** 1.8.1
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -2042,7 +2046,7 @@ flowchart TB
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
 | /twt-design | none | twt-design-system, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
-| /twt-design-system | none | twt-design-system-define, twt-design-system-validate |
+| /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define |
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |

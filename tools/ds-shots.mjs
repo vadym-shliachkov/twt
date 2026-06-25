@@ -58,20 +58,33 @@ function parseSel(sel) {
   return { tag, classes: parts.filter(Boolean), id };
 }
 
-// Approximate outer-HTML extraction (same non-nesting heuristic as ds-audit's
-// region scan — deliberately minimal). Returns the first element of `tag`
-// whose attributes carry the given id and all the given classes.
+// Outer-HTML extraction with DEPTH BALANCING. The previous version used a
+// non-nesting regex `<tag>…</tag>` that stops at the FIRST `</tag>`, so any
+// block containing nested elements of the same tag (a <div> full of <div>s,
+// a <section> with inner <section>s) was truncated to a broken fragment that
+// rendered as a white square. Here we find the matching opening tag, then walk
+// forward tracking nesting depth to the real closing tag.
 function extractBlockHtml(html, sel) {
   const { tag, classes, id } = parseSel(sel);
-  const re = new RegExp('<' + escapeRe(tag) + '\\b([^>]*)>([\\s\\S]*?)</' + escapeRe(tag) + '>', 'gi');
+  const openRe = new RegExp('<' + escapeRe(tag) + '\\b([^>]*)>', 'gi');
   let m;
-  while ((m = re.exec(html))) {
+  while ((m = openRe.exec(html))) {
     const attrs = m[1] || '';
     if (id && !new RegExp('\\bid=["\']' + escapeRe(id) + '["\']', 'i').test(attrs)) continue;
     const classAttr = ((attrs.match(/\bclass=["']([^"']+)["']/i) || [, ''])[1] || '')
       .toLowerCase().split(/\s+/).filter(Boolean);
     if (classes.length && !classes.every((c) => classAttr.includes(c.toLowerCase()))) continue;
-    return m[0];
+    const start = m.index;
+    if (/\/>\s*$/.test(m[0])) return m[0]; // self-closing opener
+    // Depth scan from just after the opening tag to the balanced close.
+    const tokRe = new RegExp('<(' + escapeRe(tag) + ')\\b[^>]*?(/?)>|</' + escapeRe(tag) + '\\s*>', 'gi');
+    tokRe.lastIndex = openRe.lastIndex;
+    let depth = 1, t;
+    while ((t = tokRe.exec(html))) {
+      if (t[0][1] === '/') { if (--depth === 0) return html.slice(start, tokRe.lastIndex); }
+      else if (t[2] !== '/') depth++; // a real (non-self-closing) nested open
+    }
+    return html.slice(start); // unbalanced markup — best-effort to EOF
   }
   return null;
 }
@@ -118,7 +131,14 @@ function writePreview(target, audit, previewsDir, name) {
   <meta charset="utf-8">
   <base href="${target.page}">
   ${links}
-  <style>body{margin:0}</style>
+  <style>
+    html,body{margin:0;background:#fff}
+    *{box-sizing:border-box}
+    img,svg,video,canvas{max-width:100%;height:auto}
+    /* The block is lifted out of its parent layout container; restore a sane
+       content width so full-bleed sections don't render edge-glued/zero-width. */
+    body>*{max-width:1200px;margin-inline:auto}
+  </style>
 </head><body>
 ${outer}
 </body></html>`;
