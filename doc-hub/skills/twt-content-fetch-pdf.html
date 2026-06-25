@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pulls the readable text out of a PDF and saves it as clean Markdown, ready for brand, IA, and curation work. Handy when your raw material lives in rep">
+  <title>/twt-content-fetch-pdf | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-content-fetch-pdf</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · content</p>
+          <h1>/twt-content-fetch-pdf</h1>
+          <p class="lede">Convert a PDF's readable text into clean Markdown for brand, IA, and curation work.</p>
+          <div class="fact-row">
+            <span>Version 1.0.0</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Pulls the readable text out of a PDF and saves it as clean Markdown, ready for brand, IA, and curation work. Handy when your raw material lives in reports, brochures, or exported docs.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Path to a local PDF file (or folder of PDFs)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;pdf-path&gt;</code><span class="file-desc">The PDF you give it.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/index.md</code><span class="file-desc">The cleaned Markdown text extracted from a PDF.</span></li><li><code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/_meta.md</code><span class="file-desc">Notes about the fetched source — where it came from and any extraction caveats.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Not OCR for scanned/image-only PDFs — text-layer extraction only (flag when a PDF appears image-only)</li><li>Doesn't preserve exact visual layout, columns, or pixel positions</li><li>Doesn't extract embedded images as files (notes their presence only)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Output appears under <code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/</code></li><li><code>index.md</code> has frontmatter (source path, title, fetched-at, page count)</li><li>Headings and lists are preserved where the PDF's text structure allows</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

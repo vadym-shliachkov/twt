@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Runs the right quality checks for your project — on local files or a live site — and rolls them up into a pass/fail report plus a plain-language list ">
+  <title>/twt-qa | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong>/twt-qa</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">QA · qa</p>
+          <h1>/twt-qa</h1>
+          <p class="lede">Run the right QA audits on local files or a live site, then report a pass/fail verdict and punch-list.</p>
+          <div class="fact-row">
+            <span>Version 1.0.3</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Runs the right quality checks for your project — on local files or a live site — and rolls them up into a pass/fail report plus a plain-language list of what's left to fix. It's the final gate before you call the site done.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-qa-content.html"><code>/twt-qa-content</code></a><span class="file-desc">Checks every page exists and matches the content plan.</span></li><li><a href="../skills/twt-qa-design.html"><code>/twt-qa-design</code></a><span class="file-desc">Checks styling is token-only and structure matches the design system.</span></li><li><a href="../skills/twt-qa-a11y.html"><code>/twt-qa-a11y</code></a><span class="file-desc">Checks accessibility basics — alt text, headings, labels, contrast.</span></li><li><a href="../skills/twt-qa-links.html"><code>/twt-qa-links</code></a><span class="file-desc">Checks links resolve and responsive tiers hold up.</span></li><li><a href="../skills/twt-qa-elementor.html"><code>/twt-qa-elementor</code></a><span class="file-desc">Checks Elementor theme code hygiene — only for WordPress builds.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional http(s):// URL (live mode) or local path; else local auto-detect</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/qa/content-report.md</code><span class="file-desc">The content &amp; IA fidelity audit findings.</span></li><li><code>.twt-artifacts/qa/design-report.md</code><span class="file-desc">The design &amp; token fidelity audit findings.</span></li><li><code>.twt-artifacts/qa/a11y-report.md</code><span class="file-desc">The accessibility audit findings.</span></li><li><code>.twt-artifacts/qa/links-report.md</code><span class="file-desc">The link-integrity and responsive-tier audit findings.</span></li><li><code>.twt-artifacts/qa/elementor-report.md</code><span class="file-desc">The Elementor code-hygiene audit findings.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/qa/qa-report.md</code><span class="file-desc">The rolled-up QA verdict — pass/fail across every audit that ran.</span></li><li><code>.twt-artifacts/qa/gaps.md</code><span class="file-desc">A plain-language punch-list of everything left to fix.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't reproduce audit logic — dispatches each audit via the Agent tool (rule 5)</li><li>Doesn't auto-fix anything — reports and stops; the human resolves BLOCKERs</li><li>Doesn't do live performance/pixel-render checks (out of scope)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Runs the audits applicable to the mode and writes <code>qa-report.md</code> (verdict PASS iff total BLOCKERs == 0) and <code>gaps.md</code></li><li><code>qa-report.md</code> frontmatter records <code>mode</code>, <code>url</code> (if live), <code>verdict</code>, <code>targets</code>, and <code>skipped</code> audits</li><li><code>gaps.md</code> lists every LOREM / EMPTY / MISSING-ASSET / DEAD-LINK / PLACEHOLDER-LINK item grouped by page</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

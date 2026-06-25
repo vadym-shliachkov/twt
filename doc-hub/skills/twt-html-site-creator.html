@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sets up a clean, dependency-free HTML/CSS site once per project, with shared header/footer partials and design tokens mirrored from your design system">
+  <title>/twt-html-site-creator | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/develop.html">Develop</a><span>/</span><strong>/twt-html-site-creator</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Develop · html</p>
+          <h1>/twt-html-site-creator</h1>
+          <p class="lede">Scaffold a dependency-free static HTML/CSS site with shared partials and mirrored design tokens.</p>
+          <div class="fact-row">
+            <span>Version 1.1.2</span>
+            <span>Arguments: no</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Sets up a clean, dependency-free HTML/CSS site once per project, with shared header/footer partials and design tokens mirrored from your design system. Run it first so every page you build starts from the same base.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>project name (asked); short slug (auto-derived, user confirms); output root (default ./site)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>site/index.html</code><span class="file-desc">The site's home page.</span></li><li><code>site/partials/header.html</code><span class="file-desc">The shared site header, reused across every page.</span></li><li><code>site/partials/footer.html</code><span class="file-desc">The shared site footer, reused across every page.</span></li><li><code>site/partials/nav.html</code><span class="file-desc">The shared navigation, reused across every page.</span></li><li><code>site/assets/css/tokens.css</code><span class="file-desc">The design tokens mirrored into the site as CSS variables.</span></li><li><code>site/assets/css/general.css</code><span class="file-desc">Site-wide base styles, built from tokens.</span></li><li><code>site/assets/css/sections.css</code><span class="file-desc">Reusable section styles, built from tokens.</span></li><li><code>site/assets/js/.gitkeep</code><span class="file-desc">An empty placeholder that keeps an otherwise-empty folder in version control.</span></li><li><code>site/assets/img/.gitkeep</code><span class="file-desc">An empty placeholder that keeps an otherwise-empty folder in version control.</span></li><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't build pages or sections (that's <code>/twt-html-block-creator</code>)</li><li>Doesn't author design tokens (mirrors the design-system spine, or writes a clearly-marked scaffold)</li><li>Doesn't add any build tooling — pure HTML + CSS, no Node/bundler/SSG</li><li>Doesn't overwrite existing files without confirmation</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>site/</code> exists with <code>index.html</code>, <code>partials/</code> (header/footer/nav), and <code>assets/css/{tokens,general,sections}.css</code></li><li><code>site/assets/css/tokens.css</code> mirrors <code>.twt-artifacts/design/design-system/tokens.css</code> when it exists (else a scaffold marked &quot;replace after design handoff&quot;)</li><li><code>index.html</code> links the three CSS files and contains the header/footer inlined between <code>BEGIN/END partials/...</code> markers</li><li><code>.twt-artifacts/html-site/conventions.md</code> exists and is readable by <code>/twt-html-block-creator</code></li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

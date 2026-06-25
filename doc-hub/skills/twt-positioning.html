@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sharpens how your brand shows up — who it's for, the value it offers, and what to lead with — then reviews it for clarity in one pass. It turns a fuzz">
+  <title>/twt-positioning | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-positioning</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · positioning</p>
+          <h1>/twt-positioning</h1>
+          <p class="lede">Define your positioning — audience, value props, priorities — and validate it in one pass.</p>
+          <div class="fact-row">
+            <span>Version 1.1.4</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Sharpens how your brand shows up — who it's for, the value it offers, and what to lead with — then reviews it for clarity in one pass. It turns a fuzzy idea into a focused message the whole site can rally around.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><code>twt-positioning-define</code><span class="file-desc">Builds or refines the positioning statement with you.</span></li><li><code>twt-positioning-validate</code><span class="file-desc">Checks it for clarity and alignment with the brand.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional; runs define then the bounded validate loop</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>.twt-artifacts/pre-design/positioning/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <p>No files of its own — it orchestrates other skills or reports back to you.</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Dispatches sub-skills (rule 5); no inline logic</li><li>No unbounded loop, no auto-downgrade of severity</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Produces/refines <code>positioning.md</code> + current <code>validation-report.md</code></li><li>Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)</li><li>On exit, states whether BLOCKERs remain</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

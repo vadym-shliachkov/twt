@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="One easy front door for pulling in content you already have. Give it any mix of websites, PDFs, documents, or Figma files and it works out what each o">
+  <title>/twt-content-fetch | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-content-fetch</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · content</p>
+          <h1>/twt-content-fetch</h1>
+          <p class="lede">One entry point for content ingest — detects each source you provide and routes it to the right fetcher.</p>
+          <div class="fact-row">
+            <span>Version 1.1.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>One easy front door for pulling in content you already have. Give it any mix of websites, PDFs, documents, or Figma files and it works out what each one is, sends it to the right reader, and hands you clean, consistent Markdown.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-content-fetch-site.html"><code>/twt-content-fetch-site</code></a><span class="file-desc">Handles any website sources.</span></li><li><a href="../skills/twt-content-fetch-pdf.html"><code>/twt-content-fetch-pdf</code></a><span class="file-desc">Handles any PDF sources.</span></li><li><a href="../skills/twt-content-fetch-doc.html"><code>/twt-content-fetch-doc</code></a><span class="file-desc">Handles any Word or Google Doc sources.</span></li><li><a href="../skills/twt-content-fetch-figma.html"><code>/twt-content-fetch-figma</code></a><span class="file-desc">Handles any Figma sources.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Any mix of site URLs, PDF paths, document paths/URLs, and Figma links</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;provided sources&gt;</code><span class="file-desc">Whatever sources you provide — sites, PDFs, docs, or Figma files.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content-fetch/_manifest.md</code><span class="file-desc">An index of everything that was fetched and where each piece came from.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't fetch anything itself — pure dispatcher (delegates to <code>-site</code> / <code>-pdf</code> / <code>-doc</code> / <code>-figma</code>)</li><li>Doesn't curate, judge, or restructure content (that's the curation step — <code>/twt-curation-define</code>)</li><li>Not a validator — there is no validate step in this sub-area</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Every provided source is routed to exactly one sub-skill</li><li><code>_manifest.md</code> lists each source, its type, the sub-skill used, and the output folder</li><li>Unrecognized sources are reported, not silently skipped</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

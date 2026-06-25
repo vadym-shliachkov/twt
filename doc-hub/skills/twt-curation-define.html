@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Goes through the content you've collected and decides what to keep, skip, or spotlight — then maps each keeper onto a page. You end up with a clear in">
+  <title>/twt-curation-define | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-curation-define</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · curation</p>
+          <h1>/twt-curation-define</h1>
+          <p class="lede">Turn fetched content into a keep/skip/elevate plan plus a per-page outline of what fills each section.</p>
+          <div class="fact-row">
+            <span>Version 1.0.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Goes through the content you've collected and decides what to keep, skip, or spotlight — then maps each keeper onto a page. You end up with a clear inventory plus a per-page outline of what fills every section.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-content-fetch.html"><code>/twt-content-fetch</code></a><span class="file-desc">Pulls in source content to curate when it hasn't been fetched yet.</span></li><li><code>twt-brand-define</code><span class="file-desc">Brings in brand voice so keep/elevate calls match the tone.</span></li><li><a href="../skills/twt-ia-define.html"><code>/twt-ia-define</code></a><span class="file-desc">Brings in the sitemap so content maps onto real pages.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional answers; otherwise interactive</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content-fetch/</code><span class="file-desc">The folder of content pulled in from your sources, all as clean Markdown.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/pre-design/ia/sitemap.md</code><span class="file-desc">The site map — every page, its purpose, and its primary call to action.</span></li><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/outlines/&lt;page-slug&gt;.md</code><span class="file-desc">The section-by-section content outline for a single page.</span></li><li><code>.twt-artifacts/pre-design/curation/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't fetch content (reads content-fetch outputs)</li><li>Doesn't define the sitemap (reads it from IA)</li><li>Doesn't critique itself; never overwrites without consent</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>inventory.md</code> lists every fetched item with a KEEP/SKIP/ELEVATE decision and a target page (or none)</li><li>One <code>outlines/&lt;page-slug&gt;.md</code> exists for each page in <code>sitemap.md</code></li><li>Every outline section carries drafted, on-brand transformed copy (or a <code>&gt; GAP</code> marker) — never a raw source excerpt</li><li>Outlines contain final-intent <strong>transformed copy</strong>, not source excerpts; verbatim-mirrored copy is a curation defect (see <code>twt-curation-validate</code>'s 'Copy transformed not mirrored' criterion)</li><li>Re-run enters refinement mode</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

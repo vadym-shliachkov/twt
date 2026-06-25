@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Builds an Elementor widget or full-page template that matches your theme's existing conventions. It reuses what you already have wherever it can, and ">
+  <title>/twt-elementor-block-creator | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/develop.html">Develop</a><span>/</span><strong>/twt-elementor-block-creator</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Develop · elementor</p>
+          <h1>/twt-elementor-block-creator</h1>
+          <p class="lede">Build an Elementor widget or page template that follows your theme's conventions, reusing what exists.</p>
+          <div class="fact-row">
+            <span>Version 1.2.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Builds an Elementor widget or full-page template that matches your theme's existing conventions. It reuses what you already have wherever it can, and only makes something new when nothing fits.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>widget description or page description</li><li>optional Figma URL</li><li>optional screenshots, staging URLs, or notes</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/elementor-theme/conventions.md</code><span class="file-desc">The build conventions every Elementor widget and template in this project follows.</span></li><li><code>&lt;THEME&gt;/inc/elementor/widgets/</code><span class="file-desc">The PHP classes for the theme's custom widgets.</span></li><li><code>&lt;THEME&gt;/assets/css/design-system.css</code><span class="file-desc">The design tokens compiled into the theme's stylesheet.</span></li><li><code>&lt;THEME&gt;/assets/css/widgets.css</code><span class="file-desc">The CSS for the theme's custom widgets, built from tokens.</span></li><li><code>&lt;THEME&gt;/inc/elementor/class-&lt;slug&gt;-elementor.php</code><span class="file-desc">The PHP class that registers the theme's Elementor integration.</span></li><li><code>.twt-artifacts/design/design-system/tokens.md</code><span class="file-desc">The human-readable token reference — colors, type, spacing, and more.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>&lt;THEME&gt;/inc/elementor/widgets/class-&lt;slug&gt;-&lt;widget&gt;.php</code><span class="file-desc">The PHP class for a single custom Elementor widget.</span></li><li><code>&lt;THEME&gt;/inc/elementor/class-&lt;slug&gt;-elementor.php</code><span class="file-desc">The PHP class that registers the theme's Elementor integration.</span></li><li><code>&lt;THEME&gt;/assets/css/widgets.css</code><span class="file-desc">The CSS for the theme's custom widgets, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/design-system.css</code><span class="file-desc">The design tokens compiled into the theme's stylesheet.</span></li><li><code>&lt;THEME&gt;/assets/js/&lt;widget&gt;.js</code><span class="file-desc">The JavaScript for a custom Elementor widget.</span></li><li><code>&lt;THEME&gt;/wpml-config.xml</code><span class="file-desc">The WPML config that makes the theme's custom fields translatable.</span></li><li><code>&lt;THEME&gt;/import/&lt;page-slug&gt;/import.json</code><span class="file-desc">An Elementor template you can import to recreate a page.</span></li><li><code>&lt;THEME&gt;/import/&lt;page-slug&gt;/assets/</code><span class="file-desc">The assets that accompany an importable page template.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't scaffold the theme itself (requires <code>/twt-elementor-theme-creator</code> to have run first)</li><li>Doesn't rewrite existing widgets without explicit user confirmation</li><li>Doesn't rename or revalue existing CSS custom properties — only appends missing tokens</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>New widget(s) registered in <code>class-&lt;slug&gt;-elementor.php</code> <code>$map</code></li><li>Widget CSS appended in delimited block to <code>widgets.css</code></li><li>New tokens (if any) appended to <code>design-system.css</code> without overwriting existing ones</li><li>WPML config updated when translatable fields are added</li><li>For page builds: <code>import.json</code> produced with referenced assets in the same folder</li><li>Reuse decisions stated explicitly in the run report</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tells you how strong a real design system is and how closely a design actually sticks to it. Point it at a Figma file or live site and it scores the s">
+  <title>/twt-design-system-audit | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-design-system-audit</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Design · design-system</p>
+          <h1>/twt-design-system-audit</h1>
+          <p class="lede">Score a real design system's quality and flag every page and block that drifts from it.</p>
+          <div class="fact-row">
+            <span>Version 1.2.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Tells you how strong a real design system is and how closely a design actually sticks to it. Point it at a Figma file or live site and it scores the system, then names the exact page and block wherever the design drifts — and if no system exists, it works out the one that should have.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-content-fetch-figma.html"><code>/twt-content-fetch-figma</code></a><span class="file-desc">Pulls the design's text and structure from Figma.</span></li><li><code>twt-design-system-define</code><span class="file-desc">Synthesizes the canonical system to measure against when none is provided.</span></li><li><code>twt-design-system-validate</code><span class="file-desc">Scores the system's quality.</span></li><li><a href="../skills/twt-brand.html"><code>/twt-brand</code></a><span class="file-desc">Brings in brand context to judge fit, when it's available.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/design/design-system/tokens.md</code><span class="file-desc">The human-readable token reference — colors, type, spacing, and more.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system-audit/audit-report.html</code><span class="file-desc">The visual audit report — system-quality scores plus every page and block that drifts.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-&lt;page-slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li><li><code>.twt-artifacts/design/design-system-audit/canonical-blocks.md</code><span class="file-desc">The reference set of blocks the design should reuse consistently.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality-report.md</code><span class="file-desc">A readable scorecard of the design system's quality.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality.json</code><span class="file-desc">The raw design-system quality scores.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit.json</code><span class="file-desc">The full machine-readable audit results.</span></li><li><code>.twt-artifacts/design/design-system-audit/blocks.json</code><span class="file-desc">Detected page blocks and how consistently they're used across pages.</span></li><li><code>.twt-artifacts/design/design-system-audit/visuals.json</code><span class="file-desc">Metadata linking each finding to its captured screenshot.</span></li><li><code>.twt-artifacts/design/design-system-audit/pages/</code><span class="file-desc">Per-page audit detail.</span></li><li><code>.twt-artifacts/design/design-system-audit/shots/</code><span class="file-desc">Screenshots captured from the design or site during the audit.</span></li><li><code>.twt-artifacts/design/design-system-audit/previews/</code><span class="file-desc">Generated preview images used in the audit report.</span></li><li><code>.twt-artifacts/design/design-system/</code><span class="file-desc">The synthesized canonical design system, created when none was provided.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Read-only on the source — never edits the audited site or Figma file.</li><li>Doesn't build or fix the design system (that's <code>/twt-design-system-define</code>); it reports. <strong>Exception:</strong> when <strong>no</strong> design system exists, this audit *creates* the canonical <code>.twt-artifacts/design/design-system/</code> (via <code>/twt-design-system-define</code> in analyse-existing mode) so the design has a system to be measured against — it no longer keeps a separate <code>synthesized-design-system/</code> copy. An <strong>existing</strong> DS is audited against, never overwritten.</li><li>Not a content or full-a11y audit (those are the <code>/twt-qa-*</code> skills); contrast is reused only as one metric.</li><li>The deterministic extraction/clustering/scoring/visuals/HTML report are done by the bundled scripts — this skill adds judgment (the *why*, recommendations, the design-taste metrics), it does not re-implement parsing, screenshotting, or report HTML in the model.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>The <strong>headline deliverable</strong> is a multi-page HTML report. <code>audit-report.html</code> is the <strong>homepage</strong>: a scorecard (DS quality /100 when scored, consistency %, drifting-block count), a <strong>design-system review</strong> (token/color/type/space/radius/component stats + the 10-metric scorecard + a swatch row) that reads as part of the audit, and a <strong>list of every page</strong> with its per-page BLOCKER/WARNING/SUGGESTION/OK counts, ordered worst-first and linked. Each page link opens <code>audit-&lt;page-slug&gt;.html</code>, which contains <strong>only that page's blocks</strong> — each as a single <strong>fused card</strong> combining status + reason chips + slimmed deltas (with the nearest token named) + the block <strong>as it looks now next to how it should look</strong> (canonical), both full-width. There is <strong>no separate canonical-component gallery and no separate matrix/findings split</strong> — everything about a block lives in one card. The <code>.md</code> reports remain as machine/diff-friendly companions.</li><li>Block names match the design system: every block carries a <strong>literal name</strong> (e.g. &quot;Hero&quot;, &quot;Diagnostic section&quot;, &quot;Site header&quot;) plus its selector, so the audit and the design system speak the same language.</li><li>Drift is measured against the <strong>design system's token values</strong> (not a per-cluster union); a value that is a token is OK, a raw/off-scale value drifts. Severity is calibrated (raw opaque color = BLOCKER; translucent tint / off-scale spacing-type-radius = WARNING) so the report isn't a wall of BLOCKERs.</li><li>Near-duplicate blocks are collapsed into one canonical block; the divergent instances are flagged, not treated as separate components.</li><li>When no DS is provided, the canonical system is synthesized <strong>into</strong> <code>.twt-artifacts/design/design-system/</code> <strong>and cleaned</strong> (preview/contrast issues fixed) before the audit runs against it; an existing <strong>provided</strong> DS is never clobbered — its issues are reported, not fixed.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

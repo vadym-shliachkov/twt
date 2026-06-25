@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Makes a piece of writing better for you: it scores the original, rewrites it to be clearer and tighter, then shows the before-and-after with the reaso">
+  <title>/twt-content-optimize | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-content-optimize</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · content</p>
+          <h1>/twt-content-optimize</h1>
+          <p class="lede">Score your copy, rewrite it for clarity and brevity, then show the before/after improvement.</p>
+          <div class="fact-row">
+            <span>Version 1.2.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Makes a piece of writing better for you: it scores the original, rewrites it to be clearer and tighter, then shows the before-and-after with the reason behind each change. Let it rewrite everything at once, or walk through the suggestions one by one.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-content-validate.html"><code>/twt-content-validate</code></a><span class="file-desc">Scores the original copy first, so the improvement is measured rather than guessed.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional subject (file path or pasted text); optional mode (auto|manual) and level (light|standard|aggressive)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>the subject text</code><span class="file-desc">The text you want analyzed — a file, pasted text, or an existing content artifact.</span></li><li><code>.twt-artifacts/content/content-config.md</code><span class="file-desc">Settings for content work — which subjects to process and how.</span></li><li><code>.twt-artifacts/content/validation/&lt;subject-slug&gt;/validation-report.md</code><span class="file-desc">A scored UX-writing critique of the text, with evidence per criterion.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/content/subject/&lt;subject-slug&gt;.md</code><span class="file-desc">A captured copy of the text being analyzed or optimized.</span></li><li><code>.twt-artifacts/content/optimized/&lt;subject-slug&gt;.md</code><span class="file-desc">The rewritten, improved version of a piece of text.</span></li><li><code>.twt-artifacts/content/validation/&lt;subject-slug&gt;/validation-report-before.md</code><span class="file-desc">The text-quality critique captured before optimization.</span></li><li><code>.twt-artifacts/content/validation/&lt;subject-slug&gt;/validation-report-after.md</code><span class="file-desc">The text-quality critique captured after optimization, to show the gain.</span></li><li><code>.twt-artifacts/content/optimization-report.md</code><span class="file-desc">A before/after summary of the copy improvements and the reasoning behind each one.</span></li><li><code>.twt-artifacts/content/content-config.md</code><span class="file-desc">Settings for content work — which subjects to process and how.</span></li><li><code>the subject file in place</code><span class="file-desc">Your original text file, updated in place — only with your explicit consent.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't invent facts, change business logic, or alter numbers/dates/prices/legal wording without explicit instruction</li><li>Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in <code>.twt-artifacts/content/optimized/</code> first</li><li>Doesn't re-implement the rubric — scoring is dispatched to <code>/twt-content-validate</code> (rule 5)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>optimization-report.md</code> shows a before/after Scorecard delta (per criterion and total Health) plus a change log explaining each edit and the criterion it serves</li><li>In manual mode, nothing is applied before the user decides (keep / apply all / apply selected / apply + switch to auto), via <code>AskUserQuestion</code></li><li>&quot;Switch to auto&quot; persists <code>content_review_mode: auto</code> to <code>.twt-artifacts/content/content-config.md</code> and later runs honor it</li><li>Guardrails hold: meaning, facts, and legal/compliance wording survive verbatim unless the user explicitly allowed changes</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

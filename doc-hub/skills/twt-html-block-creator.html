@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Adds a static HTML page or a single section to your site, reusing shared partials and styling with tokens only. It can promote a finished mockup or bu">
+  <title>/twt-html-block-creator | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/develop.html">Develop</a><span>/</span><strong>/twt-html-block-creator</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Develop · html</p>
+          <h1>/twt-html-block-creator</h1>
+          <p class="lede">Build a static HTML page or section into your site, reusing partials and styling with tokens only.</p>
+          <div class="fact-row">
+            <span>Version 1.1.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Adds a static HTML page or a single section to your site, reusing shared partials and styling with tokens only. It can promote a finished mockup or build fresh from Figma, screenshots, or notes.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>page or section description; optional Figma URL; optional Phase-2 mockup/layout; screenshots/notes</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li><li><code>.twt-artifacts/design/component/components.md</code><span class="file-desc">Detailed specs for every UI component — anatomy, variants, states, and tokens.</span></li><li><code>site/partials/</code><span class="file-desc">Shared HTML partials reused across every page.</span></li><li><code>site/assets/css/</code><span class="file-desc">The site's stylesheets.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>site/&lt;page-slug&gt;.html</code><span class="file-desc">A built page of the site.</span></li><li><code>site/assets/css/sections.css</code><span class="file-desc">Reusable section styles, built from tokens.</span></li><li><code>site/assets/css/general.css</code><span class="file-desc">Site-wide base styles, built from tokens.</span></li><li><code>site/assets/js/&lt;section-slug&gt;.js</code><span class="file-desc">The JavaScript for a specific section.</span></li><li><code>site/assets/img/</code><span class="file-desc">The site's image assets.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't scaffold the site (requires <code>/twt-html-site-creator</code> to have run first)</li><li>Doesn't add a build step or runtime include mechanism — partials are inlined at build time</li><li>Doesn't author or revalue tokens — references the mirrored <code>tokens.css</code>; adds a missing token via <code>/twt-design-system-define</code>, never a literal</li><li>Doesn't use lorem/placeholder where real content exists</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Page written to <code>site/&lt;page-slug&gt;.html</code>, linking <code>assets/css/{tokens,general,sections}.css</code>, with header/footer inlined between <code>BEGIN/END partials/...</code> markers</li><li>New section CSS appended to <code>sections.css</code> as a delimited, scoped, token-only block with the responsive tiers</li><li>On a partial change, every existing page re-inlined so chrome never drifts</li><li>Reuse decision (reuse / extend / create) stated in the report</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

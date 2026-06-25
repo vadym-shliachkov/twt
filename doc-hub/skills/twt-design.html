@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Runs your whole design phase — design system, components, page layouts, and mockups — and ties it all into one brief that's ready to hand to developme">
+  <title>/twt-design | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-design</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Design · design</p>
+          <h1>/twt-design</h1>
+          <p class="lede">Run the full design phase — system, components, layouts, mockups — into one handoff-ready brief.</p>
+          <div class="fact-row">
+            <span>Version 1.2.6</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Runs your whole design phase — design system, components, page layouts, and mockups — and ties it all into one brief that's ready to hand to development. It's the quickest way to get from a pre-design brief to a design you can actually build.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-design-system.html"><code>/twt-design-system</code></a><span class="file-desc">Establishes tokens and components — the shared spine every page is built on.</span></li><li><a href="../skills/twt-component-define.html"><code>/twt-component-define</code></a> or <a href="../skills/twt-component-validate.html"><code>/twt-component-validate</code></a><span class="file-desc">Specs each UI component, then checks it for reuse, state coverage, and accessibility.</span></li><li><a href="../skills/twt-layout-define.html"><code>/twt-layout-define</code></a> or <a href="../skills/twt-layout-validate.html"><code>/twt-layout-validate</code></a><span class="file-desc">Specs each page's layout, then reviews hierarchy and responsive intent.</span></li><li><a href="../skills/twt-mockup-define.html"><code>/twt-mockup-define</code></a> or <a href="../skills/twt-mockup-validate.html"><code>/twt-mockup-validate</code></a><span class="file-desc">Renders real-content mockups, then checks them for fidelity and accessibility.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system/tokens.md</code><span class="file-desc">The human-readable token reference — colors, type, spacing, and more.</span></li><li><code>.twt-artifacts/design/component/components.md</code><span class="file-desc">Detailed specs for every UI component — anatomy, variants, states, and tokens.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li><li><code>.twt-artifacts/design/mockup/index.html</code><span class="file-desc">A review index linking to every rendered page mockup.</span></li><li><code>.twt-artifacts/design/design-system/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/design/component/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/design/layout/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/design/mockup/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/pre-design/spec/specification.md</code><span class="file-desc">The north-star spec describing what you're building and why.</span></li><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>references/external-design-skills.md</code><span class="file-desc">Notes on the external design skills this skill leans on.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-brief.md</code><span class="file-desc">The Phase-2 handoff brief — design system, components, layouts, and mockups tied together for development.</span></li><li><code>.twt-artifacts/design/design-read.md</code><span class="file-desc">The agreed visual direction and design 'dials' that steer the whole design phase.</span></li><li><code>.twt-artifacts/design/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't do development or QA (later phases)</li><li>Doesn't reproduce sub-area logic — dispatches the design-system orchestrator, or (for component, layout, mockup, which have no standalone command) their <code>*-define</code> / <code>*-validate</code> sub-skills directly (rule 5)</li><li>The brief is a static synthesis, not a live transition skill</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Each requested sub-area runs in order: design-system → component → layout → mockup</li><li><code>--from &lt;area&gt;</code> resumes from a sub-area; <code>--only &lt;area&gt;</code> scopes to one</li><li><code>design-brief.md</code> summarizes the system, components, layouts, and mockups with links to every artifact, and surfaces any outstanding BLOCKERs</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

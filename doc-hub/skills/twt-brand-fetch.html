@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Gathers the brand clues already sitting in a source you hand it — a brand book PDF, a Figma file, screenshots, or a live site — and saves them as raw ">
+  <title>/twt-brand-fetch | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-brand-fetch</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · brand</p>
+          <h1>/twt-brand-fetch</h1>
+          <p class="lede">Pull existing brand signals from a brand book, Figma, screenshots, or a live site into raw notes.</p>
+          <div class="fact-row">
+            <span>Version 1.0.0</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Gathers the brand clues already sitting in a source you hand it — a brand book PDF, a Figma file, screenshots, or a live site — and saves them as raw notes. Those notes give the brand-define step a running start instead of a blank page.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>A brand book (PDF), Figma URL, screenshots, or a live site URL</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;brand source&gt;</code><span class="file-desc">The brand source you point it at — a brand book, Figma file, screenshots, or a live site.</span></li><li><code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/index.md</code><span class="file-desc">The cleaned Markdown text extracted from a PDF.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/_fetched-brand.md</code><span class="file-desc">Raw brand notes pulled from a source (brand book, Figma, site), used as the starting point for the brief.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't produce the canonical <code>brand-brief.md</code> (that's <code>/twt-brand-define</code>)</li><li>Doesn't invent brand attributes when the source is silent — records gaps instead</li><li>Doesn't validate quality (that's <code>/twt-brand-validate</code>)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>_fetched-brand.md</code> captures every brand attribute found, tagged with where it came from</li><li>Missing attributes are explicitly listed as gaps</li><li>Runs without prompting when dispatched by <code>/twt-brand</code></li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

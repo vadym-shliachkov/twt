@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="The express lane to a built site: starting from a Figma link, it sets up your design system, builds the content-approval workbook, scaffolds your targ">
+  <title>/twt-site-dev | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-site-dev</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · site-dev</p>
+          <h1>/twt-site-dev</h1>
+          <p class="lede">The express path — from a Figma link, build the design system and jump straight to development.</p>
+          <div class="fact-row">
+            <span>Version 1.5.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>The express lane to a built site: starting from a Figma link, it sets up your design system, builds the content-approval workbook, scaffolds your target, and dives straight into building pages — skipping the full pre-design and design phases. Auto mode runs the whole thing without questions.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><code>twt-design-system-define</code><span class="file-desc">Builds or mirrors the design system from your Figma link so everything downstream shares one source of truth.</span></li><li><a href="../skills/twt-content-approval-checklist.html"><code>/twt-content-approval-checklist</code></a><span class="file-desc">Creates the approval workbook so placeholder copy gets replaced with signed-off content.</span></li><li><a href="../skills/twt-html-site-creator.html"><code>/twt-html-site-creator</code></a> or <a href="../skills/twt-elementor-theme-creator.html"><code>/twt-elementor-theme-creator</code></a><span class="file-desc">Scaffolds your chosen build target once before any pages are built.</span></li><li><a href="../skills/twt-html-block-creator.html"><code>/twt-html-block-creator</code></a> or <a href="../skills/twt-elementor-block-creator.html"><code>/twt-elementor-block-creator</code></a><span class="file-desc">Builds each page or widget into the scaffold.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu</li><li>Optional first token <code>auto</code> — fully unattended run; everything after it is free-form context (Figma URL required, target hints, notes)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li><li><code>.twt-artifacts/elementor-theme/conventions.md</code><span class="file-desc">The build conventions every Elementor widget and template in this project follows.</span></li><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/site-dev-log.md</code><span class="file-desc">A running log of each /twt-site-dev run — questions, answers, and the skill chosen per step.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't run pre-design or design phases (use <code>/twt-pre-design</code> / <code>/twt-design</code> for those)</li><li>Doesn't reproduce design-system / scaffold / builder logic — dispatches each via the Agent tool (rule 5)</li><li>Doesn't replace an existing design system — extends it (tokens are never revalued)</li><li>Auto mode never grants destructive consents (in-place replacement, overwriting user-confirmed targets) — children write to artifacts and the scaffold only</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Target chosen (HTML or Elementor) via menu — or, in auto mode, inferred from the context/existing scaffold with the inference logged</li><li>Auto mode asks <strong>nothing</strong> (no AskUserQuestion, no prompts); a missing Figma URL aborts with a clear message instead of prompting</li><li><code>/twt-design-system-define</code> runs in analyse-existing mode from the Figma link (spine created or updated)</li><li><code>/twt-content-approval-checklist</code> creates or reuses <code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code> before development</li><li>The target's scaffold is ensured (created if its <code>conventions.md</code> is missing — theme-creator before block-creator for Elementor)</li><li>The matching builder is dispatched to start page/block development</li><li>Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs <code>/twt-content-approval-implement</code> to update corresponding blocks/pages</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

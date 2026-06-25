@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Takes scattered notes, links, file paths, and constraints and turns them into one clean brief the pipeline can actually read. Every later phase gets a">
+  <title>/twt-project-intake | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-project-intake</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · intake</p>
+          <h1>/twt-project-intake</h1>
+          <p class="lede">Turn messy project notes and links into a clean site-instruction brief the pipeline can read.</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Takes scattered notes, links, file paths, and constraints and turns them into one clean brief the pipeline can actually read. Every later phase gets a reliable, editable starting point instead of guessing from the mess.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>Messy project notes, URLs, Figma links, document paths, constraints, or <code>--from &lt;path&gt;</code></li><li>Optional <code>--root</code> to write <code>site-instruction.md</code> at the project root instead of <code>.twt-artifacts/site-instruction.md</code></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>.twt-artifacts/site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>.twt-artifacts/pre-design/pre-design-brief.md</code><span class="file-desc">The Phase-1 handoff brief — brand, positioning, structure, and content plan rolled into one design-ready document.</span></li><li><code>.twt-artifacts/design/design-brief.md</code><span class="file-desc">The Phase-2 handoff brief — design system, components, layouts, and mockups tied together for development.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>.twt-artifacts/intake/intake-report.md</code><span class="file-desc">A summary of how your raw notes were turned into the brief, with every assumption flagged.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Does not run <code>/twt-site</code>, fetch source content, build pages, or validate downstream artifacts</li><li>Does not silently overwrite an existing instruction file</li><li>Does not invent binding project decisions when the notes are ambiguous; it records open questions instead</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Writes a structured <code>site-instruction.md</code> covering intake, sources, phase choices, Figma approach, build target, and per-phase guidance when those can be inferred</li><li>Preserves ambiguous or missing inputs as explicit open questions instead of hiding them</li><li>If an instruction file already exists, enters refinement mode and merges new notes without discarding previous user decisions</li><li>Ends with a concise report naming the file written, major inferred decisions, open questions, and the suggested next <code>/twt-site</code> command</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Turns your approved design into real, production-ready code. It builds one foundation page first to lock in reusable patterns, then powers through the">
+  <title>/twt-develop | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/develop.html">Develop</a><span>/</span><strong>/twt-develop</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Develop · develop</p>
+          <h1>/twt-develop</h1>
+          <p class="lede">Promote the approved design into production code — a foundation page first, then the rest in parallel.</p>
+          <div class="fact-row">
+            <span>Version 1.3.4</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Turns your approved design into real, production-ready code. It builds one foundation page first to lock in reusable patterns, then powers through the rest in parallel — keeping your content-approval list moving alongside.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-html-site-creator.html"><code>/twt-html-site-creator</code></a> or <a href="../skills/twt-elementor-theme-creator.html"><code>/twt-elementor-theme-creator</code></a><span class="file-desc">Scaffolds your chosen build target once.</span></li><li><a href="../skills/twt-html-block-creator.html"><code>/twt-html-block-creator</code></a> or <a href="../skills/twt-elementor-block-creator.html"><code>/twt-elementor-block-creator</code></a><span class="file-desc">Builds a foundation page first to set the patterns, then the rest in parallel.</span></li><li><a href="../skills/twt-content-approval-checklist.html"><code>/twt-content-approval-checklist</code></a><span class="file-desc">Keeps the content-approval list running alongside the build.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional --target html|elementor (else menu); optional page scope</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-brief.md</code><span class="file-desc">The Phase-2 handoff brief — design system, components, layouts, and mockups tied together for development.</span></li><li><code>.twt-artifacts/design/mockup/index.html</code><span class="file-desc">A review index linking to every rendered page mockup.</span></li><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/design/mockup/*.html</code><span class="file-desc">A rendered HTML page mockup.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li><li><code>.twt-artifacts/design/layout/*.md</code><span class="file-desc">A per-page layout spec.</span></li><li><code>.twt-artifacts/design/component/components.md</code><span class="file-desc">Detailed specs for every UI component — anatomy, variants, states, and tokens.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/assets/manifest.md</code><span class="file-desc">An inventory of the images and assets the design references.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>site/assets/css/sections.css</code><span class="file-desc">Reusable section styles, built from tokens.</span></li><li><code>site/assets/css/general.css</code><span class="file-desc">Site-wide base styles, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/widgets.css</code><span class="file-desc">The CSS for the theme's custom widgets, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/design-system.css</code><span class="file-desc">The design tokens compiled into the theme's stylesheet.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't do QA (Phase 4)</li><li>Doesn't reproduce builder/scaffolder logic — dispatches each via the Agent tool (rule 5)</li><li>Doesn't start from Figma — that's the express path, <code>/twt-site-dev</code></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Target chosen (HTML or Elementor); the target's scaffold is ensured (created if its <code>conventions.md</code> is missing)</li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code> is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically</li><li>Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests</li><li>A <strong>foundation page</strong> is promoted first (serial) to seed reuse; it doubles as a <strong>pilot</strong> that the user reviews at a gate before the remaining pages are built — so a wrong direction is caught after 1 page, not after all of them</li><li>After the pilot is approved, the remaining pages are promoted as a <strong>single parallel batch</strong>, then their shared-file deltas are merged and de-duplicated serially</li><li>Approved workbook rows are <strong>not</strong> applied by this skill; after stakeholder confirmation, the user explicitly runs <code>/twt-content-approval-implement</code> to update the corresponding blocks/pages</li><li>Reports what was built per page and anything to follow up before Phase 4</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

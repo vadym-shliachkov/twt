@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Sets up the foundation every page stands on — colors, type, spacing, and components — either from scratch or by studying designs you already have, the">
+  <title>/twt-design-system | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-design-system</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Design · design-system</p>
+          <h1>/twt-design-system</h1>
+          <p class="lede">Define or analyze your design system and validate it in a single pass — the shared spine for every phase.</p>
+          <div class="fact-row">
+            <span>Version 1.2.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Sets up the foundation every page stands on — colors, type, spacing, and components — either from scratch or by studying designs you already have, then checks it for consistency. This is the shared reference that design, development, and QA all point back to.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><code>twt-design-system-define</code><span class="file-desc">Builds or analyzes the tokens, components, and preview.</span></li><li><code>twt-design-system-validate</code><span class="file-desc">Runs a read-only critique, including a WCAG contrast gate.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system/tokens.md</code><span class="file-desc">The human-readable token reference — colors, type, spacing, and more.</span></li><li><code>.twt-artifacts/design/design-system/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/component/components.md</code><span class="file-desc">Detailed specs for every UI component — anatomy, variants, states, and tokens.</span></li><li><code>.twt-artifacts/design/component/gallery.html</code><span class="file-desc">An interactive gallery rendering each component with all its variants and states.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)</li><li>Doesn't loop unbounded or auto-downgrade severity</li><li>Not required for standalone use — each sub-skill works on its own</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Produces/refines <code>tokens.md</code>, <code>tokens.css</code>, a <strong>tokens-only</strong> <code>preview.html</code> (the component catalog lives in the gallery, linked from preview) and a current <code>validation-report.md</code></li><li><strong>Standalone runs also build the component catalog</strong> (<code>component/components.md</code> + <code>gallery.html</code>) via <code>/twt-component-define</code>, so &quot;the design system&quot; is complete in one call. In <strong>collect mode</strong> this is skipped — the parent orchestrator (<code>/twt-design</code>, <code>/twt-site</code>) owns the component step, so the catalog is built exactly once.</li><li>Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)</li><li>On exit, states final Band + Health and whether BLOCKERs remain</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

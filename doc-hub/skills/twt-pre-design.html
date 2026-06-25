@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Runs your entire pre-design phase — pulling in content, then defining brand, positioning, structure, and a content plan — and rolls it all into one br">
+  <title>/twt-pre-design | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-pre-design</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · pre-design</p>
+          <h1>/twt-pre-design</h1>
+          <p class="lede">Run the full pre-design phase — content, brand, positioning, IA, curation — into one handoff brief.</p>
+          <div class="fact-row">
+            <span>Version 1.2.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Runs your entire pre-design phase — pulling in content, then defining brand, positioning, structure, and a content plan — and rolls it all into one brief ready for design. It's the fastest path from messy project notes to a solid foundation.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-content-fetch.html"><code>/twt-content-fetch</code></a><span class="file-desc">Pulls in any existing copy first, so every later step works from real material instead of guesses.</span></li><li><a href="../skills/twt-brand.html"><code>/twt-brand</code></a><span class="file-desc">Defines the brand voice and visual cues the rest of the site leans on.</span></li><li><a href="../skills/twt-spec.html"><code>/twt-spec</code></a><span class="file-desc">Captures the north-star spec when the project needs an explicit one.</span></li><li><a href="../skills/twt-positioning.html"><code>/twt-positioning</code></a><span class="file-desc">Sharpens who the site is for and what to promote.</span></li><li><a href="../skills/twt-ia-define.html"><code>/twt-ia-define</code></a> or <a href="../skills/twt-ia-validate.html"><code>/twt-ia-validate</code></a><span class="file-desc">Lays out the sitemap and scope, then checks it for gaps.</span></li><li><a href="../skills/twt-curation-define.html"><code>/twt-curation-define</code></a> or <a href="../skills/twt-curation-validate.html"><code>/twt-curation-validate</code></a><span class="file-desc">Decides what content to keep and maps it onto pages, then reviews the plan.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/pre-design/spec/specification.md</code><span class="file-desc">The north-star spec describing what you're building and why.</span></li><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>.twt-artifacts/pre-design/ia/sitemap.md</code><span class="file-desc">The site map — every page, its purpose, and its primary call to action.</span></li><li><code>.twt-artifacts/pre-design/ia/functional-scope.md</code><span class="file-desc">The features, integrations, and functionality each page needs.</span></li><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/outlines/</code><span class="file-desc">Per-page outlines showing which content fills each section.</span></li><li><code>.twt-artifacts/pre-design/brand/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/pre-design/spec/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/pre-design/positioning/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/pre-design/ia/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li><li><code>.twt-artifacts/pre-design/curation/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/pre-design-brief.md</code><span class="file-desc">The Phase-1 handoff brief — brand, positioning, structure, and content plan rolled into one design-ready document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't do design, development, or QA (later phases)</li><li>Doesn't reproduce sub-area logic — dispatches each sub-area's orchestrator, or (for IA + curation, which have no standalone command) their <code>*-define</code> / <code>*-validate</code> sub-skills directly (rule 5)</li><li>The brief is a static synthesis, not a live transition skill</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Each requested sub-area runs in order A → (B ∥ S) → D → E → C — Brand and Spec run concurrently (disjoint inputs and outputs); Positioning waits for both</li><li><code>--from &lt;area&gt;</code> resumes from a sub-area; <code>--only &lt;area&gt;</code> scopes to one</li><li><code>pre-design-brief.md</code> summarizes brand, the north-star spec/direction, positioning, IA, and curation with links to every detailed artifact</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

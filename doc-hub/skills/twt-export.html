@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Makes polished, on-brand documents and decks straight from your Markdown — PDF, Word, or slides — all from one guided command. It asks what you want, ">
+  <title>/twt-export | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-export</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · export</p>
+          <h1>/twt-export</h1>
+          <p class="lede">Create polished exports — PDF, DOCX, or slides — from a single guided command.</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Makes polished, on-brand documents and decks straight from your Markdown — PDF, Word, or slides — all from one guided command. It asks what you want, sets up a template if you need one, then runs the right export.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-export-template-create.html"><code>/twt-export-template-create</code></a><span class="file-desc">Sets up a reusable template first when you don't already have one.</span></li><li><a href="../skills/twt-export-pdf.html"><code>/twt-export-pdf</code></a> or <a href="../skills/twt-export-docx.html"><code>/twt-export-docx</code></a> or <a href="../skills/twt-export-presentation.html"><code>/twt-export-presentation</code></a><span class="file-desc">Runs the export you chose — PDF, Word, or slides.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>.twt-artifacts/export/templates/*/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/*/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li><li><code>tools/export-source-create.mjs</code><span class="file-desc">The helper that prepares a Markdown source for export.</span></li><li><code>tools/export-document.mjs</code><span class="file-desc">The script that renders Markdown into DOCX/PDF documents.</span></li><li><code>tools/export-presentation.mjs</code><span class="file-desc">The script that renders Markdown into slide decks.</span></li><li><code>tools/export-template-create.mjs</code><span class="file-desc">The helper that builds a reusable export template.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/export/sources/&lt;source-slug&gt;.md</code><span class="file-desc">The Markdown source prepared for export.</span></li><li><code>.twt-artifacts/export/sources/&lt;source-slug&gt;.notes.md</code><span class="file-desc">Notes captured about an export source.</span></li><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished, on-brand PDF document.</span></li><li><code>.twt-artifacts/export/docx/&lt;source-slug&gt;/&lt;source-slug&gt;.docx</code><span class="file-desc">The finished, on-brand Word document.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pptx</code><span class="file-desc">The finished slide deck in PowerPoint format.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished slide deck as a PDF.</span></li><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/preview-notes.md</code><span class="file-desc">Notes about a template preview.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't convert files directly inside the orchestrator</li><li>Doesn't create both document and presentation outputs unless the user explicitly runs separate exports</li><li>Doesn't overwrite sources, templates, or outputs without explicit user consent</li><li>Doesn't duplicate logic from <code>/twt-export-pdf</code>, <code>/twt-export-docx</code>, <code>/twt-export-presentation</code>, or <code>/twt-export-template-create</code></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>With no <code>$ARGUMENTS</code>, uses AskUserQuestion to choose output type before asking for source and template choices</li><li>Allows either an existing Markdown file or new source instructions</li><li>Offers only templates relevant to the selected output type, plus built-in default and create-new options</li><li>If creating a template, dispatches <code>/twt-export-template-create</code> first and then proceeds with the export</li><li>Delegates source creation to <code>tools/export-source-create.mjs</code></li><li>Delegates final conversion to the relevant child export skill, which delegates to <code>tools/export-document.mjs</code> or <code>tools/export-presentation.mjs</code></li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="twt skills documentation hub">
+  <title>Home | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="index.html">Home</a>
+        <a href="blocks/general.html">General</a><a href="blocks/pre-design.html">Pre-design</a><a href="blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+    <section class="hero">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">A local field guide for the twt workflow</p>
+        <h1>Find the right twt skill for the job.</h1>
+        <p class="lede">Explore the marketplace by phase, see what every command expects, and understand what each one leaves behind.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="blocks/pre-design.html">Start with Pre-design</a>
+          <a class="button ghost" href="blocks/general.html">View utilities</a>
+        </div>
+      </div>
+      <div class="hero-mark reveal" aria-hidden="true">
+        <span class="logo-pair hero-logo">
+          <img class="logo-dark" src="assets/logo.svg" alt="">
+          <img class="logo-light" src="assets/logo-light.svg" alt="">
+        </span>
+        <div class="orbit one"></div>
+        <div class="orbit two"></div>
+        <div class="terminal-card">
+          <span>/twt-site auto</span>
+          <span>pre-design -> design -> develop -> qa</span>
+        </div>
+      </div>
+    </section>
+    <section class="section-band">
+      <div class="section-title reveal">
+        <h2>Pick the part of the pipeline you are working in.</h2>
+      </div>
+      <div class="phase-grid">
+        <a class="phase-card reveal" href="blocks/general.html">
+    <img src="assets/previews/blocks/general.svg" alt="General preview">
+    
+    <span class="phase-meta"><span>Utilities</span><span class="pill">Ready</span></span>
+    <strong>General</strong>
+    <p>Cross-cutting helpers for setup, full-pipeline orchestration, exports, docs, status checks, and search.</p></a><a class="phase-card reveal" href="blocks/pre-design.html">
+    <img src="assets/previews/blocks/pre-design.svg" alt="Pre-design preview">
+    
+    <span class="phase-meta"><span>Phase 1</span><span class="pill">Ready</span></span>
+    <strong>Pre-design</strong>
+    <p>Shape the raw project signal into a practical brief: intake, content, brand, positioning, IA, and curation.</p></a><a class="phase-card reveal" href="blocks/design.html">
+    <img src="assets/previews/blocks/design.svg" alt="Design preview">
+    
+    <span class="phase-meta"><span>Phase 2</span><span class="pill">Ready</span></span>
+    <strong>Design</strong>
+    <p>Turn the brief into a design spine: tokens, component behavior, layouts, mockups, and design-system checks.</p></a><div class="phase-card is-disabled reveal" aria-disabled="true">
+    <img src="assets/previews/blocks/develop.svg" alt="Develop preview">
+    <span class="tape" aria-hidden="true"><span>Coming soon * Coming soon * Coming soon</span></span>
+    <span class="phase-meta"><span>Phase 3</span><span class="pill soon">Coming soon</span></span>
+    <strong>Develop</strong>
+    <p>Promote approved design into build targets: static HTML, Elementor widgets, themes, and implementation passes.</p></div><div class="phase-card is-disabled reveal" aria-disabled="true">
+    <img src="assets/previews/blocks/qa.svg" alt="QA preview">
+    <span class="tape" aria-hidden="true"><span>Coming soon * Coming soon * Coming soon</span></span>
+    <span class="phase-meta"><span>Phase 4</span><span class="pill soon">Coming soon</span></span>
+    <strong>QA</strong>
+    <p>Audit the built work for accessibility, content fidelity, links, responsive risks, and design-token hygiene.</p></div>
+      </div>
+    </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>

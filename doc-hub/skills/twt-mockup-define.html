@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Renders each page layout into a real, responsive HTML/CSS mockup filled with your actual content, plus an index to flip through them all. It's the hig">
+  <title>/twt-mockup-define | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-mockup-define</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Design · mockup</p>
+          <h1>/twt-mockup-define</h1>
+          <p class="lede">Render each layout into a responsive, real-content HTML/CSS mockup with a review index.</p>
+          <div class="fact-row">
+            <span>Version 1.2.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Renders each page layout into a real, responsive HTML/CSS mockup filled with your actual content, plus an index to flip through them all. It's the high-fidelity preview of how the finished site will look.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional: which page(s) to (re)render; otherwise all layouts</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li><li><code>.twt-artifacts/design/component/components.md</code><span class="file-desc">Detailed specs for every UI component — anatomy, variants, states, and tokens.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/pre-design/spec/specification.md</code><span class="file-desc">The north-star spec describing what you're building and why.</span></li><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/outlines/</code><span class="file-desc">Per-page outlines showing which content fills each section.</span></li><li><code>.twt-artifacts/design/design-read.md</code><span class="file-desc">The agreed visual direction and design 'dials' that steer the whole design phase.</span></li><li><code>references/external-design-skills.md</code><span class="file-desc">Notes on the external design skills this skill leans on.</span></li><li><code>.twt-artifacts/design/mockup/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/design/mockup/index.html</code><span class="file-desc">A review index linking to every rendered page mockup.</span></li><li><code>.twt-artifacts/design/mockup/styles.css</code><span class="file-desc">The shared stylesheet powering the mockups, built from design tokens.</span></li><li><code>.twt-artifacts/design/mockup/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li><li><code>.twt-artifacts/design/assets/manifest.md</code><span class="file-desc">An inventory of the images and assets the design references.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't create production WordPress/Elementor output (Phase 3)</li><li>Doesn't introduce new colour/type/spacing primitives — those come from <code>tokens.css</code></li><li>Doesn't use lorem/placeholder where real Phase-1 content exists</li><li>Doesn't shell out to transform the HTML it writes — <strong>no <code>perl -pe</code>/<code>sed -i</code> in-place edits, no <code>cat &gt; x.mjs &lt;&lt;EOF … node x.mjs</code> heredoc scripts, no <code>cmd1 &amp;&amp; cmd2</code> chains</strong>. Edit pages with the <strong>Edit</strong> tool and read them with Read/Glob/Grep; those throwaway shell forms trip the obfuscation guard and prompt the user on every run, whereas the file tools are silent. (E.g. to swap an em-dash for a middot across pages, use Edit per file, not a <code>perl</code> loop.)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>One <code>pages/&lt;page-slug&gt;.html</code> per layout, linking <code>../design-system/tokens.css</code> and <code>../styles.css</code> (relative to <code>pages/</code>)</li><li>All three breakpoints handled in CSS; real content from outlines/inventory</li><li><code>index.html</code> links every page mockup</li><li>Idempotent: re-renders only requested pages, refines (reading <code>validation-report.md</code>) (rule 10)</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

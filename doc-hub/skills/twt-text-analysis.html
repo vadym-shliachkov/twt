@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Splits your text into logical blocks and scores each on eleven quality metrics — including whether the claims are actually backed up — then offers a s">
+  <title>/twt-text-analysis | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-text-analysis</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · content</p>
+          <h1>/twt-text-analysis</h1>
+          <p class="lede">Score text block by block on 11 quality metrics and suggest rewrites — analysis only, never applied.</p>
+          <div class="fact-row">
+            <span>Version 1.2.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Splits your text into logical blocks and scores each on eleven quality metrics — including whether the claims are actually backed up — then offers a stronger version where it helps. It only analyzes; actually applying a change is a separate, deliberate step.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional subject (file path or pasted text); optional scope hint</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>the subject text</code><span class="file-desc">The text you want analyzed — a file, pasted text, or an existing content artifact.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/content/text-analysis/&lt;subject-slug&gt;/analysis-report.md</code><span class="file-desc">A block-by-block text-quality score with suggested rewrites.</span></li><li><code>.twt-artifacts/content/text-analysis/&lt;subject-slug&gt;/optimized.md</code><span class="file-desc">A suggested stronger rewrite produced during text analysis.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li><strong>Never applies changes.</strong> It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not &quot;switch to auto-apply.&quot; Implementing the suggested copy is a <strong>different call</strong> — <code>/twt-content-optimize</code> (rewrite a text file) or <code>/twt-content-approval-implement</code> (push approved content into the build). This skill stops at the report.</li><li>Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules — these still bind the *suggested* versions it writes)</li><li>Doesn't do the pipeline's content <strong>curation</strong> (keep/skip/elevate) — that's <code>/twt-curation-define</code>; this skill judges the <strong>writing quality</strong> of given text</li><li>Doesn't audit IA/sitemap coverage or built-page lorem (that's <code>/twt-qa-content</code>)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>The content is split into independently-scored <strong>blocks</strong> (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)</li><li>Each block carries all <strong>11 metric scores (0–100%)</strong> + a weighted <strong>Overall (0–100)</strong>, a <strong>Weaknesses</strong> list, a <strong>Recommendation</strong> keyed to the rewrite threshold, and a <strong>Suggested Version</strong> only when a rewrite is warranted (a block scoring ≥ 85 carries <strong>no</strong> Suggested Version block at all)</li><li>Slogan-style or &quot;bold statement&quot; copy that asserts a problem or benefit <strong>without any proof</strong> (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the <strong>Substantiation</strong> metric makes the critique bite instead of rewarding punchy emptiness</li><li>Two artifacts are written and <strong>nothing else changes</strong>: <code>analysis-report.md</code> (the scored critique) and <code>optimized.md</code> (the suggested rewrites assembled into one document, clearly labelled as *proposed, not applied*). The subject file is left untouched in every mode.</li><li>The suggested versions honor the Rewrite rules: meaning, facts, and legal wording survive verbatim; missing facts are flagged with <code>&gt; NEEDS:</code> markers, never invented</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

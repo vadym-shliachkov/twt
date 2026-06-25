@@ -15,6 +15,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 let raw = '';
 try { raw = fs.readFileSync(0, 'utf8'); } catch {}
@@ -74,9 +75,24 @@ if (bumped.length) {
 }
 
 if (bumped.length) {
+  // Auto-regenerate derived docs (SKILLS.md, architecture.md, README table).
+  const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+  const genDocs = path.join(root, 'tools', 'gen-docs.mjs');
+  let docsResult = '';
+  try {
+    const r = spawnSync(process.execPath, [genDocs], { cwd: root, encoding: 'utf8', timeout: 30000 });
+    if (r.status === 0) {
+      docsResult = 'docs synced';
+    } else {
+      docsResult = 'docs sync failed (run /twt-marketplace-docs manually)';
+    }
+  } catch {
+    docsResult = 'docs sync failed (run /twt-marketplace-docs manually)';
+  }
+
   const parts = [`Auto-bumped skill version: ${bumped.join(', ')}`];
   if (pluginBumped.length) parts.push(`plugin: ${pluginBumped.join(', ')}`);
-  parts.push('(run /twt-marketplace-docs to sync docs)');
+  parts.push(docsResult);
   process.stdout.write(JSON.stringify({ systemMessage: parts.join(' · ') }));
 }
 process.exit(0);

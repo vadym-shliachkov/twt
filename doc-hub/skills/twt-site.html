@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Runs the whole twt pipeline — pre-design through QA — as one guided command. Pick the phases and build target up front, then approve, redo, or stop at">
+  <title>/twt-site | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-site</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · site</p>
+          <h1>/twt-site</h1>
+          <p class="lede">Run the entire pipeline — pre-design to QA — as one guided command with approval pauses between phases.</p>
+          <div class="fact-row">
+            <span>Version 1.12.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Runs the whole twt pipeline — pre-design through QA — as one guided command. Pick the phases and build target up front, then approve, redo, or stop at each pause along the way; or kick off auto mode and let it run hands-free.</p>
+  </section>
+        <section class="detail-panel wide reveal">
+    <h2>Skills it runs, in order</h2>
+    <p class="panel-note">This skill is an orchestrator — it dispatches the skills below (via the Agent tool) rather than doing their work itself. Here's each one, in the order it runs, and why.</p>
+    <ol class="sequence"><li><a href="../skills/twt-pre-design.html"><code>/twt-pre-design</code></a><span class="file-desc">Lays the foundation: gathers content and defines brand, positioning, structure, and a content plan before any design starts.</span></li><li><a href="../skills/twt-design.html"><code>/twt-design</code></a><span class="file-desc">Turns that brief into a design system, components, layouts, and mockups ready to build.</span></li><li><a href="../skills/twt-text-analysis.html"><code>/twt-text-analysis</code></a><span class="file-desc">Runs a text-quality pass on the new copy so weak writing is caught before it's built.</span></li><li><a href="../skills/twt-content-approval-checklist.html"><code>/twt-content-approval-checklist</code></a><span class="file-desc">Builds the approval workbook so every page's real content is signed off before development.</span></li><li><a href="../skills/twt-develop.html"><code>/twt-develop</code></a><span class="file-desc">Promotes the approved design into real code for your chosen build target.</span></li><li><a href="../skills/twt-qa.html"><code>/twt-qa</code></a><span class="file-desc">Audits the finished build for accessibility, content, links, and design fidelity.</span></li><li><a href="../skills/twt-site-dev.html"><code>/twt-site-dev</code></a><span class="file-desc">Used instead of the full pre-design + design path when you start from a finished design or Figma link.</span></li></ol>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>Optional <code>site-instruction.md</code> (project root or <code>.twt-artifacts/</code>) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits</li><li>Optional notes, a live URL, or a hint of which phase to start from</li><li>Optional first token <code>auto</code> — fully unattended run; everything after it is free-form context (notes, URLs, target hints)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>.twt-artifacts/site-instruction.md</code><span class="file-desc">The single normalized brief that drives the whole pipeline: goals, pages, constraints, and source links.</span></li><li><code>.twt-artifacts/pre-design/pre-design-brief.md</code><span class="file-desc">The Phase-1 handoff brief — brand, positioning, structure, and content plan rolled into one design-ready document.</span></li><li><code>.twt-artifacts/design/design-brief.md</code><span class="file-desc">The Phase-2 handoff brief — design system, components, layouts, and mockups tied together for development.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li><li><code>.twt-artifacts/qa/qa-report.md</code><span class="file-desc">The rolled-up QA verdict — pass/fail across every audit that ran.</span></li><li><code>.twt-artifacts/qa/gaps.md</code><span class="file-desc">A plain-language punch-list of everything left to fix.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/site-log.md</code><span class="file-desc">A running log of each /twt-site run — questions, answers, and the skill chosen per step.</span></li><li><code>.twt-artifacts/pre-design/phase-review.md</code><span class="file-desc">A consolidated review of this phase's outputs.</span></li><li><code>.twt-artifacts/design/phase-review.md</code><span class="file-desc">A consolidated review of this phase's outputs.</span></li><li><code>.twt-artifacts/&lt;html-site|elementor-theme&gt;/phase-review.md</code><span class="file-desc">A consolidated review of this phase's outputs.</span></li><li><code>.twt-artifacts/reports/index.html</code><span class="file-desc">A dashboard linking to every phase's headline report.</span></li><li><code>.twt-artifacts/reports/</code><span class="file-desc">Copies of the headline report from each phase, gathered in one place.</span></li><li><code>.twt-artifacts/content/text-analysis/</code><span class="file-desc">Per-subject text-quality analysis output.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't reproduce any phase's logic — dispatches each phase wrapper via the Agent tool (rule 5)</li><li>Doesn't add build or QA capability — only composes the existing wrappers</li><li>Doesn't auto-proceed past BLOCKERs in interactive mode — the human approves every phase transition (auto mode defers them to the final summary instead)</li><li>Auto mode never grants destructive consents (in-place file replacement, overwrite of user-confirmed targets) — children keep writing to artifacts only</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Interactive: phase set chosen via an AskUserQuestion multi-select; build target via an AskUserQuestion single-select; after each phase an AskUserQuestion gate (Proceed / Re-run / Stop) that surfaces outstanding BLOCKERs</li><li>Each phase writes a <code>phase-review.md</code> split into <strong>Needs your decision</strong> (BLOCKING/OPTIONAL, with the owning sub-skill) and a read-only <strong>Assessment</strong>; all reviews are folded into a consolidated, on-brand <strong><code>.twt-artifacts/reports/index.html</code></strong> dashboard (open decisions surfaced at the top) regenerated by <code>gen-report.mjs</code></li><li>Open decisions are answered via the AskUserQuestion picker, written back to the owning <code>decisions.md</code>, then — <strong>confirm-before-rerun (interactive)</strong> / auto (unattended) — only the affected <code>Owner</code> <code>*-define</code>(+validate) is re-run in a single scoped pass (never the whole phase, never a loop)</li><li>Auto (<code>auto</code> first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged</li><li>Figma is a <strong>design source</strong>, not a build target: when a Figma link is provided, a dedicated <strong>Figma-approach</strong> question (Express vs. Design source) decides whether Pre-design + Design are skipped; the build target (HTML/Elementor) is asked separately. Express routes Development through <code>/twt-site-dev</code></li><li>The content-approval workbook (<code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code>) is created or reused <strong>automatically whenever both Pre-design and Design run</strong> (even when Development is not selected) <strong>or</strong> when Development is selected; approved rows are applied later only when the user explicitly runs <code>/twt-content-approval-implement</code></li><li>An optional <strong><code>site-instruction.md</code></strong> (project root or <code>.twt-artifacts/</code>) is read first when present: its values pre-fill the intake, phase set, Figma approach, build target, and per-phase guidance, and the orchestrator asks only for what the file leaves unspecified</li><li>Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

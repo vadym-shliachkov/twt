@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Rebuilds the marketplace's reference docs — the skills index, architecture map, and README table — straight from each skill's definition. Docs auto-regenerate at session end via the Stop hook; run this for an on-demand refresh or CI check.">
+  <title>/twt-marketplace-docs | twt skills</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
+    } catch {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
+        <span class="theme-toggle-indicator" aria-hidden="true"></span>
+        <span class="theme-option theme-option-dark">Dark</span>
+        <span class="theme-option theme-option-light">Light</span>
+      </button>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-marketplace-docs</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · meta</p>
+          <h1>/twt-marketplace-docs</h1>
+          <p class="lede">Regenerate SKILLS.md, architecture.md, and the README table from every skill's frontmatter.</p>
+          <div class="fact-row">
+            <span>Version 1.0.3</span>
+            <span>Arguments: no</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Rebuilds the marketplace's reference docs — the skills index, architecture map, and README table — straight from each skill's definition. Docs auto-regenerate at session end via the Stop hook; run this for an on-demand refresh or to check for drift in CI.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>(none)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>commands/*.md</code><span class="file-desc">Every skill's command definition, read to regenerate the docs.</span></li><li><code>skills/*/SKILL.md</code><span class="file-desc">Every sub-skill's definition, read to regenerate the docs.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>SKILLS.md</code><span class="file-desc">The auto-generated command reference for the marketplace.</span></li><li><code>architecture.md</code><span class="file-desc">The auto-generated map of how the skills fit together.</span></li><li><code>README.md</code><span class="file-desc">The repo README — only the auto-managed skills table inside it is updated.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't modify skill body content — only stamps the <code>description:</code> frontmatter field and rewrites generated files</li><li>Doesn't validate skill body content — only frontmatter</li><li>Doesn't create per-category README files (those no longer exist)</li><li>Doesn't enforce strict lint rules — only warns about missing required fields</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>SKILLS.md</code> lists every skill found, sorted alphabetically, with the <code>(vX.Y.Z)</code> version stripped from the displayed description</li><li><code>architecture.md</code> contains a current mermaid diagram of skill dependencies plus a per-skill detail table</li><li>Validation warnings printed for any skill missing required frontmatter fields</li><li>Every auto-generated file starts with the AUTO-GENERATED header</li><li>Root <code>README.md</code> marked block (if present) is updated</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
