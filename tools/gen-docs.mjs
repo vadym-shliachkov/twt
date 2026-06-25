@@ -387,6 +387,18 @@ else targets.push(rb);
 const repoCrlf = existsSync(join(ROOT, "SKILLS.md")) && readFileSync(join(ROOT, "SKILLS.md"), "utf8").includes("\r\n");
 const withEol = (s, crlf) => (crlf ? s.replace(/\n/g, "\r\n") : s);
 
+// Bump plugin patch version in plugin.json + marketplace.json whenever any
+// skill stamp changed (same commit, no separate re-stamp commits needed).
+if (stampStale && !CHECK) {
+  for (const rel of [".claude-plugin/plugin.json", ".claude-plugin/marketplace.json"]) {
+    const fp = join(ROOT, rel);
+    if (!existsSync(fp)) continue;
+    const src = readFileSync(fp, "utf8");
+    const bumped = src.replace(/"version":\s*"(\d+)\.(\d+)\.(\d+)"/, (_, a, b, c) => `"version": "${a}.${b}.${+c + 1}"`);
+    if (bumped !== src) { writeFileSync(fp, bumped); console.log(`  bumped: ${rel}`); }
+  }
+}
+
 let stale = 0;
 for (const t of targets) {
   const cur = existsSync(t.p) ? readFileSync(t.p, "utf8") : null;
