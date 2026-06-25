@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Rebuilds the marketplace's reference docs — the skills index, architecture map, and README table — straight from each skill's definition. Run it after">
-  <title>/twt-marketplace-docs | twt skills</title>
+  <meta name="description" content="Takes a playwright screenshot of any HTML file or live URL — either the whole page or a single element you name with a CSS selector. It also runs in b">
+  <title>/twt-block-preview | twt skills</title>
   <script>
     try {
       document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
@@ -44,44 +44,44 @@
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong>/twt-marketplace-docs</strong>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-block-preview</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
-          <p class="eyebrow">General · meta</p>
-          <h1>/twt-marketplace-docs</h1>
-          <p class="lede">Regenerate SKILLS.md, architecture.md, and the README table from every skill's frontmatter.</p>
+          <p class="eyebrow">Design · design-system</p>
+          <h1>/twt-block-preview</h1>
+          <p class="lede">Screenshot any HTML page or element with a CSS selector — full page, a clipped region, or a batch of audit blocks in one go.</p>
           <div class="fact-row">
-            <span>Version 1.0.3</span>
-            <span>Arguments: no</span>
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
           </div>
         </div>
       </section>
       <section class="detail-grid">
         <section class="detail-panel wide reveal">
     <h2>Purpose</h2>
-    <p>Rebuilds the marketplace's reference docs — the skills index, architecture map, and README table — straight from each skill's definition. Run it after you change any skill so the docs never drift out of sync.</p>
+    <p>Takes a playwright screenshot of any HTML file or live URL — either the whole page or a single element you name with a CSS selector. It also runs in batch mode to capture every flagged block in a design-system audit, producing the thumbnails shown in the visual report. When playwright isn't installed it falls through to self-contained HTML previews that render faithfully without a browser.</p>
   </section>
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>(none)</p>
+    <ul><li>A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags</li><li>OR --audit &lt;dir&gt; to run batch block-capture for an existing audit dir</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>commands/*.md</code><span class="file-desc">Every skill's command definition, read to regenerate the docs.</span></li><li><code>skills/*/SKILL.md</code><span class="file-desc">Every sub-skill's definition, read to regenerate the docs.</span></li></ul>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>&lt;audit-dir&gt;/audit.json</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>SKILLS.md</code><span class="file-desc">The auto-generated command reference for the marketplace.</span></li><li><code>architecture.md</code><span class="file-desc">The auto-generated map of how the skills fit together.</span></li><li><code>README.md</code><span class="file-desc">The repo README — only the auto-managed skills table inside it is updated.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/screenshots/&lt;slug&gt;.png</code><span class="file-desc">A generated file.</span></li><li><code>.twt-artifacts/screenshots/&lt;slug&gt;-&lt;sel&gt;.png</code><span class="file-desc">A generated file.</span></li><li><code>&lt;audit-dir&gt;/visuals.json</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>&lt;audit-dir&gt;/shots/*.png</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>&lt;audit-dir&gt;/previews/*.html</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Doesn't modify skill body content — only stamps the <code>description:</code> frontmatter field and rewrites generated files</li><li>Doesn't validate skill body content — only frontmatter</li><li>Doesn't create per-category README files (those no longer exist)</li><li>Doesn't enforce strict lint rules — only warns about missing required fields</li></ul>
+    <ul><li>Does not analyse or score the screenshot — purely a capture tool</li><li>Does not modify the audited site or Figma file</li><li>Does not replace the HTML-embed fallback (<code>ds-shots.mjs</code> handles that internally in batch mode)</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li><code>SKILLS.md</code> lists every skill found, sorted alphabetically, with the <code>(vX.Y.Z)</code> version stripped from the displayed description</li><li><code>architecture.md</code> contains a current mermaid diagram of skill dependencies plus a per-skill detail table</li><li>Validation warnings printed for any skill missing required frontmatter fields</li><li>Every auto-generated file starts with the AUTO-GENERATED header</li><li>Root <code>README.md</code> marked block (if present) is updated</li></ul>
+    <ul><li>Standalone: a PNG exists at the reported path; if a selector was given, only that element is captured</li><li>Batch: <code>visuals.json</code> is written to the audit dir; the summary line reports screenshot / embed / missing counts</li></ul>
   </section>
       </section>
   </main>

@@ -52,7 +52,7 @@
           <h1>/twt-design-system</h1>
           <p class="lede">Define or analyze your design system and validate it in a single pass — the shared spine for every phase.</p>
           <div class="fact-row">
-            <span>Version 1.2.1</span>
+            <span>Version 1.3.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -85,7 +85,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Produces/refines <code>tokens.md</code>, <code>tokens.css</code>, a <strong>tokens-only</strong> <code>preview.html</code> (the component catalog lives in the gallery, linked from preview) and a current <code>validation-report.md</code></li><li><strong>Standalone runs also build the component catalog</strong> (<code>component/components.md</code> + <code>gallery.html</code>) via <code>/twt-component-define</code>, so &quot;the design system&quot; is complete in one call. In <strong>collect mode</strong> this is skipped — the parent orchestrator (<code>/twt-design</code>, <code>/twt-site</code>) owns the component step, so the catalog is built exactly once.</li><li>Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)</li><li>On exit, states final Band + Health and whether BLOCKERs remain</li></ul>
+    <ul><li>Produces/refines <code>tokens.md</code>, <code>tokens.css</code>, a <strong>tokens-only</strong> <code>preview.html</code> (the component catalog lives in the gallery, linked from preview) and a current <code>validation-report.md</code></li><li>Always builds the full component catalog (<code>component/components.md</code> + <code>gallery.html</code>) via <code>/twt-component-define</code> — in every mode, standalone or collect. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.</li><li>Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)</li><li>On exit, states final Band + Health and whether BLOCKERs remain</li></ul>
   </section>
       </section>
   </main>
