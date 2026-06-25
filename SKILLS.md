@@ -54,7 +54,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout |
+| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
@@ -1896,7 +1896,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.11.4
+**Version:** 1.12.0
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -1941,7 +1941,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - Open decisions are answered via the AskUserQuestion picker, written back to the owning `decisions.md`, then — **confirm-before-rerun (interactive)** / auto (unattended) — only the affected `Owner` `*-define`(+validate) is re-run in a single scoped pass (never the whole phase, never a loop)
 - Auto (`auto` first token): no AskUserQuestion and no prompts anywhere — phases/target inferred, gates auto-proceed, child decisions auto-resolved and logged
 - Figma is a **design source**, not a build target: when a Figma link is provided, a dedicated **Figma-approach** question (Express vs. Design source) decides whether Pre-design + Design are skipped; the build target (HTML/Elementor) is asked separately. Express routes Development through `/twt-site-dev`
-- When Development is selected, `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or reused as a parallel approval artifact; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
+- The content-approval workbook (`.twt-artifacts/content-approval/content-approval-checklist.xlsx`) is created or reused **automatically whenever both Pre-design and Design run** (even when Development is not selected) **or** when Development is selected; approved rows are applied later only when the user explicitly runs `/twt-content-approval-implement`
 - An optional **`site-instruction.md`** (project root or `.twt-artifacts/`) is read first when present: its values pre-fill the intake, phase set, Figma approach, build target, and per-phase guidance, and the orchestrator asks only for what the file leaves unspecified
 - Ends with a summary of phases run, artifact locations, the QA verdict, the gaps file — and, in auto mode, every auto-decision taken and every deferred BLOCKER
 

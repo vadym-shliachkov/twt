@@ -279,7 +279,7 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development)
 
 ### site-dev
 
@@ -1831,7 +1831,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.11.4
+**Version:** 1.12.0
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits

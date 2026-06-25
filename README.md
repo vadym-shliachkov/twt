@@ -88,7 +88,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-qa-links | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | /twt-search-site | search | Search a website for an exact string; report page links with ±100 chars of context per match |
 | /twt-setup | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and a prominent content-approval callout |
+| /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
