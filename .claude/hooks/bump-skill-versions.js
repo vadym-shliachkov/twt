@@ -75,24 +75,46 @@ if (bumped.length) {
 }
 
 if (bumped.length) {
-  // Auto-regenerate derived docs (SKILLS.md, architecture.md, README table).
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+  // Auto-regenerate derived docs (SKILLS.md, architecture.md, README table).
   const genDocs = path.join(root, 'tools', 'gen-docs.mjs');
   let docsResult = '';
   try {
     const r = spawnSync(process.execPath, [genDocs], { cwd: root, encoding: 'utf8', timeout: 30000 });
-    if (r.status === 0) {
-      docsResult = 'docs synced';
-    } else {
-      docsResult = 'docs sync failed (run /twt-marketplace-docs manually)';
-    }
+    docsResult = r.status === 0 ? 'docs synced' : 'docs sync failed (run /twt-marketplace-docs manually)';
   } catch {
     docsResult = 'docs sync failed (run /twt-marketplace-docs manually)';
+  }
+
+  // Auto-commit the bumped files so the next session never opens with uncommitted
+  // version changes. Only add the specific files this hook touched — nothing else.
+  let commitResult = '';
+  try {
+    const addTargets = [
+      ...files,                                                          // bumped skill files
+      path.join(root, '.claude-plugin', 'plugin.json'),
+      path.join(root, '.claude-plugin', 'marketplace.json'),
+      path.join(root, 'SKILLS.md'),
+      path.join(root, 'architecture.md'),
+      path.join(root, 'README.md'),
+    ].filter(fp => { try { return require('fs').existsSync(fp); } catch { return false; } });
+    const ra = spawnSync('git', ['add', '--', ...addTargets], { cwd: root, encoding: 'utf8' });
+    if (ra.status === 0) {
+      const msg = `chore: auto-bump ${bumped.join(', ')}${pluginBumped.length ? ' + ' + pluginBumped.join(', ') : ''}`;
+      const rc = spawnSync('git', ['commit', '-m', msg], { cwd: root, encoding: 'utf8' });
+      commitResult = rc.status === 0 ? 'committed' : (rc.stderr || '').trim() || 'commit failed';
+    } else {
+      commitResult = 'git add failed';
+    }
+  } catch (e) {
+    commitResult = 'commit failed: ' + (e && e.message);
   }
 
   const parts = [`Auto-bumped skill version: ${bumped.join(', ')}`];
   if (pluginBumped.length) parts.push(`plugin: ${pluginBumped.join(', ')}`);
   parts.push(docsResult);
+  parts.push(commitResult);
   process.stdout.write(JSON.stringify({ systemMessage: parts.join(' · ') }));
 }
 process.exit(0);
