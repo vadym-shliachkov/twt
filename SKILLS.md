@@ -8,6 +8,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 
 | command | category | description |
 |---------|----------|-------------|
+| [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
@@ -61,6 +62,44 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes |
 
 ---
+## /twt-block-preview
+
+**Category:** design-system
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Take a playwright-powered screenshot of any HTML file or live URL — either the whole page or a specific CSS-selector element. Also runs as a batch block-capture step for a design-system audit directory, producing `visuals.json` consumed by `ds-audit-report.mjs`.
+
+**Inputs:**
+- A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags
+- OR --audit <dir> to run batch block-capture for an existing audit dir
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-audit
+
+**Reads:**
+- $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
+- <audit-dir>/audit.json  (batch mode only)
+
+**Writes:**
+- .twt-artifacts/screenshots/<slug>.png          (standalone, no selector)
+- .twt-artifacts/screenshots/<slug>-<sel>.png    (standalone, with selector)
+- <audit-dir>/visuals.json                        (batch mode)
+- <audit-dir>/shots/*.png                         (batch mode — playwright)
+- <audit-dir>/previews/*.html                     (batch mode — HTML-embed fallback)
+
+**Non-goals:**
+- Does not analyse or score the screenshot — purely a capture tool
+- Does not modify the audited site or Figma file
+- Does not replace the HTML-embed fallback (`ds-shots.mjs` handles that internally in batch mode)
+
+**Success criteria:**
+- Standalone: a PNG exists at the reported path; if a selector was given, only that element is captured
+- Batch: `visuals.json` is written to the audit dir; the summary line reports screenshot / embed / missing counts
+
+---
+
 ## /twt-brand
 
 **Category:** brand

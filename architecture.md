@@ -8,6 +8,7 @@ Auto-generated dependency and artifact map. For editorial workflows, see [WORKFL
 
 ```mermaid
 flowchart TB
+    twt_block_preview["/twt-block-preview"]:::skill
     twt_brand["/twt-brand"]:::skill
     twt_brand_define["/twt-brand-define"]:::skill
     twt_brand_fetch["/twt-brand-fetch"]:::skill
@@ -67,6 +68,7 @@ flowchart TB
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
     twt_text_analysis["/twt-text-analysis"]:::skill
+    twt_design_system_audit -.-> twt_block_preview
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -203,6 +205,7 @@ flowchart TB
 
 ### design-system
 
+- /twt-block-preview - Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
 - /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
 - /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
@@ -296,6 +299,36 @@ flowchart TB
 - /twt-status - Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
 
 ## Per-skill details
+
+### /twt-block-preview
+
+**Category:** design-system
+**Version:** 1.0.0
+
+**Inputs:**
+- A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags
+- OR --audit <dir> to run batch block-capture for an existing audit dir
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-design-system-audit
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
+- <audit-dir>/audit.json  (batch mode only)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/screenshots/<slug>.png          (standalone, no selector) |  |
+| .twt-artifacts/screenshots/<slug>-<sel>.png    (standalone, with selector) |  |
+| <audit-dir>/visuals.json                        (batch mode) |  |
+| <audit-dir>/shots/*.png                         (batch mode — playwright) |  |
+| <audit-dir>/previews/*.html                     (batch mode — HTML-embed fallback) |  |
 
 ### /twt-brand
 
@@ -843,7 +876,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-block-preview
 
 **Reads:**
 - $ARGUMENTS (figma URL, site URL, tokens path, --brand)
@@ -2030,6 +2063,7 @@ flowchart TB
 
 | Skill | Hard deps | Soft deps |
 |-------|-----------|-----------|
+| /twt-block-preview | none | twt-design-system-audit |
 | /twt-brand | none | twt-brand-fetch, twt-brand-define, twt-brand-validate |
 | /twt-brand-define | none | twt-brand-fetch |
 | /twt-brand-fetch | none | twt-content-fetch-pdf, figma-mcp, WebFetch |
@@ -2105,6 +2139,7 @@ flowchart TB
   pre-design/
   qa/
   reports/
+  screenshots/
   search/
   site-dev-log.md/
   site-instruction.md/
