@@ -212,6 +212,79 @@ for (const s of surfaceSet) {
   }
 }
 
+// ---- color palette split: primitive (raw value) vs semantic (var() alias) ---
+const primitiveColors = colorTokens.filter((t) => !/^\s*var\s*\(/.test(t.raw));
+const semanticColors  = colorTokens.filter((t) =>  /^\s*var\s*\(/.test(t.raw));
+// Sort primitives lightest → darkest so the palette reads as a tonal ramp.
+primitiveColors.sort((a, b) => relLum(b.color) - relLum(a.color));
+
+// Near-duplicate detection within the primitive palette (Euclidean RGB distance).
+// Two colors within 22/255 (~8.6%) are visually near-identical and flag a
+// consolidation opportunity (e.g. --color-bg-section vs --color-accent-pale).
+function rgbDist(c1, c2) {
+  return Math.sqrt((c1.r - c2.r) ** 2 + (c1.g - c2.g) ** 2 + (c1.b - c2.b) ** 2);
+}
+const NEAR_DUP_DIST = 22;
+const primNearDups = new Map();
+for (let i = 0; i < primitiveColors.length; i++) {
+  for (let j = i + 1; j < primitiveColors.length; j++) {
+    if (rgbDist(primitiveColors[i].color, primitiveColors[j].color) <= NEAR_DUP_DIST) {
+      const na = primitiveColors[i].name, nb = primitiveColors[j].name;
+      if (!primNearDups.has(na)) primNearDups.set(na, []);
+      if (!primNearDups.has(nb)) primNearDups.set(nb, []);
+      primNearDups.get(na).push(nb);
+      primNearDups.get(nb).push(na);
+    }
+  }
+}
+
+// Semantic token grouping by purpose — ordered so the most common groups appear first.
+const SEM_GROUPS = [
+  { key: 'bg',     label: 'Background & Surface', re: /\b(bg|background|surface|canvas|page|section)\b/i },
+  { key: 'text',   label: 'Text & Ink',            re: /\b(text|ink|body|label|heading|caption|muted|on)\b/i },
+  { key: 'border', label: 'Border & Rule',         re: /\b(border|rule|divide|separator|outline|line)\b/i },
+  { key: 'accent', label: 'Accent & Brand',        re: /\b(accent|brand|primary|secondary|cta|interactive|link)\b/i },
+  { key: 'state',  label: 'State & Feedback',      re: /\b(active|focus|hover|disabled|error|success|warning|danger|info|alert)\b/i },
+];
+const semBuckets = new Map([...SEM_GROUPS.map((g) => [g.key, []]), ['other', []]]);
+for (const t of semanticColors) {
+  let placed = false;
+  for (const g of SEM_GROUPS) { if (g.re.test(t.name)) { semBuckets.get(g.key).push(t); placed = true; break; } }
+  if (!placed) semBuckets.get('other').push(t);
+}
+
+function swatchPrimitive(t) {
+  const dups = primNearDups.get(t.name);
+  const dupTag = dups && dups.length
+    ? `<span class="gp-dup">≈ near-dup: ${dups.map((n) => esc(n)).join(', ')}</span>` : '';
+  return `<div class="gp-sw${dups ? ' gp-sw-dup' : ''}">` +
+    `<div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>${dupTag}</div></div>`;
+}
+function swatchSemantic(t) {
+  const am = t.raw.match(/var\(\s*(--[\w-]+)\s*\)/);
+  return `<div class="gp-sw gp-sw-sem">` +
+    `<div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>` +
+    (am ? `<span class="gp-alias">→ ${esc(am[1])}</span>` : '') +
+    `</div></div>`;
+}
+function renderColorSection() {
+  const primHtml = `
+  <h4 class="gp-sub2">Basic palette <span class="gp-cnt">${primitiveColors.length} raw colors</span></h4>
+  <p class="gp-legend">All unique raw color values on this site, sorted lightest → darkest. Every semantic token below references one of these. Near-identical primitives are flagged — consider consolidating.</p>
+  <div class="gp-swatches">${primitiveColors.map(swatchPrimitive).join('')}${gradientTokens.map(gradientSwatch).join('')}</div>`;
+  if (!semanticColors.length) return primHtml;
+  const semHtml = [...SEM_GROUPS.map((g) => ({ label: g.label, items: semBuckets.get(g.key) })), { label: 'Other', items: semBuckets.get('other') }]
+    .filter((g) => g.items.length > 0)
+    .map((g) => `<h5 class="gp-sub3">${esc(g.label)}</h5><div class="gp-swatches">${g.items.map(swatchSemantic).join('')}</div>`)
+    .join('');
+  return primHtml + `
+  <h4 class="gp-sub2">Semantic tokens by purpose <span class="gp-cnt">${semanticColors.length} aliases</span></h4>
+  <p class="gp-legend">Purpose-mapped aliases — each → shows which basic palette color it references. All semantic tokens reuse primitives; no new raw values are introduced here.</p>
+  ${semHtml}`;
+}
+
 // ---- component inventory (Tiers 2–4) ----------------------------------------
 // Parse the first-column bold names + composition note from the §3.2/3.3/3.4
 // tables of components.md (preferred) or tokens.md (fallback). Section numbers
@@ -258,7 +331,7 @@ const tier1 = `
   <p class="gp-legend">The subatomic particles — every design token, rendered live from <code>tokens.css</code>. Everything above is built only from these.</p>
 
   <h3 class="gp-sub">Color</h3>
-  <div class="gp-swatches">${colorTokens.map(swatch).join('')}${gradientTokens.map(gradientSwatch).join('')}</div>
+  ${renderColorSection()}
 
   <h3 class="gp-sub">Contrast (WCAG, intended text/surface pairs)</h3>
   ${renderContrast()}
@@ -396,7 +469,15 @@ const html = `<!doctype html>
   .gp-chip{display:block;height:72px;width:100%}
   .gp-meta{padding:8px 10px;font-size:.78rem}
   .gp-meta b{display:block}
-  .gp-meta span{color:var(--color-label, #888);word-break:break-all}
+  .gp-meta span{color:var(--color-label, #888);word-break:break-all;display:block}
+  /* color palette hierarchy */
+  .gp-sub2{font-size:.88rem;margin:24px 0 6px;font-weight:700;color:var(--color-label,#444)}
+  .gp-sub3{font-size:.75rem;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-label,#888)}
+  .gp-cnt{font-size:.72rem;font-weight:400;letter-spacing:0;color:var(--color-label,#aaa);margin-left:6px}
+  .gp-alias{font-size:.72rem;color:var(--color-label,#888);font-style:italic;margin-top:2px}
+  .gp-sw-dup .gp-chip{outline:2px solid #f59e0b;outline-offset:-2px}
+  .gp-dup{display:block;font-size:.7rem;color:#b45309;margin-top:3px}
+  .gp-sw-sem{opacity:.95}
   .gp-ct{border-collapse:collapse;font-size:.82rem;margin:8px 0}
   .gp-ct th,.gp-ct td{border:1px solid var(--border, #e5e5e5);padding:6px 10px;text-align:left}
   .gp-pass{color:#1a7f37}.gp-warn{color:#9a6700}.gp-fail{color:#c01724}.gp-na{color:#888}

@@ -1,27 +1,35 @@
 #!/usr/bin/env node
-// ds-shots.mjs — block visuals for /twt-design-system-audit (v2).
+// ds-shots.mjs — block visuals for /twt-design-system-audit (v3).
 //
 // Reads audit.json, picks a bounded target set (one canonical example per
 // cluster + every itemized finding instance) and produces a thumbnail per
 // target so the HTML report can show the block being criticized:
 //
-//   • Playwright path — if `import('playwright')` succeeds AND Chromium
+//   • Playwright path  — if `import('playwright')` succeeds AND Chromium
 //     launches: goto(page) once per page, then element-screenshot each block
-//     → shots/<cluster>-<n>.png.
-//   • Fallback path  — no Playwright (or a capture failed): slice the block's
-//     outer HTML out of the crawler-saved pages/<slug>.html and wrap it with a
-//     <base href> + the page's own stylesheets → previews/<cluster>-<n>.html,
-//     which renders faithfully inside a sandboxed iframe.
+//     → shots/<cluster>-<n>.png. Skipped when --html-only is passed.
+//   • HTML-embed path  — slice the block's outer HTML out of the crawler-saved
+//     pages/<slug>.html, fetch each linked stylesheet and INLINE it as a
+//     <style> block (so the iframe renders faithfully without cross-origin
+//     requests), add 20px body padding, and save as previews/<cluster>-<n>.html
+//     inside a sandboxed iframe. Used for blocks Playwright didn't capture.
+//
+// Flags:
+//   --out <dir>          audit output directory (default: .twt-artifacts/design/design-system-audit)
+//   --max-shots N        cap on targets (default: 400)
+//   --html-only          skip Playwright entirely; use HTML-embed for every block
 //
 // Writes visuals.json: { <vid>: { page, block, cluster, kind:"png"|"html",
 // path } } (value is null when neither path could produce anything). Never
 // throws on a missing block — degrades to "no thumbnail" for that target.
 //
 // Zero hard deps (Playwright is optional). Usage:
-//   node ds-shots.mjs --out <auditDir> [--max-shots N]
+//   node ds-shots.mjs --out <auditDir> [--max-shots N] [--html-only]
 
 import fs from 'node:fs';
 import path from 'node:path';
+import https from 'node:https';
+import http from 'node:http';
 
 // ── args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -37,6 +45,7 @@ for (let i = 0; i < argv.length; i++) {
 }
 const OUT = flags.out ? String(flags.out) : '.twt-artifacts/design/design-system-audit';
 const MAX_SHOTS = flags['max-shots'] ? parseInt(flags['max-shots'], 10) || 400 : 400;
+const htmlOnly = Boolean(flags['html-only']);
 
 function log(msg) { console.error('ds-shots: ' + msg); }
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
@@ -89,6 +98,32 @@ function extractBlockHtml(html, sel) {
   return null;
 }
 
+// ── stylesheet fetching + caching ─────────────────────────────────────────
+const styleCache = new Map(); // url → css string | null
+
+async function fetchText(url) {
+  return new Promise((resolve) => {
+    try {
+      const mod = url.startsWith('https') ? https : http;
+      const req = mod.get(url, { timeout: 8000 }, (res) => {
+        if (res.statusCode !== 200) { res.resume(); resolve(null); return; }
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      });
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+    } catch { resolve(null); }
+  });
+}
+
+async function fetchStylesheet(url) {
+  if (styleCache.has(url)) return styleCache.get(url);
+  const css = await fetchText(url);
+  styleCache.set(url, css);
+  return css;
+}
+
 // ── target set ──────────────────────────────────────────────────────────────
 function buildTargets(audit) {
   const seen = new Set();
@@ -115,8 +150,8 @@ function namer() {
   return (cluster) => { n[cluster] = (n[cluster] || 0) + 1; return cluster + '-' + n[cluster]; };
 }
 
-// ── fallback: embedded-HTML preview ──────────────────────────────────────────
-function writePreview(target, audit, previewsDir, name) {
+// ── HTML-embed preview (with inlined stylesheets) ─────────────────────────
+async function writePreview(target, audit, previewsDir, name) {
   const meta = (audit.page_stylesheets || {})[target.page];
   const slug = meta ? meta.slug : slugify(target.page);
   const pageFile = path.join(OUT, 'pages', slug + '.html');
@@ -124,19 +159,27 @@ function writePreview(target, audit, previewsDir, name) {
   const html = fs.readFileSync(pageFile, 'utf8');
   const outer = extractBlockHtml(html, target.block);
   if (!outer) return null;
-  const links = (meta && meta.stylesheets ? meta.stylesheets : [])
-    .map((h) => `<link rel="stylesheet" href="${h}">`).join('\n  ');
+
+  // Fetch and inline each stylesheet so the iframe is fully self-contained —
+  // no cross-origin requests needed, no sandbox blocking.
+  const urls = (meta && meta.stylesheets) ? meta.stylesheets : [];
+  const styleBlocks = (await Promise.all(
+    urls.map(async (u) => {
+      const css = await fetchStylesheet(u);
+      return css ? `<style>\n/* inlined: ${u} */\n${css}\n</style>` : '';
+    }),
+  )).filter(Boolean);
+
   const doc = `<!doctype html>
 <html><head>
   <meta charset="utf-8">
   <base href="${target.page}">
-  ${links}
+  ${styleBlocks.join('\n  ')}
   <style>
-    html,body{margin:0;background:#fff}
+    html,body{margin:0;padding:20px;background:#fff}
     *{box-sizing:border-box}
     img,svg,video,canvas{max-width:100%;height:auto}
-    /* The block is lifted out of its parent layout container; restore a sane
-       content width so full-bleed sections don't render edge-glued/zero-width. */
+    /* Block lifted out of its parent — restore a sane content width */
     body>*{max-width:1200px;margin-inline:auto}
   </style>
 </head><body>
@@ -202,13 +245,19 @@ function cssFromSel(sel) { return sel; }
   const captured = new Set();
   const name = namer();
 
-  // 1) Try Playwright screenshots (best fidelity).
-  const usedPw = await tryPlaywright(targets, audit, shotsDir, name, visuals, captured);
+  // 1) Try Playwright screenshots (best fidelity). Skipped in --html-only mode.
+  let usedPw = false;
+  if (!htmlOnly) {
+    usedPw = await tryPlaywright(targets, audit, shotsDir, name, visuals, captured);
+  } else {
+    log('--html-only: skipping Playwright, using HTML-embed for all blocks');
+  }
 
-  // 2) HTML-embed fallback for everything not captured by Playwright.
+  // 2) HTML-embed fallback (with inlined stylesheets) for everything not captured.
+  log(`fetching stylesheets for ${targets.length - captured.size} HTML previews…`);
   for (const t of targets) {
     if (captured.has(t.id)) continue;
-    const rel = writePreview(t, audit, previewsDir, name(t.cluster));
+    const rel = await writePreview(t, audit, previewsDir, name(t.cluster));
     visuals[t.id] = rel
       ? { page: t.page, block: t.block, cluster: t.cluster, kind: 'html', path: rel }
       : null;
@@ -218,5 +267,6 @@ function cssFromSel(sel) { return sel; }
   const png = Object.values(visuals).filter((v) => v && v.kind === 'png').length;
   const htm = Object.values(visuals).filter((v) => v && v.kind === 'html').length;
   const none = Object.values(visuals).filter((v) => !v).length;
-  log(`visuals: ${png} screenshots, ${htm} embeds, ${none} missing (${usedPw ? 'playwright+fallback' : 'fallback only'})`);
+  const mode = htmlOnly ? 'html-only' : usedPw ? 'playwright+fallback' : 'playwright-unavailable → html fallback';
+  log(`visuals: ${png} screenshots, ${htm} embeds, ${none} missing (${mode})`);
 })();

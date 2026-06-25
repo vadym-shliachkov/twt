@@ -144,7 +144,7 @@ function reasonChips(types) {
 function thumb(v, cls) {
   if (!v) return '<div class="noimg">no preview captured</div>';
   if (v.kind === 'png') return `<img class="${cls || ''}" loading="lazy" src="${esc(v.path)}" alt="block preview">`;
-  return `<iframe class="${cls || ''}" src="${esc(v.path)}" sandbox loading="lazy" title="block preview"></iframe>`;
+  return `<iframe class="${cls || ''}" src="${esc(v.path)}" sandbox="allow-same-origin" loading="lazy" title="block preview"></iframe>`;
 }
 
 // Per-cluster "canonical reference" = the highest-match instance of the cluster
