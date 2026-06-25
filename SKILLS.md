@@ -712,7 +712,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.3.1
+**Version:** 1.4.1
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **10 weighted quality metrics** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
