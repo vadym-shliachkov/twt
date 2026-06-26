@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.6) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.6
+description: (v1.8.7) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.7
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -284,6 +284,22 @@ Label
 Button
 ```
 
+#### Text styles table (the real combinations — required in §2.2)
+
+The type axes (family, size, weight, line-height, tracking) are **not** independent menus where every weight pairs with every size. Each role above uses **one** real combination. Capture those — and only those — in a **Text styles** table in §2.2, one row per role, each cell pointing at the token that role binds (em-dash `—` when an axis is unused):
+
+```
+#### Text styles
+| Role | Family | Size | Weight | Line-height | Tracking |
+|------|--------|------|--------|-------------|----------|
+| **Display**   | `--font-family-heading` | `--font-size-display`  | `--font-weight-bold`     | `--line-height-display` | `--tracking-tight` |
+| **Heading L** | `--font-family-heading` | `--font-size-heading-l` | `--font-weight-semibold` | `--line-height-heading` | —                  |
+| **Body M**    | `--font-family-base`    | `--font-size-body-m`    | `--font-weight-regular`  | `--line-height-body-m`  | —                  |
+| **Button**    | `--font-family-base`    | `--font-size-button`    | `--font-weight-semibold` | —                       | —                  |
+```
+
+Only list roles the design actually uses, and only the weight each role actually uses — do **not** enumerate every possible weight × size. `gen-preview.mjs` parses this table (token names matched by pattern, so column order is flexible) and renders **one live specimen per row** — the real combination — instead of parading every weight and size in isolation. The underlying `--font-weight-*` / `--font-size-*` / `--font-family-*` / `--line-height-*` / `--tracking-*` tokens still all live in `tokens.css` (the primitives the rows reference); the table just records which of them compose each role.
+
 ---
 
 ## Step 6 — Component hierarchy (tech vocabulary)
@@ -392,7 +408,7 @@ The file MUST include the following sections in this order:
 
 ## 2. Tokens
 ### 2.1 Colors           (table: name · HEX · RGB · HSL · role · usage · confidence)
-### 2.2 Typography       (families · scale · weights · line-height · tracking · responsive)
+### 2.2 Typography       (families · scale · weights · line-height · tracking · responsive · **Text styles** table)
 ### 2.3 Spacing          (scale · rhythm · responsive deltas)
 ### 2.4 Radius           (scale · category mapping)
 ### 2.5 Shadows          (elevation system · overlay · interactive)
@@ -512,7 +528,7 @@ After writing `tokens.md`, write `.twt-artifacts/design/design-system/tokens.css
 Rules:
 - One custom property per token, named from the token's kebab-case name: `--color-primary`, `--space-4`, `--radius-card`, `--font-size-body-m`, `--font-family-base`, `--font-weight-bold`, `--line-height-body-m`, `--tracking-tight`, `--shadow-e2`, `--motion-duration-fast`, etc.
 - Group with comments by category (Colors, Typography, Spacing, Radius, Shadows, Motion, Grid/Breakpoints).
-- **Typography is more than size.** Export the *full* type system as tokens — not only `--font-size-*`. Always include: `--font-family-*` (one per family/role), `--font-weight-*` (one per weight actually used — e.g. `--font-weight-regular: 400`, `--font-weight-medium: 500`, `--font-weight-bold: 700`), `--line-height-*`, and `--tracking-*` (or `--letter-spacing-*`) wherever the design uses non-default tracking. The preview renders a live specimen for each of these; if a weight or tracking value is only mentioned in prose and never tokenized, it won't appear in `preview.html`.
+- **Typography is more than size.** Export the *full* type system as tokens — not only `--font-size-*`. Always include: `--font-family-*` (one per family/role), `--font-weight-*` (one per weight actually used — e.g. `--font-weight-regular: 400`, `--font-weight-medium: 500`, `--font-weight-bold: 700`), `--line-height-*`, and `--tracking-*` (or `--letter-spacing-*`) wherever the design uses non-default tracking. These are the primitives the §2.2 **Text styles** table references; if a weight or tracking value a role needs is only mentioned in prose and never tokenized here, that role's specimen can't render it in `preview.html`. The preview renders **one specimen per Text-styles row** (the real family+size+weight+line-height+tracking combination) — not an independent specimen for every weight and size — so only combinations the design actually uses appear.
 - Values are the confirmed/inferred values from `tokens.md`. Do not introduce values absent from `tokens.md`.
 
 ### Color two-layer architecture (mandatory)
@@ -577,7 +593,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR"
 **Run this command directly — do not first hunt for the tool.** `${CLAUDE_PLUGIN_ROOT}` is always set at runtime and the generator always lives at `tools/gen-preview.mjs` under it; do **not** `ls`/`find` the plugin cache to locate it, and do **not** run it with `--help` to discover its CLI (its only args are the project dir and the optional `--mode`/`--check` flags named here). Those exploratory reads of the install dir are unnecessary and slow the run. If the single invocation errors, report the error — don't go spelunking.
 
 `$CLAUDE_PROJECT_DIR` is the target project root (same convention as the qa-scan tools); if unset, pass the project root explicitly. The script reads `tokens.css` (authoritative), resolves every `var()` alias and rgba, and writes a tokens-only `preview.html` with:
-- live color swatches (name · resolved value · alias chain), the **WCAG contrast matrix** for intended text/surface pairs, **typography specimens — the full type story, not just sizes**: family specimens, the size × line-height scale, a live **weight** specimen per `--font-weight-*` token, and a **tracking** specimen per `--tracking-*`/`--letter-spacing-*` token (each rendered live so the weight/spacing is visible, not just a numeric legend), spacing bars (real per-step widths), radius tiles, shadow cards, motion swatches, grid list;
+- live color swatches (name · resolved value · alias chain), the **WCAG contrast matrix** for intended text/surface pairs, **typography specimens — the real text styles, not every weight × size**: one live specimen per row of the §2.2 **Text styles** table (each its actual family + size + weight + line-height + tracking, with the resolved values and bound token names captioned), spacing bars (real per-step widths), radius tiles, shadow cards, motion swatches, grid list. (If no Text styles table is present — e.g. a tokens-only run — it falls back to rendering the raw family/size/weight/tracking axes independently.)
 - a prominent **"Open component gallery →"** link to `../component/gallery.html` (the component catalog the design-system orchestrator / `/twt-component-define` produces).
 
 The script prints a ` ```json ` block to stdout with `counts` and `contrast_failures[]`. **Capture it** — Step 10c (contrast gate) reads `contrast_failures`, and the Step 12 summary reads `counts`.
