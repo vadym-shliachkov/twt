@@ -58,10 +58,10 @@ For 4:3, reduce title sizes by roughly 8-12% and prefer fewer words per slide.
 
 ## Color
 
-- Background: white or near-white.
-- Text: dark neutral, approximately `#111827`.
-- Secondary text: `#4B5563`.
-- Accent: one restrained blue such as `#2563EB`, used for section markers, links, or one emphasis element.
+- Background: `#f7f3e8` (warm cream).
+- Text: `#101214`.
+- Secondary text: `#363b42`.
+- Accent: `#0b68b7` (doc-hub light cyan), used for section markers, links, or one emphasis element.
 - Avoid gradients, shadows, decorative borders, and large color blocks unless a user-provided brand template requires them.
 
 ## Spacing

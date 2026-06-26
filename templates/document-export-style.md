@@ -36,7 +36,7 @@ Default sizes:
 | Caption / footnote | 8.5-9 pt | 1.35 | 3 pt after |
 | Code | 9-9.5 pt | 1.35 | 8 pt before and after |
 
-Use dark neutral text (`#111827`) on white. Secondary text may use `#4B5563`. Avoid colored headings unless the source document already defines a brand palette.
+Use dark neutral text (`#101214`) on warm cream (`#f7f3e8`). Secondary text may use `#363b42`. Avoid colored headings unless the source document already defines a brand palette.
 
 ## Heading nesting
 
@@ -66,27 +66,27 @@ Preserve semantic heading order. The exported document must not skip levels:
 ## Tables
 
 - Use full-width tables when they contain more than two columns.
-- Header row: bold text, subtle bottom border, light neutral fill (`#F3F4F6`) if supported.
-- Body rows: no heavy grid. Use light horizontal rules (`#E5E7EB`) or alternating very light fills only when it improves scanning.
+- Header row: bold text, subtle bottom border, light neutral fill (`#e7e1d1`) if supported.
+- Body rows: no heavy grid. Use light horizontal rules (`rgba(16,18,20,.18)`) or alternating very light fills only when it improves scanning.
 - Keep cell padding comfortable: 4-6 pt vertical, 6-8 pt horizontal.
 - If a table is too wide, prefer landscape page only for that page/section when supported; otherwise report the limitation in `render-notes.md`.
 
 ## Code blocks
 
 - Use monospace at 9-9.5 pt.
-- Use a very light background (`#F6F8FA`) and subtle border (`#E5E7EB`) when supported.
+- Use a very light background (`#eef4fb`) and subtle border (`rgba(16,18,20,.18)`) when supported.
 - Preserve indentation exactly.
 - Do not line-wrap code if it changes meaning; report overflow if unavoidable.
 
 ## Blockquotes and callouts
 
-- Blockquotes: left border `#D1D5DB`, 10-12 pt left padding, no large quotation marks.
+- Blockquotes: left border `#0b68b7`, 10-12 pt left padding, no large quotation marks.
 - Use callouts sparingly. If the Markdown has `> NOTE:` / `> WARNING:` lines, preserve the label and use a subtle neutral treatment.
 
 ## Links
 
 - Preserve clickable links in DOCX/PDF when the export tool supports it.
-- Use understated link styling: dark blue `#1D4ED8`, no bright cyan.
+- Use understated link styling: `#0b68b7`, matching the doc-hub light accent.
 - If exporting for print, include the URL in parentheses only when the link text is not self-explanatory.
 
 ## Images
