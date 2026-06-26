@@ -45,6 +45,7 @@ const OUT = flags.out ? String(flags.out) : '.twt-artifacts/design/design-system
 const MAX = flags.max ? parseInt(flags.max, 10) || 20 : 20;
 const TOKENS_PATH = flags.tokens ? String(flags.tokens) : null;
 const DS_SOURCE = flags['ds-source'] ? String(flags['ds-source']) : null; // provided | synthesized
+const COUNT_ONLY = !!flags['count-only']; // fast link-discovery pass — no block/CSS extraction
 
 function die(msg) { console.error('ds-audit: ' + msg); process.exit(1); }
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); }
@@ -613,7 +614,7 @@ async function runSite() {
   const start = normUrl(positional[0]);
   if (!positional[0]) die('site <url> required');
   const outDir = OUT, pagesDir = path.join(outDir, 'pages');
-  ensureDir(pagesDir);
+  if (!COUNT_ONLY) ensureDir(pagesDir);
   const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;
   const queue = [start], visited = new Set();
   const blocks = [];
@@ -626,17 +627,31 @@ async function runSite() {
     visited.add(url);
     const res = await fetchUrl(url);
     if (res.status < 200 || res.status >= 300 || !res.body) continue;
-    const css = await collectCss(res.body, url);
-    allCss += '\n' + css;
-    const slug = slugify(url);
-    fs.writeFileSync(path.join(pagesDir, slug + '.html'), res.body);
-    pageStylesheets[url] = { slug, stylesheets: stylesheetHrefs(res.body, url) };
-    if (looksJsRendered(res.body)) jsPages.push(url);
-    for (const b of blocksFromPage(url, res.body, css)) blocks.push(b);
+    if (!COUNT_ONLY) {
+      const css = await collectCss(res.body, url);
+      allCss += '\n' + css;
+      const slug = slugify(url);
+      fs.writeFileSync(path.join(pagesDir, slug + '.html'), res.body);
+      pageStylesheets[url] = { slug, stylesheets: stylesheetHrefs(res.body, url) };
+      if (looksJsRendered(res.body)) jsPages.push(url);
+      for (const b of blocksFromPage(url, res.body, css)) blocks.push(b);
+    }
     for (const link of extractLinks(res.body, url)) if (!visited.has(link)) queue.push(link);
+  }
+  // Total unique pages discovered (visited + remaining queue, same-host, deduped).
+  const allDiscovered = new Set(visited);
+  for (const u of queue) { try { if (sameHost(u, start)) allDiscovered.add(normUrl(u)); } catch {} }
+  const discoveredTotal = allDiscovered.size;
+  if (COUNT_ONLY) {
+    const out = { count_only: true, crawled: visited.size, discovered_total: discoveredTotal };
+    console.log('```json');
+    console.log(JSON.stringify(out, null, 2));
+    console.log('```');
+    return;
   }
   const result = buildReport(blocks, allCss, tokensCss, {
     crawled: visited.size,
+    discovered_total: discoveredTotal,
     js_rendered_pages: jsPages,
     confidence: jsPages.length ? 'low (JS-rendered pages present — static analysis is partial)' : 'static',
   }, { pageStylesheets, dsSource: DS_SOURCE || (tokensCss ? 'provided' : 'none') });
@@ -662,5 +677,5 @@ function runAnalyze() {
 (async () => {
   if (sub === 'site') await runSite();
   else if (sub === 'analyze') runAnalyze();
-  else die('usage: ds-audit.mjs site <url> | analyze <blocks.json>  [--out dir] [--tokens tokens.css] [--max N]');
+  else die('usage: ds-audit.mjs site <url> | analyze <blocks.json>  [--out dir] [--tokens tokens.css] [--max N] [--count-only]');
 })();

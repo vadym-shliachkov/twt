@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.4.8) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
-version: 1.4.8
+description: (v1.4.9) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+version: 1.4.9
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -104,6 +104,26 @@ Use the **Figma MCP read tools** (no `figma-use` needed — read-only): `get_met
 Use the frame name as `page`, the Figma component/instance name as the `classes` signature (so repeated component instances cluster), and the frame's actual fill/spacing/type/radius values as `styles`. (Optionally also dispatch `/twt-content-fetch-figma` to capture the visible copy for reference — not required for the structural audit.)
 
 ### Step 4b — Site source
+
+**Step 4b-i — Page-count discovery (interactive mode only)**
+Skip this sub-step if: `--max` was explicitly passed in `$ARGUMENTS` (user already chose scope), **or** running as a dispatched subagent (unattended). Otherwise:
+
+Run the fast link-discovery pass — no block/CSS extraction, just follows links to count pages:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit.mjs" site "<site-url>" --out "<OUT>" --max 500 --count-only
+```
+Read `discovered_total` from the JSON output. Then ask via the **AskUserQuestion** tool (single-select, header "Crawl scope") — construct the first option's label to include the actual page count (e.g. "Fetch all (47 pages)"):
+
+| Option | Label | What it means |
+|--------|-------|---------------|
+| 1 | Fetch all (N pages) | Audit every discovered page |
+| 2 | 10 pages | Quick sample |
+| 3 | Homepage only | Single-page audit (fastest) |
+| 4 | Stop | Abort the audit |
+
+Set `<max>` from the answer: "Fetch all" → `discovered_total` (or 1000 if the discovery hit its cap); "10 pages" → 10; "Homepage only" → 1; "Stop" → exit.
+
+**Step 4b-ii — Full crawl**
 Run the bundled crawler — it fetches static HTML + linked CSS, extracts the per-page block inventory, and (in Step 5) clusters and scores it. **Run it directly; do not hunt for the tool.**
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit.mjs" site "<site-url>" --out "<OUT>" --max <max> [--tokens "<tokens>"] [--ds-source <provided|synthesized>]
