@@ -55,7 +55,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Fact-faithfulness / no invention | 20 | No facts/claims/numbers invented beyond the source. |
 | Gap honesty | 10 | Missing content is marked `> GAP`, not faked. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Copy transformed not mirrored","weight":30,"score":<s1>},{"criterion":"Brand-voice fidelity","weight":20,"score":<s2>},{"criterion":"IA/section coverage","weight":20,"score":<s3>},{"criterion":"Fact-faithfulness / no invention","weight":20,"score":<s4>},{"criterion":"Gap honesty","weight":10,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Judge **Copy transformed not mirrored** and **Brand-voice fidelity** with the `/twt-content-validate` anchors in miniature — clarity, conciseness, user value, active voice — citing verbatim outline quotes as evidence; for a deep per-criterion evaluation of any single page's copy, recommend running `/twt-content-validate` on that outline (soft dependency).
 

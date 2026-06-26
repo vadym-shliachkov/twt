@@ -52,7 +52,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Consistency with brand voice | 15 | Tone/wording aligns with `brand-brief.md` voice. |
 | Promotion-priority coherence | 15 | Promotion priorities follow logically from audience + value props. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Audience specificity","weight":25,"score":<s1>},{"criterion":"Value-prop differentiation","weight":25,"score":<s2>},{"criterion":"Evidence/proof grounding","weight":20,"score":<s3>},{"criterion":"Consistency with brand voice","weight":15,"score":<s4>},{"criterion":"Promotion-priority coherence","weight":15,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. vague audience blocks IA and copy direction; WARNING if it degrades quality; SUGGESTION otherwise). Findings must explain *why*, citing evidence from the positioning doc.
 

@@ -53,7 +53,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Functional-scope completeness | 20 | `functional-scope.md` covers the must-haves from the spec without gaps. |
 | Consistency with positioning | 15 | IA emphasis reflects the positioning's audience + priorities. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Sitemap coverage vs scope","weight":25,"score":<s1>},{"criterion":"Navigation logic & depth","weight":20,"score":<s2>},{"criterion":"Page-purpose clarity","weight":20,"score":<s3>},{"criterion":"Functional-scope completeness","weight":20,"score":<s4>},{"criterion":"Consistency with positioning","weight":15,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. orphan scope blocks development; WARNING if it degrades quality; SUGGESTION otherwise). Findings must explain *why*, citing evidence from the IA artifacts.
 

@@ -67,7 +67,11 @@ Rating rules (binding):
 - **Evidence or no score** — each criterion's rating must rest on at least one verbatim quote from the subject; intermediate scores (1, 3) mean "between the anchors", and the reasoning must say in which direction and why.
 - Scores are **evaluative**, never presence-based ("has headings" is not Scanability 5; "a reader finds any key point within one glance per section" is).
 - If a criterion genuinely doesn't apply (e.g. Scanability for a 4-word button label), mark it **N/A** and redistribute its weight proportionally across the rest; say so in the reasoning. In the Scorecard, an N/A row shows Weight 0 and Score "N/A", and the remaining weights are rescaled so the table still totals 100.
-- Compute `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+- After assigning all scores, run (Bash) to compute weighted sums and health:
+  ```bash
+  node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Clarity","weight":20,"score":<s1>},{"criterion":"Conciseness","weight":15,"score":<s2>},{"criterion":"Specificity","weight":15,"score":<s3>},{"criterion":"User value","weight":15,"score":<s4>},{"criterion":"Active voice","weight":10,"score":<s5>},{"criterion":"Scanability","weight":10,"score":<s6>},{"criterion":"UX writing quality","weight":10,"score":<s7>},{"criterion":"Content density","weight":5,"score":<s8>}]'
+  ```
+  Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 ## Step 4 — Derive findings
 For every criterion scoring ≤3, write at least one Finding. Severity: **BLOCKER** = the reader can't understand or act (wrong/ambiguous instruction, impenetrable passage); **WARNING** = quality loss (filler, passive pile-ups, vague claims); **SUGGESTION** = polish. Each finding carries a one-line **Suggested rewrite** and an **Expected impact** — phrased as a contribution ("contributes toward Clarity 3→4"), since several findings usually share one criterion's uplift and must not each claim the full point. Collect into **Decisions to confirm** any judgment inferred as a rule (e.g. "treated industry term X as known to this audience").

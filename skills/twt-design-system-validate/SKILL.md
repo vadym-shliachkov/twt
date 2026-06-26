@@ -55,7 +55,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the evolution — Tokens → Primitives → Components → Modules — with **every** Primitive, Component, and Module documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. The preview is `gen-preview.mjs`-generated, so check that **no `<!-- gp:fill … -->` slots remain unfilled** (any left = incomplete) and specimen counts match §3.2/§3.3/§3.4. BLOCKER if preview is token-only with no Primitives/Components/Modules tiers, or if any `gp:fill` slot is still empty; WARNING if a tier omits documented components. **Also a BLOCKER if the preview is a marketing landing page / homepage mockup instead of a neutral specimen sheet** — i.e. it uses real project copy (real hero headline, value props, case-study/stat numbers, testimonials, CTA messaging), assembles a running homepage rather than an inventory of captioned specimens, wires a real nav, or includes `<script>`/GSAP/auto-advancing/scroll-triggered demos of "the site." The fix is to re-render Modules as isolated, neutrally-labeled specimens. |
 | Naming / structure hygiene | 15 | Token names are systematic and namespaced; no duplicate/conflicting definitions. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Token contrast / accessibility","weight":25,"score":<s1>},{"criterion":"Scale coherence (type & space)","weight":20,"score":<s2>},{"criterion":"Brand fidelity","weight":20,"score":<s3>},{"criterion":"Completeness for downstream build","weight":20,"score":<s4>},{"criterion":"Naming / structure hygiene","weight":15,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. a text/surface color pair failing WCAG AA blocks accessible build; WARNING if it degrades quality; SUGGESTION otherwise). Findings must explain *why*, citing evidence from the tokens.
 

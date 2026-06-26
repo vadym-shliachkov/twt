@@ -57,7 +57,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Visual-direction adherence | 10 | Matches the spec's Visual Style + Motion direction (and `design-read.md` dials if present). |
 | Anti-slop / design taste | 15 | Passes `design-taste-frontend` §9/§14 — **zero em-dashes**; one theme + one accent + one radius scale page-wide; hero fits viewport; eyebrow count ≤ ceil(sections/3); no three-equal-card rows; no `<div>` fake screenshots; motion-claimed = motion-shown with reduced-motion; AA button/contrast. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Real (transformed) content used","weight":20,"score":<s1>},{"criterion":"Token-only & design-system fidelity","weight":20,"score":<s2>},{"criterion":"Responsiveness across tiers","weight":15,"score":<s3>},{"criterion":"A11y baseline","weight":20,"score":<s4>},{"criterion":"Visual-direction adherence","weight":10,"score":<s5>},{"criterion":"Anti-slop / design taste","weight":15,"score":<s6>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. a page not linking `tokens.css` blocks the build; lorem content where real Phase-1 content exists blocks design fidelity; WARNING if it degrades quality; SUGGESTION otherwise). Findings must explain *why*, citing evidence from the mockup files.
 

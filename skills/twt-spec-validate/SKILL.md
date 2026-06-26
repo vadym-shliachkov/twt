@@ -52,7 +52,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Functional scope realism | 20 | Must-have capabilities are realistic and scoped, not a wishlist. |
 | Non-contradiction with brand | 20 | Nothing contradicts `brand-brief.md` (voice, palette, audience). |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Visual direction concreteness & renderability","weight":25,"score":<s1>},{"criterion":"Motion direction concreteness incl. reduced-motion","weight":15,"score":<s2>},{"criterion":"Vision/goals clarity & measurability","weight":20,"score":<s3>},{"criterion":"Functional scope realism","weight":20,"score":<s4>},{"criterion":"Non-contradiction with brand","weight":20,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 **No-Figma visual-direction gate (hard BLOCKER):** Read `specification.md` frontmatter `figma:` and `visual_direction:`. If `figma: none` AND `visual_direction: model-assumed`, raise a **BLOCKER** finding: "Visual direction unconfirmed — no Figma was provided and the direction was model-assumed; the user must pick/confirm an art direction before the design phase proceeds." This caps the "Visual direction concreteness" criterion at ≤2 regardless of how concrete the prose is (an unconfirmed direction is not a usable direction). If `figma: used` OR `visual_direction: user-confirmed`, no gate.
 

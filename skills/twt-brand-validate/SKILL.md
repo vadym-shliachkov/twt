@@ -55,7 +55,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | Positioning/message clarity | 20 | The brand statement says something specific and defensible, not vague. |
 | Completeness & internal coherence | 15 | No TBD/missing required fields; no internal contradictions. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Palette contrast / WCAG AA on key pairings","weight":25,"score":<s1>},{"criterion":"Palette fit to context & audience","weight":20,"score":<s2>},{"criterion":"Voice distinctiveness & consistency","weight":20,"score":<s3>},{"criterion":"Positioning/message clarity","weight":20,"score":<s4>},{"criterion":"Completeness & internal coherence","weight":15,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. AA failure on body text; WARNING if it degrades; SUGGESTION otherwise). Findings must explain *why*, citing evidence (e.g. "primary #1DB89C on #FFFFFF = 2.1:1, fails AA 4.5:1 for body").
 

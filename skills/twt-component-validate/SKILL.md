@@ -52,7 +52,11 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 | A11y affordances | 20 | Focus states, semantics, labels, contrast considered. |
 | Spec clarity | 15 | Each component's spec is unambiguous and buildable. |
 
-Compute `Weighted = Weight × Score / 5` per row; `Health = Σ Weighted` (0–100); `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Token-only styling","weight":25,"score":<s1>},{"criterion":"Reuse / composition quality","weight":20,"score":<s2>},{"criterion":"State / variant coverage","weight":20,"score":<s3>},{"criterion":"A11y affordances","weight":20,"score":<s4>},{"criterion":"Spec clarity","weight":15,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downstream — e.g. a component using hardcoded values where tokens exist blocks accessible build; WARNING if it degrades quality; SUGGESTION otherwise). Findings must explain *why*, citing evidence from the components.
 
