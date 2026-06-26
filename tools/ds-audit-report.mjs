@@ -488,20 +488,30 @@ function pageDoc(page, blocks) {
 
 // ── shared shell + CSS ───────────────────────────────────────────────────────
 const CSS = `
-:root{--ink:#16181d;--muted:#6b7280;--line:#e5e7eb;--bg:#fff;--soft:#f7f8fa;
-  --blocker:#dc2626;--warning:#d97706;--suggestion:#2563eb;--ok:#059669;--accent:#4f46e5}
+/* doc-hub light design language — shared with gen-preview.mjs:
+   light page, blue accents, Montserrat headings, tri-color (red/blue/yellow)
+   accent bars, rounded panels. */
+:root{--ink:#090e22;--text:#3a3f5c;--muted:#7a82a8;--line:#dde0ee;--bg:#fff;--soft:#f8f9fc;
+  --blocker:#ca221f;--warning:#9a6700;--suggestion:#0b68b7;--ok:#1a7f37;--accent:#0b68b7;
+  --red:#ca221f;--blue:#0b68b7;--yellow:#f6c22b;
+  --font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
+  --font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--soft)}
-.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 80px}
-h1{font-size:26px;margin:0 0 4px} h2{font-size:19px;margin:36px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
-a{color:var(--accent)} code{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:#eef0f4;padding:1px 5px;border-radius:4px}
+body{margin:0;font:15px/1.55 var(--font-body);color:var(--text);background:var(--bg)}
+.wrap{max-width:1100px;margin:0 auto;padding:48px 24px 96px}
+h1{font-family:var(--font-heading);font-size:clamp(2rem,4vw,2.75rem);font-weight:800;line-height:1.05;letter-spacing:0;color:var(--ink);margin:0 0 4px}
+h1::after{content:"";display:block;width:72px;height:4px;margin:18px 0 0;border-radius:999px;background:linear-gradient(90deg,var(--red) 0 33%,var(--blue) 33% 66%,var(--yellow) 66% 100%)}
+h2{font-family:var(--font-heading);font-size:clamp(1.2rem,2.2vw,1.4rem);font-weight:800;color:var(--ink);margin:48px 0 14px;padding-bottom:0;border-bottom:0;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:30px;height:6px;border-radius:999px;flex:none;background:linear-gradient(90deg,var(--yellow) 0 33%,var(--red) 33% 66%,var(--blue) 66% 100%)}
+a{color:var(--accent)} code{font:12px/1.4 var(--font-mono);background:var(--soft);border:1px solid rgba(122,130,168,.18);color:var(--ink);padding:1px 5px;border-radius:4px}
 .muted{color:var(--muted);font-weight:400}.note{color:var(--muted);font-size:13px;margin-bottom:10px}.ok{color:var(--ok)}.small{font-size:13px}
 .back{display:inline-block;font-size:13px;margin-bottom:10px}
 .card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
 .scorecard .meta{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:13px;margin-bottom:14px}
 .metrics{display:flex;gap:14px;flex-wrap:wrap}.metrics.small .metric{min-width:90px}
 .metric{flex:1;min-width:120px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
-.metric .num{font-size:30px;font-weight:700}.metric .den{font-size:15px;color:var(--muted)}.metric .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.metric .num{font-family:var(--font-heading);font-size:30px;font-weight:800;color:var(--ink)}.metric .den{font-size:15px;color:var(--muted)}.metric .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .warnnum{color:var(--warning)}.blknum{color:var(--blocker)}
 table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .grid th,.grid td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
@@ -519,7 +529,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .pagelist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .pagerow{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 16px;text-decoration:none;color:inherit}
 .pagerow:hover{border-color:var(--accent)}
-.pr-title{font-weight:600;font-size:15px;color:var(--accent)}.pr-url{font-size:12px;color:var(--muted);word-break:break-all}
+.pr-title{font-family:var(--font-heading);font-weight:700;font-size:15px;color:var(--accent)}.pr-url{font-size:12px;color:var(--muted);word-break:break-all}
 .pr-counts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .pc{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
 .pc-blocker{background:#fde7e7;color:#b91c1c}.pc-warning{background:#fef3c7;color:#92400e}.pc-suggestion{background:#dbeafe;color:#1d4ed8}.pc-ok{background:#e8f5ef;color:#047857}
@@ -529,7 +539,7 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .block{background:var(--bg);border:1px solid var(--line);border-left-width:5px;border-radius:12px;padding:16px 18px;margin:14px 0}
 .block.tier-blocker{border-left-color:var(--blocker)}.block.tier-warning{border-left-color:var(--warning)}.block.tier-suggestion{border-left-color:var(--suggestion)}.block.tier-ok{border-left-color:var(--ok)}
 .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-.btitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bname{font-size:17px;font-weight:700}
+.btitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bname{font-family:var(--font-heading);font-size:17px;font-weight:800;color:var(--ink)}
 .bsel{font-size:11px;color:var(--muted);background:#eef0f4}
 .breasons{margin:10px 0}.chips{margin-bottom:6px}
 .deltas{margin:6px 0 0;padding-left:18px;font-size:13px}.deltas li{margin:2px 0}
@@ -583,6 +593,9 @@ function htmlShell(title, body) {
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap">
 <style>${CSS}</style></head>
 <body><div class="wrap">${body}</div></body></html>`;
 }

@@ -6,6 +6,21 @@ Default house template for `/twt-export-presentation`. Use this for every Markdo
 
 Create a minimal, sharp presentation that reads clearly on a projector and in a PDF handout. The look should be calm and editorial: strong hierarchy, generous whitespace, restrained color, and no decorative clutter.
 
+It shares the **doc-hub light** design language used by the design-system preview and audit reports: a clean white page, near-black Montserrat titles, cool-grey body text, hairline rules, and the signature tri-color (red/blue/yellow) accent. The deck may apply the accent a little more boldly than a document — a tri-color bar on the cover and section dividers, and gradient-pill markers on section labels — but still avoid gradients-as-fills, drop shadows, and large decorative blocks.
+
+## Color palette (doc-hub light)
+
+| Role | Token | Value |
+|------|-------|-------|
+| Slide background | surface | `#ffffff` |
+| Soft panel fill (tables/code) | panel-soft | `#f8f9fc` |
+| Ink (titles, strong text) | ink | `#090e22` |
+| Body text | text | `#3a3f5c` |
+| Secondary / labels / sources | muted | `#7a82a8` |
+| Hairline rules / borders | rule | `#dde0ee` |
+| Accent — primary (markers, links) | blue | `#0b68b7` |
+| Accent — signature triad | red · blue · yellow | `#ca221f` · `#0b68b7` · `#f6c22b` |
+
 ## Aspect ratio
 
 - Default: `16:9`, the common modern presentation format.
@@ -25,22 +40,24 @@ Create a minimal, sharp presentation that reads clearly on a projector and in a 
 
 | Type | Trigger | Layout |
 |------|---------|--------|
-| Cover | first slide, usually one `#` | large title, optional subtitle |
-| Section divider | title-only slide | centered or upper-left title with large whitespace |
-| Title and bullets | title plus bullets | title top-left, bullets below |
+| Cover | first slide, usually one `#` | large Montserrat title, optional subtitle, thin tri-color (red/blue/yellow) accent bar beneath the title |
+| Section divider | title-only slide | upper-left title with large whitespace, tri-color accent bar beneath the title |
+| Title and bullets | title plus bullets | title top-left, optional gradient-pill marker before a section label, bullets below |
 | Two-column | explicit columns or paired sections | equal columns on 16:9, stacked on 4:3 if dense |
 | Image slide | title plus image | image large, caption small |
 | Table slide | title plus table | simplify rows/columns; split if dense |
 
 ## Typography
 
-Use Office-safe fonts first so PPTX remains portable:
+Prefer the doc-hub fonts, but always list an Office-safe fallback so PPTX stays portable on machines without them:
 
 | Role | Preferred | Fallback |
 |------|-----------|----------|
-| Headings | Aptos Display | Arial |
-| Body | Aptos | Arial |
-| Code | Cascadia Mono | Consolas |
+| Headings / titles | Montserrat, Aptos Display | Arial |
+| Body | Inter, Aptos | Arial |
+| Code | IBM Plex Mono, Cascadia Mono | Consolas |
+
+Titles set in Montserrat at semibold–extrabold (600–800). When embedding fonts in the PPTX is not possible, fall back to Arial cleanly rather than substituting a mismatched display face.
 
 Default sizes for 16:9:
 
@@ -58,11 +75,19 @@ For 4:3, reduce title sizes by roughly 8-12% and prefer fewer words per slide.
 
 ## Color
 
-- Background: `#f7f3e8` (warm cream).
-- Text: `#101214`.
-- Secondary text: `#363b42`.
-- Accent: `#0b68b7` (doc-hub light cyan), used for section markers, links, or one emphasis element.
-- Avoid gradients, shadows, decorative borders, and large color blocks unless a user-provided brand template requires them.
+- Background: `#ffffff` (white). Use the soft panel fill `#f8f9fc` only behind tables or code.
+- Title / strong text: ink `#090e22`.
+- Body text: `#3a3f5c`. Secondary text, labels, and sources: muted `#7a82a8`.
+- Hairline rules / borders: `#dde0ee`.
+- Primary accent: blue `#0b68b7`, used for section markers, links, or one emphasis element per slide.
+- Signature accent: the tri-color triad — red `#ca221f` · blue `#0b68b7` · yellow `#f6c22b` — used only as (a) the thin accent bar under cover/section-divider titles, and (b) a small gradient pill before a section label. See **Signature accent** below.
+- Avoid gradient *fills*, shadows, decorative borders, and large color blocks unless a user-provided brand template requires them.
+
+## Signature accent
+
+- **Title accent bar:** a thin horizontal bar (~3–4% of slide width long, ~6 px tall) directly beneath cover and section-divider titles, split into three equal segments left-to-right: red · blue · yellow.
+- **Section-label pill:** an optional small rounded pill (~30 px × 6 px) before a section label, filled with a left-to-right yellow → red → blue gradient.
+- Use at most one of these per slide. Body slides usually need neither — the accent marks structure (covers, dividers, section labels), not every slide.
 
 ## Spacing
 
