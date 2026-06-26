@@ -1,8 +1,8 @@
 ---
 name: twt-content-validate
 category: content
-description: (v1.1.1) Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
-version: 1.1.1
+description: (v1.1.2) Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional subject — a file path, pasted text, or nothing (then prompt for one)

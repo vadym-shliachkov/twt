@@ -1,8 +1,8 @@
 ---
 name: twt-qa-links
 category: qa
-description: (v1.1.1) Audit built or served pages for link integrity and declared responsive tiers
-version: 1.1.1
+description: (v1.1.2) Audit built or served pages for link integrity and declared responsive tiers
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups

@@ -411,7 +411,7 @@ flowchart TB
 ### /twt-brand-validate
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - (none — reads the canonical brand-brief.md)
@@ -468,7 +468,7 @@ flowchart TB
 ### /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - none (reads the component artifacts)
@@ -719,7 +719,7 @@ flowchart TB
 ### /twt-content-validate
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional subject — a file path, pasted text, or nothing (then prompt for one)
@@ -774,7 +774,7 @@ flowchart TB
 ### /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - (none — reads curation artifacts and upstream)
@@ -865,7 +865,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.4.7
+**Version:** 1.4.8
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -904,7 +904,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.1
+**Version:** 1.8.2
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -940,7 +940,7 @@ flowchart TB
 ### /twt-design-system-validate
 
 **Category:** design-system
-**Version:** 1.4.0
+**Version:** 1.4.1
 
 **Inputs:**
 - none (reads the design-system artifacts)
@@ -1326,7 +1326,7 @@ flowchart TB
 ### /twt-ia-validate
 
 **Category:** ia
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - (none — reads IA artifacts and upstream)
@@ -1384,7 +1384,7 @@ flowchart TB
 ### /twt-layout-validate
 
 **Category:** layout
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - none (reads the layout artifacts)
@@ -1438,7 +1438,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1474,7 +1474,7 @@ flowchart TB
 ### /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - none (reads the mockup artifacts)
@@ -1557,7 +1557,7 @@ flowchart TB
 ### /twt-positioning-validate
 
 **Category:** positioning
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - (none — reads positioning.md and upstream artifacts)
@@ -1678,7 +1678,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1704,7 +1704,7 @@ flowchart TB
 ### /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1733,7 +1733,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -1762,7 +1762,7 @@ flowchart TB
 ### /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
@@ -1788,7 +1788,7 @@ flowchart TB
 ### /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -1986,7 +1986,7 @@ flowchart TB
 ### /twt-spec-validate
 
 **Category:** spec
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - (none — reads the canonical specification.md)
@@ -2036,7 +2036,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

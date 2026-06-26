@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.2.2) Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
-version: 1.2.2
+description: (v1.2.3) Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
+version: 1.2.3
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint

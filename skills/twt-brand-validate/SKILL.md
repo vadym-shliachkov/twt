@@ -1,8 +1,8 @@
 ---
 name: twt-brand-validate
 category: brand
-description: (v1.1.3) Critique brand-brief.md and write a validation-report.md (read-only critic)
-version: 1.1.3
+description: (v1.1.4) Critique brand-brief.md and write a validation-report.md (read-only critic)
+version: 1.1.4
 accepts_arguments: false
 inputs:
   - (none — reads the canonical brand-brief.md)

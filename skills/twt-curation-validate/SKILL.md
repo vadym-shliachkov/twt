@@ -1,8 +1,8 @@
 ---
 name: twt-curation-validate
 category: curation
-description: (v1.1.1) Critique curation against brand voice and IA; write validation-report.md
-version: 1.1.1
+description: (v1.1.2) Critique curation against brand voice and IA; write validation-report.md
+version: 1.1.2
 accepts_arguments: false
 inputs:
   - (none — reads curation artifacts and upstream)

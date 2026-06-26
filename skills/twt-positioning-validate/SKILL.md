@@ -1,8 +1,8 @@
 ---
 name: twt-positioning-validate
 category: positioning
-description: (v1.0.1) Critique positioning.md against brand and content signal; write validation-report.md
-version: 1.0.1
+description: (v1.0.2) Critique positioning.md against brand and content signal; write validation-report.md
+version: 1.0.2
 accepts_arguments: false
 inputs:
   - (none — reads positioning.md and upstream artifacts)

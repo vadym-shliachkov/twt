@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-validate
 category: design-system
-description: (v1.4.0) Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
-version: 1.4.0
+description: (v1.4.1) Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
+version: 1.4.1
 accepts_arguments: false
 inputs:
   - none (reads the design-system artifacts)

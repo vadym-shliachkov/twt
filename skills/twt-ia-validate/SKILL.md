@@ -1,8 +1,8 @@
 ---
 name: twt-ia-validate
 category: ia
-description: (v1.0.1) Critique sitemap.md + functional-scope.md against positioning and content; write report
-version: 1.0.1
+description: (v1.0.2) Critique sitemap.md + functional-scope.md against positioning and content; write report
+version: 1.0.2
 accepts_arguments: false
 inputs:
   - (none — reads IA artifacts and upstream)

@@ -1,8 +1,8 @@
 ---
 name: twt-layout-validate
 category: layout
-description: (v1.0.1) Read-only critique of per-page layout specs into validation-report.md
-version: 1.0.1
+description: (v1.0.2) Read-only critique of per-page layout specs into validation-report.md
+version: 1.0.2
 accepts_arguments: false
 inputs:
   - none (reads the layout artifacts)

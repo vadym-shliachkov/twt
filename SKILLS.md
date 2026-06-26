@@ -213,7 +213,7 @@ Document the component library the site needs — anatomy, variants, states, tok
 ## /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** no
 
 Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
@@ -554,7 +554,7 @@ Improve a text using the `/twt-content-validate` rubric as the rating engine —
 ## /twt-content-validate
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read-only content-quality critic — score any text against an 8-criterion UX-writing rubric (Information Style / «Пиши и сокращай», NN/g, GOV.UK content design) and write a `validation-report.md` where **every score is justified by verbatim evidence and explicit reasoning**. It rates and explains; it never rewrites (that's `/twt-content-optimize`).
@@ -630,7 +630,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 ## /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** no
 
 Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
@@ -751,7 +751,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.4.7
+**Version:** 1.4.8
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **10 weighted quality metrics** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
@@ -1289,7 +1289,7 @@ Produce the canonical site structure — `sitemap.md` (page hierarchy with purpo
 ## /twt-ia-validate
 
 **Category:** ia
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** no
 
 Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them against a weighted rubric, find coverage gaps, navigation problems, unclear page purposes, scope omissions, and positioning misalignment, and write a structured `validation-report.md` recommending fixes.
@@ -1368,7 +1368,7 @@ For every page in the sitemap, define a layout spec — section order, the compo
 ## /twt-layout-validate
 
 **Category:** layout
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** no
 
 Read-only critique of the page layouts — section order & hierarchy, component-slot fit, content-map completeness, responsive intent, and IA consistency — written to `validation-report.md`.
@@ -1445,7 +1445,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1492,7 +1492,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 ## /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** no
 
 Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.
@@ -1690,7 +1690,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 ## /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read-only accessibility audit of the built HTML (local) or the rendered pages (live, best-effort) — image alt text, heading order, landmarks, form labels, and WCAG AA contrast for declared color pairs.
@@ -1724,7 +1724,7 @@ Read-only accessibility audit of the built HTML (local) or the rendered pages (l
 ## /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Read-only audit of content & information-architecture fidelity — every sitemap page exists, each page's sections match the Phase-1 outlines, and the content is real (no lorem/placeholder, no empty slots). Works on local HTML files or, given a URL, on the rendered site (the only way to see Elementor content).
@@ -1762,7 +1762,7 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 ## /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read-only audit of design & token fidelity on the **source** files — CSS is token-only (no hex/px/font literals), every custom property used is defined in `tokens.css`, and each page's section structure includes the components its layout requires.
@@ -1799,7 +1799,7 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 ## /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS, every widget registered in `$map`, WPML coverage for translatable fields, PHP syntax, and CSS scoping. Does NOT audit content (Elementor content lives in the WordPress DB, not in files — use live `/twt-qa <url>` for that).
@@ -1833,7 +1833,7 @@ Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS
 ## /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Read-only audit of link integrity (internal links/anchors resolve, nav consistent) and — in local mode — declared responsive tiers (960/720/600/480) and fixed-width risks. Detects dead and placeholder links for the gaps punch-list.
@@ -2103,7 +2103,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.

@@ -1,8 +1,8 @@
 ---
 name: twt-qa-content
 category: qa
-description: (v1.2.1) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
-version: 1.2.1
+description: (v1.2.2) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
