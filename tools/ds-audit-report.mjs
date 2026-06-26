@@ -170,20 +170,65 @@ const sourceLabel = dsStats.source === 'synthesized' ? 'synthesized by this audi
 const qScore = quality && typeof quality.weighted_overall === 'number' ? quality.weighted_overall : null;
 
 function scorecard() {
-  const cards = [
-    qScore != null ? `<div class="metric"><div class="num">${qScore}<span class="den">/100</span></div><div class="lbl">DS quality</div></div>` : '',
-    `<div class="metric"><div class="num">${summary.consistency_pct != null ? summary.consistency_pct + '%' : '—'}</div><div class="lbl">Consistency</div></div>`,
-    `<div class="metric"><div class="num ${summary.deviating_instances ? 'warnnum' : ''}">${summary.deviating_instances || 0}</div><div class="lbl">Drifting blocks</div></div>`,
-    `<div class="metric"><div class="num">${summary.pages || 0}</div><div class="lbl">Pages</div></div>`,
-    `<div class="metric"><div class="num">${summary.clusters || clusters.length}</div><div class="lbl">Components</div></div>`,
-  ].filter(Boolean).join('');
+  const scores5 = quality ? {
+    coherence: quality.ds_coherence,
+    adoption: quality.implementation_adoption,
+    consistency: quality.visual_consistency,
+    accessibility: quality.accessibility_safety,
+    governance: quality.governance,
+    alignment: quality.product_system_alignment ?? quality.weighted_overall,
+  } : null;
+
+  const hardGates = quality?.hard_gates || metricsData?.hard_gates || {};
+  const gateWarnings = Object.entries(hardGates)
+    .filter(([, v]) => v === true)
+    .map(([k]) => {
+      const labels = {
+        token_usage_zero: 'Token usage = 0% → Implementation Adoption capped at 15; Alignment capped at 45',
+        unique_ui_colors_blocker: '25+ unique UI colors → Color System Adoption capped at 30',
+        inline_style_blocker: '21+ inline styles → Implementation Adoption capped at 40',
+        important_blocker: '11+ !important declarations → Implementation Adoption reduced',
+        raw_value_blocker: '51+ raw values → Implementation Adoption capped at 35',
+        critical_a11y_failure: 'Critical accessibility failure → Accessibility Safety capped at 80; Alignment capped at 70',
+      };
+      return labels[k] || k;
+    });
+
+  let scoresHtml = '';
+  if (scores5) {
+    const fmt = (v, lbl) => v != null
+      ? `<div class="metric"><div class="num">${v}<span class="den">/100</span></div><div class="lbl">${lbl}</div></div>`
+      : '';
+    scoresHtml = [
+      fmt(scores5.alignment, 'Product-System Alignment'),
+      fmt(scores5.coherence, 'DS Coherence'),
+      fmt(scores5.adoption, 'Implementation Adoption'),
+      fmt(scores5.consistency, 'Visual Consistency'),
+      fmt(scores5.accessibility, 'Accessibility Safety'),
+      fmt(scores5.governance, 'Governance'),
+    ].filter(Boolean).join('');
+  } else if (qScore != null) {
+    scoresHtml = `<div class="metric"><div class="num">${qScore}<span class="den">/100</span></div><div class="lbl">DS quality</div></div>`;
+  }
+
+  const gateHtml = gateWarnings.length
+    ? `<div class="gates">${gateWarnings.map((w) => `<div class="gate-warn">⚠ ${esc(w)}</div>`).join('')}</div>`
+    : '';
+
   return `<section class="card scorecard">
     <div class="meta">
       <span><b>Baseline:</b> ${esc(sourceLabel)}</span>
       <span><b>Confidence:</b> ${esc(summary.confidence || 'static')}</span>
       ${summary.crawled ? `<span><b>Crawled:</b> ${summary.crawled} page(s)</span>` : ''}
     </div>
-    <div class="metrics">${cards}</div>
+    ${gateHtml}
+    <div class="metrics">
+      ${scoresHtml}
+      <div class="metric"><div class="num">${summary.consistency_pct != null ? summary.consistency_pct + '%' : '—'}</div><div class="lbl">Consistency</div></div>
+      <div class="metric"><div class="num ${summary.deviating_instances ? 'warnnum' : ''}">${summary.deviating_instances || 0}</div><div class="lbl">Drifting blocks</div></div>
+      <div class="metric"><div class="num">${summary.pages || 0}</div><div class="lbl">Pages</div></div>
+      <div class="metric"><div class="num">${summary.clusters || clusters.length}</div><div class="lbl">Components</div></div>
+    </div>
   </section>`;
 }
 
@@ -208,29 +253,53 @@ const METRICS_LEGEND = `<div class="metrics-legend">
 </div>`;
 
 function qualityTable() {
-  if (quality && Array.isArray(quality.metrics) && quality.metrics.length) {
-    const rows = quality.metrics.map((q) => `<tr>
-      <td>${esc(q.name)}</td><td class="r">${esc(q.weight)}</td>
-      <td class="r ${Number(q.score) < 60 ? 'low' : ''}">${esc(q.score)}%</td>
-      <td>${esc(q.evidence || '')}${q.note ? ' — ' + esc(q.note) : ''}</td></tr>`).join('');
+  let html = '';
+
+  // 5-score summary (new in v2)
+  if (quality && quality.product_system_alignment != null) {
+    const scoreRows = [
+      ['Design System Coherence', quality.ds_coherence, '20%', 'Whether the system definition is well-structured on its own'],
+      ['Implementation Adoption', quality.implementation_adoption, '30%', 'Whether the product actually uses the system in CSS/code'],
+      ['Visual Consistency', quality.visual_consistency, '25%', 'Whether similar UI looks and behaves consistently'],
+      ['Accessibility Safety', quality.accessibility_safety, '15%', 'Contrast, focus, target size, readability'],
+      ['Governance / Intentionality', quality.governance, '10%', 'Whether exceptions are documented and justified'],
+    ].map(([name, val, weight, desc]) => `<tr>
+      <td><b>${esc(name)}</b></td>
+      <td class="r">${esc(weight)}</td>
+      <td class="r ${val != null && val < 50 ? 'low' : ''}">${val != null ? val : '—'}/100</td>
+      <td>${esc(desc)}</td></tr>`).join('');
     const ca = quality.critical_assessment || {};
     const caHtml = (ca.strength || ca.weakness || ca.fix)
       ? `<div class="assess"><b>Critical assessment.</b>
           ${ca.strength ? '<div><b>Strength:</b> ' + esc(ca.strength) + '</div>' : ''}
           ${ca.weakness ? '<div><b>Weakness:</b> ' + esc(ca.weakness) + '</div>' : ''}
           ${ca.fix ? '<div><b>Highest-impact fix:</b> ' + esc(ca.fix) + '</div>' : ''}</div>` : '';
-    return `${METRICS_LEGEND}<table class="grid"><thead><tr><th>Metric</th><th class="r">Weight</th><th class="r">Score</th><th>Evidence / note</th></tr></thead><tbody>${rows}</tbody></table>${caHtml}`;
+    html += `<h3>Score Breakdown</h3>
+      <table class="grid"><thead><tr><th>Dimension</th><th class="r">Weight</th><th class="r">Score</th><th>What it means</th></tr></thead>
+      <tbody>${scoreRows}</tbody></table>${caHtml}`;
   }
-  const sig = [
-    ['Token coverage', (signals.token_coverage_pct || 0) + '%'],
-    ['Undefined var refs', signals.undefined_var_refs || 0],
-    ['Distinct colors', signals.distinct_colors || 0],
-    ['Distinct lengths', signals.distinct_lengths || 0],
-    ['Breakpoints', signals.breakpoint_count || 0],
-    ['Duplicate token defs', signals.duplicate_token_defs || 0],
-  ].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r">${esc(v)}</td></tr>`).join('');
-  return `<p class="note">No model scorecard (quality.json) found — showing deterministic signals only.</p>
-    <table class="grid"><thead><tr><th>Signal</th><th class="r">Value</th></tr></thead><tbody>${sig}</tbody></table>`;
+
+  // 10-metric DS Coherence detail (existing, unchanged)
+  if (quality && Array.isArray(quality.metrics) && quality.metrics.length) {
+    const rows = quality.metrics.map((q) => `<tr>
+      <td>${esc(q.name)}</td><td class="r">${esc(q.weight)}</td>
+      <td class="r ${Number(q.score) < 60 ? 'low' : ''}">${esc(q.score)}%</td>
+      <td>${esc(q.evidence || '')}${q.note ? ' — ' + esc(q.note) : ''}</td></tr>`).join('');
+    html += `<h3>DS Coherence Detail (10 sub-metrics)</h3>
+      ${METRICS_LEGEND}<table class="grid"><thead><tr><th>Metric</th><th class="r">Weight</th><th class="r">Score</th><th>Evidence / note</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } else if (!html) {
+    const sig = [
+      ['Token coverage', (signals.token_coverage_pct || 0) + '%'],
+      ['Undefined var refs', signals.undefined_var_refs || 0],
+      ['Distinct colors', signals.distinct_colors || 0],
+      ['Distinct lengths', signals.distinct_lengths || 0],
+      ['Breakpoints', signals.breakpoint_count || 0],
+      ['Duplicate token defs', signals.duplicate_token_defs || 0],
+    ].map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r">${esc(v)}</td></tr>`).join('');
+    html += `<p class="note">No model scorecard (quality.json) found — showing deterministic signals only.</p>
+      <table class="grid"><thead><tr><th>Signal</th><th class="r">Value</th></tr></thead><tbody>${sig}</tbody></table>`;
+  }
+  return html;
 }
 
 // ── group blocks by page ──────────────────────────────────────────────────────
@@ -318,7 +387,13 @@ function fmtVal(m) {
 }
 function stBadge(st) {
   if (!st) return '';
-  const map = { ok: ['st-ok', 'OK'], warn: ['st-warn', 'WARN'], bad: ['st-bad', 'BAD'], info: ['st-info', '·'] };
+  const map = {
+    ok: ['st-ok', 'OK'],
+    warn: ['st-warn', 'WARN'],
+    bad: ['st-bad', 'BAD'],
+    blocker: ['st-blocker', 'BLOCKER'],
+    info: ['st-info', '·'],
+  };
   const [cls, label] = map[st] || ['st-info', st];
   return `<span class="${cls}">${label}</span>`;
 }
@@ -342,7 +417,7 @@ function metricsSection() {
     </details>`;
   }).join('');
   return `<h2>Design System Comparison Metrics</h2>
-  <p class="note">Compares what the design system defines against what the site actually uses — token counts, coverage ratios, and site-side drift. Metrics marked <span class="st-bad">BAD</span> indicate systemic drift; <span class="st-warn">WARN</span> suggests review; <span class="mc-null">—</span> requires Playwright or manual review. Generated ${esc(metricsData.generated_at || '')}.</p>
+  <p class="note">Compares what the design system defines against what the site actually uses — token counts, coverage ratios, and site-side drift. Metrics marked <span class="st-blocker">BLOCKER</span> indicate hard failures; <span class="st-bad">BAD</span> systemic drift; <span class="st-warn">WARN</span> suggests review; <span class="mc-null">—</span> requires Playwright or manual review. Generated ${esc(metricsData.generated_at || '')}.</p>
   <div class="mc-legend">
     <span><b>Value</b> — computed from crawled CSS and audit data</span>
     <span><b>OK</b> — within healthy thresholds</span>
@@ -496,7 +571,10 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .st-ok{color:var(--ok);font-weight:700;font-size:11px}
 .st-warn{color:var(--warning);font-weight:700;font-size:11px}
 .st-bad{color:var(--blocker);font-weight:700;font-size:11px}
+.st-blocker{background:#7f1d1d;color:#fff;border-radius:3px;padding:1px 5px;font-size:.75rem;font-weight:700}
 .st-info{color:var(--accent);font-size:11px}
+.gates{margin:8px 0;display:flex;flex-direction:column;gap:4px}
+.gate-warn{background:#7f1d1d22;border-left:3px solid #dc2626;padding:4px 8px;font-size:.8rem;color:#dc2626;border-radius:0 4px 4px 0}
 `;
 
 function htmlShell(title, body) {
