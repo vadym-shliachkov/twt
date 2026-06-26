@@ -52,7 +52,7 @@ For the **token-only CSS** check, gather the literal counts deterministically �
 node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" tokens "$CLAUDE_PROJECT_DIR" elementor
 ```
 
-Use its `counts`/`findings[]` for the Token-only CSS criterion. The **other checks are not scriptable** and stay yours: widget-`$map` registration, `php -l`, WPML coverage, and CSS scoping all require reading the PHP/XML structure. Then classify:
+Use its `counts`/`findings[]` for the Token-only CSS criterion. The output also includes `evidence_hints` (token_only_styling, defined_vars) — use these pre-formatted strings in the scorecard Evidence column. The **other checks are not scriptable** and stay yours: widget-`$map` registration, `php -l`, WPML coverage, and CSS scoping all require reading the PHP/XML structure. Then classify:
 
 - **BLOCKER** — a widget PHP file in `inc/elementor/widgets/` whose class is not registered in the `$map` of `class-<slug>-elementor.php`; a hex/px/font **literal** in `widgets.css` or `design-system.css` (scanner's counts — token-only violation, definitions already excluded); a PHP syntax error (run `php -l` per file if `php` is available; otherwise flag as "lint not run — php unavailable"); an unscoped CSS selector (not wrapped in the `:where(.<slug>-chrome, .<slug>-homepage)` scope) that would leak globally.
 - **WARNING** — a translatable text control with no entry in `wpml-config.xml`; a widget shipping `'default' =>` demo content on TEXT/TEXTAREA/MEDIA/REPEATER (violates the no-demo-content rule); a widget missing `register_section_spacing()`.

@@ -64,7 +64,7 @@ In **local mode, gather the deterministic counts first — don't scan for filler
 node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" content "$CLAUDE_PROJECT_DIR"
 ```
 
-Use its `counts`/`findings[]` for the lorem/placeholder/empty and sitemap-coverage evidence. You still own the judgment the script can't do: **outline fidelity** (do the sections match `outlines/`?), **copy quality** (Step 5), and the **manifest** cross-check. In **live mode** there's no script — crawl with `WebFetch` (Step 3) and judge content from the rendered text. Then, for each page:
+Use its `counts`/`findings[]` for the lorem/placeholder/empty and sitemap-coverage evidence. The output also includes `evidence_hints` (sitemap_coverage, real_content, heading_copy) — use these pre-formatted strings in the scorecard Evidence column. You still own the judgment the script can't do: **outline fidelity** (do the sections match `outlines/`?), **copy quality** (Step 5), and the **manifest** cross-check. In **live mode** there's no script — crawl with `WebFetch` (Step 3) and judge content from the rendered text. Then, for each page:
 
 - **BLOCKER** — a `sitemap.md` page has no corresponding built/served page (scanner's `missing_pages`); an outline section is missing from its page; **lorem/placeholder** text present (scanner's `lorem_blocks` + `placeholder_markers`); a content slot the outline specifies is empty (scanner's `empty_headings` + your outline read).
 - **WARNING** — content present but not traceable to any outline; a heading/copy block materially diverges from the outline; a manifest entry that no page references (planned-but-unused asset).

@@ -52,7 +52,7 @@ In **local mode, gather the deterministic counts first — don't hand-scan attri
 node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" a11y "$CLAUDE_PROJECT_DIR"
 ```
 
-Use its `counts`/`findings[]` for the attribute/structure evidence. **Contrast is not in the script** — compute WCAG AA token pairs yourself by reading `tokens.css` (the one check needing color math). In **live mode** there's no script — judge attributes from the `WebFetch`-rendered pages. Then, per page:
+Use its `counts`/`findings[]` for the attribute/structure evidence; the output also includes `evidence_hints` — pre-formatted strings keyed by criterion (alt_text, heading_landmarks, labels_roles, contrast, focusable) — paste these directly into the scorecard's Evidence column. **Contrast is not in the script** — compute WCAG AA token pairs yourself by reading `tokens.css` (the one check needing color math). In **live mode** there's no script — judge attributes from the `WebFetch`-rendered pages. Then, per page:
 
 - **BLOCKER** — `<img>` without `alt` (scanner's `img_no_alt`); a skipped heading level, e.g. `h1`→`h3` (scanner's `heading_jumps`); no `<main>` or landmark element; a form control without an associated label (scanner's `control_no_label`); a declared text/background **token pair** that fails WCAG AA (< 4.5:1 for normal text — your contrast computation).
 - **WARNING** — more than one `<h1>`; a link/button with no discernible text; non-descriptive `alt` (e.g. "image").

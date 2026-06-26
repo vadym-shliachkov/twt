@@ -86,13 +86,41 @@ function lineOf(text, idx) { let n = 1; for (let i = 0; i < idx && i < text.leng
 // Strip /* ... */ comments but keep length/offsets stable (replace with spaces).
 function stripComments(css) { return css.replace(/\/\*[\s\S]*?\*\//g, (m) => ' '.repeat(m.length)); }
 
+function buildEvidenceHints(checkType, counts) {
+  if (checkType === 'a11y') return {
+    alt_text: `${counts.img_no_alt} image${counts.img_no_alt !== 1 ? 's' : ''} missing alt`,
+    heading_landmarks: `${counts.heading_jumps} heading level skip${counts.heading_jumps !== 1 ? 's' : ''}, ${counts.missing_h1} page${counts.missing_h1 !== 1 ? 's' : ''} missing h1`,
+    labels_roles: `${counts.control_no_label} unlabeled control${counts.control_no_label !== 1 ? 's' : ''}, ${counts.link_no_text} link${counts.link_no_text !== 1 ? 's' : ''} with no text`,
+    contrast: '— compute from tokens.css WCAG AA pairs (not in scanner)',
+    focusable: `${counts.missing_lang} page${counts.missing_lang !== 1 ? 's' : ''} missing lang attribute`,
+  };
+  if (checkType === 'tokens') return {
+    token_only_styling: `${counts.hex_literals} hex + ${counts.length_literals} length + ${counts.font_literals} font literal${counts.font_literals !== 1 ? 's' : ''} across CSS`,
+    defined_vars: `${counts.undefined_var_refs} undefined var() reference${counts.undefined_var_refs !== 1 ? 's' : ''}`,
+    structure_vs_ds: '— check layout components manually against layouts/; not in scanner',
+    consistency: '— check unique undocumented patterns manually; not in scanner',
+  };
+  if (checkType === 'links') return {
+    internal_links: `${counts.dead_internal_links} dead internal link${counts.dead_internal_links !== 1 ? 's' : ''}, ${counts.dead_anchors} dead anchor${counts.dead_anchors !== 1 ? 's' : ''}`,
+    asset_resolution: `${counts.missing_assets} missing asset${counts.missing_assets !== 1 ? 's' : ''}, ${counts.empty_or_placeholder_hrefs} placeholder href${counts.empty_or_placeholder_hrefs !== 1 ? 's' : ''}`,
+    responsive_tiers: '— check @media breakpoints manually; not in scanner',
+  };
+  if (checkType === 'content') return {
+    sitemap_coverage: `${counts.missing_pages} page${counts.missing_pages !== 1 ? 's' : ''} in sitemap not built, ${counts.extra_pages} built but not in sitemap`,
+    real_content: `${counts.lorem_blocks} lorem block${counts.lorem_blocks !== 1 ? 's' : ''}, ${counts.placeholder_markers} placeholder marker${counts.placeholder_markers !== 1 ? 's' : ''}`,
+    content_ia_fidelity: '— compare sections to outlines/ manually; not in scanner',
+    heading_copy: `${counts.empty_headings} empty heading${counts.empty_headings !== 1 ? 's' : ''}`,
+  };
+  return {};
+}
+
 function emit(sources, counts, findings) {
   const capped = findings.slice(0, CAP * 8);
   const summary = Object.entries(counts).map(([k, v]) => `${k}=${v}`).join('  ');
   console.log(`qa-scan ${check}: ${summary}  (sources: ${sources.length} file${sources.length === 1 ? '' : 's'})`);
   if (findings.length > capped.length) console.log(`(showing ${capped.length} of ${findings.length} locations; counts above are exact)`);
   console.log('```json');
-  console.log(JSON.stringify({ check, sources: sources.map(rel), counts, findings: capped }, null, 2));
+  console.log(JSON.stringify({ check, sources: sources.map(rel), counts, evidence_hints: buildEvidenceHints(check, counts), findings: capped }, null, 2));
   console.log('```');
 }
 
