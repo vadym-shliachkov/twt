@@ -272,11 +272,17 @@ function fmt(v, suffix) { return v == null ? null : v + (suffix || ''); }
 // Each metric: { id, name, site, ds, value, unit, status, description }
 // status: 'ok' | 'warn' | 'bad' | 'info' | null
 
-function status(val, warnAt, badAt, invert = false) {
+function status(val, warnAt, badAt, invertOrOpts = false) {
   if (val == null) return null;
   const v = parseFloat(val);
   if (isNaN(v)) return 'info';
-  if (!invert) return v >= badAt ? 'bad' : v >= warnAt ? 'warn' : 'ok';
+  const invert = typeof invertOrOpts === 'boolean' ? invertOrOpts : false;
+  const blockerAt = typeof invertOrOpts === 'object' && invertOrOpts !== null ? invertOrOpts.blocker : undefined;
+  if (!invert) {
+    if (blockerAt !== undefined && v >= blockerAt) return 'blocker';
+    return v >= badAt ? 'bad' : v >= warnAt ? 'warn' : 'ok';
+  }
+  if (blockerAt !== undefined && v <= blockerAt) return 'blocker';
   return v <= badAt ? 'bad' : v <= warnAt ? 'warn' : 'ok';
 }
 
@@ -284,50 +290,56 @@ const metrics = [
   // ── Category 1: Color ──────────────────────────────────────────────────────
   { cat: 1, catLabel: 'Color', id: '1.1',  name: 'Unique colors count',
     value: siteColors.length, site: siteColors.length, ds: null,
-    st: status(siteColors.length, 30, 60), desc: 'How many distinct color values appear in the site\'s CSS. High counts signal ad-hoc decisions outside the palette.' },
+    st: status(siteColors.length, 9, 15, { blocker: 25 }),
+    desc: 'Unique UI styling color values in site CSS. For a normal site/app: 1–8 = OK, 9–14 = WARN, 15–24 = BAD, 25+ = BLOCKER (unless product swatches, data-viz, or documented theme roles explain the count).' },
   { cat: 1, id: '1.2',  name: 'DS color token count',
     value: ds.color_count, site: null, ds: ds.color_count,
     st: 'info', desc: 'How many approved color tokens the design system defines — the permitted palette.' },
   { cat: 1, id: '1.3',  name: 'Color token expansion ratio',
     value: ratio(siteColors.length, ds.color_count), site: siteColors.length, ds: ds.color_count,
-    unit: 'x', st: status(ratio(siteColors.length, ds.color_count), 2, 4),
-    desc: 'Site unique colors ÷ DS color tokens. A ratio above 2× means the site is using far more colors than the system allows; 4×+ is a systemic problem.' },
+    unit: 'x', st: status(ratio(siteColors.length, ds.color_count), 1.5, 2.5, { blocker: 4 }),
+    desc: 'Site unique colors ÷ DS color tokens. A ratio above 1.5× means the site is using more colors than the system allows; 4×+ is systemic. Trust token coverage over this ratio — a low ratio with 0% token usage is still BLOCKER.' },
   { cat: 1, id: '1.4',  name: 'Extra colors count',
     value: Math.max(0, siteColors.length - (ds.color_count || 0)),
     site: siteColors.length, ds: ds.color_count,
-    st: status(Math.max(0, siteColors.length - (ds.color_count || 0)), 5, 20),
-    desc: 'Site unique colors minus DS tokens. Every extra color is a value that has no approved home in the system.' },
+    st: status(Math.max(0, siteColors.length - (ds.color_count || 0)), 3, 8, { blocker: 15 }),
+    desc: 'Site unique colors minus DS tokens. Every extra color is a value with no approved home in the system.' },
   { cat: 1, id: '1.5',  name: 'Approved color coverage',
     value: colorTokenCoverage, unit: '%',
-    st: status(colorTokenCoverage, 60, 40, true),
-    desc: 'What percentage of color usages reference an approved design system token (via var(--…)). Below 60% means most colors are raw/ad-hoc.' },
+    st: colorTokenCoverage == null ? null
+      : colorTokenCoverage >= 95 ? 'ok'
+      : colorTokenCoverage >= 80 ? 'warn'
+      : colorTokenCoverage >= 50 ? 'bad'
+      : 'blocker',
+    desc: 'Percentage of color usages referencing an approved DS token via var(--…). 95%+ = OK, 80–94% = WARN, 50–79% = BAD, 0–49% = BLOCKER. Special rule: 0% = hard implementation failure.' },
   { cat: 1, id: '1.6',  name: 'Unmapped colors count',
     value: Math.max(0, unmappedColors),
-    st: status(Math.max(0, unmappedColors), 5, 15),
-    desc: 'Colors used in the site that do not match any design system token value. These must each be mapped or removed.' },
+    st: status(Math.max(0, unmappedColors), 1, 3, { blocker: 6 }),
+    desc: 'Colors used in the site that do not match any DS token value. 0 = OK, 1–2 = WARN, 3–5 = BAD, 6+ = BLOCKER.' },
   { cat: 1, id: '1.7',  name: 'Near-duplicate colors count',
     value: nearDupColorCount,
-    st: status(nearDupColorCount, 3, 8),
-    desc: 'Colors that are visually almost identical to a DS token (within 22/255 RGB distance) but not exactly equal — e.g. #FFFFFF vs #FEFEFE. Each one is a consolidation opportunity.' },
+    st: status(nearDupColorCount, 1, 4, { blocker: 9 }),
+    desc: 'Colors visually almost identical to a DS token (within 22/255 RGB distance) but not exactly equal. 0 = OK, 1–3 = WARN, 4–8 = BAD, 9+ = BLOCKER.' },
   { cat: 1, id: '1.8',  name: 'One-off colors count',
-    value: tokenCandidates(siteColors) > 0 ? null : null, // requires per-component frequency; set null
-    st: null, desc: 'Colors used only once across the entire site. One-offs are candidates for removal or replacement with an existing token.' },
+    value: null, st: null,
+    desc: 'Colors used only once across the entire site. One-offs are candidates for removal or replacement with an existing token.' },
   { cat: 1, id: '1.9',  name: 'Semantic color mismatch count',
     value: null, st: null,
-    desc: 'Cases where an approved color is used for the wrong semantic purpose (e.g. error-red used as an accent). Requires manual review — static analysis cannot infer intent.' },
+    desc: 'Cases where an approved color is used for the wrong semantic purpose (e.g. error-red used as an accent). Requires manual review.' },
   { cat: 1, id: '1.10', name: 'Color contrast failure count',
     value: contrastFailures,
-    st: status(contrastFailures, 1, 5),
-    desc: 'Text/background color pairs that fail WCAG AA contrast requirements. Zero failures means every intended text-on-surface pair is accessible.' },
+    st: status(contrastFailures, 1, 3, { blocker: 5 }),
+    desc: 'Text/background color pairs failing WCAG AA. 0 = OK, 1 low-visibility failure = WARN, multiple = BAD, critical flow failure = BLOCKER.' },
   { cat: 1, id: '1.11', name: 'Token-safe color pair coverage',
     value: contrastFailures === 0 ? 100 : contrastFailures != null ? Math.max(0, 100 - contrastFailures * 10) : null,
-    unit: '%', st: status(contrastFailures === 0 ? 100 : contrastFailures != null ? Math.max(0, 100 - contrastFailures * 10) : null, 80, 60, true),
-    desc: 'Percentage of color combinations that are both approved tokens and WCAG-accessible. The higher, the safer.' },
+    unit: '%', st: contrastFailures === 0 ? 'ok' : contrastFailures != null ? (contrastFailures >= 5 ? 'blocker' : contrastFailures >= 3 ? 'bad' : 'warn') : null,
+    desc: 'Percentage of color combinations that are both approved tokens and WCAG-accessible.' },
 
   // ── Category 2: Typography ─────────────────────────────────────────────────
   { cat: 2, catLabel: 'Typography', id: '2.1', name: 'Unique font-size count',
     value: siteFontSizes.length, site: siteFontSizes.length, ds: null,
-    st: status(siteFontSizes.length, 12, 25), desc: 'How many distinct font-size values the site uses. A healthy type scale has 6–10 steps; many more indicates an uncontrolled scale.' },
+    st: status(siteFontSizes.length, 8, 11, { blocker: 16 }),
+    desc: 'Distinct font-size values used. A healthy type scale has 6–10 steps. 1–7 = OK, 8–10 = WARN, 11–15 = BAD, 16+ = BLOCKER.' },
   { cat: 2, id: '2.2',  name: 'DS font-size token count',
     value: ds.type_size_count, ds: ds.type_size_count, st: 'info',
     desc: 'Number of approved font-size tokens in the design system type scale.' },
@@ -341,8 +353,12 @@ const metrics = [
     desc: 'Font sizes that do not match any approved type scale step. Each one breaks the visual rhythm.' },
   { cat: 2, id: '2.5',  name: 'Approved font-size coverage',
     value: fontSizeCoverage, unit: '%',
-    st: status(fontSizeCoverage, 60, 40, true),
-    desc: 'Percentage of font-size usages that reference a DS token via var(--…). High coverage means the type scale is actually being followed.' },
+    st: fontSizeCoverage == null ? null
+      : fontSizeCoverage >= 95 ? 'ok'
+      : fontSizeCoverage >= 80 ? 'warn'
+      : fontSizeCoverage >= 50 ? 'bad'
+      : 'blocker',
+    desc: 'Percentage of font-size usages referencing a DS token. 95%+ = OK, 80–94% = WARN, 50–79% = BAD, 0–49% = BLOCKER.' },
   { cat: 2, id: '2.6',  name: 'Near-token font-size count',
     value: nearDupFontSizes,
     st: status(nearDupFontSizes, 3, 7),
@@ -373,7 +389,8 @@ const metrics = [
     desc: 'Site font-weights ÷ DS font-weight tokens.' },
   { cat: 2, id: '2.14', name: 'Unique letter-spacing count',
     value: siteLetterSpacings.length,
-    st: status(siteLetterSpacings.length, 5, 10), desc: 'Number of distinct letter-spacing values. 2–4 is typical for a well-controlled system.' },
+    st: status(siteLetterSpacings.length, 3, 5, { blocker: 10 }),
+    desc: 'Distinct letter-spacing values. Letter-spacing should be rare and intentional. 0–2 = OK, 3–4 = WARN, 5–9 = BAD, 10+ = BLOCKER.' },
   { cat: 2, id: '2.15', name: 'Unmapped letter-spacing count',
     value: dsTokens.letterSpacings.length ? unmappedCount(siteLetterSpacings, dsTokens.letterSpacings) : null,
     st: null, desc: 'Letter-spacing values not covered by DS tokens.' },
@@ -397,7 +414,8 @@ const metrics = [
   // ── Category 3: Spacing ────────────────────────────────────────────────────
   { cat: 3, catLabel: 'Spacing', id: '3.1', name: 'Unique spacing value count',
     value: siteSpacings.length, site: siteSpacings.length,
-    st: status(siteSpacings.length, 20, 50), desc: 'How many distinct margin/padding/gap/inset values the site uses. A spacing scale should need 8–16 steps.' },
+    st: status(siteSpacings.length, 9, 15, { blocker: 25 }),
+    desc: 'Distinct margin/padding/gap/inset values. A spacing scale should need 8–16 steps. 1–8 = OK, 9–14 = WARN, 15–24 = BAD, 25+ = BLOCKER.' },
   { cat: 3, id: '3.2',  name: 'DS spacing token count',
     value: ds.space_count, ds: ds.space_count, st: 'info',
     desc: 'Number of approved spacing tokens (margin, padding, gap steps) in the design system.' },
@@ -411,12 +429,16 @@ const metrics = [
     desc: 'Spacing values that fall outside the approved scale. Every one creates micro-inconsistency in rhythm and density.' },
   { cat: 3, id: '3.5',  name: 'Approved spacing coverage',
     value: spacingCoverage, unit: '%',
-    st: status(spacingCoverage, 60, 40, true),
-    desc: 'Percentage of spacing usages that reference a DS token. Below 50% means the layout is built on ad-hoc values.' },
+    st: spacingCoverage == null ? null
+      : spacingCoverage >= 95 ? 'ok'
+      : spacingCoverage >= 80 ? 'warn'
+      : spacingCoverage >= 50 ? 'bad'
+      : 'blocker',
+    desc: 'Percentage of spacing usages referencing a DS token. 95%+ = OK, 80–94% = WARN, 50–79% = BAD, 0–49% = BLOCKER.' },
   { cat: 3, id: '3.6',  name: 'Near-token spacing count',
     value: nearDupSpacings,
-    st: status(nearDupSpacings, 5, 15),
-    desc: 'Spacing values within 2 px of an approved scale step but not exact — e.g. 15 px near 16 px. Easy normalization wins.' },
+    st: status(nearDupSpacings, 1, 5, { blocker: 10 }),
+    desc: 'Spacing values within 2 px of an approved scale step but not exact. 0 = OK, 1–4 = WARN, 5–9 = BAD, 10+ = BLOCKER.' },
   { cat: 3, id: '3.7',  name: 'One-off spacing value count',
     value: null, st: null,
     desc: 'Spacing values used in only one place. These are prime candidates for removal or replacement.' },
@@ -484,7 +506,8 @@ const metrics = [
     st: status(siteBorderColors.length, 5, 10), desc: 'Number of distinct border colors. A consistent border language uses 2–4 approved values.' },
   { cat: 5, id: '5.8',  name: 'Unique shadow count',
     value: siteShadows.length, site: siteShadows.length,
-    st: status(siteShadows.length, 4, 8), desc: 'Distinct box-shadow / elevation styles. Elevation systems typically have 3–5 levels.' },
+    st: status(siteShadows.length, 5, 8, { blocker: 13 }),
+    desc: 'Distinct box-shadow/elevation styles. Elevation systems typically have 3–5 levels. 0–4 = OK, 5–7 = WARN, 8–12 = BAD, 13+ = BLOCKER.' },
   { cat: 5, id: '5.9',  name: 'DS shadow token count',
     value: dsTokens.shadows.length, ds: dsTokens.shadows.length, st: 'info',
     desc: 'Number of approved shadow/elevation tokens.' },
@@ -598,15 +621,24 @@ const metrics = [
   // ── Category 9: CSS / Implementation ──────────────────────────────────────
   { cat: 9, catLabel: 'CSS / Implementation', id: '9.1', name: 'Raw value usage count',
     value: rawValueUsageCount,
-    st: status(rawValueUsageCount, 30, 100), desc: 'Total hardcoded visual values (colors, spacings, font sizes) not expressed via tokens. The lower, the more maintainable.' },
+    st: status(rawValueUsageCount, 1, 11, { blocker: 51 }),
+    desc: 'Total hardcoded visual values (colors, spacings, font sizes) not expressed via tokens. 0 = OK, 1–10 = WARN, 11–50 = BAD, 51+ = BLOCKER.' },
   { cat: 9, id: '9.2',  name: 'Token usage ratio',
     value: qs.token_coverage_pct, unit: '%',
-    st: status(qs.token_coverage_pct, 60, 40, true),
-    desc: 'Percentage of all design declarations that reference a DS token (var(--…) or matching value). The headline maintainability metric.' },
+    st: qs.token_coverage_pct == null ? null
+      : qs.token_coverage_pct >= 95 ? 'ok'
+      : qs.token_coverage_pct >= 80 ? 'warn'
+      : qs.token_coverage_pct >= 50 ? 'bad'
+      : 'blocker',
+    desc: 'Percentage of design declarations referencing a DS token. 95%+ = OK, 80–94% = WARN, 50–79% = BAD, 0–49% = BLOCKER. 0% = hard implementation failure (caps implementation adoption score at 15).' },
   { cat: 9, id: '9.3',  name: 'CSS variable coverage',
     value: qs.token_coverage_pct, unit: '%',
-    st: status(qs.token_coverage_pct, 60, 40, true),
-    desc: 'What fraction of design-relevant declarations use CSS custom properties (var(--…)) rather than hardcoded values.' },
+    st: qs.token_coverage_pct == null ? null
+      : qs.token_coverage_pct >= 95 ? 'ok'
+      : qs.token_coverage_pct >= 80 ? 'warn'
+      : qs.token_coverage_pct >= 50 ? 'bad'
+      : 'blocker',
+    desc: 'Fraction of design-relevant declarations using CSS custom properties (var(--…)) rather than hardcoded values.' },
   { cat: 9, id: '9.4',  name: 'Hardcoded color count',
     value: hardcodedColorCount,
     st: status(hardcodedColorCount, 10, 30), desc: 'Raw color values used directly in CSS (not via a token). Each one is a theming and rebrand liability.' },
@@ -623,10 +655,12 @@ const metrics = [
     value: null, st: null, desc: 'Average CSS specificity layers needed to reach the final computed value. Deep overrides make refactors risky.' },
   { cat: 9, id: '9.9',  name: '!important count',
     value: importantCount,
-    st: status(importantCount, 5, 20), desc: 'Number of !important declarations. Each one bypasses the cascade and makes systematic token rollout harder.' },
+    st: status(importantCount, 1, 4, { blocker: 11 }),
+    desc: '!important declarations. Each bypasses the cascade. 0 = OK, 1–3 = WARN, 4–10 = BAD, 11+ = BLOCKER.' },
   { cat: 9, id: '9.10', name: 'Inline style count',
     value: inlineStyleCount,
-    st: status(inlineStyleCount, 10, 30), desc: 'Number of inline style= attributes in HTML. Inline styles can\'t be overridden by tokens and resist theming.' },
+    st: status(inlineStyleCount, 1, 6, { blocker: 21 }),
+    desc: 'Inline style= attributes. Cannot be overridden by tokens and resist theming. 0 = OK, 1–5 = WARN, 6–20 = BAD, 21+ = BLOCKER.' },
   { cat: 9, id: '9.11', name: 'Dead token count',
     value: qs.undefined_var_refs ?? null,
     st: status(qs.undefined_var_refs, 3, 10), desc: 'DS tokens defined in tokens.css but not referenced anywhere in site CSS. Clean these up to reduce system noise.' },
@@ -797,9 +831,100 @@ for (const m of metrics) {
   });
 }
 
+// ── hard gates ────────────────────────────────────────────────────────────────
+// Requirements v2 §2: gates that prevent fake-good scores.
+const isTokenUsageZero = (qs.token_coverage_pct ?? null) === 0;
+const uniqueUiColorsBlocker = siteColors.length >= 25;
+const inlineStyleBlocker = inlineStyleCount > 20;
+const importantBlocker = importantCount >= 11;
+const rawValueBlocker = rawValueUsageCount >= 51;
+const cssVarCoverageZero = (qs.token_coverage_pct ?? null) === 0; // same signal
+const hasCriticalA11yFailure = (contrastFailures ?? 0) > 0
+  || (allSiteCss.match(/outline\s*:\s*0|outline\s*:\s*none/gi) || []).length > 0;
+
+const hardGates = {
+  token_usage_zero: isTokenUsageZero,
+  unique_ui_colors_blocker: uniqueUiColorsBlocker,
+  inline_style_blocker: inlineStyleBlocker,
+  important_blocker: importantBlocker,
+  raw_value_blocker: rawValueBlocker,
+  critical_a11y_failure: hasCriticalA11yFailure,
+};
+
+// ── 5-score model (Requirements v2 §1) ───────────────────────────────────────
+// Score 2 — Implementation Adoption (30% weight in final)
+// Base: 40% token usage + 20% raw-value health + 20% hardcoded color health + 10% inline + 10% important
+const tokenPct = qs.token_coverage_pct ?? null;
+let implAdoption = tokenPct != null
+  ? Math.round(
+      tokenPct * 0.40
+      + Math.max(0, 100 - Math.min(100, hardcodedColorCount * 3)) * 0.20
+      + Math.max(0, 100 - Math.min(100, rawValueUsageCount / 2)) * 0.20
+      + (inlineStyleCount <= 5 ? 100 : inlineStyleCount <= 20 ? 60 : 20) * 0.10
+      + (importantCount <= 3 ? 100 : importantCount <= 10 ? 60 : 20) * 0.10
+    )
+  : null;
+// Hard caps from Requirements v2 §15
+if (isTokenUsageZero && implAdoption != null) implAdoption = Math.min(15, implAdoption);
+if (inlineStyleBlocker && implAdoption != null) implAdoption = Math.min(40, implAdoption);
+if (rawValueBlocker && implAdoption != null) implAdoption = Math.min(35, implAdoption);
+
+// Score 3 — Visual Consistency (25% weight)
+const overrideRate = pct(deviations.length, (audit.block_status || []).length) ?? 0;
+let visualConsistency = consistencyPct != null
+  ? Math.round(consistencyPct * 0.70 + Math.max(0, 100 - overrideRate) * 0.30)
+  : null;
+if (overrideRate > 30 && visualConsistency != null) visualConsistency = Math.min(40, visualConsistency);
+
+// Score 4 — Accessibility Safety (15% weight)
+let accessSafety = contrastFailures != null
+  ? Math.max(0, 100 - contrastFailures * 15)
+  : null;
+if (hasCriticalA11yFailure && accessSafety != null) accessSafety = Math.min(80, accessSafety);
+
+// Score 5 — Governance / Intentionality (10% weight)
+const govScore = rawValueUsageCount > 0
+  ? Math.max(0, Math.round(100 - (totalTokenCandidates / Math.max(rawValueUsageCount, 1)) * 100))
+  : (rawValueUsageCount === 0 ? 100 : null);
+
+// Score 1 — DS Coherence (20% weight) — model-computes the real value in quality.json;
+// here we emit a placeholder proxy so the alignment score can be computed without quality.json.
+// The report uses quality.json's ds_coherence when available (overrides this proxy).
+const dsCoherenceProxy = dsTokens.all.length > 0
+  ? Math.min(100, Math.round(Math.min(dsTokens.all.length, 50) * 2)) // rough proxy
+  : null;
+
+// Score 6 — Product-System Alignment (final score with hard caps)
+let alignmentScore = null;
+if (implAdoption != null && visualConsistency != null) {
+  alignmentScore = Math.round(
+    implAdoption * 0.30
+    + visualConsistency * 0.25
+    + (dsCoherenceProxy ?? 70) * 0.20
+    + (accessSafety ?? 80) * 0.15
+    + (govScore ?? 50) * 0.10
+  );
+  if (isTokenUsageZero) alignmentScore = Math.min(45, alignmentScore);
+  if (hasCriticalA11yFailure) alignmentScore = Math.min(70, alignmentScore);
+  if (uniqueUiColorsBlocker) alignmentScore = Math.min(alignmentScore, Math.max(30, alignmentScore - 15));
+}
+
+const scores = {
+  ds_coherence: dsCoherenceProxy,
+  implementation_adoption: implAdoption,
+  visual_consistency: visualConsistency,
+  accessibility_safety: accessSafety,
+  governance: govScore,
+  product_system_alignment: alignmentScore,
+  hard_gates: hardGates,
+  note: 'ds_coherence is a proxy from static signals; quality.json provides the model-computed value. When quality.json is present, use its ds_coherence field instead.',
+};
+
 const output = {
   generated_at: new Date().toISOString().slice(0, 10),
   categories: Object.values(catMap),
+  scores,
+  hard_gates: hardGates,
 };
 
 fs.writeFileSync(path.join(OUT, 'metrics.json'), JSON.stringify(output, null, 2) + '\n');
