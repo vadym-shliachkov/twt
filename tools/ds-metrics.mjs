@@ -270,7 +270,7 @@ function fmt(v, suffix) { return v == null ? null : v + (suffix || ''); }
 
 // ── metric definition list ────────────────────────────────────────────────────
 // Each metric: { id, name, site, ds, value, unit, status, description }
-// status: 'ok' | 'warn' | 'bad' | 'info' | null
+// status: 'ok' | 'warn' | 'bad' | 'blocker' | 'info' | null
 
 function status(val, warnAt, badAt, invertOrOpts = false) {
   if (val == null) return null;
@@ -838,7 +838,6 @@ const uniqueUiColorsBlocker = siteColors.length >= 25;
 const inlineStyleBlocker = inlineStyleCount > 20;
 const importantBlocker = importantCount >= 11;
 const rawValueBlocker = rawValueUsageCount >= 51;
-const cssVarCoverageZero = (qs.token_coverage_pct ?? null) === 0; // same signal
 const hasCriticalA11yFailure = (contrastFailures ?? 0) > 0
   || (allSiteCss.match(/outline\s*:\s*0|outline\s*:\s*none/gi) || []).length > 0;
 
@@ -916,7 +915,6 @@ const scores = {
   accessibility_safety: accessSafety,
   governance: govScore,
   product_system_alignment: alignmentScore,
-  hard_gates: hardGates,
   note: 'ds_coherence is a proxy from static signals; quality.json provides the model-computed value. When quality.json is present, use its ds_coherence field instead.',
 };
 

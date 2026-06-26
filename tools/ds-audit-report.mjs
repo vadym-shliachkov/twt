@@ -185,7 +185,7 @@ function scorecard() {
     .map(([k]) => {
       const labels = {
         token_usage_zero: 'Token usage = 0% → Implementation Adoption capped at 15; Alignment capped at 45',
-        unique_ui_colors_blocker: '25+ unique UI colors → Color System Adoption capped at 30',
+        unique_ui_colors_blocker: '25+ unique UI colors → Alignment score reduced by 15 (floor 30)',
         inline_style_blocker: '21+ inline styles → Implementation Adoption capped at 40',
         important_blocker: '11+ !important declarations → Implementation Adoption reduced',
         raw_value_blocker: '51+ raw values → Implementation Adoption capped at 35',
@@ -248,7 +248,7 @@ function swatches() {
   return `<div class="swatches">${out.join('')}</div>`;
 }
 const METRICS_LEGEND = `<div class="metrics-legend">
-  <div class="ml-item"><span class="ml-label">Weight</span><span class="ml-desc">How much this metric contributes to the overall DS quality score. Higher weight = greater impact on the final number.</span></div>
+  <div class="ml-item"><span class="ml-label">Weight</span><span class="ml-desc">How much this metric contributes to the DS Coherence score. Higher weight = greater impact on the final number.</span></div>
   <div class="ml-item"><span class="ml-label">Score</span><span class="ml-desc">How well the design system performs on this metric (0–100%). Below 60% is highlighted as a concern.</span></div>
 </div>`;
 
@@ -421,6 +421,7 @@ function metricsSection() {
   <div class="mc-legend">
     <span><b>Value</b> — computed from crawled CSS and audit data</span>
     <span><b>OK</b> — within healthy thresholds</span>
+    <span class="st-blocker">BLOCKER</span> — hard failure; gate triggered
     <span class="st-warn">WARN</span> — worth reviewing
     <span class="st-bad">BAD</span> — systemic issue
     <span class="mc-null">—</span> — requires browser/manual review
