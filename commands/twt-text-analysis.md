@@ -62,7 +62,12 @@ Derive a kebab-case `<subject-slug>` (file name sans extension, or the first wor
 Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present — brand voice is **context, not a metric**: copy that is intentionally on-voice isn't penalised as cliché unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
 
 ## Step 2 — Split into blocks
-Split the subject into **logical blocks**, each analyzed separately. A block is one of: **Heading · Paragraph · List · CTA · Button text · Error message · Hint text · Description · Feature explanation**. Use document structure (markdown headings, list markers, link/button labels, paragraph breaks) to segment. Number the blocks (Block 1, Block 2, …) and record each block's **type** and **verbatim original text**. Keep blocks at natural boundaries — do not merge a heading with the paragraph beneath it, and do not split a single list into per-item blocks.
+
+If the subject is a file on disk (not pasted text), run (Bash) to segment it deterministically:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/split-blocks.mjs" "<subject-file-path>"
+```
+This outputs JSON `[{n, type, text}]` segmenting by structure: Heading (ATX `#`), Paragraph, List, Code, Blockquote. Use this as the authoritative block list. For pasted text that is not a file, split by hand: **Heading · Paragraph · List · CTA · Button text · Error message · Hint text · Description · Feature explanation**. After obtaining the block list, re-type each block's type using semantic intent: a short Paragraph ending in a verb phrase is likely a CTA; ≤8-word standalone text in a button context is Button text. Keep these semantic re-classifications minimal — the structural type is correct for most blocks. Number blocks 1-indexed.
 
 ## Step 3 — Score the 11 metrics (per block)
 Score **each block** on every metric. Each metric has **0–4 anchors** (0 Poor · 1 Weak · 2 Acceptable · 3 Good · 4 Excellent); report each as a **percentage 0–100** (the anchors guide judgment; interpolate for in-between quality). A metric that genuinely doesn't apply to a block type (e.g. Scanability for a 4-word button) is marked **N/A** and its weight is redistributed proportionally across the rest for that block.
