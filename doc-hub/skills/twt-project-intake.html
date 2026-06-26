@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Takes scattered notes, links, file paths, and constraints and turns them into one clean brief the pipeline can actually read. Every later phase gets a">
   <title>/twt-project-intake | twt skills</title>
-  <script>
-    try {
-      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
-    } catch {
-      document.documentElement.dataset.theme = "dark";
-    }
-  </script>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -22,7 +15,6 @@
       <a class="brand" href="../index.html" aria-label="twt skills home">
         <span class="logo-pair" aria-hidden="true">
           <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
-          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
         </span>
         <span>twt</span>
       </a>
@@ -33,18 +25,13 @@
         <a href="../index.html">Home</a>
         <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
       </nav>
-      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
-        <span class="theme-toggle-indicator" aria-hidden="true"></span>
-        <span class="theme-option theme-option-dark">Dark</span>
-        <span class="theme-option theme-option-light">Light</span>
-      </button>
     </header>
   <main>
     
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong>/twt-project-intake</strong>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong class="breadcrumb-command">/twt-project-intake</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
@@ -89,7 +76,6 @@
     <footer class="site-footer">
       <span class="logo-pair footer-logo" aria-hidden="true">
         <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
-        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
       </span>
       <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
     </footer>

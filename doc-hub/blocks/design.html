@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Turn the brief into a design spine: tokens, component behavior, layouts, mockups, and design-system checks.">
   <title>Design | twt skills</title>
-  <script>
-    try {
-      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
-    } catch {
-      document.documentElement.dataset.theme = "dark";
-    }
-  </script>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -22,7 +15,6 @@
       <a class="brand" href="../index.html" aria-label="twt skills home">
         <span class="logo-pair" aria-hidden="true">
           <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
-          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
         </span>
         <span>twt</span>
       </a>
@@ -33,11 +25,6 @@
         <a href="../index.html">Home</a>
         <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
       </nav>
-      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
-        <span class="theme-toggle-indicator" aria-hidden="true"></span>
-        <span class="theme-option theme-option-dark">Dark</span>
-        <span class="theme-option theme-option-light">Light</span>
-      </button>
     </header>
   <main>
     
@@ -87,9 +74,9 @@
       <span class="skill-title">Design System Audit</span>
       <span class="skill-owner">/twt-design-system-audit</span>
     </span>
-    <span class="skill-version">v1.4.7</span>
+    <span class="skill-version">v1.5.1</span>
     <span class="skill-copy">Score a real design system's quality and flag every page and block that drifts from it.</span>
-    <span class="skill-stats">inputs yes · reads 4 · writes 13</span>
+    <span class="skill-stats">inputs yes · reads 4 · writes 14</span>
     <span class="skill-action">View details</span>
   </a><a class="skill-card skill-row reveal" href="../skills/twt-block-preview.html">
     <span class="skill-icon" aria-hidden="true">B</span>
@@ -107,7 +94,7 @@
       <span class="skill-title">Component</span>
       <span class="skill-owner">/twt-component-define</span>
     </span>
-    <span class="skill-version">v1.3.3</span>
+    <span class="skill-version">v1.3.5</span>
     <span class="skill-copy">Document every UI component — anatomy, variants, states, tokens — and render a full interactive gallery.</span>
     <span class="skill-stats">inputs yes · reads 7 · writes 3</span>
     <span class="skill-action">View details</span>
@@ -127,7 +114,7 @@
       <span class="skill-title">Mockup</span>
       <span class="skill-owner">/twt-mockup-define</span>
     </span>
-    <span class="skill-version">v1.2.2</span>
+    <span class="skill-version">v1.2.3</span>
     <span class="skill-copy">Render each layout into a responsive, real-content HTML/CSS mockup with a review index.</span>
     <span class="skill-stats">inputs yes · reads 9 · writes 5</span>
     <span class="skill-action">View details</span>
@@ -147,7 +134,7 @@
       <span class="skill-title">Component Validate</span>
       <span class="skill-owner">/twt-component-validate</span>
     </span>
-    <span class="skill-version">v1.0.1</span>
+    <span class="skill-version">v1.0.2</span>
     <span class="skill-copy">Review the component library for token-only styling, reuse quality, state coverage, and accessibility.</span>
     <span class="skill-stats">inputs no · reads 4 · writes 1</span>
     <span class="skill-action">View details</span>
@@ -157,7 +144,7 @@
       <span class="skill-title">Layout Validate</span>
       <span class="skill-owner">/twt-layout-validate</span>
     </span>
-    <span class="skill-version">v1.0.1</span>
+    <span class="skill-version">v1.0.2</span>
     <span class="skill-copy">Review page layouts for section hierarchy, component fit, content coverage, and responsive intent.</span>
     <span class="skill-stats">inputs no · reads 4 · writes 1</span>
     <span class="skill-action">View details</span>
@@ -167,7 +154,7 @@
       <span class="skill-title">Mockup Validate</span>
       <span class="skill-owner">/twt-mockup-validate</span>
     </span>
-    <span class="skill-version">v1.1.1</span>
+    <span class="skill-version">v1.1.2</span>
     <span class="skill-copy">Review mockups for real content, token fidelity, responsiveness, and accessibility.</span>
     <span class="skill-stats">inputs no · reads 8 · writes 1</span>
     <span class="skill-action">View details</span>
@@ -179,7 +166,6 @@
     <footer class="site-footer">
       <span class="logo-pair footer-logo" aria-hidden="true">
         <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
-        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
       </span>
       <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
     </footer>

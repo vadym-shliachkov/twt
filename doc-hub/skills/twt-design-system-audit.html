@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Tells you how strong a real design system is and how closely a design actually sticks to it. Point it at a Figma file or live site and it scores the s">
   <title>/twt-design-system-audit | twt skills</title>
-  <script>
-    try {
-      document.documentElement.dataset.theme = localStorage.getItem("twt-theme") || "dark";
-    } catch {
-      document.documentElement.dataset.theme = "dark";
-    }
-  </script>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/styles.css">
 </head>
@@ -22,7 +15,6 @@
       <a class="brand" href="../index.html" aria-label="twt skills home">
         <span class="logo-pair" aria-hidden="true">
           <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
-          <img class="logo-light" src="../assets/logo-light.svg" alt="" width="56" height="56">
         </span>
         <span>twt</span>
       </a>
@@ -33,18 +25,13 @@
         <a href="../index.html">Home</a>
         <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
       </nav>
-      <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false" data-theme-toggle>
-        <span class="theme-toggle-indicator" aria-hidden="true"></span>
-        <span class="theme-option theme-option-dark">Dark</span>
-        <span class="theme-option theme-option-light">Light</span>
-      </button>
     </header>
   <main>
     
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong>/twt-design-system-audit</strong>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong class="breadcrumb-command">/twt-design-system-audit</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
@@ -52,7 +39,7 @@
           <h1>/twt-design-system-audit</h1>
           <p class="lede">Score a real design system's quality and flag every page and block that drifts from it.</p>
           <div class="fact-row">
-            <span>Version 1.4.7</span>
+            <span>Version 1.5.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -77,7 +64,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/design/design-system-audit/audit-report.html</code><span class="file-desc">The visual audit report — system-quality scores plus every page and block that drifts.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-&lt;page-slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li><li><code>.twt-artifacts/design/design-system-audit/canonical-blocks.md</code><span class="file-desc">The reference set of blocks the design should reuse consistently.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality-report.md</code><span class="file-desc">A readable scorecard of the design system's quality.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality.json</code><span class="file-desc">The raw design-system quality scores.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit.json</code><span class="file-desc">The full machine-readable audit results.</span></li><li><code>.twt-artifacts/design/design-system-audit/blocks.json</code><span class="file-desc">Detected page blocks and how consistently they're used across pages.</span></li><li><code>.twt-artifacts/design/design-system-audit/visuals.json</code><span class="file-desc">Metadata linking each finding to its captured screenshot.</span></li><li><code>.twt-artifacts/design/design-system-audit/pages/</code><span class="file-desc">Per-page audit detail.</span></li><li><code>.twt-artifacts/design/design-system-audit/shots/</code><span class="file-desc">Screenshots captured from the design or site during the audit.</span></li><li><code>.twt-artifacts/design/design-system-audit/previews/</code><span class="file-desc">Generated preview images used in the audit report.</span></li><li><code>.twt-artifacts/design/design-system/</code><span class="file-desc">The synthesized canonical design system, created when none was provided.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/design/design-system-audit/audit-report.html</code><span class="file-desc">The visual audit report — system-quality scores plus every page and block that drifts.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-&lt;page-slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li><li><code>.twt-artifacts/design/design-system-audit/canonical-blocks.md</code><span class="file-desc">The reference set of blocks the design should reuse consistently.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality-report.md</code><span class="file-desc">A readable scorecard of the design system's quality.</span></li><li><code>.twt-artifacts/design/design-system-audit/quality.json</code><span class="file-desc">The raw design-system quality scores.</span></li><li><code>.twt-artifacts/design/design-system-audit/metrics.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit.json</code><span class="file-desc">The full machine-readable audit results.</span></li><li><code>.twt-artifacts/design/design-system-audit/blocks.json</code><span class="file-desc">Detected page blocks and how consistently they're used across pages.</span></li><li><code>.twt-artifacts/design/design-system-audit/visuals.json</code><span class="file-desc">Metadata linking each finding to its captured screenshot.</span></li><li><code>.twt-artifacts/design/design-system-audit/pages/</code><span class="file-desc">Per-page audit detail.</span></li><li><code>.twt-artifacts/design/design-system-audit/shots/</code><span class="file-desc">Screenshots captured from the design or site during the audit.</span></li><li><code>.twt-artifacts/design/design-system-audit/previews/</code><span class="file-desc">Generated preview images used in the audit report.</span></li><li><code>.twt-artifacts/design/design-system/</code><span class="file-desc">The synthesized canonical design system, created when none was provided.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -93,7 +80,6 @@
     <footer class="site-footer">
       <span class="logo-pair footer-logo" aria-hidden="true">
         <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
-        <img class="logo-light" src="../assets/logo-light.svg" alt="" width="36" height="36">
       </span>
       <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
     </footer>
