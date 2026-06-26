@@ -309,6 +309,50 @@ function parseInventory() {
 }
 const inv = parseInventory();
 
+// ---- typography text styles -------------------------------------------------
+// Parse the "Text styles" table from tokens.md §2.2 — one row per semantic role
+// (Display, Heading L, Body M, Button, …), each binding the REAL combination of
+// family · size · weight · line-height · tracking the design actually uses. We
+// render one live specimen per row instead of parading every weight and size in
+// isolation, so the preview shows only the combinations that exist, never the
+// full weight × size cross-product. Token references are matched by pattern, so
+// the column order in the table doesn't matter.
+const TS_PAT = {
+  family: /(--(?:font-family|font|ff)[\w-]*)/,
+  size:   /(--(?:font-size|fs)[\w-]*)/,
+  weight: /(--(?:font-weight|fw)[\w-]*)/,
+  lh:     /(--(?:line-height|lh)[\w-]*)/,
+  track:  /(--(?:tracking|letter-spacing)[\w-]*)/,
+};
+function parseTextStyles() {
+  if (!existsSync(TOKENS_MD)) return [];
+  const lines = readFileSync(TOKENS_MD, 'utf8').split(/\r?\n/);
+  const styles = [];
+  let inSection = false;
+  for (const line of lines) {
+    if (/^#{2,6}\s.*\btext styles?\b/i.test(line)) { inSection = true; continue; }
+    if (inSection && /^#{1,6}\s/.test(line)) { inSection = false; }
+    if (!inSection) continue;
+    const row = line.match(/^\|\s*\*\*([^*]+)\*\*\s*\|(.+)\|/);
+    if (!row) continue;
+    const rest = row[2];
+    const grab = (re) => { const m = rest.match(re); return m && vars.has(m[1]) ? m[1] : null; };
+    const ts = {
+      role:   row[1].trim(),
+      family: grab(TS_PAT.family),
+      size:   grab(TS_PAT.size),
+      weight: grab(TS_PAT.weight),
+      lh:     grab(TS_PAT.lh),
+      track:  grab(TS_PAT.track),
+    };
+    // Keep a row only if it binds a real type axis (size, weight, or family).
+    if (ts.size || ts.weight || ts.family) styles.push(ts);
+  }
+  return styles;
+}
+const textStyles = parseTextStyles();
+const resolvedOf = (name) => (name && vars.has(name) ? resolveVal(vars.get(name)) : null);
+
 // ---- HTML rendering ---------------------------------------------------------
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const projName = (() => {
@@ -338,10 +382,7 @@ const tier1 = `
   ${renderContrast()}
 
   <h3 class="gp-sub">Typography</h3>
-  <div class="gp-type">${fsTokens.map(renderType).join('')}</div>
-  ${fontTokens.length ? `<p class="gp-legend">Families: ${fontTokens.map((f) => `<code>${esc(f.name)}</code> ${esc(f.resolved)}`).join(' · ')}</p>` : ''}
-  ${fwTokens.length ? `<p class="gp-legend">Weights: ${fwTokens.map((f) => `${esc(f.name)} (${esc(f.resolved)})`).join(' · ')}</p>` : ''}
-  ${trackTokens.length ? `<p class="gp-legend">Tracking: ${trackTokens.map((f) => `${esc(f.name)} ${esc(f.resolved)}`).join(' · ')}</p>` : ''}
+  ${renderTypography()}
 
   <h3 class="gp-sub">Spacing</h3>
   <div>${spaceTokens.map(renderSpace).join('')}</div>
@@ -360,11 +401,66 @@ const tier1 = `
   <ul class="gp-grid">${gridTokens.map((t) => `<li><code>${esc(t.name)}</code> — ${esc(t.resolved)}</li>`).join('')}</ul>
 </section>`;
 
+// Typography section. Preferred path: render one specimen per REAL text style
+// (family + size + weight + line-height + tracking) parsed from tokens.md §2.2 —
+// only the combinations the design actually uses, never every weight × size.
+// Fallback (no Text styles table — e.g. tokens-only mode or a legacy tokens.md):
+// render the raw type axes independently, as before.
+function renderTypography() {
+  if (textStyles.length) {
+    return `<p class="gp-legend">The real text styles — each row is one combination of family, size, weight, line-height and tracking that the design actually uses. Rendered live from <code>tokens.css</code>; only used combinations appear, not every possible weight × size.</p>
+    <div class="gp-type">${textStyles.map(renderTextStyle).join('')}</div>`;
+  }
+  return `${fontTokens.length ? `<div class="gp-type-fam">${fontTokens.map(renderFamily).join('')}</div>` : ''}
+    <h4 class="gp-sub2">Type scale (size · line-height)</h4>
+    <div class="gp-type">${fsTokens.map(renderType).join('')}</div>
+    ${fwTokens.length ? `<h4 class="gp-sub2">Weights</h4>
+    <div class="gp-type">${fwTokens.map(renderWeight).join('')}</div>` : ''}
+    ${trackTokens.length ? `<h4 class="gp-sub2">Tracking (letter-spacing)</h4>
+    <div class="gp-type">${trackTokens.map(renderTrack).join('')}</div>` : ''}`;
+}
+// One live specimen for a real text style. The caption shows the resolved
+// combination (the actual size/weight/etc. in use) and the bound token names, so
+// the specimen doubles as documentation of which tokens compose the role.
+function renderTextStyle(ts) {
+  const decls = [];
+  if (ts.family) decls.push(`font-family:var(${ts.family})`);
+  if (ts.size)   decls.push(`font-size:var(${ts.size})`);
+  if (ts.weight) decls.push(`font-weight:var(${ts.weight})`);
+  if (ts.lh)     decls.push(`line-height:var(${ts.lh})`);
+  if (ts.track)  decls.push(`letter-spacing:var(${ts.track})`);
+  const meta = [];
+  const fam = resolvedOf(ts.family); if (fam) meta.push(esc(fam.split(',')[0].replace(/["']/g, '').trim()));
+  const sz = resolvedOf(ts.size);    if (sz) meta.push(esc(sz));
+  const wt = resolvedOf(ts.weight);  if (wt) meta.push(esc(wt));
+  const lh = resolvedOf(ts.lh);      if (lh) meta.push('lh ' + esc(lh));
+  const tk = resolvedOf(ts.track);   if (tk && !/^(normal|0)$/.test(tk.trim())) meta.push(esc(tk));
+  const tokens = [ts.family, ts.size, ts.weight, ts.lh, ts.track].filter(Boolean).map(esc).join(' · ');
+  return `<div class="gp-spec"><span class="gp-spec-label"><b>${esc(ts.role)}</b>${meta.length ? ' · ' + meta.join(' · ') : ''}</span>` +
+    `<div style="${decls.join(';')}">Ag — the quick brown fox</div>` +
+    (tokens ? `<span class="gp-ts-tok">${tokens}</span>` : '') + `</div>`;
+}
 function renderType(t) {
   const lhName = t.name.replace(/^--fs/, '--lh').replace(/^--font-size/, '--line-height');
   const lh = lhTokens.has(lhName) ? `line-height:var(${lhName});` : '';
   return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
     `<div style="font-size:var(${t.name});${lh}">Ag — the quick brown fox</div></div>`;
+}
+// Weight specimens — each weight token rendered live so you SEE the weight,
+// not just read its numeric value in a legend.
+function renderWeight(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="font-weight:var(${t.name});font-size:1.5rem">Ag — the quick brown fox</div></div>`;
+}
+// Tracking specimens — letter-spacing applied live at a readable size.
+function renderTrack(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="letter-spacing:var(${t.name});font-size:1.25rem">Ag — the quick brown fox</div></div>`;
+}
+// Family specimens — each font-family rendered live at display size.
+function renderFamily(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="font-family:var(${t.name});font-size:2rem">Ag — the quick brown fox</div></div>`;
 }
 // Resolve a length token to a pixel number so the spacing bars have real,
 // distinguishable widths. Most projects express spacing in rem/em (e.g.
@@ -448,6 +544,9 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(projName)} — Design System Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
 <link rel="stylesheet" href="tokens.css">
 <style>
   /* gen-preview.mjs — all classes namespaced gp- to avoid collisions.
@@ -486,6 +585,7 @@ const html = `<!doctype html>
   .gp-ct th{background:rgba(16,18,20,.04);font-weight:600;color:#101214}
   .gp-pass{color:#1a7f37}.gp-warn{color:#9a6700}.gp-fail{color:#c01724}.gp-na{color:#363b42}
   .gp-type{display:grid;gap:16px}
+  .gp-type-fam{display:grid;gap:16px;margin-bottom:8px}
   .gp-spec-label{display:block;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#363b42;margin-bottom:4px}
   .gp-bar-row{display:flex;align-items:center;gap:16px;margin-bottom:8px}
   .gp-bar-row span{font-size:.8rem;color:#363b42;min-width:200px}
@@ -507,11 +607,323 @@ const html = `<!doctype html>
   .gp-cap-top{margin-top:0;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(16,18,20,.12)}
   .gp-cap b{color:#101214}
 </style>
+<style>
+  /* doc-hub light skin — the canonical design-system look. Clean light page,
+     blue project label with a tri-color (red/blue/yellow) gradient underline,
+     Montserrat display headings, gradient-pill tier tags, dark action buttons,
+     rounded panel tables. Overrides the base chrome above. */
+  :root{
+    --gp-page:#ffffff;
+    --gp-panel:#ffffff;
+    --gp-panel-soft:#f8f9fc;
+    --gp-ink:#090e22;
+    --gp-text:#3a3f5c;
+    --gp-muted:#7a82a8;
+    --gp-rule:#dde0ee;
+    --gp-rule-soft:rgba(122,130,168,.18);
+    --gp-red:#ca221f;
+    --gp-blue:#0b68b7;
+    --gp-yellow:#f6c22b;
+    --gp-action:#090e22;
+    --gp-action-hover:#0e1630;
+    --gp-warning:#9a6700;
+    --gp-danger:#ca221f;
+    --gp-font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
+    --gp-font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
+    --gp-font-mono:"IBM Plex Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  html{background:var(--gp-page)}
+  body{
+    min-width:320px;
+    margin:0;
+    color:var(--gp-text);
+    background:var(--gp-page);
+    font-family:var(--gp-font-body);
+    line-height:1.55;
+    text-rendering:optimizeLegibility;
+  }
+  a{color:inherit}
+  code{font-family:var(--gp-font-mono);font-size:.88em}
+
+  .gp-wrap{max-width:1120px;margin:0 auto;padding:64px 24px 96px}
+
+  .gp-head{
+    position:relative;
+    min-height:0;
+    padding:24px 0 52px;
+    border-bottom:1px solid var(--gp-rule);
+  }
+  .gp-project{
+    display:block;
+    margin:0 0 26px;
+    color:var(--gp-blue);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(1.45rem,3vw,2.15rem);
+    font-weight:800;
+    line-height:1.12;
+    text-wrap:balance;
+  }
+  .gp-project::after{
+    content:"";
+    display:block;
+    width:72px;
+    height:4px;
+    margin:22px 0 0;
+    background:linear-gradient(90deg,var(--gp-red) 0 33%,var(--gp-blue) 33% 66%,var(--gp-yellow) 66% 100%);
+  }
+  .gp-head h1{
+    max-width:760px;
+    margin:0 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(3rem,6.8vw,5.75rem);
+    font-weight:800;
+    line-height:.98;
+    letter-spacing:0;
+    text-transform:none;
+    text-wrap:balance;
+  }
+  .gp-head .gp-legend{
+    max-width:760px;
+    margin:0;
+    padding:0;
+    color:var(--gp-text);
+    background:transparent;
+    border:0;
+    box-shadow:none;
+    font-size:1.05rem;
+  }
+
+  .gp-complink{
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:center;
+    gap:20px;
+    margin:32px 0 8px;
+    padding:20px 22px;
+    border:1px solid var(--gp-rule);
+    border-left:4px solid var(--gp-blue);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+  }
+  .gp-complink span{color:var(--gp-text);font-size:.9rem}
+  .gp-complink b{
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:.9rem;
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-complink a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 14px;
+    border:1px solid var(--gp-action);
+    border-radius:8px;
+    background:var(--gp-action);
+    color:#fff;
+    font-size:.82rem;
+    font-weight:600;
+    text-decoration:none;
+    box-shadow:none;
+    transition:transform 160ms ease-out,background-color 160ms ease-out,border-color 160ms ease-out;
+  }
+  .gp-complink a:hover{background:var(--gp-action-hover);border-color:var(--gp-action-hover)}
+  .gp-complink a:active{transform:scale(.97);box-shadow:none}
+  .gp-complink a:focus-visible{outline:3px solid rgba(122,130,168,.35);outline-offset:3px}
+
+  .gp-tier{
+    margin:0;
+    padding:64px 0;
+    border-top:1px solid var(--gp-rule);
+    background:transparent;
+    color:var(--gp-text);
+  }
+
+  .gp-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 8px;
+    color:var(--gp-blue);
+    font-family:var(--gp-font-heading);
+    font-size:.82rem;
+    font-weight:700;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  .gp-tag::before{
+    content:"";
+    width:30px;
+    height:6px;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--gp-yellow) 0 33%,var(--gp-red) 33% 66%,var(--gp-blue) 66% 100%);
+  }
+  .gp-th{
+    margin:0 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(1.8rem,3.4vw,3rem);
+    font-weight:800;
+    line-height:1.05;
+    letter-spacing:0;
+    text-transform:none;
+    text-wrap:balance;
+  }
+  .gp-sub{
+    display:block;
+    margin:56px 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:1.05rem;
+    font-weight:800;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  .gp-sub2{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin:36px 0 12px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:.95rem;
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-sub2 .gp-cnt{color:var(--gp-red);font-weight:700}
+  .gp-sub3{color:var(--gp-muted);font-family:var(--gp-font-heading);letter-spacing:0;text-transform:none}
+  .gp-legend{
+    max-width:92ch;
+    margin-bottom:20px;
+    color:var(--gp-text);
+    font-size:.92rem;
+    line-height:1.6;
+    text-wrap:pretty;
+  }
+  .gp-legend code{
+    color:var(--gp-ink);
+    background:var(--gp-panel-soft);
+    border:1px solid var(--gp-rule-soft);
+    padding:2px 6px;
+    border-radius:4px;
+  }
+
+  .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  .gp-sw{
+    overflow:hidden;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+    transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out;
+  }
+  @media (hover:hover) and (pointer:fine){
+    .gp-sw:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}
+  }
+  .gp-chip{height:72px;border-bottom:1px solid var(--gp-rule)}
+  .gp-meta{min-height:118px;padding:12px 12px 14px;background:var(--gp-panel);font-size:.74rem}
+  .gp-meta b{margin-bottom:4px;color:var(--gp-ink);line-height:1.25;word-break:break-word}
+  .gp-meta span,.gp-cnt,.gp-alias,.gp-bar-over,.gp-na{color:var(--gp-muted)}
+  .gp-dup{margin-top:5px;color:var(--gp-warning);line-height:1.35}
+
+  .gp-ct{
+    width:100%;
+    margin:18px 0 28px;
+    border-collapse:separate;
+    border-spacing:0;
+    overflow:hidden;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+    font-size:.82rem;
+  }
+  .gp-ct th,.gp-ct td{border:0;border-bottom:1px solid var(--gp-rule);padding:12px 14px;text-align:left;vertical-align:top}
+  .gp-ct th{
+    background:var(--gp-panel-soft);
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-ct tr:last-child td{border-bottom:0}
+  .gp-pass{color:#1a7f37;font-weight:700}
+  .gp-warn{color:var(--gp-warning);font-weight:700}
+  .gp-fail{color:var(--gp-danger);font-weight:700}
+
+  .gp-type{display:grid;gap:14px}
+  .gp-type-fam{display:grid;gap:14px;margin-bottom:8px}
+  .gp-spec{overflow:hidden;padding:20px;border:1px solid var(--gp-rule);border-radius:8px;background:var(--gp-panel)}
+  .gp-spec-label{display:block;margin-bottom:8px;color:var(--gp-muted);font-size:.7rem;font-weight:600;letter-spacing:0}
+  .gp-spec-label b{color:#101214;font-weight:700}
+  .gp-ts-tok{display:block;margin-top:10px;color:rgba(16,18,20,.42);font-size:.64rem;letter-spacing:0}
+
+  .gp-bar-row{display:grid;grid-template-columns:minmax(150px,210px) 1fr;align-items:center;gap:18px;margin-bottom:12px}
+  .gp-bar-row span{min-width:0;color:var(--gp-muted);font-size:.8rem}
+  .gp-bar{height:12px;min-width:4px;border-radius:0;background:var(--gp-ink);box-shadow:none}
+
+  .gp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
+  .gp-tile,.gp-shadowtile{
+    min-height:104px;
+    height:auto;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:12px;
+    border:1px solid var(--gp-rule);
+    color:var(--gp-muted);
+    background:var(--gp-panel);
+    text-align:center;
+    font-size:.75rem;
+  }
+
+  .gp-motion{display:flex;gap:14px;flex-wrap:wrap}
+  .gp-mo{min-height:60px;border-radius:8px;color:var(--gp-muted);background:var(--gp-panel-soft);border:1px solid var(--gp-rule)}
+
+  .gp-grid{
+    margin:0;
+    padding:20px 20px 20px 38px;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    color:var(--gp-text);
+    box-shadow:none;
+    font-size:.86rem;
+  }
+  .gp-grid li+li{margin-top:6px}
+
+  .gp-inv-wide{display:block}
+  .gp-cell{border:1px solid var(--gp-rule);border-radius:8px;background:var(--gp-panel)}
+  .gp-cell-wide{width:100%;margin-bottom:24px;padding:28px}
+  .gp-cap,.gp-cap-top{color:var(--gp-muted)}
+  .gp-cap-top{border-bottom:1px solid var(--gp-rule)}
+  .gp-cap b{color:var(--gp-ink)}
+
+  @media (max-width:760px){
+    .gp-wrap{padding:36px 16px 72px}
+    .gp-head{padding:12px 0 40px}
+    .gp-project{font-size:1.42rem}
+    .gp-head h1{font-size:clamp(2.6rem,14vw,4.2rem)}
+    .gp-complink{grid-template-columns:1fr;margin:24px 0 0;padding:16px}
+    .gp-complink a{width:100%;white-space:normal;text-align:center}
+    .gp-tier{padding:48px 0}
+    .gp-ct{display:block;overflow-x:auto}
+    .gp-bar-row{grid-template-columns:1fr;gap:6px}
+    .gp-sub{margin:44px 0 16px}
+    .gp-sub2{margin:32px 0 12px}
+  }
+</style>
 </head>
 <body>
 <div class="gp-wrap">
   <header class="gp-head">
-    <h1>${esc(projName)} — Design System</h1>
+    <p class="gp-project">Project name: ${esc(projName)}</p>
+    <h1>Design System</h1>
     <p class="gp-legend">Token specimen sheet (not the site) — every design token rendered live from <code>tokens.css</code>${withComponents ? ', followed by neutral Primitive/Component/Module specimens' : ''}. The full component catalog (breadth + variant × state depth) lives in the component gallery. Generated by <code>gen-preview.mjs</code>.</p>
   </header>
   ${componentsLink}
@@ -533,7 +945,10 @@ const summary = {
   out: checkOnly ? null : OUT,
   counts: {
     colors: colorTokens.length, gradients: gradientTokens.length,
-    type_steps: fsTokens.length, spacing: spaceTokens.length,
+    type_steps: fsTokens.length, font_families: fontTokens.length,
+    font_weights: fwTokens.length, tracking_steps: trackTokens.length,
+    text_styles: textStyles.length,
+    spacing: spaceTokens.length,
     radius: radiusTokens.length, shadows: shadowTokens.length,
     primitives: inv.primitives.length, components: inv.components.length, modules: inv.modules.length,
     contrast_pairs: contrastRows.filter((r) => r.intended).length,
