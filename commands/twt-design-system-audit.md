@@ -147,7 +147,24 @@ Run only when a DS was **provided or synthesized**. Score each metric **0–100%
 | 9 | Responsiveness | 8 | Breakpoints & responsive rules are systematic — `quality_signals.breakpoint_count`. |
 | 10 | Documentation & implementability | 6 | Clear enough to build from (specimens/usage) — judgment. |
 
-**Weighted overall = Σ(metric% × weight) / 100** (weights sum to 100). Write `<OUT>/quality-report.md`: a table (Metric · Weight · Score % · Evidence · Note), the weighted overall, and a short **Critical assessment** (biggest strength · biggest weakness · highest-impact fix). Every metric scoring < 60% gets a one-line "why" tied to its evidence.
+**Weighted overall** — after scoring all 10 metrics, run (Bash):
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" --max 100 '[
+  {"criterion":"Token coverage","weight":14,"score":<s1>},
+  {"criterion":"Scale coherence (type, space & radius)","weight":10,"score":<s2>},
+  {"criterion":"Color system rigor","weight":12,"score":<s3>},
+  {"criterion":"Accessibility / contrast","weight":16,"score":<s4>},
+  {"criterion":"Naming & structure hygiene","weight":6,"score":<s5>},
+  {"criterion":"Component coverage","weight":12,"score":<s6>},
+  {"criterion":"Variant & state completeness","weight":8,"score":<s7>},
+  {"criterion":"Reuse / DRY","weight":8,"score":<s8>},
+  {"criterion":"Responsiveness","weight":8,"score":<s9>},
+  {"criterion":"Documentation & implementability","weight":6,"score":<s10>}
+]'
+```
+Use `rows[i].weighted` for the **Score %** column contribution, `health` for the weighted overall and the `"weighted_overall"` key in `quality.json`, and `band` for the quality band. Never recompute by hand.
+
+Write `<OUT>/quality-report.md`: a table (Metric · Weight · Score % · Evidence · Note), the weighted overall, and a short **Critical assessment** (biggest strength · biggest weakness · highest-impact fix). Every metric scoring < 60% gets a one-line "why" tied to its evidence.
 
 Also write the machine-readable `<OUT>/quality.json` (consumed by the HTML report in Step 7b) with the same numbers:
 ```json

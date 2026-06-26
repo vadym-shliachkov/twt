@@ -59,7 +59,11 @@ Use its `counts`/`findings[]` for the attribute/structure evidence. **Contrast i
 - **SUGGESTION** — no skip-link; missing `lang` attribute; no focus-visible styling.
 
 ## Step 3 — Write report
-Score each criterion 0–5 with concrete evidence (e.g. "5 of 18 images missing alt", "2 pages skip h2→h4", "3 form controls unlabeled", "1 token pair fails 4.5:1"). Use the formulas: `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+Score each criterion 0–5 with concrete evidence (e.g. "5 of 18 images missing alt", "2 pages skip h2→h4", "3 form controls unlabeled", "1 token pair fails 4.5:1"). After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Alt text coverage (images with valid alt)","weight":20,"score":<s1>},{"criterion":"Heading order & landmarks (no skips, <main> present)","weight":25,"score":<s2>},{"criterion":"Labels & roles (form controls, buttons, links)","weight":20,"score":<s3>},{"criterion":"Contrast (WCAG AA token pairs >=4.5:1)","weight":25,"score":<s4>},{"criterion":"Focusable controls (skip-link, focus-visible, lang)","weight":10,"score":<s5>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Write `.twt-artifacts/qa/a11y-report.md`:
 ```

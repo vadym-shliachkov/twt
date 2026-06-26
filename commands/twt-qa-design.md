@@ -66,7 +66,11 @@ Use its `counts` as the evidence backbone and its `findings[]` locations in your
 (Ignore literals inside `tokens.css` itself — that file *defines* the values.)
 
 ## Step 4 — Write report
-Score each criterion 0–5 with concrete evidence (e.g. "7 hex literals found across 3 files", "2 undefined var(--x) references", "3 pages missing required layout components"). Use the formulas: `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+Score each criterion 0–5 with concrete evidence (e.g. "7 hex literals found across 3 files", "2 undefined var(--x) references", "3 pages missing required layout components"). After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Token-only styling (no hex/px/font literals)","weight":40,"score":<s1>},{"criterion":"Defined custom properties (no undefined var() refs)","weight":20,"score":<s2>},{"criterion":"Structure vs design system (layout components present)","weight":25,"score":<s3>},{"criterion":"Consistency across pages (token + component reuse)","weight":15,"score":<s4>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Write `.twt-artifacts/qa/design-report.md`:
 ```

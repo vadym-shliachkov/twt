@@ -64,7 +64,11 @@ Resolve every asset reference against the build's files AND `.twt-artifacts/desi
 Tag each dead/placeholder/missing-asset finding with `gap-type: DEAD-LINK|PLACEHOLDER-LINK|MISSING-ASSET` + page + the `href`/filename so the wrapper can compile `gaps.md`.
 
 ## Step 3 — Write report
-Score each criterion 0–5 with concrete evidence (e.g. "4 dead internal hrefs", "6 placeholder links found", "2 pages missing 720px breakpoint"). Use the formulas: `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+Score each criterion 0–5 with concrete evidence (e.g. "4 dead internal hrefs", "6 placeholder links found", "2 pages missing 720px breakpoint"). After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Internal link integrity (hrefs/anchors resolve)","weight":45,"score":<s1>},{"criterion":"Asset & href resolution (no missing targets)","weight":30,"score":<s2>},{"criterion":"Declared responsive-tier presence (local only)","weight":25,"score":<s3>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Write `.twt-artifacts/qa/links-report.md`:
 ```

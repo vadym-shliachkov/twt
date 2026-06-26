@@ -59,7 +59,11 @@ Use its `counts`/`findings[]` for the Token-only CSS criterion. The **other chec
 - **SUGGESTION** — a token in `tokens.md` not mirrored into `design-system.css`.
 
 ## Step 3 — Write report
-Score each criterion 0–5 with concrete evidence (e.g. "5 hex literals in widgets.css", "2 widget classes missing from $map", "4 translatable fields absent from wpml-config.xml", "php -l errors in 1 file"). Use the formulas: `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+Score each criterion 0–5 with concrete evidence (e.g. "5 hex literals in widgets.css", "2 widget classes missing from $map", "4 translatable fields absent from wpml-config.xml", "php -l errors in 1 file"). After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Token-only CSS (no literals outside :root definitions)","weight":30,"score":<s1>},{"criterion":"Widget registration correctness (all classes in $map)","weight":25,"score":<s2>},{"criterion":"WPML completeness (translatable fields declared)","weight":20,"score":<s3>},{"criterion":"PHP lint cleanliness (no syntax errors)","weight":25,"score":<s4>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Write `.twt-artifacts/qa/elementor-report.md`:
 ```

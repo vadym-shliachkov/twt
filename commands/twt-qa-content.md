@@ -77,7 +77,11 @@ Cross-check every referenced image/video against `.twt-artifacts/design/assets/m
 Tag each lorem/empty/missing-asset finding with `gap-type: LOREM|EMPTY|MISSING-ASSET` and the page + location so the wrapper can compile `gaps.md`.
 
 ## Step 5 — Write report
-Score each criterion 0–5 with concrete evidence (e.g. "3 of 8 sitemap pages missing", "12 lorem blocks found", "4 sections deviate from outline"). Use the formulas: `Weighted = Weight × Score / 5`, `Health = Σ Weighted`, `Band = Pass ≥80 / Revise 50–79 / Fail <50`.
+Score each criterion 0–5 with concrete evidence (e.g. "3 of 8 sitemap pages missing", "12 lorem blocks found", "4 sections deviate from outline"). After assigning all scores, run (Bash) to compute weighted sums and health:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" '[{"criterion":"Sitemap / page coverage","weight":30,"score":<s1>},{"criterion":"Real content vs lorem/placeholder","weight":35,"score":<s2>},{"criterion":"Content-IA fidelity (sections match outlines)","weight":20,"score":<s3>},{"criterion":"Heading & copy quality","weight":15,"score":<s4>}]'
+```
+Use `rows[i].weighted` for the **Weighted** column, `health` for the **Total** row and the `**Health:**` line, and `band` for the Band verdict. Never recompute arithmetic manually.
 
 Write `.twt-artifacts/qa/content-report.md`:
 ```
