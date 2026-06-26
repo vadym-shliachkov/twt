@@ -106,7 +106,11 @@ If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinemen
 
 Before asking any questions, check whether `.twt-artifacts/design/design-system/tokens.md` already exists.
 
-- **Exists:** Read it in full. Hold it in memory as `<existing_system>`. Capture (a) the token names + values, (b) the naming convention in use, (c) the section structure. Record `<existing_system_present> = true`.
+- **Exists:** Read it in full. Hold it in memory as `<existing_system>`. Capture (a) the token names + values, (b) the naming convention in use, (c) the section structure. Record `<existing_system_present> = true`. To understand what changed since the last run, diff the existing tokens.css against the candidate new tokens (after writing candidate CSS to a temp path):
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/diff-tokens.mjs" ".twt-artifacts/design/design-system/tokens.css" "<candidate-tokens.css>"
+```
+The output `{added, changed, removed, unchanged_count}` identifies new/changed/dropped tokens. Surface any removals to the user before overwriting — dropped tokens may break downstream builds.
 - **Does not exist:** Record `<existing_system_present> = false` and continue normally.
 
 If `<existing_system_present> = true`, print:
@@ -244,6 +248,12 @@ For each token category, extract values from the sources, deduplicate, and norma
 - Mark inferred tokens with `(inferred)` in the table.
 - Use the naming convention defined in Step 9.
 - Do not invent values that aren't present in the sources.
+
+When raw extracted tokens are available as CSS variable declarations (exported CSS, Figma CSS export, or a generated candidate file), normalize and categorize them:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-tokens-from-candidates.mjs" "<candidate-file.css>"
+```
+The script deduplicates (last value wins), normalizes names to `--kebab-case`, and groups by category (`color`/`type`/`space`/`radius`/`shadow`/`motion`/`other`). Use the grouped output as the token inventory before writing `tokens.md` and `tokens.css`. Apply your design judgment on which tokens to keep, rename, or merge — the script handles only the mechanical dedup/categorization.
 
 ### Categories
 
