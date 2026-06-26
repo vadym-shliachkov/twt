@@ -436,7 +436,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.3
+**Version:** 1.3.4
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -456,14 +456,14 @@ flowchart TB
 - .twt-artifacts/pre-design/curation/outlines/
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
-- .twt-artifacts/design/component/validation-report.md
+- .twt-artifacts/design/design-system/component/validation-report.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/component/components.md |  |
-| .twt-artifacts/design/component/gallery.html |  |
-| .twt-artifacts/design/component/decisions.md |  |
+| .twt-artifacts/design/design-system/component/components.md |  |
+| .twt-artifacts/design/design-system/component/gallery.html |  |
+| .twt-artifacts/design/design-system/component/decisions.md |  |
 
 ### /twt-component-validate
 

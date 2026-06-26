@@ -48,7 +48,8 @@ const checkOnly = process.argv.includes('--check');
 // Pass --with-components to also inline the component shells (legacy behavior).
 const withComponents = process.argv.includes('--with-components') && !tokensOnly;
 // Where the component gallery lives, relative to preview.html.
-const COMPONENTS_HREF = '../component/gallery.html';
+// gallery.html is written into design-system/component/ (same folder as preview.html → no ../).
+const COMPONENTS_HREF = 'component/gallery.html';
 if (!projectDir) {
   console.error('usage: gen-preview.mjs <projectDir> [--mode tokens-only]');
   process.exit(2);
@@ -449,58 +450,62 @@ const html = `<!doctype html>
 <title>${esc(projName)} — Design System Preview</title>
 <link rel="stylesheet" href="tokens.css">
 <style>
-  /* gen-preview.mjs — all classes namespaced gp- so nothing can collide with token/component CSS */
-  body{margin:0;font-family:var(--font, system-ui);color:var(--color-text, #222);background:var(--surface-page, #fff);line-height:1.5}
-  .gp-wrap{max-width:var(--max, 1120px);margin:0 auto;padding:0 24px}
+  /* gen-preview.mjs — all classes namespaced gp- to avoid collisions.
+     Chrome (layout, labels, legends) uses the doc-hub light palette so every
+     project's preview looks consistent. Token specimens use var(--…) from the
+     project's own tokens.css (linked above). */
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#101214;background:#f7f3e8;line-height:1.6}
+  .gp-wrap{max-width:1120px;margin:0 auto;padding:0 24px}
   .gp-head{padding:48px 0 8px}
-  .gp-head h1{margin:0 0 8px;font-size:2rem}
-  .gp-tier{padding:48px 0;border-top:1px solid var(--border, #e5e5e5)}
-  .gp-tag{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--color-label, #888);margin:0 0 4px;font-weight:600}
-  .gp-th{font-size:1.6rem;margin:0 0 8px}
-  .gp-sub{font-size:1rem;margin:32px 0 12px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-label, #888)}
-  .gp-legend{font-size:.85rem;color:var(--color-label, #777);max-width:110ch}
-  .gp-legend code{font-family:ui-monospace,Menlo,monospace;font-size:.85em}
-  .gp-bar-over{color:var(--color-label, #aaa);font-style:italic}
-  .gp-complink{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:8px 0 0;padding:18px 22px;border:1px solid var(--border, #e5e5e5);border-radius:12px;background:var(--surface-panel, #f7f8fa)}
-  .gp-complink b{font-size:1rem}
-  .gp-complink a{display:inline-block;padding:9px 16px;border-radius:8px;background:var(--color-heading, #16181d);color:var(--surface-page, #fff);text-decoration:none;font-size:.85rem;font-weight:600;white-space:nowrap}
+  .gp-head h1{margin:0 0 8px;font-size:2rem;font-weight:700;color:#101214}
+  .gp-tier{padding:48px 0;border-top:1px solid rgba(16,18,20,.14)}
+  .gp-tag{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#363b42;margin:0 0 4px;font-weight:600}
+  .gp-th{font-size:1.6rem;margin:0 0 8px;color:#101214;font-weight:700}
+  .gp-sub{font-size:1rem;margin:32px 0 12px;text-transform:uppercase;letter-spacing:.08em;color:#363b42}
+  .gp-legend{font-size:.85rem;color:#363b42;max-width:110ch;line-height:1.55}
+  .gp-legend code{font-family:ui-monospace,Menlo,monospace;font-size:.85em;background:rgba(16,18,20,.07);padding:1px 5px;border-radius:3px}
+  .gp-bar-over{color:#363b42;font-style:italic}
+  .gp-complink{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:8px 0 0;padding:18px 22px;border:1px solid rgba(16,18,20,.16);border-radius:12px;background:rgba(16,18,20,.04)}
+  .gp-complink b{font-size:1rem;color:#101214}
+  .gp-complink a{display:inline-block;padding:9px 16px;border-radius:8px;background:#101214;color:#f7f3e8;text-decoration:none;font-size:.85rem;font-weight:600;white-space:nowrap}
   .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
-  .gp-sw{border:1px solid var(--border, #e5e5e5);border-radius:8px;overflow:hidden}
+  .gp-sw{border:1px solid rgba(16,18,20,.14);border-radius:8px;overflow:hidden}
   .gp-chip{display:block;height:72px;width:100%}
-  .gp-meta{padding:8px 10px;font-size:.78rem}
-  .gp-meta b{display:block}
-  .gp-meta span{color:var(--color-label, #888);word-break:break-all;display:block}
+  .gp-meta{padding:8px 10px;font-size:.78rem;background:#fff}
+  .gp-meta b{display:block;color:#101214}
+  .gp-meta span{color:#363b42;word-break:break-all;display:block}
   /* color palette hierarchy */
-  .gp-sub2{font-size:.88rem;margin:24px 0 6px;font-weight:700;color:var(--color-label,#444)}
-  .gp-sub3{font-size:.75rem;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-label,#888)}
-  .gp-cnt{font-size:.72rem;font-weight:400;letter-spacing:0;color:var(--color-label,#aaa);margin-left:6px}
-  .gp-alias{font-size:.72rem;color:var(--color-label,#888);font-style:italic;margin-top:2px}
+  .gp-sub2{font-size:.88rem;margin:24px 0 6px;font-weight:700;color:#363b42}
+  .gp-sub3{font-size:.75rem;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.07em;color:#363b42}
+  .gp-cnt{font-size:.72rem;font-weight:400;letter-spacing:0;color:rgba(16,18,20,.45);margin-left:6px}
+  .gp-alias{font-size:.72rem;color:#363b42;font-style:italic;margin-top:2px}
   .gp-dup{display:block;font-size:.7rem;color:#b45309;margin-top:3px}
   .gp-sw-sem{opacity:.95}
   .gp-ct{border-collapse:collapse;font-size:.82rem;margin:8px 0}
-  .gp-ct th,.gp-ct td{border:1px solid var(--border, #e5e5e5);padding:6px 10px;text-align:left}
-  .gp-pass{color:#1a7f37}.gp-warn{color:#9a6700}.gp-fail{color:#c01724}.gp-na{color:#888}
+  .gp-ct th,.gp-ct td{border:1px solid rgba(16,18,20,.14);padding:6px 10px;text-align:left}
+  .gp-ct th{background:rgba(16,18,20,.04);font-weight:600;color:#101214}
+  .gp-pass{color:#1a7f37}.gp-warn{color:#9a6700}.gp-fail{color:#c01724}.gp-na{color:#363b42}
   .gp-type{display:grid;gap:16px}
-  .gp-spec-label{display:block;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--color-label, #888);margin-bottom:4px}
+  .gp-spec-label{display:block;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#363b42;margin-bottom:4px}
   .gp-bar-row{display:flex;align-items:center;gap:16px;margin-bottom:8px}
-  .gp-bar-row span{font-size:.8rem;color:var(--color-label, #888);min-width:200px}
-  .gp-bar{background:var(--color-heading, #222);height:14px;border-radius:2px}
+  .gp-bar-row span{font-size:.8rem;color:#363b42;min-width:200px}
+  .gp-bar{background:#101214;height:14px;border-radius:2px}
   .gp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
-  .gp-tile,.gp-shadowtile{height:88px;display:flex;align-items:flex-end;justify-content:center;padding:8px;font-size:.75rem;color:var(--color-label, #888)}
-  .gp-tile{background:var(--surface-panel, #eee);border:1px solid var(--border, #e5e5e5)}
-  .gp-shadowtile{background:var(--surface-page, #fff);border-radius:12px}
+  .gp-tile,.gp-shadowtile{height:88px;display:flex;align-items:flex-end;justify-content:center;padding:8px;font-size:.75rem;color:#363b42}
+  .gp-tile{background:rgba(16,18,20,.06);border:1px solid rgba(16,18,20,.12)}
+  .gp-shadowtile{background:#fff;border-radius:12px}
   .gp-motion{display:flex;gap:16px;flex-wrap:wrap}
-  .gp-mo{height:60px;flex:1;min-width:140px;background:var(--surface-panel, #eee);border-radius:8px;display:flex;align-items:flex-end;padding:8px;font-size:.75rem;color:var(--color-label, #888);transition-property:transform;transition-timing-function:ease}
+  .gp-mo{height:60px;flex:1;min-width:140px;background:rgba(16,18,20,.06);border-radius:8px;display:flex;align-items:flex-end;padding:8px;font-size:.75rem;color:#363b42;transition-property:transform;transition-timing-function:ease}
   .gp-mo:hover{transform:translateY(-6px)}
-  .gp-grid{font-size:.85rem;color:var(--color-label, #777)}
+  .gp-grid{font-size:.85rem;color:#363b42}
   .gp-inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-  /* Modules (Tier 4): one per row, full container width, taller, so a hero/footer/CTA band shows real proportions */
+  /* Modules (Tier 4): one per row, full container width, taller */
   .gp-inv-wide{display:block}
-  .gp-cell{border:1px solid var(--border, #e5e5e5);border-radius:12px;padding:20px;background:var(--surface-page, #fff)}
+  .gp-cell{border:1px solid rgba(16,18,20,.14);border-radius:12px;padding:20px;background:#fff}
   .gp-cell-wide{width:100%;margin-bottom:24px;padding:28px}
-  .gp-cap{display:block;margin-top:12px;font-size:.78rem;color:var(--color-label, #888)}
-  .gp-cap-top{margin-top:0;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border, #e5e5e5)}
-  .gp-cap b{color:var(--color-heading, #222)}
+  .gp-cap{display:block;margin-top:12px;font-size:.78rem;color:#363b42}
+  .gp-cap-top{margin-top:0;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(16,18,20,.12)}
+  .gp-cap b{color:#101214}
 </style>
 </head>
 <body>

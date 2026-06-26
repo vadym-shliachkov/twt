@@ -278,20 +278,31 @@ function cssFromSel(sel) { return sel; }
     log('--html-only: skipping Playwright, using HTML-embed for all blocks');
   }
 
-  // 2) HTML-embed fallback (with inlined stylesheets) for everything not captured.
-  log(`fetching stylesheets for ${targets.length - captured.size} HTML previews…`);
-  for (const t of targets) {
-    if (captured.has(t.id)) continue;
-    const rel = await writePreview(t, audit, previewsDir, name(t.cluster));
-    visuals[t.id] = rel
-      ? { page: t.page, block: t.block, cluster: t.cluster, kind: 'html', path: rel }
-      : null;
+  // 2) HTML-embed fallback — ONLY when Playwright was unavailable (not installed / failed
+  //    to launch) or when the user explicitly passed --html-only. When Playwright ran
+  //    successfully, blocks it couldn't locate get null (no preview) — never HTML embeds,
+  //    because mixing screenshot + HTML modes in the same report is confusing and the user
+  //    clearly chose the screenshot path.
+  if (!usedPw || htmlOnly) {
+    log(`fetching stylesheets for ${targets.length - captured.size} HTML previews…`);
+    for (const t of targets) {
+      if (captured.has(t.id)) continue;
+      const rel = await writePreview(t, audit, previewsDir, name(t.cluster));
+      visuals[t.id] = rel
+        ? { page: t.page, block: t.block, cluster: t.cluster, kind: 'html', path: rel }
+        : null;
+    }
+  } else {
+    // Playwright ran — mark everything it missed as null (no preview).
+    for (const t of targets) {
+      if (!captured.has(t.id)) visuals[t.id] = null;
+    }
   }
 
   fs.writeFileSync(path.join(OUT, 'visuals.json'), JSON.stringify(visuals, null, 2) + '\n');
   const png = Object.values(visuals).filter((v) => v && v.kind === 'png').length;
   const htm = Object.values(visuals).filter((v) => v && v.kind === 'html').length;
   const none = Object.values(visuals).filter((v) => !v).length;
-  const mode = htmlOnly ? 'html-only' : usedPw ? 'playwright+fallback' : 'playwright-unavailable → html fallback';
+  const mode = htmlOnly ? 'html-only' : usedPw ? 'playwright (screenshots only, no html fallback)' : 'playwright-unavailable → html fallback';
   log(`visuals: ${png} screenshots, ${htm} embeds, ${none} missing (${mode})`);
 })();

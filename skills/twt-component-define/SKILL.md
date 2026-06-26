@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.3) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.3
+description: (v1.3.4) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.4
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -16,11 +16,11 @@ reads:
   - .twt-artifacts/pre-design/curation/outlines/
   - .twt-artifacts/design/design-read.md
   - references/external-design-skills.md
-  - .twt-artifacts/design/component/validation-report.md
+  - .twt-artifacts/design/design-system/component/validation-report.md
 writes:
-  - .twt-artifacts/design/component/components.md
-  - .twt-artifacts/design/component/gallery.html
-  - .twt-artifacts/design/component/decisions.md
+  - .twt-artifacts/design/design-system/component/components.md
+  - .twt-artifacts/design/design-system/component/gallery.html
+  - .twt-artifacts/design/design-system/component/decisions.md
 ---
 
 # /twt-component-define
@@ -78,7 +78,13 @@ Mark anything inferred. Never use a value that isn't a token.
 **No-Figma anti-slop polish.** When the design wasn't driven by a Figma/exported source, apply the external design skills (per `references/external-design-skills.md`; read `design-read.md` for the dials, and project-local auto-install the skills if missing). From `design-taste-frontend`: **§4.4** use cards only where elevation conveys real hierarchy and lock to one corner-radius scale; **§4.5** specify the **full** interactive-state cycle (loading/empty/error, not just the happy path) and verify button text meets WCAG AA against its background; **§3.C** keep icons from one family. From `emil-design-eng`: specify the **hover / focus / `:active`** micro-interaction per interactive component as motion tokens (custom easing, short durations, `scale(0.97)`-style press feedback, reduced-motion fallback) — recorded as the component's documented motion, not invented foundation values.
 
 ## Step 5 — Render `gallery.html` (exhaustive catalog)
-Write `gallery.html`: a single page that links `../design-system/tokens.css`, then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings (matching the design-system preview's levels). Use only `var(--…)` for foundation values — no hardcoded colours/spacing. A small embedded `<style>` block for gallery layout only is fine. At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../design-system/preview.html` shows **breadth** — every component once, by level (the evolution).
+Write `gallery.html` at `.twt-artifacts/design/design-system/component/gallery.html` — it lives **inside** the design-system folder so that the `preview.html` link (`component/gallery.html`) resolves correctly. The file links `../tokens.css` (one level up, into `design-system/`), then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings.
+
+**Chrome vs. specimens — two separate style layers:**
+- **Page chrome** (layout, labels, section headings, legends, captions, navigation) must use the **doc-hub light palette** so gallery.html and preview.html look visually consistent: background `#f7f3e8` (warm cream), primary text `#101214`, secondary/muted text `#363b42`, border `rgba(16,18,20,.14)`, font `Inter, ui-sans-serif, system-ui, sans-serif`. Hard-code these values in the `<style>` block — never use project tokens for chrome.
+- **Component specimens** (the actual rendered previews of buttons, cards, inputs, etc.) must use only `var(--…)` references from `tokens.css` — no hardcoded colours or spacing. The tokens drive what the specimens look like, which is the whole point of the catalog.
+
+At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../preview.html` shows **breadth** — every token rendered live.
 
 ## Step 6 — Report
 List components written, both file paths, and what to run next (`/twt-component-validate`, then `/twt-layout-define`).

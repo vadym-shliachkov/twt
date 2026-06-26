@@ -171,7 +171,7 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.3
+**Version:** 1.3.4
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -190,12 +190,12 @@ Document the component library the site needs — anatomy, variants, states, tok
 - .twt-artifacts/pre-design/curation/outlines/
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
-- .twt-artifacts/design/component/validation-report.md
+- .twt-artifacts/design/design-system/component/validation-report.md
 
 **Writes:**
-- .twt-artifacts/design/component/components.md
-- .twt-artifacts/design/component/gallery.html
-- .twt-artifacts/design/component/decisions.md
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/design-system/component/gallery.html
+- .twt-artifacts/design/design-system/component/decisions.md
 
 **Non-goals:**
 - Doesn't invent components the IA/outlines don't need
