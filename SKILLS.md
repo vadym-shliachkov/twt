@@ -776,6 +776,7 @@ Audit how good a design system is **and** how consistently a real design follows
 - .twt-artifacts/design/design-system-audit/canonical-blocks.md
 - .twt-artifacts/design/design-system-audit/quality-report.md
 - .twt-artifacts/design/design-system-audit/quality.json
+- .twt-artifacts/design/design-system-audit/metrics.json
 - .twt-artifacts/design/design-system-audit/audit.json
 - .twt-artifacts/design/design-system-audit/blocks.json
 - .twt-artifacts/design/design-system-audit/visuals.json

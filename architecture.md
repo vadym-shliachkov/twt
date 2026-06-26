@@ -893,6 +893,7 @@ flowchart TB
 | .twt-artifacts/design/design-system-audit/canonical-blocks.md |  |
 | .twt-artifacts/design/design-system-audit/quality-report.md |  |
 | .twt-artifacts/design/design-system-audit/quality.json |  |
+| .twt-artifacts/design/design-system-audit/metrics.json |  |
 | .twt-artifacts/design/design-system-audit/audit.json |  |
 | .twt-artifacts/design/design-system-audit/blocks.json |  |
 | .twt-artifacts/design/design-system-audit/visuals.json |  |
