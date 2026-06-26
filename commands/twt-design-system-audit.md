@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.4.14) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
-version: 1.4.14
+description: (v1.5.0) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
+version: 1.5.0
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -152,28 +152,37 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit.mjs" analyze "<OUT>/blocks.json" --ou
 ```
 Read `<OUT>/audit.json`. Its shape: `summary` (pages, blocks, clusters, `consistency_pct`, `deviating_instances`), `ds_stats` (token/color/type/space/radius/component counts + `source`), `canonical_blocks[]` (per cluster: role, instances, pages, `example` instance, canonical styles/structure), `deviations[]` (`{cluster, role, page, block, match, tier, reason_types[], deltas[], deltas_typed[]}`), `block_status[]` (one entry per instance — drifting **and** OK — `{page, block, cluster, role, match, tier, reason_types[], reasons[]}`, the full matrix), `page_stylesheets`, and `quality_signals`. This is the evidence backbone — do not re-derive it by eyeballing HTML.
 
-## Step 6 — Design-system quality pass (10 weighted metrics)
+## Step 6 — Design-system quality pass (5 scores + DS coherence detail)
 
-Run only when a DS was **provided or synthesized**. Score each metric **0–100%** using the `quality_signals` from `audit.json` plus the deterministic contrast gate and your design judgment. For the contrast metric, run (Bash, read-only) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR" --check` against the resolved DS (or compute from the token hex values if the DS lives outside the standard path) and read `contrast_failures[]`.
+Run only when a DS was **provided or synthesized**. Read `<OUT>/metrics.json` (written by `ds-metrics.mjs` in Step 7c below — run Step 7c first, then come back to Step 6 judgment). The metrics.json `scores` object gives you the deterministically-computed **Implementation Adoption**, **Visual Consistency**, **Accessibility Safety**, and **Governance** scores with their hard caps already applied. Your role in Step 6 is to compute **Design System Coherence** (the model-judgment score) and then assemble the final **Product-System Alignment** score with any additional caps your judgment finds.
 
-| # | Metric | Weight | What "good" means / evidence |
-|---|--------|-------:|------------------------------|
-| 1 | Token coverage | 14 | Color/type/space/radius/shadow/motion are tokenized, not ad-hoc — `quality_signals.token_coverage_pct`. |
-| 2 | Scale coherence (type, space & radius) | 10 | Type, spacing, and radius all follow rhythmic scales with meaningful visual differentiation. Radius values within 5 px of each other (e.g., 8 px and 12 px) are perceptually identical at normal display size — a two-radius system with that gap has effectively one step; score this low and call it out explicitly in the critical assessment. Use `distinct_lengths` as a signal, then apply judgment. |
-| 3 | Color system rigor | 12 | Structured roles (bg/surface/text/border/accent), neutral ramp, state tints, one disciplined accent — judgment. |
-| 4 | Accessibility / contrast | 16 | Intended text/surface pairs meet WCAG AA — `gen-preview --check` `contrast_failures[]`. Any failure caps this low. |
-| 5 | Naming & structure hygiene | 6 | Systematic, namespaced names; no duplicates — `undefined_var_refs`, `duplicate_token_defs`. |
-| 6 | Component coverage | 12 | Primitives/Components/Modules exist for the patterns the design actually uses — `canonical_blocks` roles vs DS. |
-| 7 | Variant & state completeness | 8 | Needed variants & states (hover/active/disabled/focus) defined — judgment from DS/components.md. |
-| 8 | Reuse / DRY | 8 | Few one-off/duplicate definitions — `distinct_colors`/`distinct_lengths` vs token count. |
-| 9 | Responsiveness | 8 | Breakpoints & responsive rules are systematic — `quality_signals.breakpoint_count`. |
-| 10 | Documentation & implementability | 6 | Clear enough to build from (specimens/usage) — judgment. |
+### 6a — Design System Coherence (Score 1, weight 20%)
 
-**Weighted overall** — after scoring all 10 metrics, run (Bash):
+Score this metric 0–100 using the `quality_signals` from `audit.json` and your design judgment. This is the only score you compute; the rest come from `metrics.json`.
+
+| # | Sub-metric | Weight | Evidence |
+|---|-----------|-------:|---------|
+| 1 | Token coverage | 14 | `quality_signals.token_coverage_pct` — 95%+ = 100, scale down |
+| 2 | Scale coherence (type, space, radius) | 10 | rhythmic steps with meaningful visual differentiation; call out radius values within 5px of each other explicitly |
+| 3 | Color system rigor | 12 | structured roles (bg/surface/text/border/accent), neutral ramp, one disciplined accent |
+| 4 | Accessibility / contrast | 16 | `gen-preview --check` `contrast_failures[]`; any failure caps this low |
+| 5 | Naming & structure hygiene | 6 | systematic namespaced names; no duplicates |
+| 6 | Component coverage | 12 | primitives/components/modules for patterns the design uses |
+| 7 | Variant & state completeness | 8 | hover/active/disabled/focus defined |
+| 8 | Reuse / DRY | 8 | few one-off/duplicate definitions |
+| 9 | Responsiveness | 8 | systematic breakpoints |
+| 10 | Documentation & implementability | 6 | clear enough to build from |
+
+Run the contrast gate:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR" --check
+```
+
+Compute the weighted DS Coherence score:
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" --max 100 '[
   {"criterion":"Token coverage","weight":14,"score":<s1>},
-  {"criterion":"Scale coherence (type, space & radius)","weight":10,"score":<s2>},
+  {"criterion":"Scale coherence","weight":10,"score":<s2>},
   {"criterion":"Color system rigor","weight":12,"score":<s3>},
   {"criterion":"Accessibility / contrast","weight":16,"score":<s4>},
   {"criterion":"Naming & structure hygiene","weight":6,"score":<s5>},
@@ -184,16 +193,83 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/score-rubric.mjs" --max 100 '[
   {"criterion":"Documentation & implementability","weight":6,"score":<s10>}
 ]'
 ```
-Use `rows[i].weighted` for the **Score %** column contribution, `health` for the weighted overall and the `"weighted_overall"` key in `quality.json`, and `band` for the quality band. Never recompute by hand.
 
-Write `<OUT>/quality-report.md`: a table (Metric · Weight · Score % · Evidence · Note), the weighted overall, and a short **Critical assessment** (biggest strength · biggest weakness · highest-impact fix). Every metric scoring < 60% gets a one-line "why" tied to its evidence.
+The `health` value from the rubric = **DS Coherence score**.
 
-Also write the machine-readable `<OUT>/quality.json` (consumed by the HTML report in Step 7b) with the same numbers:
-```json
-{ "weighted_overall": <0-100>,
-  "metrics": [ { "n": 1, "name": "Token coverage", "weight": 14, "score": <0-100>, "evidence": "<short>", "note": "<short>" }, … all 10 … ],
-  "critical_assessment": { "strength": "<…>", "weakness": "<…>", "fix": "<…>" } }
+### 6b — Assemble the 5-score summary
+
+Read `<OUT>/metrics.json` → `scores` object for the 4 deterministic scores. Combine:
+
+| Score | Source | Weight |
+|-------|--------|-------:|
+| 1. Design System Coherence | Step 6a (model judgment) | 20% |
+| 2. Implementation Adoption | metrics.json (with hard caps already applied) | 30% |
+| 3. Visual Consistency | metrics.json (with component override cap) | 25% |
+| 4. Accessibility Safety | metrics.json (capped at 80 if any critical failure) | 15% |
+| 5. Governance / Intentionality | metrics.json | 10% |
+
 ```
+Product-System Alignment =
+  Score_1 × 0.20
++ Score_2 × 0.30
++ Score_3 × 0.25
++ Score_4 × 0.15
++ Score_5 × 0.10
+```
+
+Apply additional hard caps from Requirements v2 §15 that the model can see but `ds-metrics.mjs` cannot (e.g. component override rate from `audit.json`):
+- If component override rate > 30%: `Product-System Alignment` max = 65
+- If metrics.json `hard_gates.token_usage_zero` = true: `Product-System Alignment` max = 45 (already capped in metrics.json, confirm)
+- If metrics.json `hard_gates.critical_a11y_failure` = true: max = 70
+
+### 6c — Write quality.json and quality-report.md
+
+Write `<OUT>/quality.json`:
+```json
+{
+  "ds_coherence": <0-100>,
+  "implementation_adoption": <from metrics.json scores>,
+  "visual_consistency": <from metrics.json scores>,
+  "accessibility_safety": <from metrics.json scores>,
+  "governance": <from metrics.json scores>,
+  "product_system_alignment": <final with all caps>,
+  "weighted_overall": <same as product_system_alignment — kept for compat>,
+  "hard_gates": <from metrics.json hard_gates>,
+  "metrics": [ { "n": 1, "name": "Token coverage", "weight": 14, "score": <0-100>, "evidence": "<short>", "note": "<short>" }, … all 10 … ],
+  "critical_assessment": { "strength": "<…>", "weakness": "<…>", "fix": "<…>" }
+}
+```
+
+Write `<OUT>/quality-report.md`:
+```markdown
+# Design System Quality Report — <ISO date>
+
+## Score Summary
+
+| Score | Value | Meaning |
+|-------|-------|---------|
+| Design System Coherence | <N>/100 | Whether the system definition is well-structured |
+| Implementation Adoption | <N>/100 | Whether the product actually uses the system |
+| Visual Consistency | <N>/100 | Whether similar UI looks and behaves consistently |
+| Accessibility Safety | <N>/100 | Contrast, target size, focus, readability |
+| Governance / Intentionality | <N>/100 | Whether exceptions are documented and justified |
+| **Product-System Alignment** | **<N>/100** | Final combined score with hard caps applied |
+
+<list any hard gates that triggered, e.g. "Token usage = 0% → Implementation Adoption capped at 15, Alignment capped at 45">
+
+## DS Coherence Detail (10 sub-metrics)
+
+<table: Sub-metric · Weight · Score % · Evidence · Note>
+
+## Critical Assessment
+
+**Strength:** <biggest strength>
+**Weakness:** <biggest weakness>
+**Highest-impact fix:** <specific action>
+```
+
+Important: Implementation Adoption and Product-System Alignment must be very low when token usage is near 0%, regardless of how well-structured the DS definition is. A well-documented DS that the product ignores must not score above 45 on alignment. State this explicitly in the report whenever it applies.
+
 If the Quality pass did not run (no DS), skip `quality.json` — the report falls back to the deterministic `quality_signals`.
 
 ## Step 7 — Write the reports
@@ -257,4 +333,6 @@ This is the human deliverable; the `.md` reports stay as companions. Do not hand
 
 ## Step 8 — Report
 
-State: the sources audited, baseline (provided vs **synthesized into the canonical DS, then cleaned**), DS-quality weighted overall (if run), consistency %, the count of drifting blocks and the worst offenders (literal name + page), any low-confidence (JS-rendered) pages, and the artifact paths under `.twt-artifacts/design/design-system-audit/` — leading with **`audit-report.html`** (the homepage) as the thing to open, and noting that each page has its own `audit-<slug>.html` reachable from it. If the canonical DS was synthesized, say so (and whether cleanup re-ran define) and point to `.twt-artifacts/design/design-system/`. If a **provided** DS had issues, say they're reported but **not** modified. Note that fixing the *audited design* is a separate step (`/twt-design-system-define` to evolve the system; rebuild blocks to match).
+State: the sources audited, baseline (provided vs **synthesized into the canonical DS, then cleaned**), then the **5 scores** in this order — Design System Coherence / Implementation Adoption / Visual Consistency / Accessibility Safety / Governance / Product-System Alignment — with any hard gates that triggered named explicitly (e.g. "Token usage = 0% — Implementation Adoption capped at 15; Alignment capped at 45"). Follow with: consistency %, drifting block count, worst offenders, and artifact paths. The `audit-report.html` homepage shows the 5-score dashboard; the DS quality detail is in the collapsible section there.
+
+State: the count of drifting blocks and the worst offenders (literal name + page), any low-confidence (JS-rendered) pages, and the artifact paths under `.twt-artifacts/design/design-system-audit/` — leading with **`audit-report.html`** (the homepage) as the thing to open, and noting that each page has its own `audit-<slug>.html` reachable from it. If the canonical DS was synthesized, say so (and whether cleanup re-ran define) and point to `.twt-artifacts/design/design-system/`. If a **provided** DS had issues, say they're reported but **not** modified. Note that fixing the *audited design* is a separate step (`/twt-design-system-define` to evolve the system; rebuild blocks to match).
