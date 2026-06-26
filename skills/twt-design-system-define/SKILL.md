@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.2) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.2
+description: (v1.8.3) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.3
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -514,13 +514,31 @@ Rules:
 - Group with comments by category (Colors, Typography, Spacing, Radius, Shadows, Motion, Grid/Breakpoints).
 - Values are the confirmed/inferred values from `tokens.md`. Do not introduce values absent from `tokens.md`.
 
-Example shape:
+### Color two-layer architecture (mandatory)
+
+Colors MUST be split into two layers — **every time, no exceptions**:
+
+**Layer 1 — Primitives** (raw values only): the complete palette — every hex solid and every alpha tone.  
+**Layer 2 — By purpose** (`var()` references only): semantic/role tokens that point to Layer 1. **No raw hex or rgba values may appear in Layer 2.** A purpose token names the *use*, not the color.
+
 ```css
 :root {
-  /* Colors */
-  --color-primary: #0057FF;
-  --color-surface: #FFFFFF;
-  --color-text: #0D1B2A;
+  /* ── Layer 1: Color primitives — solids ── */
+  --color-ink:       #090E22;
+  --color-white:     #FFFFFF;
+  --color-slate:     #3A3F5C;
+  /* ── Layer 1: Color primitives — alpha tones ── */
+  --color-ink-a08:   rgba(9, 14, 34, .08);
+  --color-white-a85: rgba(255, 255, 255, .85);
+
+  /* ── Layer 2: Colors by purpose — var() only ── */
+  --color-bg:            var(--color-white);
+  --color-text:          var(--color-slate);
+  --color-text-heading:  var(--color-ink);
+  --color-primary:       var(--color-ink);
+  --color-on-primary:    var(--color-white);
+  --color-border:        var(--color-ink-a08);
+
   /* Typography */
   --font-family-base: "Inter", system-ui, sans-serif;
   --font-size-body-m: 1rem;
@@ -529,12 +547,14 @@ Example shape:
   --space-4: 16px;
   /* Radius */
   --radius-card: 16px;
-  /* Shadows */
-  --shadow-e2: 0 2px 8px rgba(13,27,42,.12);
+  /* Shadows — reference color primitives via var(), never raw rgba */
+  --shadow-e2: 0 2px 8px var(--color-ink-a08);
   /* Motion */
   --motion-duration-fast: 120ms;
 }
 ```
+
+This two-layer rule also applies to **Shadows**: shadow values must reference color primitive tokens via `var()` rather than hard-coding rgba literals. Add any alpha-tone primitives needed for shadows into Layer 1.
 
 ## Step 10b — Generate `preview.html` (tokens-only, always)
 
