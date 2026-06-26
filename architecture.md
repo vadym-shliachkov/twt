@@ -207,7 +207,7 @@ flowchart TB
 
 - /twt-block-preview - Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
-- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
+- /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
 - /twt-design-system-define - Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
 - /twt-design-system-validate - Read-only critique of tokens.md, tokens.css, and preview.html into validation-report.md (deterministic WCAG contrast gate via gen-preview --check)
 
@@ -865,7 +865,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.4.11
+**Version:** 1.4.12
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)

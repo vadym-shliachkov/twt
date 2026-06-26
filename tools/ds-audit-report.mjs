@@ -59,6 +59,7 @@ if (!fs.existsSync(auditPath)) { console.error('ds-audit-report: audit.json not 
 const audit = readJson(auditPath) || {};
 const visuals = readJson(path.join(OUT, 'visuals.json')) || {};
 const quality = readJson(path.join(OUT, 'quality.json')); // may be null
+const metricsData = readJson(path.join(OUT, 'metrics.json')); // may be null
 const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;
 
 const summary = audit.summary || {};
@@ -307,6 +308,51 @@ function isSignificant(b) {
   return true;
 }
 
+// ── DS comparison metrics section ────────────────────────────────────────────
+function fmtVal(m) {
+  if (m.value == null) return '<span class="mc-null">—</span>';
+  const v = m.value;
+  const u = m.unit || '';
+  if (typeof v === 'string' && /[^\d.x%]/.test(v)) return esc(v); // descriptive string
+  return `<b>${esc(v)}</b><span class="mc-unit">${esc(u)}</span>`;
+}
+function stBadge(st) {
+  if (!st) return '';
+  const map = { ok: ['st-ok', 'OK'], warn: ['st-warn', 'WARN'], bad: ['st-bad', 'BAD'], info: ['st-info', '·'] };
+  const [cls, label] = map[st] || ['st-info', st];
+  return `<span class="${cls}">${label}</span>`;
+}
+function metricsSection() {
+  if (!metricsData || !Array.isArray(metricsData.categories) || !metricsData.categories.length) return '';
+  const catHtml = metricsData.categories.map((cat) => {
+    const computed = cat.metrics.filter((m) => m.value != null && m.value !== '').length;
+    const rows = cat.metrics.map((m) => `<tr>
+      <td class="mc-id">${esc(m.id)}</td>
+      <td class="mc-name">${esc(m.name)}</td>
+      <td class="mc-val">${fmtVal(m)}</td>
+      <td class="mc-st">${stBadge(m.status)}</td>
+      <td class="mc-desc">${esc(m.desc || '')}</td>
+    </tr>`).join('');
+    return `<details class="mc-cat">
+      <summary class="mc-sum">${esc(cat.label)}<span class="mc-count">${computed} of ${cat.metrics.length} computed</span></summary>
+      <table class="grid mc-tbl">
+        <thead><tr><th class="mc-id">#</th><th>Metric</th><th>Value</th><th class="mc-st">Status</th><th>Description</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </details>`;
+  }).join('');
+  return `<h2>Design System Comparison Metrics</h2>
+  <p class="note">Compares what the design system defines against what the site actually uses — token counts, coverage ratios, and site-side drift. Metrics marked <span class="st-bad">BAD</span> indicate systemic drift; <span class="st-warn">WARN</span> suggests review; <span class="mc-null">—</span> requires Playwright or manual review. Generated ${esc(metricsData.generated_at || '')}.</p>
+  <div class="mc-legend">
+    <span><b>Value</b> — computed from crawled CSS and audit data</span>
+    <span><b>OK</b> — within healthy thresholds</span>
+    <span class="st-warn">WARN</span> — worth reviewing
+    <span class="st-bad">BAD</span> — systemic issue
+    <span class="mc-null">—</span> — requires browser/manual review
+  </div>
+  ${catHtml}`;
+}
+
 // ── per-page: one fused card per block ───────────────────────────────────────
 function blockCard(b) {
   const dev = devByPageBlock.get(vid(b.page, b.block));
@@ -430,6 +476,27 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 .ml-item{display:flex;align-items:baseline;gap:8px;font-size:13px}
 .ml-label{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
 .ml-desc{color:var(--ink)}
+/* DS comparison metrics */
+.mc-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:4px 0 10px;align-items:center}
+.mc-cat{border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--bg);overflow:hidden}
+.mc-sum{padding:11px 16px;cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;list-style:none;background:var(--soft);user-select:none}
+.mc-sum::-webkit-details-marker{display:none}
+.mc-cat[open]>.mc-sum{border-bottom:1px solid var(--line)}
+.mc-count{font-weight:400;font-size:12px;color:var(--muted);margin-left:8px}
+.mc-tbl{border:none;border-radius:0}
+.mc-tbl thead tr th:first-child,.mc-tbl tbody tr td:first-child{padding-left:16px}
+.mc-tbl thead tr th:last-child,.mc-tbl tbody tr td:last-child{padding-right:16px}
+.mc-id{font-size:11px;color:var(--muted);width:38px;white-space:nowrap}
+.mc-name{font-size:13px;font-weight:600;width:220px}
+.mc-val{font-size:14px;width:90px;white-space:nowrap}.mc-val b{color:var(--ink)}
+.mc-unit{font-size:11px;color:var(--muted);margin-left:1px}
+.mc-null{color:var(--muted);font-size:13px}
+.mc-st{width:52px;text-align:center}
+.mc-desc{font-size:12px;color:var(--muted);line-height:1.4}
+.st-ok{color:var(--ok);font-weight:700;font-size:11px}
+.st-warn{color:var(--warning);font-weight:700;font-size:11px}
+.st-bad{color:var(--blocker);font-weight:700;font-size:11px}
+.st-info{color:var(--accent);font-size:11px}
 `;
 
 function htmlShell(title, body) {
@@ -450,6 +517,8 @@ const homeBody = `
   <h2>Design-system review</h2>
   <p>${dsLine()}</p>
   ${qualityTable()}
+
+  ${metricsSection()}
 
   <h2>Pages</h2>
   <p class="note">Each page lists only its own blocks. Open a page to see every drifting block as a card — the block as it looks now next to how it should look. Ordered worst-first.</p>

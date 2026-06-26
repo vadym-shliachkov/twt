@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.4.11) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts
-version: 1.4.11
+description: (v1.4.12) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
+version: 1.4.12
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -241,9 +241,14 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --html-only
 
 The script writes `<OUT>/shots/` (PNGs when Playwright ran), `<OUT>/previews/` (HTML embeds when html-only), and `<OUT>/visuals.json`. A block with no preview renders without a thumbnail — the card is still shown. Never re-run ds-shots after Playwright has already produced screenshots; the visuals.json it writes is consumed as-is by Step 7c.
 
-## Step 7c — Generate the HTML report (headline deliverable)
+## Step 7c — Compute comparison metrics + generate HTML report
 
-Run the report generator. It reads `audit.json` (+ `visuals.json` and, when present, `quality.json` and the resolved `tokens.css`) and writes a **multi-file** report: `audit-report.html` (the homepage — scorecard, design-system review, and the page list with per-page BLOCKER/WARNING/SUGGESTION/OK counts) plus one `audit-<page-slug>.html` per page (only that page's blocks, each a fused card with the now-vs-should-look visuals). Pass `--tokens` so the homepage shows the swatch row and the per-block deltas name the nearest token.
+First, compute the Design System vs. Site comparison metrics (14 categories, ~90 metrics). The script reads `audit.json`, the crawled `pages/` HTML, and `tokens.css` (if available) — no new network calls — and writes `metrics.json` to the audit directory. The HTML report reads it automatically.
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/ds-metrics.mjs" --out "<OUT>" [--tokens "<tokens>"]
+```
+
+Then run the report generator. It reads `audit.json` (+ `visuals.json`, `metrics.json`, and, when present, `quality.json` and the resolved `tokens.css`) and writes a **multi-file** report: `audit-report.html` (the homepage — scorecard, design-system review, DS comparison metrics, and the page list with per-page BLOCKER/WARNING/SUGGESTION/OK counts) plus one `audit-<page-slug>.html` per page (only that page's blocks, each a fused card with the now-vs-should-look visuals). Pass `--tokens` so the homepage shows the swatch row and the per-block deltas name the nearest token.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit-report.mjs" --out "<OUT>" [--tokens "<tokens>"]
 ```
