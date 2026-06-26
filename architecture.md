@@ -436,7 +436,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.4
+**Version:** 1.3.5
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -865,7 +865,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.4.10
+**Version:** 1.4.11
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
