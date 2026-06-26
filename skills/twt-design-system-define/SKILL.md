@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.4) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.4
+description: (v1.8.6) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.6
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -510,8 +510,9 @@ module.exports = {
 After writing `tokens.md`, write `.twt-artifacts/design/design-system/tokens.css` — a single `:root` block exporting **every** token as a CSS custom property. This is the one stylesheet every downstream HTML artifact (preview, gallery, mockups) links, so it must be complete and authoritative.
 
 Rules:
-- One custom property per token, named from the token's kebab-case name: `--color-primary`, `--space-4`, `--radius-card`, `--font-size-body-m`, `--font-family-base`, `--line-height-body-m`, `--shadow-e2`, `--motion-duration-fast`, etc.
+- One custom property per token, named from the token's kebab-case name: `--color-primary`, `--space-4`, `--radius-card`, `--font-size-body-m`, `--font-family-base`, `--font-weight-bold`, `--line-height-body-m`, `--tracking-tight`, `--shadow-e2`, `--motion-duration-fast`, etc.
 - Group with comments by category (Colors, Typography, Spacing, Radius, Shadows, Motion, Grid/Breakpoints).
+- **Typography is more than size.** Export the *full* type system as tokens — not only `--font-size-*`. Always include: `--font-family-*` (one per family/role), `--font-weight-*` (one per weight actually used — e.g. `--font-weight-regular: 400`, `--font-weight-medium: 500`, `--font-weight-bold: 700`), `--line-height-*`, and `--tracking-*` (or `--letter-spacing-*`) wherever the design uses non-default tracking. The preview renders a live specimen for each of these; if a weight or tracking value is only mentioned in prose and never tokenized, it won't appear in `preview.html`.
 - Values are the confirmed/inferred values from `tokens.md`. Do not introduce values absent from `tokens.md`.
 
 ### Color two-layer architecture (mandatory)
@@ -539,10 +540,16 @@ Colors MUST be split into two layers — **every time, no exceptions**:
   --color-on-primary:    var(--color-white);
   --color-border:        var(--color-ink-a08);
 
-  /* Typography */
-  --font-family-base: "Inter", system-ui, sans-serif;
-  --font-size-body-m: 1rem;
-  --line-height-body-m: 1.5;
+  /* Typography — family, size, weight, line-height, tracking (not size alone) */
+  --font-family-base:    "Inter", system-ui, sans-serif;
+  --font-family-heading: "Inter", system-ui, sans-serif;
+  --font-size-body-m:    1rem;
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+  --font-weight-bold:    700;
+  --line-height-body-m:  1.5;
+  --tracking-tight:      -0.01em;
+  --tracking-wide:        0.04em;
   /* Spacing */
   --space-4: 16px;
   /* Radius */
@@ -570,7 +577,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR"
 **Run this command directly — do not first hunt for the tool.** `${CLAUDE_PLUGIN_ROOT}` is always set at runtime and the generator always lives at `tools/gen-preview.mjs` under it; do **not** `ls`/`find` the plugin cache to locate it, and do **not** run it with `--help` to discover its CLI (its only args are the project dir and the optional `--mode`/`--check` flags named here). Those exploratory reads of the install dir are unnecessary and slow the run. If the single invocation errors, report the error — don't go spelunking.
 
 `$CLAUDE_PROJECT_DIR` is the target project root (same convention as the qa-scan tools); if unset, pass the project root explicitly. The script reads `tokens.css` (authoritative), resolves every `var()` alias and rgba, and writes a tokens-only `preview.html` with:
-- live color swatches (name · resolved value · alias chain), the **WCAG contrast matrix** for intended text/surface pairs, type specimens, spacing bars (real per-step widths), radius tiles, shadow cards, motion swatches, grid list;
+- live color swatches (name · resolved value · alias chain), the **WCAG contrast matrix** for intended text/surface pairs, **typography specimens — the full type story, not just sizes**: family specimens, the size × line-height scale, a live **weight** specimen per `--font-weight-*` token, and a **tracking** specimen per `--tracking-*`/`--letter-spacing-*` token (each rendered live so the weight/spacing is visible, not just a numeric legend), spacing bars (real per-step widths), radius tiles, shadow cards, motion swatches, grid list;
 - a prominent **"Open component gallery →"** link to `../component/gallery.html` (the component catalog the design-system orchestrator / `/twt-component-define` produces).
 
 The script prints a ` ```json ` block to stdout with `counts` and `contrast_failures[]`. **Capture it** — Step 10c (contrast gate) reads `contrast_failures`, and the Step 12 summary reads `counts`.
