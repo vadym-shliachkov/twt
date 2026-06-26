@@ -905,7 +905,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.2
+**Version:** 1.8.4
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
