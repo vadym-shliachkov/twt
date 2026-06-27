@@ -436,7 +436,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.5
+**Version:** 1.3.7
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines

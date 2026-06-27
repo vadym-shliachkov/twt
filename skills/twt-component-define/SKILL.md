@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.5) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.5
+description: (v1.3.7) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.7
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -81,10 +81,56 @@ Mark anything inferred. Never use a value that isn't a token.
 Write `gallery.html` at `.twt-artifacts/design/design-system/component/gallery.html` — it lives **inside** the design-system folder so that the `preview.html` link (`component/gallery.html`) resolves correctly. The file links `../tokens.css` (one level up, into `design-system/`), then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings.
 
 **Chrome vs. specimens — two separate style layers:**
-- **Page chrome** (layout, labels, section headings, legends, captions, navigation) must use the **doc-hub light palette** so gallery.html and preview.html look visually consistent: background `#f7f3e8` (warm cream), primary text `#101214`, secondary/muted text `#363b42`, border `rgba(16,18,20,.14)`, font `Inter, ui-sans-serif, system-ui, sans-serif`. Hard-code these values in the `<style>` block — never use project tokens for chrome.
-- **Component specimens** (the actual rendered previews of buttons, cards, inputs, etc.) must use only `var(--…)` references from `tokens.css` — no hardcoded colours or spacing. The tokens drive what the specimens look like, which is the whole point of the catalog.
+- **Page chrome** (layout, labels, section headings, legends, captions, navigation) must use the **doc-hub light skin** — the exact same canonical look `gen-preview.mjs` renders into `preview.html`, so the two sheets are visually indistinguishable. Hard-code these values in the `<style>` block — **never** use project `var(--…)` tokens for chrome. Copy the skin block below verbatim. **Component specimens** (the rendered previews of buttons, cards, inputs, etc.) must use only `var(--…)` references from `tokens.css` — no hardcoded colours or spacing. The tokens drive what the specimens look like; that's the whole point of the catalog.
 
-At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../preview.html` shows **breadth** — every token rendered live.
+**Load the chrome fonts** in `<head>` (Montserrat display + Inter body + IBM Plex Mono — the same three `preview.html` uses), then `../tokens.css`:
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="../tokens.css">
+```
+
+**Doc-hub light skin — paste this chrome `<style>` block verbatim** (all classes namespaced `gal-` so they never collide with specimen markup or `tokens.css`):
+```css
+:root{
+  --gal-page:#ffffff; --gal-panel:#ffffff; --gal-panel-soft:#f8f9fc;
+  --gal-ink:#090e22; --gal-text:#3a3f5c; --gal-muted:#7a82a8;
+  --gal-rule:#dde0ee; --gal-rule-soft:rgba(122,130,168,.18);
+  --gal-red:#ca221f; --gal-blue:#0b68b7; --gal-yellow:#f6c22b;
+  --gal-action:#090e22; --gal-action-hover:#0e1630;
+  --gal-font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
+  --gal-font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
+  --gal-font-mono:"IBM Plex Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html{background:var(--gal-page)}
+body{margin:0;min-width:320px;color:var(--gal-text);background:var(--gal-page);font-family:var(--gal-font-body);line-height:1.55;text-rendering:optimizeLegibility}
+code{font-family:var(--gal-font-mono);font-size:.88em}
+.gal-wrap{max-width:1120px;margin:0 auto;padding:64px 24px 96px}
+.gal-head{padding:24px 0 52px;border-bottom:1px solid var(--gal-rule)}
+.gal-project{display:block;margin:0 0 26px;color:var(--gal-blue);font-family:var(--gal-font-heading);font-size:clamp(1.45rem,3vw,2.15rem);font-weight:800;line-height:1.12}
+.gal-project::after{content:"";display:block;width:72px;height:4px;margin:22px 0 0;background:linear-gradient(90deg,var(--gal-red) 0 33%,var(--gal-blue) 33% 66%,var(--gal-yellow) 66% 100%)}
+.gal-head h1{max-width:760px;margin:0 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:clamp(3rem,6.8vw,5.75rem);font-weight:800;line-height:.98}
+.gal-head .gal-legend{max-width:760px;margin:0;color:var(--gal-text);font-size:1.05rem}
+.gal-tier{margin:0;padding:64px 0;border-top:1px solid var(--gal-rule)}
+.gal-tag{display:inline-flex;align-items:center;gap:10px;margin:0 0 8px;color:var(--gal-blue);font-family:var(--gal-font-heading);font-size:.82rem;font-weight:700}
+.gal-tag::before{content:"";width:30px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--gal-yellow) 0 33%,var(--gal-red) 33% 66%,var(--gal-blue) 66% 100%)}
+.gal-th{margin:0 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:clamp(1.8rem,3.4vw,3rem);font-weight:800;line-height:1.05;text-wrap:balance}
+.gal-sub{display:block;margin:56px 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:1.05rem;font-weight:800}
+.gal-legend{max-width:92ch;margin-bottom:20px;color:var(--gal-text);font-size:.92rem;line-height:1.6}
+.gal-legend code{color:var(--gal-ink);background:var(--gal-panel-soft);border:1px solid var(--gal-rule-soft);padding:2px 6px;border-radius:4px}
+/* component cells: rounded light panels with a subtle hover lift, like preview's .gp-cell/.gp-sw */
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.gal-cell{padding:20px;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
+@media (hover:hover) and (pointer:fine){.gal-cell:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}}
+.gal-cap{display:block;margin-top:12px;color:var(--gal-muted);font-size:.78rem}
+.gal-cap b{color:var(--gal-ink)}
+/* per-state label above each specimen variant */
+.gal-state{display:block;margin-bottom:8px;color:var(--gal-muted);font-size:.7rem;font-weight:600;letter-spacing:0;text-transform:none}
+@media (max-width:760px){.gal-wrap{padding:36px 16px 72px}.gal-head h1{font-size:clamp(2.6rem,14vw,4.2rem)}.gal-tier{padding:48px 0}.gal-sub{margin:44px 0 16px}}
+```
+Use a header that mirrors preview's (`<p class="gal-project">Project name: …</p><h1>Component Gallery</h1>`), a `gal-tier` section per level (Primitives / Components / Modules) introduced by a `gal-tag` pill + `gal-th` heading, and `gal-cell` panels for each component's variant × state matrix. Keep the specimen markup inside the cells token-only.
+
+At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../preview.html` shows **breadth** — every token rendered live. Both sheets share the doc-hub light skin so they read as one system.
 
 ## Step 6 — Report
 List components written, both file paths, and what to run next (`/twt-component-validate`, then `/twt-layout-define`).

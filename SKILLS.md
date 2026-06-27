@@ -171,7 +171,7 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.5
+**Version:** 1.3.7
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
