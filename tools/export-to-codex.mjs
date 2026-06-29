@@ -26,7 +26,7 @@ function usage() {
 
 Options:
   --out <dir>       Write a previewable Codex plugin copy. Defaults to dist-codex/twt-marketplace.
-  --install user    Write to the personal Codex marketplace root under ~/.agents/plugins.
+  --install user    Install generated skills into ~/.agents/skills and support files into ~/.codex/twt-marketplace.
   --help            Show this help.
 `;
 }
@@ -102,10 +102,14 @@ async function listSkillDirs(dir) {
     .filter((path) => existsSync(path));
 }
 
-function insertCodexNote(text, name) {
+function insertCodexNote(text, name, options = {}) {
+  const runtimeRoot = options.runtimeRoot || "<codex-plugin-root>";
+  const reloadLine = options.directUserInstall
+    ? " Reload Codex or start a new session after install so the user skills list is refreshed."
+    : "";
   const note = [
     "",
-    "> **Codex adaptation note.** This file was generated from the TWT Claude Code marketplace. Invoke it as `$" + name + "` or select it from `/skills`. Treat the text after the skill invocation as the argument string. Resolve `<codex-plugin-root>` as the installed plugin folder that contains `skills/`, `tools/`, `templates/`, `references/`, and `hooks/`. Legacy Claude Code permission setup is a no-op in Codex; rely on the active Codex approvals and sandbox.",
+    "> **Codex adaptation note.** This file was generated from the TWT Claude Code marketplace. Invoke it as `$" + name + "` or select it from `/skills`. Treat the text after the skill invocation as the argument string. Resolve `" + runtimeRoot + "` as the installed TWT support folder that contains `skills/`, `tools/`, `templates/`, `references/`, and `hooks/`. Legacy Claude Code permission setup is a no-op in Codex; rely on the active Codex approvals and sandbox." + reloadLine,
     "",
   ].join("\n");
 
@@ -118,13 +122,14 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function adaptSkillText(raw, name) {
+function adaptSkillText(raw, name, options = {}) {
+  const runtimeRoot = options.runtimeRoot || "<codex-plugin-root>";
   let text = raw.replace(/^\uFEFF/, "");
 
   text = text.replace(new RegExp(`^# /${escapeRegExp(name)}\\s*$`, "m"), `# $${name}`);
   text = text.replace(/\/twt-([a-z0-9-]+)/g, "$twt-$1");
-  text = text.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, "<codex-plugin-root>");
-  text = text.replace(/\$CLAUDE_PLUGIN_ROOT/g, "<codex-plugin-root>");
+  text = text.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, runtimeRoot);
+  text = text.replace(/\$CLAUDE_PLUGIN_ROOT/g, runtimeRoot);
   text = text.replace(/\$CLAUDE_PROJECT_DIR/g, "<current-project-root>");
   text = text.replace(/\$ARGUMENTS/g, "the invocation arguments");
   text = text.replace(/AskUserQuestion tool/g, "Codex user-input flow");
@@ -132,9 +137,9 @@ function adaptSkillText(raw, name) {
   text = text.replace(/Agent tool/g, "Codex sibling-skill or subagent dispatch");
   text = text.replace(/Claude Code/g, "Codex");
   text = text.replace(/\.claude\/settings\.json/g, "Codex session permissions");
-  text = text.replace(/`<codex-plugin-root>/g, "`<codex-plugin-root>");
+  text = text.replace(new RegExp("`" + escapeRegExp(runtimeRoot), "g"), "`" + runtimeRoot);
 
-  return insertCodexNote(text, name);
+  return insertCodexNote(text, name, options);
 }
 
 async function writeManifest(outDir) {
@@ -192,19 +197,19 @@ async function adaptCopiedHooks(outDir) {
   }
 }
 
-async function exportExistingSkills(outDir) {
+async function exportExistingSkills(outDir, options = {}) {
   const skillFiles = await listSkillDirs(join(ROOT, "skills"));
   for (const sourceFile of skillFiles) {
     const name = sourceFile.split(sep).at(-2);
     const raw = await readFile(sourceFile, "utf8");
     const outFile = join(outDir, "skills", name, "SKILL.md");
     await mkdir(dirname(outFile), { recursive: true });
-    await writeFile(outFile, adaptSkillText(raw, name), "utf8");
+    await writeFile(outFile, adaptSkillText(raw, name, options), "utf8");
   }
   return skillFiles.length;
 }
 
-async function exportCommandsAsSkills(outDir) {
+async function exportCommandsAsSkills(outDir, options = {}) {
   const commandFiles = await listMarkdownFiles(join(ROOT, "commands"));
   let count = 0;
   for (const sourceFile of commandFiles) {
@@ -214,77 +219,76 @@ async function exportCommandsAsSkills(outDir) {
     const raw = await readFile(sourceFile, "utf8");
     const outFile = join(outDir, "skills", name, "SKILL.md");
     await mkdir(dirname(outFile), { recursive: true });
-    await writeFile(outFile, adaptSkillText(raw, name), "utf8");
+    await writeFile(outFile, adaptSkillText(raw, name, options), "utf8");
     count++;
   }
   return count;
 }
 
-async function exportCodexPlugin(outDir) {
+async function exportCodexPlugin(outDir, options = {}) {
   await assertGeneratedTargetCanBeReplaced(outDir);
   await mkdir(outDir, { recursive: true });
   await writeManifest(outDir);
   await copySupportDirs(outDir);
-  const copiedSkills = await exportExistingSkills(outDir);
-  const convertedCommands = await exportCommandsAsSkills(outDir);
+  const copiedSkills = await exportExistingSkills(outDir, options);
+  const convertedCommands = await exportCommandsAsSkills(outDir, options);
   return { outDir, copiedSkills, convertedCommands };
 }
 
 async function installUser() {
-  const marketplaceRoot = join(homedir(), ".agents", "plugins");
-  const pluginRoot = join(marketplaceRoot, "plugins", PLUGIN_NAME);
-  const marketplacePath = join(marketplaceRoot, "marketplace.json");
+  const codexHome = resolve(process.env.TWT_CODEX_HOME || join(homedir(), ".codex"));
+  const agentsHome = resolve(process.env.TWT_AGENTS_HOME || join(homedir(), ".agents"));
+  const supportRoot = join(codexHome, PLUGIN_NAME);
+  const userSkillsRoot = join(agentsHome, "skills");
+  const runtimeRoot = cleanSlashPath(supportRoot);
 
-  const summary = await exportCodexPlugin(pluginRoot);
-  await updateMarketplace(marketplacePath);
-  return { ...summary, marketplacePath };
+  const summary = await exportCodexPlugin(supportRoot, {
+    runtimeRoot,
+    directUserInstall: true,
+  });
+  const installedSkills = await installGeneratedSkills(join(supportRoot, "skills"), userSkillsRoot);
+  return { ...summary, supportRoot, userSkillsRoot, installedSkills };
 }
 
-async function updateMarketplace(marketplacePath) {
-  await mkdir(dirname(marketplacePath), { recursive: true });
-  let marketplace;
-  if (existsSync(marketplacePath)) {
-    marketplace = JSON.parse(await readFile(marketplacePath, "utf8"));
-  } else {
-    marketplace = {
-      name: "personal",
-      interface: { displayName: "Personal" },
-      plugins: [],
-    };
+async function installGeneratedSkills(generatedSkillsRoot, userSkillsRoot) {
+  await mkdir(userSkillsRoot, { recursive: true });
+  const entries = await readdir(generatedSkillsRoot, { withFileTypes: true });
+  let installed = 0;
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith("twt-")) continue;
+    const sourceDir = join(generatedSkillsRoot, entry.name);
+    const targetDir = join(userSkillsRoot, entry.name);
+    await assertUserSkillCanBeReplaced(targetDir);
+    await rm(targetDir, { recursive: true, force: true });
+    await cp(sourceDir, targetDir, { recursive: true, force: true });
+    installed++;
   }
+  return installed;
+}
 
-  marketplace.name ||= "personal";
-  marketplace.interface ||= { displayName: "Personal" };
-  marketplace.interface.displayName ||= "Personal";
-  marketplace.plugins = Array.isArray(marketplace.plugins) ? marketplace.plugins : [];
-  marketplace.plugins = marketplace.plugins.filter((plugin) => plugin.name !== PLUGIN_NAME);
-  marketplace.plugins.push({
-    name: PLUGIN_NAME,
-    source: {
-      source: "local",
-      path: `./plugins/${PLUGIN_NAME}`,
-    },
-    policy: {
-      installation: "AVAILABLE",
-      authentication: "ON_INSTALL",
-    },
-    category: "Productivity",
-  });
-
-  await writeFile(marketplacePath, `${JSON.stringify(marketplace, null, 2)}\n`, "utf8");
+async function assertUserSkillCanBeReplaced(targetDir) {
+  if (!(await pathExists(targetDir))) return;
+  const skillPath = join(targetDir, "SKILL.md");
+  if (!existsSync(skillPath)) {
+    throw new Error(`refusing to replace ${targetDir}: existing folder is not a Codex skill`);
+  }
+  const text = await readFile(skillPath, "utf8");
+  if (!text.includes("generated from the TWT Claude Code marketplace")) {
+    throw new Error(`refusing to replace ${targetDir}: existing skill was not generated by this exporter`);
+  }
 }
 
 function printSummary(summary) {
   console.log(`Codex plugin exported: ${summary.outDir}`);
   console.log(`Existing skills copied: ${summary.copiedSkills}`);
   console.log(`Commands converted to skills: ${summary.convertedCommands}`);
-  if (summary.marketplacePath) {
-    const marketplaceRel = cleanSlashPath(relative(dirname(summary.marketplacePath), summary.outDir));
-    console.log(`Marketplace updated: ${summary.marketplacePath}`);
-    console.log(`Marketplace source path: ./${marketplaceRel}`);
-    console.log("Restart Codex, then open /plugins or invoke skills with /skills.");
+  if (summary.userSkillsRoot) {
+    console.log(`User skills installed: ${summary.installedSkills}`);
+    console.log(`User skills root: ${summary.userSkillsRoot}`);
+    console.log(`Support files root: ${summary.supportRoot}`);
+    console.log("Reload Codex or start a new session, then use /skills or invoke $twt-* directly.");
   } else {
-    console.log("Preview build only. Use --install user to register a personal Codex marketplace entry.");
+    console.log("Preview build only. Use --install user to install into ~/.agents/skills.");
   }
 }
 

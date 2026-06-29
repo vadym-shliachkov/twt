@@ -61,3 +61,39 @@ test("exports a Codex plugin without changing source marketplace layout", async 
     await rm(tmp, { recursive: true, force: true });
   }
 });
+
+test("installs user skills directly for session reload discovery", async () => {
+  const tmp = await mkdtemp(join(tmpdir(), "twt-codex-install-"));
+  const codexHome = join(tmp, ".codex");
+  const agentsHome = join(tmp, ".agents");
+
+  try {
+    const result = spawnSync(
+      process.execPath,
+      ["tools/export-to-codex.mjs", "--install", "user"],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          TWT_CODEX_HOME: codexHome,
+          TWT_AGENTS_HOME: agentsHome,
+        },
+      },
+    );
+
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+
+    const installedSkill = join(agentsHome, "skills", "twt-block-preview", "SKILL.md");
+    assert.equal(await exists(installedSkill), true);
+    assert.equal(await exists(join(codexHome, "twt-marketplace", "tools", "ds-block-preview.mjs")), true);
+    assert.equal(await exists(join(agentsHome, "plugins", "marketplace.json")), false);
+
+    const converted = await readFile(installedSkill, "utf8");
+    assert.match(converted, /Reload Codex or start a new session/);
+    assert.match(converted, /\/twt-marketplace\/tools\/ds-block-preview\.mjs/);
+    assert.doesNotMatch(converted, /<codex-plugin-root>/);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
