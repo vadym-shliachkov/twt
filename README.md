@@ -93,7 +93,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| /twt-text-analysis | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes |
+| /twt-text-analysis | content | Block-type-aware text-quality audit with validated suggestions only; never applies changes |
 <!-- TWT_SKILLS_TABLE_END -->
 
 ---

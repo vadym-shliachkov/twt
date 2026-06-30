@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.2.3) Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
-version: 1.2.3
+description: (v1.2.4) Block-type-aware text-quality audit with validated suggestions only; never applies changes
+version: 1.2.4
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint
@@ -21,20 +21,22 @@ writes:
 
 ## Intent
 
-**Purpose:** Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.
+**Purpose:** Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.
 
 **Non-goals:**
-- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing the suggested copy is a **different call** — `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
-- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules — these still bind the *suggested* versions it writes)
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges the **writing quality** of given text
-- Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
+- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing suggested copy is a different call: `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
+- Does not invent facts, numbers, deadlines, features, proof points, source labels, or change business logic / legal wording.
+- Does not rewrite protected content automatically: mission statements, vision statements, slogans, legal text, quotations, product names, company names, or brand positioning statements.
+- Does not do the pipeline's content curation (keep/skip/elevate) - that's `/twt-curation-define`; this skill judges the writing quality of given text.
+- Does not audit IA/sitemap coverage or built-page lorem - that's `/twt-qa-content`.
 
 **Success criteria:**
-- The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
-- Each block carries all **11 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** only when a rewrite is warranted (a block scoring ≥ 85 carries **no** Suggested Version block at all)
-- Slogan-style or "bold statement" copy that asserts a problem or benefit **without any proof** (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the **Substantiation** metric makes the critique bite instead of rewarding punchy emptiness
-- Two artifacts are written and **nothing else changes**: `analysis-report.md` (the scored critique) and `optimized.md` (the suggested rewrites assembled into one document, clearly labelled as *proposed, not applied*). The subject file is left untouched in every mode.
-- The suggested versions honor the Rewrite rules: meaning, facts, and legal wording survive verbatim; missing facts are flagged with `> NEEDS:` markers, never invented
+- The content is split into independently scored blocks and each block is assigned a semantic type: heading, paragraph, mission/vision/brand positioning, CTA, caption, error message, list, hint text, description, or feature explanation.
+- Each block is scored only on metrics that apply to its type; irrelevant metrics are marked N/A and never used as a reason to rewrite.
+- Every finding is classified as **Problem**, **Opportunity**, or **No issue**, with a confidence score and a clear reason.
+- A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
+- When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
+- Two artifacts are written and nothing else changes: `analysis-report.md` (the scored critique) and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
 
 ---
 
@@ -42,136 +44,248 @@ Arguments passed to this command: $ARGUMENTS
 
 ---
 
-## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
-- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
-- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
-- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
-- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
+## Step 0 - Ensure the permission allowlist
 
-## Step 1 — Subject & settings
-Parse `$ARGUMENTS` (strip and remember a `subagent-collect` token first — collect mode, see Step 6). The legacy `auto`/`manual` mode tokens are **accepted but ignored** — this skill never applies changes, so there is no apply mode to choose; do **not** ask a mode question.
-- A path to an existing file → read it as the subject.
-- Something that **looks like** a path (extension/slashes) but doesn't exist → don't analyze the path string; say the file wasn't found and prompt for a correction (in collect mode, write the question to `decisions.md` and stop).
-- An `http(s)://` URL → abort with: "Fetch the page first with `/twt-content-fetch-site`, then analyze the saved markdown."
-- Any other non-trivial text → treat the text itself as the subject.
-- Empty → prompt (plain text, free-form): "Paste the text to analyze, or give a file path." In collect mode, write the missing-subject question to `decisions.md` and stop.
+Before project work, make sure this project is set up so the run is not interrupted by per-call permission prompts. Use Glob/Read - never a shell command - to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
 
-Derive a kebab-case `<subject-slug>` (file name sans extension, or the first words of pasted text). If the subject is pasted text, persist it verbatim to `.twt-artifacts/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
+- **Missing + running interactively in the main thread:** ask via the AskUserQuestion tool (single-select, header "Setup"): **Run /twt-setup now** (recommended - merges the curated allowlist), **Skip** (continue; expect prompts), **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` with the Agent tool, wait for it to finish, then continue.
+- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking: `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"`; note it and continue.
+- **Already present:** continue without asking.
+- If the plugin root or seeder is unavailable, warn once and continue. Never block the run.
 
-Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present — brand voice is **context, not a metric**: copy that is intentionally on-voice isn't penalised as cliché unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
+## Step 1 - Subject and settings
 
-## Step 2 — Split into blocks
+Parse `$ARGUMENTS`:
 
-If the subject is a file on disk (not pasted text), run (Bash) to segment it deterministically:
+- Strip and remember `subagent-collect` first. In collect mode, do not prompt; write unresolved input questions to `decisions.md` and stop.
+- Strip and remember a leading `auto` or `manual` token if present. These tokens never allow source edits. `auto` uses the strictest suggestion gate; `manual` may report lower-confidence opportunities, but still must not invent a rewrite.
+- A path to an existing file -> read it as the subject.
+- Something that looks like a path (extension/slashes) but does not exist -> do not analyze the path string; say the file was not found and prompt for a correction. In collect mode, write the question to `decisions.md` and stop.
+- An `http(s)://` URL -> abort with: "Fetch the page first with `/twt-content-fetch-site`, then analyze the saved markdown."
+- Any other non-trivial text -> treat the text itself as the subject.
+- Empty -> prompt (plain text, free-form): "Paste the text to analyze, or give a file path." In collect mode, write the missing-subject question to `decisions.md` and stop.
+
+Derive a kebab-case `<subject-slug>` from the file name or the first words of pasted text. If the subject is pasted text, persist it verbatim to `.twt-artifacts/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
+
+Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present. Brand voice is context, not a metric: copy that is intentionally on-voice is not penalized as cliche unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
+
+## Step 2 - Split into blocks
+
+If the subject is a file on disk, run Bash to segment it deterministically:
+
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/split-blocks.mjs" "<subject-file-path>"
 ```
-This outputs JSON `[{n, type, text}]` segmenting by structure: Heading (ATX `#`), Paragraph, List, Code, Blockquote. Use this as the authoritative block list. For pasted text that is not a file, split by hand: **Heading · Paragraph · List · CTA · Button text · Error message · Hint text · Description · Feature explanation**. After obtaining the block list, re-type each block's type using semantic intent: a short Paragraph ending in a verb phrase is likely a CTA; ≤8-word standalone text in a button context is Button text. Keep these semantic re-classifications minimal — the structural type is correct for most blocks. Number blocks 1-indexed.
 
-## Step 3 — Score the 11 metrics (per block)
-Score **each block** on every metric. Each metric has **0–4 anchors** (0 Poor · 1 Weak · 2 Acceptable · 3 Good · 4 Excellent); report each as a **percentage 0–100** (the anchors guide judgment; interpolate for in-between quality). A metric that genuinely doesn't apply to a block type (e.g. Scanability for a 4-word button) is marked **N/A** and its weight is redistributed proportionally across the rest for that block.
+This outputs JSON `[{n, type, text}]` segmenting by structure: Heading, Paragraph, List, Code, Blockquote. Use it as the authoritative starting block list.
 
-| # | Metric | Weight | Question — what "good" means | Negative signals (penalise) |
-|---|--------|-------:|------------------------------|------------------------------|
-| 1 | **User Value** | 18 | Does the block explain value **for the user**? User benefit exists, the result is understandable, focus is not on company achievements. | "leader of the market", "innovative solutions", "professional team", "high quality services" |
-| 2 | **Specificity** | 13 | Are statements measurable and concrete — numbers, deadlines, examples, limitations, exact actions? | "quickly", "efficiently", "conveniently", "quality", "reliable" used without explanation |
-| 3 | **Clarity** | 13 | Can an average reader understand it immediately — simple language, short sentences, no jargon, no bureaucratic style? | complicated structures, corporate language, ambiguous terms |
-| 4 | **Conciseness** | 9 | Can it be shorter without losing meaning? | filler phrases, repetitions, introductory constructions, weak adjectives, unnecessary words |
-| 5 | **Active Voice** | 9 | Is the subject performing the action? ("Create account") | passive constructions ("Account should be created") |
-| 6 | **Scanability** | 9 | Can users quickly scan — headings, lists, short paragraphs, highlighted key info? | large text walls |
-| 7 | **Action Clarity** | 9 | Does the user know what to do next — obvious action, understandable CTA, clear next step? | vague buttons, unclear instructions |
-| 8 | **Substantiation** | 10 | Is every claim **backed by proof** — a mechanism, a number, a concrete example, or a named consequence? A bold assertion the reader is simply asked to believe is the failure mode this catches. | slogan-style claims with no evidence ("Everyone optimizes a part. Nobody fixes the system.", "We think differently", "Built for the future"); sweeping generalisations ("everyone", "nobody", "always") used rhetorically; problem/benefit stated but never demonstrated |
-| 9 | **Content Density** | 5 | How much useful information per block? (Bad: "world-class innovative solutions." Good: "Generate reports in less than 30 seconds.") | marketing clichés, empty claims, emotional exaggerations |
-| 10 | **Transparency** | 3 | Are restrictions and important conditions explicitly stated — limitations, deadlines, pricing conditions, requirements? | hidden restrictions |
-| 11 | **Information Hierarchy** | 2 | Is the most important info first? Ideal order: Result → Action → Details → Conditions → Additional info. | long introductions before the actual message |
+For pasted text that is not a file, split by hand into logical blocks. After obtaining the block list, re-type each block by semantic intent:
 
-**Substantiation is the critical-reading metric.** Do not reward copy just because it is punchy, confident, or on-brand. A line like *"Everyone optimizes a part. Nobody fixes the system."* is rhetorically strong but evidence-free — it scores **low** on Substantiation (and usually on User Value and Specificity too) and **must** appear in Weaknesses as `unsubstantiated claim — no proof (Substantiation)`. The remedy in the Suggested Version is to attach the missing proof (or a `> NEEDS:` marker for it per the Rewrite rules), never to keep the empty assertion.
+- **Heading:** page headings, section headings, card headings.
+- **Paragraph:** body paragraphs, descriptions, explanatory text.
+- **Mission / Vision / Brand positioning:** mission statements, vision statements, slogans, company principles, brand positioning lines.
+- **CTA:** text links, buttons, call-to-action headings.
+- **Caption:** image captions, credits, source labels.
+- **Error message:** errors, warnings, validation messages.
+- **List / hint / description / feature explanation:** use the closest evaluator below, usually Paragraph unless the block clearly behaves as CTA, Caption, or Error message.
 
-**Overall (per block)** = Σ(metric% × weight) / 100, rounded — a 0–100 score. For N/A metrics, rescale the remaining weights so they still total 100 for that block. Also compute a **document Overall** = the mean of the block Overalls (note it; the per-block scores drive every rewrite decision).
+Number blocks 1-indexed. Keep semantic re-classifications minimal and explain any judgment call in the block's `Purpose`.
 
-## Step 4 — Recommendation per block (rewrite threshold)
-Map each block's Overall to a recommendation:
-- **≥ 85** → *No rewrite required.*
-- **70–84** → *Minor improvements suggested.*
-- **50–69** → *Rewrite recommended.*
-- **< 50** → *Rewrite strongly recommended.*
+## Step 3 - Analyze with block-type-specific metrics
 
-For every block scoring **< 85**, generate a **Suggested Version** following the Rewrite rules (below). For 85+, emit no `Suggested Version` section at all — the block ends at its `Recommendation: No rewrite required` line (do not print a "— (no rewrite required)" placeholder).
+Score only the metrics that apply to the block type. Each metric is 0-100; use N/A for metrics that do not apply. Compute **Overall** as the weighted average of applicable metrics only. A low score is evidence for analysis, not permission to rewrite.
 
-## Step 5 — Report
-Write `.twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md`. Per block, use exactly this structure:
+### Evaluators
 
-```markdown
-## Block <n> — <type>
+| Block type | Applicable metrics | Special scoring rules |
+|---|---|---|
+| Heading | Clarity, Scanability, Information Hierarchy, Discoverability, Expectation Match | Do not score Active Voice, Transparency, Substantiation, or User Value unless the heading is also a CTA. |
+| Paragraph | User Value, Clarity, Conciseness, Specificity, Content Density, Credibility, Transparency, Information Hierarchy; optional Active Voice; optional Action Clarity | Use Active Voice only when passive construction hurts clarity. Use Action Clarity only when the paragraph asks the reader to do something. |
+| Mission / Vision / Brand positioning | Clarity, Memorability, Credibility, Conciseness, Brand Fit, Meaning Preservation | Do not heavily penalize broad goals, aspirational wording, lack of numbers, or lack of proof points. Specificity is N/A or low-weight unless the sentence makes a concrete factual claim. |
+| CTA | Action Clarity, Destination Clarity, Motivation, Conciseness, Accessibility | Heavily penalize vague labels such as "Read more", "Learn more", and "Get started" when the destination is not predictable from context. |
+| Caption | Accuracy, Clarity, Conciseness, Attribution Completeness | Do not rewrite unless the caption is inaccurate, unclear, or unnecessarily long. |
+| Error message | Problem Clarity, Recovery Guidance, Tone, Actionability, Specificity | Penalize messages that do not explain what went wrong, how to fix it, or that blame the user. |
 
-Original:
+### Metric anchors
 
-<verbatim text>
+Use these anchors for every applicable metric:
 
-Scores:
+- **0-39:** Problem prevents understanding, trust, or action.
+- **40-59:** Weak; reader can infer meaning, but effort or ambiguity is high.
+- **60-79:** Acceptable; meaning is clear enough, but a concrete improvement exists.
+- **80-89:** Good; only small opportunities remain.
+- **90-100:** Excellent for the block's purpose.
 
-User Value .......... <0-100>
-Specificity ......... <0-100>
-Clarity ............. <0-100>
-Conciseness ......... <0-100>
-Active Voice ........ <0-100>
-Scanability ......... <0-100>
-Action Clarity ...... <0-100>
-Substantiation ...... <0-100>
-Content Density ..... <0-100>
-Transparency ........ <0-100>
-Information Hierarchy <0-100>
-Overall ............. <0-100>
+Substantiation and Credibility are critical-reading metrics. Do not reward copy just because it is punchy, confident, or on-brand. A slogan-style claim with no mechanism, example, named consequence, or proof may be a weakness in a paragraph or feature explanation. In a mission statement, broad aspirational language is often acceptable; do not rewrite it merely because it is broad.
 
-Weaknesses:
+## Step 4 - Decide whether a rewrite is possible
 
-- <specific weakness, tied to a metric — e.g. "vague statement (Specificity)", "unnecessary adjectives (Conciseness)", "value is not measurable (User Value)", "unsubstantiated claim — no proof (Substantiation)">
+For each block, classify the finding:
 
-Recommendation:
+- **Problem:** a real usability, clarity, trust, or comprehension issue that should usually be fixed, such as an unclear CTA, vague recovery path, ambiguous wording, hidden condition, or sentence too long to understand.
+- **Opportunity:** a possible improvement that is not required, such as slightly shorter wording, a more direct heading, or an acceptable but broad brand phrase.
+- **No issue:** no relevant weakness for this block type.
 
-<No rewrite required | Minor improvements suggested | Rewrite recommended | Rewrite strongly recommended>
+Then assign **Confidence**:
 
-Suggested Version:
+- **90-100:** Objective issue. Rewrite recommended if it passes validation.
+- **70-89:** Strong recommendation.
+- **50-69:** Possible improvement. Manual review only.
+- **Below 50:** Subjective preference. Keep original.
 
-<rewritten block>
+### Rewrite eligibility rule
+
+A block is eligible for a suggested rewrite only if all conditions are true:
+
+1. At least one detected weakness is fixable.
+2. The fix does not require invented information.
+3. The rewrite improves at least one relevant metric by 10+ points.
+4. The rewrite does not make any relevant metric worse.
+5. The rewrite sounds natural to a native speaker.
+6. The rewrite preserves the original meaning.
+7. The rewrite is not only a stylistic preference.
+
+If any condition fails, output:
+
+```text
+Suggested Version: No better wording found.
+Decision: Keep original.
+Reason: The detected issue cannot be fixed safely without additional information or would only produce a stylistic preference.
 ```
 
-**The `Suggested Version:` section is emitted only when the block scored below 85** (a rewrite is warranted). For a block scoring **≥ 85**, end the block at the `Recommendation:` line (`No rewrite required`) and **omit the `Suggested Version:` heading entirely** — never print a placeholder like "— (no rewrite required)". For a ≥ 85 block, `Weaknesses` may also be omitted or read `- none`.
+### Decision tree
 
-Open the report with a header (subject label · mode · document Overall · block count · how many blocks scored < 85) and a one-row-per-block summary table (`| Block | Type | Overall | Recommendation |`). A block scoring ≥ 85 still appears (Scores + "No rewrite required"), but with no Weaknesses list padding and no Suggested Version section.
+Use this exact logic:
 
-## Step 6 — Write the outputs (analysis only — never apply)
-This skill is **read-only with respect to the subject**. In every mode — standalone, collect, or however it was invoked — it does exactly this and **never asks whether to apply or replace anything**:
+```text
+if no relevant weakness:
+    Decision = Keep original
+    Suggested Version = No better wording found
+else if weakness cannot be fixed without inventing facts:
+    Decision = Keep original
+    Suggested Version = No better wording found
+else if block is mission/vision/brand positioning and weakness is only broadness:
+    Decision = Keep original
+    Suggested Version = No better wording found
+else if confidence < 70:
+    Decision = Keep original or Manual review only
+    Suggested Version = No better wording found
+else if rewrite fails validation:
+    Decision = Keep original
+    Suggested Version = No better wording found
+else:
+    Decision = Rewrite recommended
+    Suggested Version = [validated rewrite]
+```
 
-1. Write the report (Step 5) to `analysis-report.md`.
-2. Assemble the suggested rewrites into `optimized.md`: for each block scoring **< 85** use its Suggested Version; for blocks scoring ≥ 85 keep the original verbatim. Open the file with a clear banner — `> Proposed rewrites — NOT applied. Implement with /twt-content-optimize (file) or /twt-content-approval-implement (build).` — so it can never be mistaken for the live copy.
-3. **Do not** modify the subject file. **Do not** offer to. There is no "apply" question, no "replace source file" question, and no persisted auto-apply setting.
+In `auto` mode and collect-mode pipeline runs, be stricter: write a suggested version only when Finding Type is **Problem**, Confidence is 70+, the rewrite passes validation, at least one applicable metric improves by 10+ points, no metric gets worse, and the block is not protected content. In `manual` mode, lower-confidence opportunities may be described, but the original remains acceptable and the suggested version must still be omitted unless validated.
 
-If a previous `optimized.md` exists, just regenerate it (it is a derived artifact, safe to overwrite). The optional `auto`/`manual` tokens change nothing here.
+## Step 5 - Validate every suggested rewrite
 
-## Step 7 — Report
-State: the document Overall, how many blocks scored below 85, the two files written (`analysis-report.md`, `optimized.md`) with their paths, and — explicitly — that **no source text was changed**. End with the next-step pointer: "To implement these suggestions, run `/twt-content-optimize <file>` (to rewrite a text file) or, for built pages, approve the copy and run `/twt-content-approval-implement`."
+Before outputting a suggested version, validate it against all checks:
+
+- Solves at least one reported weakness.
+- Preserves original meaning.
+- Avoids invented facts.
+- Sounds natural to a native speaker.
+- Is at least as clear as the original.
+- Is at least as concise as the original, unless extra clarity is needed.
+- Avoids replacing good brand voice with generic wording.
+- Would most UX writers likely agree it is an improvement.
+
+If two or more checks fail, do not suggest the rewrite. If Claude cannot write a clear weakness-to-fix mapping, do not suggest the rewrite.
+
+Every suggested rewrite must include:
+
+```markdown
+Weakness-To-Fix Mapping:
+
+- Weakness: <detected weakness>
+  Rewrite Action: <what changed>
+  Expected Metric Improvement: <metric name> +<points>
+```
+
+Do not use `> NEEDS:` markers as a fake rewrite. Missing facts belong in `Weaknesses` and `Reason`; the suggested version remains `No better wording found.`
+
+## Step 6 - Write the report
+
+Write `.twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md`. Open with a header containing subject label, mode (`auto`, `manual`, `collect`, or default), document Overall, block count, how many Problems, how many Opportunities, and how many validated suggested versions. Add a one-row-per-block summary table:
+
+```markdown
+| Block | Type | Overall | Finding Type | Decision | Confidence |
+```
+
+For each block, use exactly this structure:
+
+```markdown
+## Block <n> -- <type>
+
+Purpose:
+<what this block is supposed to do>
+
+Original:
+<verbatim text>
+
+Applicable Metrics:
+- <Metric>: <0-100 or N/A> - <one-line evidence>
+
+Overall:
+<number>/100
+
+Finding Type:
+Problem | Opportunity | No issue
+
+Decision:
+Rewrite recommended | Minor improvement suggested | Manual review only | Keep original
+
+Weaknesses:
+- <weakness tied to a metric, or "none">
+
+Can Fix Safely:
+Yes | No
+
+Reason:
+<why rewrite is or is not safe/useful>
+
+Suggested Version:
+<new version OR "No better wording found.">
+
+Rewrite Validation:
+- Solves reported weakness: Yes/No
+- Preserves meaning: Yes/No
+- Avoids invented facts: Yes/No
+- Sounds natural: Yes/No
+- Meaningful improvement: Yes/No
+
+Confidence:
+<number>%
+```
+
+If `Suggested Version` contains a new version, immediately follow it with the `Weakness-To-Fix Mapping` block from Step 5. If there is no validated rewrite, `Rewrite Validation` may use `N/A` for checks that were not attempted, but it must still explain the gate failure in `Reason`.
+
+For opportunities, use this wording in `Reason`: `Optional improvement. Original is acceptable.`
+
+## Step 7 - Write optimized.md (analysis only, never apply)
+
+This skill is read-only with respect to the subject. In every mode, it does exactly this and never asks whether to apply or replace anything:
+
+1. Write the report from Step 6 to `analysis-report.md`.
+2. Assemble `optimized.md`: for each block with `Decision: Rewrite recommended` and a validated new `Suggested Version`, use that suggested version; for every other block, keep the original verbatim.
+3. Open `optimized.md` with this banner: `> Proposed rewrites - NOT applied. Only blocks with validated, high-confidence improvements were changed. Implement with /twt-content-optimize (file) or /twt-content-approval-implement (build).`
+4. Do not modify the subject file. Do not offer to. There is no source replacement question.
+
+If a previous `optimized.md` exists, regenerate it; it is a derived artifact, safe to overwrite.
+
+## Step 8 - Report back
+
+State the document Overall, counts for Problems / Opportunities / validated suggested versions, the two files written (`analysis-report.md`, `optimized.md`) with their paths, and explicitly that no source text was changed. End with the next-step pointer: "To implement validated suggestions, run `/twt-content-optimize <file>` or, for built pages, approve the copy and run `/twt-content-approval-implement`."
 
 ---
 
-## Rewrite rules
-When generating suggested versions, the skill **must**:
-- preserve the original meaning
-- prefer simple words
-- remove filler
-- replace abstractions with facts (only facts already present in the source — never invented)
-- use active voice
-- focus on user benefit
-- improve scanability
-- shorten text when possible
-- preserve legal meaning
+## Rewrite guardrails
 
-The skill **must not**:
-- invent numbers
-- invent deadlines
-- invent features
-- change business logic
-- remove important conditions
+Claude must preserve original meaning, facts, names, legal meaning, and brand voice. Claude may simplify wording, remove filler, clarify a vague CTA, improve recovery guidance, or shorten text only when the change directly fixes a detected weakness.
 
-These guardrails are binding in every mode and at every rewrite. Where a low score is caused by **missing** information (e.g. Specificity needs a number the source doesn't contain), do **not** fabricate it — note it as a Weakness and, in the Suggested Version, leave a `> NEEDS: <what fact is missing>` marker instead of a made-up value.
+Claude must not invent numbers, proof points, dates, deadlines, testimonials, source labels, features, product behavior, or business logic. Claude must not replace strong original voice with generic copy. Claude must not produce a rewrite merely because the block scored below a threshold.
+
+The goal is not to rewrite more text. The goal is to identify where content quality actually harms understanding, trust, or action. A good result can be: `No better wording found. Keep original.`

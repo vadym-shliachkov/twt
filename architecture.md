@@ -192,7 +192,7 @@ flowchart TB
 - /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
-- /twt-text-analysis - Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes
+- /twt-text-analysis - Block-type-aware text-quality audit with validated suggestions only; never applies changes
 
 ### curation
 
@@ -2037,7 +2037,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.3
+**Version:** 1.2.4
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

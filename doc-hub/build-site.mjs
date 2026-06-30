@@ -179,7 +179,7 @@ const shortDescriptions = {
   "twt-site-dev": "The express path — from a Figma link, build the design system and jump straight to development.",
   "twt-spec": "Interview into a north-star specification and validate it in one pass.",
   "twt-status": "Detect stale artifacts — flag any output older than the inputs it came from and what to re-run.",
-  "twt-text-analysis": "Score text block by block on 11 quality metrics and suggest rewrites — analysis only, never applied.",
+  "twt-text-analysis": "Audit copy by block type and suggest only rewrites that pass the safe-improvement gate.",
 };
 
 function cardCopy(skill) {
@@ -242,7 +242,7 @@ const longDescriptions = {
   "twt-site-dev": "The express lane to a built site: starting from a Figma link, it sets up your design system, builds the content-approval workbook, scaffolds your target, and dives straight into building pages — skipping the full pre-design and design phases. Auto mode runs the whole thing without questions.",
   "twt-spec": "Interviews you to capture a north-star spec — the one document that says what you're building and why — then reviews it for clarity in a single pass. It's the anchor everything else points back to.",
   "twt-status": "Tells you what's gone stale. Edit something early in the pipeline and everything downstream is quietly out of date — this compares timestamps, flags what's affected, and lists the smallest set of steps to re-run. It only reports; it never changes a thing.",
-  "twt-text-analysis": "Splits your text into logical blocks and scores each on eleven quality metrics — including whether the claims are actually backed up — then offers a stronger version where it helps. It only analyzes; actually applying a change is a separate, deliberate step.",
+  "twt-text-analysis": "Splits your text into logical blocks, scores each one with metrics that fit that block type, and separates real problems from optional polish. It only suggests a rewrite when Claude can show the change fixes a detected weakness without inventing facts, weakening voice, or changing meaning.",
 };
 
 function detailCopy(skill) {
@@ -603,7 +603,7 @@ const callSequences = {
     { to: ["twt-content-validate"], why: "Scores the original copy first, so the improvement is measured rather than guessed." },
   ],
   "twt-content-approval-checklist": [
-    { to: ["twt-text-analysis"], why: "Scores existing copy so each row can suggest recommended content." },
+    { to: ["twt-text-analysis"], why: "Scores existing copy so only validated rewrites become recommended content." },
   ],
   "twt-content-approval-implement": [
     { to: ["twt-html-block-creator", "twt-elementor-block-creator"], why: "Applies approved rows by rebuilding the affected blocks in your build target." },

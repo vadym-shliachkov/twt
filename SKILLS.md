@@ -59,7 +59,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| [/twt-text-analysis](#twt-text-analysis) | content | Block-by-block text-quality analysis (11 metrics incl. substantiation) — read-only scored report with suggested rewrites; never applies changes |
+| [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with validated suggestions only; never applies changes |
 
 ---
 ## /twt-block-preview
@@ -290,7 +290,7 @@ Create the content approval workbook that proves every page, shared header/foote
 - `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
 - Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
 - When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
-- Discovered text copy is run through `/twt-text-analysis` (analysis-only) and, where a block scored below the rewrite threshold, its **suggested version** is placed in that field's `recommended content` so reviewers see a quality-improved option next to the current copy.
+- Discovered text copy is run through `/twt-text-analysis` (analysis-only) and only **validated suggested versions** are placed in `recommended content`; when text-analysis says `No better wording found`, reviewers keep the current copy unless they choose to revise it manually.
 - The `ready to implement` cell is colored by its value — **green when `true`, pink when `false`** — and that single cell is the only readiness signal (rows are not blanket-highlighted).
 - Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
 - Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
@@ -2104,10 +2104,10 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.3
+**Version:** 1.2.4
 **Accepts arguments:** yes
 
-Analyze text quality using Information Style and UX-writing principles — split the content into logical blocks, score each block independently on **11 metrics** (including a dedicated **Substantiation** check that punishes claims made without proof), and produce a scored, read-only report that explains every weakness and proposes an improved version where needed. This skill **only analyzes**; applying the suggestions is a separate, explicit call.
+Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
@@ -2125,14 +2125,16 @@ Analyze text quality using Information Style and UX-writing principles — split
 - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
 
 **Non-goals:**
-- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing the suggested copy is a **different call** — `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
-- Doesn't invent facts, numbers, deadlines, features, or change business logic / legal wording (see Rewrite rules — these still bind the *suggested* versions it writes)
-- Doesn't do the pipeline's content **curation** (keep/skip/elevate) — that's `/twt-curation-define`; this skill judges the **writing quality** of given text
-- Doesn't audit IA/sitemap coverage or built-page lorem (that's `/twt-qa-content`)
+- **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing suggested copy is a different call: `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
+- Does not invent facts, numbers, deadlines, features, proof points, source labels, or change business logic / legal wording.
+- Does not rewrite protected content automatically: mission statements, vision statements, slogans, legal text, quotations, product names, company names, or brand positioning statements.
+- Does not do the pipeline's content curation (keep/skip/elevate) - that's `/twt-curation-define`; this skill judges the writing quality of given text.
+- Does not audit IA/sitemap coverage or built-page lorem - that's `/twt-qa-content`.
 
 **Success criteria:**
-- The content is split into independently-scored **blocks** (heading, paragraph, list, CTA, button text, error message, hint text, description, feature explanation)
-- Each block carries all **11 metric scores (0–100%)** + a weighted **Overall (0–100)**, a **Weaknesses** list, a **Recommendation** keyed to the rewrite threshold, and a **Suggested Version** only when a rewrite is warranted (a block scoring ≥ 85 carries **no** Suggested Version block at all)
-- Slogan-style or "bold statement" copy that asserts a problem or benefit **without any proof** (mechanism, number, example, named consequence) is treated as a weakness, not as strong writing — the **Substantiation** metric makes the critique bite instead of rewarding punchy emptiness
-- Two artifacts are written and **nothing else changes**: `analysis-report.md` (the scored critique) and `optimized.md` (the suggested rewrites assembled into one document, clearly labelled as *proposed, not applied*). The subject file is left untouched in every mode.
-- The suggested versions honor the Rewrite rules: meaning, facts, and legal wording survive verbatim; missing facts are flagged with `> NEEDS:` markers, never invented
+- The content is split into independently scored blocks and each block is assigned a semantic type: heading, paragraph, mission/vision/brand positioning, CTA, caption, error message, list, hint text, description, or feature explanation.
+- Each block is scored only on metrics that apply to its type; irrelevant metrics are marked N/A and never used as a reason to rewrite.
+- Every finding is classified as **Problem**, **Opportunity**, or **No issue**, with a confidence score and a clear reason.
+- A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
+- When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
+- Two artifacts are written and nothing else changes: `analysis-report.md` (the scored critique) and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
