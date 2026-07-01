@@ -19,6 +19,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { readHouseCss } from './house-style.mjs';
 
 const projectDir = process.argv[2];
 const checkOnly = process.argv.includes('--check');
@@ -26,7 +27,6 @@ if (!projectDir) { console.error('usage: gen-report.mjs <projectDir> [--check]')
 
 const ART = join(projectDir, '.twt-artifacts');
 const REPORTS = join(ART, 'reports');
-const TOKENS = join(ART, 'design', 'design-system', 'tokens.css');
 
 // ---- discover report sources ------------------------------------------------
 // Phase reviews (the decision-bearing reports) + the QA report (informational).
@@ -122,7 +122,6 @@ for (const s of found) {
   );
 }
 
-const tokensLink = existsSync(TOKENS) ? '<link rel="stylesheet" href="../design/design-system/tokens.css">' : '';
 const nav = found.map((s) => `<a href="#gr-${s.phase}">${esc(s.title)}</a>`).join(' · ');
 const extrasList = EXTRAS.length
   ? `<section class="gr-card"><h2>More reports</h2><ul>` +
@@ -141,31 +140,31 @@ const html = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Project review — twt reports</title>
-${tokensLink}
+<style>${readHouseCss()}</style>
 <style>
-  /* gen-report.mjs — gr- namespaced; inherits tokens.css when present, neutral fallback otherwise */
-  body{margin:0;font-family:var(--font, system-ui, sans-serif);color:var(--color-text, #1f2430);background:var(--surface-page, #f6f7f9);line-height:1.55}
-  .gr-wrap{max-width:var(--max, 960px);margin:0 auto;padding:0 20px 64px}
+  /* gen-report.mjs — gr- namespaced; doc-hub-light via shared house-style.css */
+  .gr-wrap{max-width:960px;margin:0 auto;padding:0 20px 64px}
   .gr-head{padding:40px 0 8px}
-  .gr-head h1{margin:0 0 6px;font-size:1.9rem;color:var(--color-heading, #0d1b2a)}
-  .gr-nav{font-size:.85rem;color:var(--color-label, #6b7280);margin:4px 0 8px}
-  .gr-nav a{color:var(--color-interactive, #0057ff);text-decoration:none}
-  .gr-card{background:var(--surface-page, #fff);border:1px solid var(--border, #e5e7eb);border-radius:var(--radius-card, 12px);padding:20px 24px;margin:18px 0;box-shadow:var(--shadow-e1, 0 1px 3px rgba(0,0,0,.06))}
-  .gr-master{border-color:var(--color-interactive, #0057ff)}
-  .gr-card h2{margin:0 0 12px;font-size:1.3rem;color:var(--color-heading, #0d1b2a)}
-  .gr-card h3,.gr-ph{margin:18px 0 8px;font-size:1.02rem;color:var(--color-heading, #0d1b2a)}
-  .gr-count{font-size:.72rem;font-weight:600;color:var(--color-label, #6b7280)}
-  .gr-legend{font-size:.85rem;color:var(--color-label, #6b7280)}
+  .gr-head h1{margin:0 0 6px;font-size:1.9rem;font-family:var(--hs-font-heading);color:var(--hs-ink)}
+  .gr-head h1::after{content:"";display:block;width:72px;height:4px;margin:14px 0 0;border-radius:999px;background:linear-gradient(90deg,var(--hs-accent-red) 0 33%,var(--hs-accent-blue) 33% 66%,var(--hs-accent-yellow) 66% 100%)}
+  .gr-nav{font-size:.85rem;color:var(--hs-muted);margin:4px 0 8px}
+  .gr-nav a{color:var(--hs-accent-blue);text-decoration:none}
+  .gr-card{background:var(--hs-surface);border:1px solid var(--hs-rule);border-radius:var(--hs-radius);padding:20px 24px;margin:18px 0;box-shadow:var(--hs-shadow)}
+  .gr-master{border-color:var(--hs-accent-blue)}
+  .gr-card h2{margin:0 0 12px;font-size:1.3rem;font-family:var(--hs-font-heading);color:var(--hs-ink)}
+  .gr-card h3,.gr-ph{margin:18px 0 8px;font-size:1.02rem;font-family:var(--hs-font-heading);color:var(--hs-ink)}
+  .gr-count{font-size:.72rem;font-weight:600;color:var(--hs-muted)}
+  .gr-legend{font-size:.85rem;color:var(--hs-muted)}
   .gr-tbl{border-collapse:collapse;width:100%;font-size:.85rem;margin:8px 0 14px}
-  .gr-tbl th,.gr-tbl td{border:1px solid var(--border, #e5e7eb);padding:7px 10px;text-align:left;vertical-align:top}
-  .gr-tbl th{background:var(--surface-panel, #f1f3f5);font-weight:600}
+  .gr-tbl th,.gr-tbl td{border:1px solid var(--hs-rule);padding:7px 10px;text-align:left;vertical-align:top}
+  .gr-tbl th{background:var(--hs-panel-soft);font-weight:600}
   .gr-sev{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:6px}
-  .gr-block{color:#b00020;background:rgba(176,0,32,.10)}
-  .gr-warn{color:#8a5a00;background:rgba(138,90,0,.10)}
-  .gr-opt{color:#1a7f37;background:rgba(26,127,55,.10)}
-  .gr-src{font-size:.74rem;color:var(--color-label, #9aa0a6);margin:10px 0 0}
-  code{font-family:ui-monospace,Menlo,monospace;font-size:.85em;background:var(--surface-panel, #f1f3f5);padding:1px 4px;border-radius:4px}
-  a{color:var(--color-interactive, #0057ff)}
+  .gr-block{color:var(--hs-danger);background:rgba(202,34,31,.10)}
+  .gr-warn{color:var(--hs-warning);background:rgba(154,103,0,.10)}
+  .gr-opt{color:var(--hs-ok);background:rgba(26,127,55,.10)}
+  .gr-src{font-size:.74rem;color:var(--hs-muted);margin:10px 0 0}
+  code{font-family:var(--hs-font-mono);font-size:.85em;background:var(--hs-panel-soft);padding:1px 4px;border-radius:4px}
+  a{color:var(--hs-accent-blue)}
 </style>
 </head>
 <body>
