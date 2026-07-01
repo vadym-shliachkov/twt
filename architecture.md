@@ -357,7 +357,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive

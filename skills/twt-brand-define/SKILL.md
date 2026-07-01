@@ -1,8 +1,8 @@
 ---
 name: twt-brand-define
 category: brand
-description: (v1.1.0) Build or refine the canonical brand-brief.md through guided dialogue
-version: 1.1.0
+description: (v1.1.1) Build or refine the canonical brand-brief.md through guided dialogue
+version: 1.1.1
 accepts_arguments: true
 inputs:
   - Optional starting notes or answers; otherwise interactive
