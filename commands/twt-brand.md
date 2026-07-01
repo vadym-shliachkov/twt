@@ -1,8 +1,8 @@
 ---
 name: twt-brand
 category: brand
-description: (v1.2.1) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
-version: 1.2.1
+description: (v1.2.2) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - Optional brand source (forwarded to fetch) or none (define from scratch)

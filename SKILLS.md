@@ -103,7 +103,7 @@ Take a playwright-powered screenshot of any HTML file or live URL — either the
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 One-call brand workflow: fetch (always; adaptive research when no source) → define → validate in one pass (§9 — no iteration loop).
@@ -138,7 +138,7 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.

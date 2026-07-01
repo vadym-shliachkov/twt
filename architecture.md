@@ -333,7 +333,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -358,7 +358,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -389,7 +389,7 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -419,7 +419,7 @@ flowchart TB
 ### /twt-brand-validate
 
 **Category:** brand
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - (none — reads the canonical brand-brief.md)
