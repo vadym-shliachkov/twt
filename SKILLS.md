@@ -137,7 +137,7 @@ One-call brand workflow: fetch (if a source is given) → define → validate in
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Pull whatever brand signal exists in a provided source (brand book PDF, Figma file, screenshots, live site) into a raw notes file that `/twt-brand-define` refines into the canonical brief.
