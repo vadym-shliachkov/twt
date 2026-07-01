@@ -103,7 +103,7 @@ Take a playwright-powered screenshot of any HTML file or live URL — either the
 ## /twt-brand
 
 **Category:** brand
-**Version:** 1.1.5
+**Version:** 1.2.0
 **Accepts arguments:** yes
 
 One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
@@ -118,6 +118,7 @@ One-call brand workflow: fetch (if a source is given) → define → validate in
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
+- .twt-artifacts/pre-design/brand/_coverage.md
 
 **Writes:**
 - (none)

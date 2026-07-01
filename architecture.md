@@ -333,7 +333,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.1.5
+**Version:** 1.2.0
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -349,6 +349,7 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
+- .twt-artifacts/pre-design/brand/_coverage.md
 
 **Writes:**
 | Path | Notes |

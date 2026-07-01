@@ -1,8 +1,8 @@
 ---
 name: twt-brand
 category: brand
-description: (v1.1.5) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
-version: 1.1.5
+description: (v1.2.0) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
+version: 1.2.0
 accepts_arguments: true
 inputs:
   - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -15,6 +15,7 @@ dependencies:
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/brand/validation-report.md
+  - .twt-artifacts/pre-design/brand/_coverage.md
 writes: []
 ---
 
@@ -50,8 +51,8 @@ Before any project work, make sure this project is set up so the run isn't inter
 ## Step 1 — Detect state
 If `brand-brief.md` exists, ask via the **AskUserQuestion** tool (single-select, header "Brand state") whether to **Use as-is** (keep the existing brief unchanged), **Refine** (address validation findings or update specific sections), **Rebuild** (start the brief over from scratch), or **You decide** (I pick: Refine if a validation-report flags findings, else Use as-is). Pass the choice to the dispatched define skill. If `brand-brief.md` is missing, proceed to fetch+define.
 
-## Step 2 — Fetch (conditional)
-If the user provided a source (in `$ARGUMENTS` or when asked), dispatch `/twt-brand-fetch` with it (Agent tool). Otherwise skip.
+## Step 2 — Fetch (always; adaptive when no source)
+Dispatch `/twt-brand-fetch` (Agent tool) — **even when the user provided no source**. Pass any source in `$ARGUMENTS` through; when none is given, fetch researches project artifacts (and the site if a URL is discoverable) and writes `_coverage.md`. Skip only when a current `brand-brief.md` is being used as-is (Step 1 → "Use as-is") and a `_coverage.md` already exists. Do not run `WebSearch` unless the user explicitly asked to research the brand online.
 
 ## Step 3 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
 Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (i.e. it was itself dispatched by /twt-pre-design or /twt-site). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (see step 2 below).
@@ -64,3 +65,5 @@ Run **one** define → validate cycle — no iteration loop (§9):
 
 ## Step 5 — Report
 State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). Include the validator's `Before design proceeds` notice so the user sees the risk before Phase 2. If decisions remain unresolved or Band < Pass, present them and the human-decision options (provide a source / accept and edit directly / defer) — never auto-fix and never claim design is risk-free.
+
+Also surface the **brand-book completeness** summary from the validator's `## Brand-book completeness & source coverage` section: per-tier coverage % (Core/Recommended/Optional) and the top missing parts by tier, noting for each whether it was `silent` (no source signal — user may supply more) or `not-extracted` (a capture gap). Core gaps are the ones to act on before Phase 2.
