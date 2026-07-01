@@ -411,7 +411,7 @@ flowchart TB
 ### /twt-brand-validate
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.2.1
 
 **Inputs:**
 - (none — reads the canonical brand-brief.md)
@@ -427,6 +427,8 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - tools/check-brand-validation-report.mjs
+- references/brand-book-checklist.md
+- .twt-artifacts/pre-design/brand/_coverage.md
 
 **Writes:**
 | Path | Notes |

@@ -1,8 +1,8 @@
 ---
 name: twt-brand-validate
 category: brand
-description: (v1.1.4) Critique brand-brief.md and write a validation-report.md (read-only critic)
-version: 1.1.4
+description: (v1.2.1) Critique brand-brief.md and write a validation-report.md (read-only critic)
+version: 1.2.1
 accepts_arguments: false
 inputs:
   - (none — reads the canonical brand-brief.md)
@@ -13,6 +13,8 @@ dependencies:
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - tools/check-brand-validation-report.mjs
+  - references/brand-book-checklist.md
+  - .twt-artifacts/pre-design/brand/_coverage.md
 writes:
   - .twt-artifacts/pre-design/brand/validation-report.md
 ---
@@ -33,6 +35,7 @@ writes:
 - At least the contrast criterion is computed from actual hex values; AA failures on body text are BLOCKERs
 - A `## Detailed brand component evaluation` section evaluates every available brand component item-by-item, with pros, cons, all eight metric scores/evidence rows, and design handoff impact
 - A `## Critical assessment` section delivers genuine design judgment on whether the palette, type, and voice are actually **good** (not just faithfully transcribed) — strengths, weaknesses, and what a top studio would change — even when the brand is already in production
+- A `## Brand-book completeness & source coverage` section maps the brief onto `references/brand-book-checklist.md`, reports per-tier coverage % (Core/Recommended/Optional) and per-part status with source-coverage attribution (`silent` vs `not-extracted`), and passes the checker's new required-heading assertion
 - A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
 - Findings keep BLOCKER/WARNING/SUGGESTION with Where/Problem/Recommendation, Problem citing evidence
 - Brand problems do not stop the workflow by themselves; the report must clearly inform the user before design proceeds, with BLOCKERs carried forward as known design risks
@@ -100,7 +103,17 @@ Use this item inventory as the default checklist. If the brief uses different he
 | Experience identity | website/product UI, support, onboarding, packaging/materials, social, sales materials, community/events, sound/sensory identity | touchpoint audit, UX testing, expectation-delivery gap, channel-fit evaluation |
 | Governance | brand guidelines, templates, asset library, accessibility rules, legal/trademark/licensing, consistency checklist | governance usability, adoption readiness, compliance and rights check |
 
-## Step 2b — Critical assessment (genuine design judgment)
+## Step 2a′ — Brand-book completeness & source coverage
+Load `references/brand-book-checklist.md` (the canonical tiered TOC). For every part, decide its presence in `brand-brief.md`: `Complete | Partial | Missing`. Then attribute *why* a part is Partial/Missing using the fetch coverage manifest `.twt-artifacts/pre-design/brand/_coverage.md` when it exists:
+- `silent` — the sources genuinely had nothing (do not fault the pipeline).
+- `not-extracted` — signal existed but capture failed (a fetch/define gap to fix).
+- `n/a` — the part is Complete, or its tier makes it out of scope for this project.
+
+If `_coverage.md` is absent (e.g. the brief was authored by hand), attribute from the brief + `## Sources` alone and mark attribution `unknown` rather than guessing.
+
+Compute per-tier coverage %: for each tier, `(Complete + 0.5·Partial) / parts-in-tier · 100`, rounded. **Core** gaps become WARNING findings (BLOCKER only when a Core part is both Missing *and* downstream-blocking — e.g. no palette at all, so tokens cannot be derived). Recommended/Optional gaps are informational and never BLOCK. This section is additive — it does not change the weighted Scorecard or the 8-dimension item evaluation.
+
+## Step 2b — Critical assessment
 Beyond the rubric scores, render an opinionated critique as a senior brand/visual designer would — say plainly what is **good** and what is **weak**, with reasons:
 - **Palette** — Is it harmonious and considered, or arbitrary? Distinctive in its sector or generic? Dated (e.g. 2010s gradient-blue, the AI-purple glow, beige+brass premium-consumer cliché)? Is the accent disciplined (one confident accent vs. a confetti of hues)? Enough contrast/value range to build an accessible, legible UI? Does it give the design phase room (tints/shades, a usable neutral ramp)?
 - **Typography** — Is the pairing good (clear role separation, not two near-identical sans)? Is there a real hierarchy? Distinctive or default-Arial/Inter-by-inertia? Suited to the audience and tone?
