@@ -38,6 +38,7 @@ function evaluate(markdown) {
     "# Validation report — brand",
     "## Scorecard",
     "## Detailed brand component evaluation",
+    "## Brand-book completeness & source coverage",
     "## Critical assessment",
     "## Before design proceeds",
     "## Decisions to confirm",
@@ -73,6 +74,14 @@ function evaluate(markdown) {
     ["Design handoff note:", "Detailed item blocks must include design handoff note."],
   ];
   for (const [needle, message] of detailChecks) {
+    if (!markdown.includes(needle)) failures.push(message);
+  }
+
+  const completenessChecks = [
+    ["Tier coverage", "Completeness section must include per-tier coverage."],
+    ["Source coverage", "Completeness section must include source-coverage attribution."],
+  ];
+  for (const [needle, message] of completenessChecks) {
     if (!markdown.includes(needle)) failures.push(message);
   }
 
@@ -146,6 +155,15 @@ function selfTest() {
 - **Pros:** clear
 - **Cons / risks:** limited
 - **Design handoff note:** use
+
+## Brand-book completeness & source coverage
+
+**Tier coverage:** Core 100% · Recommended 50% · Optional 0%
+
+| Part | Tier | In brief | Source coverage | Recommendation |
+|---|---|---|---|---|
+| Palette + usage | Core | Complete | n/a | keep |
+| Motion | Recommended | Missing | Silent | add if brief expands |
 
 ## Critical assessment
 Good.
