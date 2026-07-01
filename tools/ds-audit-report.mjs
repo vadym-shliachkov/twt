@@ -27,6 +27,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { readHouseCss } from './house-style.mjs';
 
 const argv = process.argv.slice(2);
 const flags = {};
@@ -491,12 +492,12 @@ const CSS = `
 /* doc-hub light design language — shared with gen-preview.mjs:
    light page, blue accents, Montserrat headings, tri-color (red/blue/yellow)
    accent bars, rounded panels. */
-:root{--ink:#090e22;--text:#3a3f5c;--muted:#7a82a8;--line:#dde0ee;--bg:#fff;--soft:#f8f9fc;
-  --blocker:#ca221f;--warning:#9a6700;--suggestion:#0b68b7;--ok:#1a7f37;--accent:#0b68b7;
-  --red:#ca221f;--blue:#0b68b7;--yellow:#f6c22b;
-  --font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
-  --font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
-  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:root{--ink:var(--hs-ink);--text:var(--hs-text);--muted:var(--hs-muted);--line:var(--hs-rule);--bg:var(--hs-surface);--soft:var(--hs-panel-soft);
+  --blocker:var(--hs-danger);--warning:var(--hs-warning);--suggestion:var(--hs-accent-blue);--ok:var(--hs-ok);--accent:var(--hs-accent-blue);
+  --red:var(--hs-accent-red);--blue:var(--hs-accent-blue);--yellow:var(--hs-accent-yellow);
+  --font-heading:var(--hs-font-heading);
+  --font-body:var(--hs-font-body);
+  --font-mono:var(--hs-font-mono)}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.55 var(--font-body);color:var(--text);background:var(--bg)}
 .wrap{max-width:1100px;margin:0 auto;padding:48px 24px 96px}
@@ -596,7 +597,7 @@ function htmlShell(title, body) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap">
-<style>${CSS}</style></head>
+<style>${readHouseCss()}</style><style>${CSS}</style></head>
 <body><div class="wrap">${body}</div></body></html>`;
 }
 
