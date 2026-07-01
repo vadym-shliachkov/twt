@@ -37,6 +37,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { readHouseCss } from './house-style.mjs';
 
 const projectDir = process.argv[2];
 const tokensOnly = process.argv.includes('--mode') &&
@@ -548,6 +549,7 @@ const html = `<!doctype html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
 <link rel="stylesheet" href="tokens.css">
+<style>${readHouseCss()}</style>
 <style>
   /* gen-preview.mjs — all classes namespaced gp- to avoid collisions.
      Chrome (layout, labels, legends) uses the doc-hub light palette so every
@@ -613,24 +615,24 @@ const html = `<!doctype html>
      Montserrat display headings, gradient-pill tier tags, dark action buttons,
      rounded panel tables. Overrides the base chrome above. */
   :root{
-    --gp-page:#ffffff;
-    --gp-panel:#ffffff;
-    --gp-panel-soft:#f8f9fc;
-    --gp-ink:#090e22;
-    --gp-text:#3a3f5c;
-    --gp-muted:#7a82a8;
-    --gp-rule:#dde0ee;
+    --gp-page:var(--hs-surface);
+    --gp-panel:var(--hs-surface);
+    --gp-panel-soft:var(--hs-panel-soft);
+    --gp-ink:var(--hs-ink);
+    --gp-text:var(--hs-text);
+    --gp-muted:var(--hs-muted);
+    --gp-rule:var(--hs-rule);
     --gp-rule-soft:rgba(122,130,168,.18);
-    --gp-red:#ca221f;
-    --gp-blue:#0b68b7;
-    --gp-yellow:#f6c22b;
-    --gp-action:#090e22;
+    --gp-red:var(--hs-accent-red);
+    --gp-blue:var(--hs-accent-blue);
+    --gp-yellow:var(--hs-accent-yellow);
+    --gp-action:var(--hs-ink);
     --gp-action-hover:#0e1630;
-    --gp-warning:#9a6700;
-    --gp-danger:#ca221f;
-    --gp-font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
-    --gp-font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
-    --gp-font-mono:"IBM Plex Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --gp-warning:var(--hs-warning);
+    --gp-danger:var(--hs-accent-red);
+    --gp-font-heading:var(--hs-font-heading);
+    --gp-font-body:var(--hs-font-body);
+    --gp-font-mono:var(--hs-font-mono);
   }
 
   html{background:var(--gp-page)}
