@@ -411,7 +411,7 @@ flowchart TB
 ### /twt-brand-validate
 
 **Category:** brand
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - (none — reads the canonical brand-brief.md)
