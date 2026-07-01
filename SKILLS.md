@@ -137,13 +137,13 @@ One-call brand workflow: fetch (if a source is given) → define → validate in
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Pull whatever brand signal exists in a provided source (brand book PDF, Figma file, screenshots, live site) into a raw notes file that `/twt-brand-define` refines into the canonical brief.
 
 **Inputs:**
-- A brand book (PDF), Figma URL, screenshots, or a live site URL
+- A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
 
 **Dependencies:**
 - Hard: none
@@ -152,9 +152,14 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 **Reads:**
 - <brand source>
 - .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
+- references/brand-book-checklist.md
+- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/spec/specification.md
 
 **Writes:**
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
+- .twt-artifacts/pre-design/brand/_coverage.md
 
 **Non-goals:**
 - Doesn't produce the canonical `brand-brief.md` (that's `/twt-brand-define`)
@@ -164,6 +169,8 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 **Success criteria:**
 - `_fetched-brand.md` captures every brand attribute found, tagged with where it came from
 - Missing attributes are explicitly listed as gaps
+- With no brand source, still produces `_fetched-brand.md` + `_coverage.md` from project artifacts (and the site if a URL exists), recording gaps rather than inventing values
+- `_coverage.md` has one row per `references/brand-book-checklist.md` part with a `Found/Partial/Silent/Not-extracted` status and a source tag
 - Runs without prompting when dispatched by `/twt-brand`
 
 ---

@@ -386,10 +386,10 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 **Inputs:**
-- A brand book (PDF), Figma URL, screenshots, or a live site URL
+- A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
 
 **Dependencies:**
 - Hard: none
@@ -402,11 +402,16 @@ flowchart TB
 **Reads:**
 - <brand source>
 - .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
+- references/brand-book-checklist.md
+- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/spec/specification.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/pre-design/brand/_fetched-brand.md |  |
+| .twt-artifacts/pre-design/brand/_coverage.md |  |
 
 ### /twt-brand-validate
 
