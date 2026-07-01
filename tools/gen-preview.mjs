@@ -646,7 +646,7 @@ const html = `<!doctype html>
     text-rendering:optimizeLegibility;
   }
   a{color:inherit}
-  code{font-family:var(--gp-font-mono);font-size:.88em}
+  code{font-family:var(--gp-font-mono);font-size:.88em;background:none;border:0;padding:0;color:inherit;border-radius:0}
 
   .gp-wrap{max-width:1120px;margin:0 auto;padding:64px 24px 96px}
 

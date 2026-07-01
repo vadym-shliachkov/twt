@@ -515,7 +515,7 @@ a{color:var(--accent)} code{font:12px/1.4 var(--font-mono);background:var(--soft
 .metric .num{font-family:var(--font-heading);font-size:30px;font-weight:800;color:var(--ink)}.metric .den{font-size:15px;color:var(--muted)}.metric .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .warnnum{color:var(--warning)}.blknum{color:var(--blocker)}
 table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.grid th,.grid td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.grid th,.grid td{padding:8px 10px;border:0;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .grid th{background:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
 .grid .r{text-align:right}.grid .low{color:var(--blocker);font-weight:700}
 .assess{margin-top:10px;font-size:13px;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.assess>div{margin-top:3px}
