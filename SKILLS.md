@@ -106,7 +106,7 @@ Take a playwright-powered screenshot of any HTML file or live URL — either the
 **Version:** 1.2.1
 **Accepts arguments:** yes
 
-One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
+One-call brand workflow: fetch (always; adaptive research when no source) → define → validate in one pass (§9 — no iteration loop).
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -141,7 +141,7 @@ One-call brand workflow: fetch (if a source is given) → define → validate in
 **Version:** 1.1.1
 **Accepts arguments:** yes
 
-Pull whatever brand signal exists in a provided source (brand book PDF, Figma file, screenshots, live site) into a raw notes file that `/twt-brand-define` refines into the canonical brief.
+Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
 
 **Inputs:**
 - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -164,7 +164,7 @@ Pull whatever brand signal exists in a provided source (brand book PDF, Figma fi
 
 **Non-goals:**
 - Doesn't produce the canonical `brand-brief.md` (that's `/twt-brand-define`)
-- Doesn't invent brand attributes when the source is silent — records gaps instead
+- Doesn't invent brand attributes when the sources are silent — records gaps instead
 - Doesn't validate quality (that's `/twt-brand-validate`)
 
 **Success criteria:**

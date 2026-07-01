@@ -375,7 +375,7 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
-- skills/brand/twt-brand-validate.md
+- skills/twt-brand-validate/SKILL.md
 - references/brand-book-checklist.md
 - .twt-artifacts/pre-design/brand/_coverage.md
 

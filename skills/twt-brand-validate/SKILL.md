@@ -113,7 +113,7 @@ If `_coverage.md` is absent (e.g. the brief was authored by hand), attribute fro
 
 Compute per-tier coverage %: for each tier, `(Complete + 0.5·Partial) / parts-in-tier · 100`, rounded. **Core** gaps become WARNING findings (BLOCKER only when a Core part is both Missing *and* downstream-blocking — e.g. no palette at all, so tokens cannot be derived). Recommended/Optional gaps are informational and never BLOCK. This section is additive — it does not change the weighted Scorecard or the 8-dimension item evaluation.
 
-## Step 2b — Critical assessment
+## Step 2b — Critical assessment (genuine design judgment)
 Beyond the rubric scores, render an opinionated critique as a senior brand/visual designer would — say plainly what is **good** and what is **weak**, with reasons:
 - **Palette** — Is it harmonious and considered, or arbitrary? Distinctive in its sector or generic? Dated (e.g. 2010s gradient-blue, the AI-purple glow, beige+brass premium-consumer cliché)? Is the accent disciplined (one confident accent vs. a confetti of hues)? Enough contrast/value range to build an accessible, legible UI? Does it give the design phase room (tints/shades, a usable neutral ramp)?
 - **Typography** — Is the pairing good (clear role separation, not two near-identical sans)? Is there a real hierarchy? Distinctive or default-Arial/Inter-by-inertia? Suited to the audience and tone?

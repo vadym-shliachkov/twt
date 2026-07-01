@@ -27,7 +27,7 @@ writes: []
 
 ## Intent
 
-**Purpose:** One-call brand workflow: fetch (if a source is given) → define → validate in one pass (§9 — no iteration loop).
+**Purpose:** One-call brand workflow: fetch (always; adaptive research when no source) → define → validate in one pass (§9 — no iteration loop).
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)

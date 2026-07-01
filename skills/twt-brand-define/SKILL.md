@@ -14,7 +14,7 @@ reads:
   - .twt-artifacts/pre-design/brand/_fetched-brand.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/brand/validation-report.md
-  - skills/brand/twt-brand-validate.md
+  - skills/twt-brand-validate/SKILL.md
   - references/brand-book-checklist.md
   - .twt-artifacts/pre-design/brand/_coverage.md
 writes:
@@ -50,18 +50,19 @@ Also read `.twt-artifacts/pre-design/brand/_coverage.md` if present: it tells yo
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
 If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the brand-brief from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/pre-design/brand/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`.
 
-Then write the draft brand-brief and perform the **folded validation exception** required by the orchestrator: write `.twt-artifacts/pre-design/brand/validation-report.md` as if `/twt-brand-validate` had run, using the full validation skeleton and rubric from `skills/brand/twt-brand-validate.md`. Do not replace it with a compact pass/fail, green/yellow/red, or checklist-only report.
+Then write the draft brand-brief and perform the **folded validation exception** required by the orchestrator: write `.twt-artifacts/pre-design/brand/validation-report.md` as if `/twt-brand-validate` had run, using the full validation skeleton and rubric from `skills/twt-brand-validate/SKILL.md`. Do not replace it with a compact pass/fail, green/yellow/red, or checklist-only report.
 
 The folded validation report MUST include all of these sections in this order:
 
 1. `# Validation report — brand`
 2. `## Scorecard` with the five fixed weighted criteria from `/twt-brand-validate`: weights summing to 100, `Score (0-5)`, `Weighted`, evidence, numeric `Health 0-100`, and Band `Pass ≥80 / Revise 50-79 / Fail <50`
 3. `## Detailed brand component evaluation` with every available brand item evaluated item-by-item, including status, evaluation method, item health, metric values, pros, cons/risks, severity, and design handoff note. Every item block must include all eight metric rows from `/twt-brand-validate`: Clarity, Relevance, Distinctiveness, Consistency, Actionability, Evidence quality, Accessibility / usability, and Governance readiness. Use `N/A — not applicable because <reason>` for a metric only when it truly does not apply; do not omit the metric row.
-4. `## Critical assessment` with direct senior-designer judgment on palette, typography, voice, coherence, and a one-line verdict
-5. `## Before design proceeds` with proceed status, user-facing notice, design-safe defaults, and unresolved brand risks
-6. `## Decisions to confirm`
-7. `## Findings` using numbered findings with severity in the heading and `Where / Problem / Recommendation`
-8. `## Summary`
+4. `## Brand-book completeness & source coverage` mapping the brief onto `references/brand-book-checklist.md`: a `**Tier coverage:** Core <n>% · Recommended <n>% · Optional <n>%` line, then a table `Part | Tier | In brief | Source coverage | Recommendation` with each part's presence (`Complete/Partial/Missing`) and source-coverage attribution (`silent`/`not-extracted`/`n/a`/`unknown`, drawn from `_coverage.md` when present), per `/twt-brand-validate` Step 2a′. This section is required — the checker asserts its heading and the `Tier coverage`/`Source coverage` needles.
+5. `## Critical assessment` with direct senior-designer judgment on palette, typography, voice, coherence, and a one-line verdict
+6. `## Before design proceeds` with proceed status, user-facing notice, design-safe defaults, and unresolved brand risks
+7. `## Decisions to confirm`
+8. `## Findings` using numbered findings with severity in the heading and `Where / Problem / Recommendation`
+9. `## Summary`
 
 For palette evaluation, compute actual WCAG contrast ratios from provided hex values whenever hex values exist. If a value is missing or only described, mark the metric as `Missing / not evaluable`; do not convert that absence into a Pass.
 

@@ -28,11 +28,11 @@ writes:
 
 ## Intent
 
-**Purpose:** Pull whatever brand signal exists in a provided source (brand book PDF, Figma file, screenshots, live site) into a raw notes file that `/twt-brand-define` refines into the canonical brief.
+**Purpose:** Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
 
 **Non-goals:**
 - Doesn't produce the canonical `brand-brief.md` (that's `/twt-brand-define`)
-- Doesn't invent brand attributes when the source is silent — records gaps instead
+- Doesn't invent brand attributes when the sources are silent — records gaps instead
 - Doesn't validate quality (that's `/twt-brand-validate`)
 
 **Success criteria:**
