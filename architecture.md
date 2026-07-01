@@ -333,7 +333,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
