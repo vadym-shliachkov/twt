@@ -1,0 +1,42 @@
+/* twt house style — "doc-hub light". Single source of truth for the look of
+   every generated HTML document (design-system preview, reports dashboard,
+   design-system audit; exports in a later pass). Derived from gen-preview.mjs.
+   Tokens are namespaced --hs-* so they never collide with a project's
+   tokens.css --color-*/--font-* variables when both appear on one page. */
+:root{
+  /* color */
+  --hs-ink:#090e22;
+  --hs-text:#3a3f5c;
+  --hs-muted:#7a82a8;
+  --hs-rule:#dde0ee;
+  --hs-panel-soft:#f8f9fc;
+  --hs-surface:#ffffff;
+  --hs-accent-red:#ca221f;
+  --hs-accent-blue:#0b68b7;
+  --hs-accent-yellow:#f6c22b;
+  /* semantic status (report/audit chips) */
+  --hs-ok:#1a7f37;
+  --hs-warning:#9a6700;
+  --hs-danger:#ca221f;
+  /* type */
+  --hs-font-heading:Montserrat,"Avenir Next",ui-sans-serif,system-ui,sans-serif;
+  --hs-font-body:Inter,"Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --hs-font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  /* shape */
+  --hs-radius:12px;
+  --hs-shadow:0 1px 3px rgba(9,14,34,.06);
+}
+
+/* base element rules — safe defaults; each generator's component <style>
+   (inlined AFTER this) overrides where it needs to. Bare exported HTML with
+   no component CSS still gets a clean doc-hub-light document from these. */
+body{margin:0;font-family:var(--hs-font-body);color:var(--hs-text);background:var(--hs-surface);line-height:1.55}
+h1,h2,h3,h4{font-family:var(--hs-font-heading);color:var(--hs-ink);line-height:1.15}
+a{color:var(--hs-accent-blue)}
+code,pre{font-family:var(--hs-font-mono)}
+code{font-size:.88em;background:var(--hs-panel-soft);border:1px solid var(--hs-rule);color:var(--hs-ink);padding:1px 5px;border-radius:4px}
+table{border-collapse:collapse}
+th,td{border:1px solid var(--hs-rule);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--hs-panel-soft);font-weight:600}
+blockquote{margin:1em 0;padding:.4em 1em;border-left:3px solid var(--hs-accent-blue);color:var(--hs-text)}
+.hs-accent-bar{display:block;width:72px;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--hs-accent-red) 0 33%,var(--hs-accent-blue) 33% 66%,var(--hs-accent-yellow) 66% 100%)}
