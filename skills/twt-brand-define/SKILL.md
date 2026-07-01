@@ -1,8 +1,8 @@
 ---
 name: twt-brand-define
 category: brand
-description: (v1.0.4) Build or refine the canonical brand-brief.md through guided dialogue
-version: 1.0.4
+description: (v1.1.0) Build or refine the canonical brand-brief.md through guided dialogue
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Optional starting notes or answers; otherwise interactive
@@ -15,6 +15,8 @@ reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/brand/validation-report.md
   - skills/brand/twt-brand-validate.md
+  - references/brand-book-checklist.md
+  - .twt-artifacts/pre-design/brand/_coverage.md
 writes:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/brand/decisions.md
@@ -43,6 +45,8 @@ writes:
 ## Step 1 — Detect mode (idempotency, CONVENTIONS rule 10)
 If `brand-brief.md` exists → **refinement mode**: read it and any sibling `validation-report.md`; if findings exist, list them and ask which to address. If it does not exist → **from-scratch mode**: read `_fetched-brand.md` if present to seed answers.
 
+Also read `.twt-artifacts/pre-design/brand/_coverage.md` if present: it tells you which brand-book parts the fetch found, which were `Silent`, and which were `Not-extracted`. Use it to steer the interview toward thin **Core** parts and to decide what to mark `TBD` (see Step 2/Step 3).
+
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
 If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the brand-brief from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/pre-design/brand/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`.
 
@@ -65,8 +69,12 @@ Return the decisions block and the validation Band/Health in your report. Do not
 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
 
+In collect mode, apply the same coverage-aware rule without prompting: fill Core parts from best practice grounded in loaded context (logging each under decisions/assumptions), and mark `Silent` Recommended/Optional parts `TBD`.
+
 ## Step 2 — Interview / refine
 **(Skipped in collect mode — see Step 1b.)** Walk the canonical sections one at a time (Identity → Palette → Typography → Voice & Tone → Audience signals). Ask focused questions; pre-fill from fetched notes where available and confirm rather than re-ask. In refinement mode, only touch the sections the user chose.
+
+**Coverage-aware filling.** Prioritize interviewing the **Core** parts that `_coverage.md` marked `Silent`/`Partial`. For **Recommended/Optional** parts that were `Silent`, mark them `TBD` in the brief rather than inventing content — the completeness report will surface them as informational gaps. Never fabricate a value to close a gap.
 
 ## Step 3 — Write the brief
 Write/update `.twt-artifacts/pre-design/brand/brand-brief.md` with sections: `# Brand Brief`, `## Identity`, `## Palette` (table: name | hex | usage), `## Typography`, `## Voice & Tone` (attributes + do/don't), `## Audience signals`, `## Sources`. Mark unknowns `TBD` rather than guessing. Confirm before overwriting.

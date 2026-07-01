@@ -357,7 +357,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.0.4
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -375,6 +375,8 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
 - skills/brand/twt-brand-validate.md
+- references/brand-book-checklist.md
+- .twt-artifacts/pre-design/brand/_coverage.md
 
 **Writes:**
 | Path | Notes |
