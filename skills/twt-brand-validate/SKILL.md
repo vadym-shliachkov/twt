@@ -179,6 +179,13 @@ Generated: <ISO timestamp>  ·  Validator: /twt-brand-validate
 ### Governance
 <repeat the item block for guidelines, templates, asset library, accessibility rules, legal/trademark/licensing, consistency checklist, as applicable>
 
+## Brand-book completeness & source coverage
+**Tier coverage:** Core <n>% · Recommended <n>% · Optional <n>%
+
+| Part | Tier | In brief | Source coverage | Recommendation |
+|------|------|----------|-----------------|----------------|
+| <part> | <Core/Recommended/Optional> | <Complete/Partial/Missing> | <silent/not-extracted/n/a/unknown> | <what to do> |
+
 ## Critical assessment
 - **Palette:** <good/weak + why — harmony, distinctiveness, dated?, accent discipline, contrast/value range, headroom for UI>
 - **Typography:** <good/weak + why — pairing, hierarchy, distinctiveness, audience fit>
