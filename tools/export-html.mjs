@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
 import { readCss } from './house-style.mjs';
 
 const FONTS = '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
@@ -55,7 +56,8 @@ export function mdToSlidesHtml({ markdownPath, aspect = '16:9', title }) {
   return shellSlides({ slidesHtml, title: t, aspect });
 }
 
-if (process.argv.includes('--self-test')) {
+const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (_isMain && process.argv.includes('--self-test')) {
   const doc = shellDoc({ bodyHtml: '<p>body</p>', title: 'T' });
   assert.match(doc, /--hs-ink/, 'inlines house-style tokens');
   assert.match(doc, /@page/, 'inlines house-doc layer');

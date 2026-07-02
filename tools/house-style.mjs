@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// house-style.mjs — single read point for templates/house-style.css (the
-// canonical doc-hub-light look). Generators import readHouseCss() and inline
-// the result before their own component <style>.
+// house-style.mjs — read point for the shared doc-hub-light CSS in templates/
+// (house-style.css + house-doc.css + house-slide.css). Consumers call
+// readCss(name) / readHouseCss() and inline the result before their own <style>.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,7 +14,8 @@ export function readCss(name) {
 }
 export function readHouseCss() { return readCss('house-style.css'); }
 
-if (process.argv.includes('--self-test')) {
+const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (_isMain && process.argv.includes('--self-test')) {
   const css = readHouseCss();
   assert.match(css, /--hs-ink:\s*#090e22/, 'must define --hs-ink #090e22');
   assert.match(css, /--hs-accent-blue:\s*#0b68b7/, 'must define --hs-accent-blue');

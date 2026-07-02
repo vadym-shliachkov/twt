@@ -224,19 +224,23 @@ async function convert(args) {
   if (!commandExists("pandoc")) {
     conversionNotes.push("Pandoc was not found on PATH; requested output was not produced.");
   } else if (args.format === "pdf") {
-    const html = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title });
-    const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
-    const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
-    if (r.ok) {
-      engine = "chromium";
-      success = existsSync(paths.output) && statSync(paths.output).size > 0;
-      conversionNotes.push("Rendered doc-hub-light slides via Chromium.");
-    } else {
-      const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title });
-      success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
-      engine = "pandoc-beamer";
-      conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to beamer. Install \`playwright\` for doc-hub-light slides.`);
-      if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || p.error?.message || "").trim().replace(/\r?\n/g, " ")}`);
+    try {
+      const html = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title });
+      const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
+      const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
+      if (r.ok) {
+        engine = "chromium";
+        success = existsSync(paths.output) && statSync(paths.output).size > 0;
+        conversionNotes.push("Rendered doc-hub-light slides via Chromium.");
+      } else {
+        const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title });
+        success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
+        engine = "pandoc-beamer";
+        conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to beamer. Install \`playwright\` for doc-hub-light slides.`);
+        if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || p.error?.message || "").trim().replace(/\r?\n/g, " ")}`);
+      }
+    } catch (e) {
+      conversionNotes.push("Slide PDF build failed: " + e.message);
     }
   } else { // pptx
     if (args.aspect === "4:3" && !existsSync(REFERENCE_PPTX)) {

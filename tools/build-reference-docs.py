@@ -20,7 +20,7 @@ Design tokens applied:
 import re
 import shutil
 import subprocess
-import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -269,7 +269,7 @@ def _rebuild_zip(src: Path, dst: Path, patches: dict[str, str | bytes]) -> None:
 def main() -> None:
     pandoc = find_pandoc()
     root = Path(__file__).resolve().parent.parent
-    tmp = Path.home() / "AppData" / "Local" / "Temp" / "build-refdocs"
+    tmp = Path(tempfile.gettempdir()) / "build-refdocs"
     tmp.mkdir(parents=True, exist_ok=True)
     templates = root / "templates"
     templates.mkdir(parents=True, exist_ok=True)

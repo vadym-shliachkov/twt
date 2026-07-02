@@ -3,6 +3,7 @@
 // `playwright` npm package is present; otherwise return a graceful fallback signal
 // so the caller runs its pandoc path. Same optional-playwright pattern as ds-shots.mjs.
 import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
 
 export async function htmlToPdf({ html, outPath, format, landscape = false, margin, width, height }) {
   let pw;
@@ -23,7 +24,8 @@ export async function htmlToPdf({ html, outPath, format, landscape = false, marg
   } finally { await browser.close(); }
 }
 
-if (process.argv.includes('--self-test')) {
+const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (_isMain && process.argv.includes('--self-test')) {
   (async () => {
     const os = await import('node:os'); const { join } = await import('node:path');
     const { existsSync, statSync } = await import('node:fs');
