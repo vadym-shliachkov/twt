@@ -67,7 +67,7 @@ Summarize back to the user, in 2-3 lines, what you understood from the above —
 If **On your decision**: fill every area yourself from the context + common practice, record each choice under `## Assumptions`, then jump to Step 5. If **Interview me**: proceed to Step 3b.
 
 ## Step 3b — Scope check (before deep questions)
-Assess scope first. If the project spans multiple **independent** subsystems (e.g. a marketing site + a separate web app + a standalone blog platform), flag it and help decompose: name the independent pieces, pick the **first** sub-scope to specify now, and note the rest for later spec cycles. A normal single-site project passes straight through — do not manufacture decomposition where there is one cohesive thing.
+**(Skipped in collect mode — see Step 1b.)** Assess scope first. If the project spans multiple **independent** subsystems (e.g. a marketing site + a separate web app + a standalone blog platform), flag it and help decompose: name the independent pieces, pick the **first** sub-scope to specify now, and note the rest for later spec cycles. A normal single-site project passes straight through — do not manufacture decomposition where there is one cohesive thing.
 
 ## Step 4 — Brainstorming interview (adaptive; until the idea is clear)
 **(Skipped in collect mode — see Step 1b.)** Interview like a thoughtful design partner — **not** a fixed form:
