@@ -4,10 +4,13 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { mdToHtmlDoc } from "./export-html.mjs";
+import { htmlToPdf } from "./pdf-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEMPLATE_PATH = join(ROOT, "templates", "document-export-style.md");
-const VALID_FORMATS = new Set(["pdf", "docx"]);
+const REFERENCE_DOCX = join(ROOT, "templates", "reference.docx");
+const VALID_FORMATS = new Set(["pdf", "docx", "html"]);
 
 function parseArgs(argv) {
   const out = { force: false, selfTest: false };
@@ -31,6 +34,7 @@ function parseArgs(argv) {
 function usage() {
   return [
     "Usage:",
+    "  node tools/export-document.mjs --format html --input path/to/file.md [--template path/to/template.md] [--force]",
     "  node tools/export-document.mjs --format pdf --input path/to/file.md [--template path/to/template.md] [--force]",
     "  node tools/export-document.mjs --format docx --input path/to/file.md [--template path/to/template.md] [--force]",
   ].join("\n");
@@ -114,21 +118,13 @@ function commandExists(command) {
 }
 
 function runPandoc({ input, output, format, title }) {
-  const args = [
-    input,
-    "--standalone",
-    "--metadata",
-    `title=${title}`,
-    "-o",
-    output,
-  ];
-  if (format === "pdf") {
-    args.push("--variable", "geometry:margin=24mm", "--variable", "fontsize=11pt");
-  }
+  const args = [input, "--standalone", "--metadata", `title=${title}`, "-o", output];
+  if (format === "pdf") args.push("--variable", "geometry:margin=24mm", "--variable", "fontsize=11pt");
+  if (format === "docx" && existsSync(REFERENCE_DOCX)) args.push("--reference-doc", REFERENCE_DOCX);
   return spawnSync("pandoc", args, { encoding: "utf8" });
 }
 
-function renderNotes({ source, format, templatePath, output, headingWarnings, adjustments, conversionNotes, sourceEdited }) {
+function renderNotes({ source, format, templatePath, output, headingWarnings, adjustments, conversionNotes, sourceEdited, engine }) {
   return `# Render notes - ${format.toUpperCase()} - ${source.split(/[\\/]/).pop()}
 
 Generated: ${new Date().toISOString().slice(0, 10)}
@@ -138,6 +134,9 @@ Template: ${templatePath}
 
 ## Outputs
 - ${format.toUpperCase()}: ${output}
+
+## Engine
+- ${engine}
 
 ## Heading nesting
 ${headingWarnings.length ? headingWarnings.map((w) => `- ${w}`).join("\n") : "- none"}
@@ -153,9 +152,9 @@ ${sourceEdited ? "Source was edited." : "No source edits were made."}
 `;
 }
 
-function convert(args) {
+async function convert(args) {
   if (!args.format || !VALID_FORMATS.has(args.format)) {
-    throw new Error(`Missing or invalid --format. Expected: pdf or docx.\n${usage()}`);
+    throw new Error(`Missing or invalid --format. Expected: pdf, docx, or html.\n${usage()}`);
   }
   if (!args.input) throw new Error(`Missing --input.\n${usage()}`);
   const templatePath = args.template ? resolve(args.template) : TEMPLATE_PATH;
@@ -182,18 +181,42 @@ function convert(args) {
 
   const conversionNotes = [];
   let success = false;
-  if (!commandExists("pandoc")) {
-    conversionNotes.push("Pandoc was not found on PATH; requested output was not produced.");
-  } else {
-    const title = audit.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
-    const result = runPandoc({ input: inputForPandoc, output: paths.output, format: args.format, title });
-    if (result.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0) {
-      conversionNotes.push("Converted with pandoc.");
-      success = true;
-    } else {
-      conversionNotes.push(`Pandoc failed with exit code ${result.status ?? "unknown"}.`);
-      const stderr = (result.stderr || result.error?.message || "").trim();
-      if (stderr) conversionNotes.push(stderr.replace(/\r?\n/g, " "));
+  let engine = "none";
+  const title = audit.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
+
+  if (args.format === "html") {
+    if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; HTML not produced."); }
+    else {
+      try {
+        writeFileSync(paths.output, mdToHtmlDoc({ markdownPath: inputForPandoc, title }), "utf8");
+        engine = "html+house-style"; success = statSync(paths.output).size > 0;
+        conversionNotes.push("Built doc-hub-light HTML (house-style.css + house-doc.css).");
+      } catch (e) { conversionNotes.push("HTML build failed: " + e.message); }
+    }
+  } else if (args.format === "pdf") {
+    if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; PDF not produced."); }
+    else {
+      try {
+        const html = mdToHtmlDoc({ markdownPath: inputForPandoc, title });
+        const r = await htmlToPdf({ html, outPath: paths.output });
+        if (r.ok) { engine = "chromium"; success = statSync(paths.output).size > 0; conversionNotes.push("Rendered doc-hub-light PDF via Chromium."); }
+        else {
+          const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", title });
+          success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
+          engine = "pandoc-latex";
+          conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to pandoc LaTeX. Install the \`playwright\` npm package for doc-hub-light PDF.`);
+          if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || "").trim().replace(/\r?\n/g, " ")}`);
+        }
+      } catch (e) { conversionNotes.push("PDF build failed: " + e.message); }
+    }
+  } else { // docx
+    if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; DOCX not produced."); }
+    else {
+      const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "docx", title });
+      success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
+      engine = existsSync(REFERENCE_DOCX) ? "pandoc+reference.docx" : "pandoc-default";
+      conversionNotes.push(existsSync(REFERENCE_DOCX) ? "Converted with pandoc + doc-hub-light reference.docx." : "Converted with pandoc (default reference; templates/reference.docx missing).");
+      if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || "").trim().replace(/\r?\n/g, " ")}`);
     }
   }
 
@@ -206,6 +229,7 @@ function convert(args) {
     adjustments: audit.adjustments,
     conversionNotes,
     sourceEdited: false,
+    engine,
   }), "utf8");
 
   return { success, paths, warnings: audit.warnings, conversionNotes };
@@ -233,18 +257,13 @@ function selfTest() {
 
 try {
   const args = parseArgs(process.argv.slice(2));
-  if (args.selfTest) {
-    selfTest();
-  } else if (args.help) {
-    console.log(usage());
-  } else {
-    const result = convert(args);
+  if (args.selfTest) selfTest();
+  else if (args.help) console.log(usage());
+  else {
+    const result = await convert(args);
     console.log(`${args.format.toUpperCase()} export ${result.success ? "created" : "failed"}`);
     console.log(`Notes: ${result.paths.notes}`);
     if (result.success) console.log(`Output: ${result.paths.output}`);
     process.exit(result.success ? 0 : 2);
   }
-} catch (error) {
-  console.error(error.message);
-  process.exit(1);
-}
+} catch (error) { console.error(error.message); process.exit(1); }
