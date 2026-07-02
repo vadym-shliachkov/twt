@@ -4,9 +4,12 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { mdToSlidesHtml } from "./export-html.mjs";
+import { htmlToPdf } from "./pdf-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEMPLATE_PATH = join(ROOT, "templates", "presentation-export-style.md");
+const REFERENCE_PPTX = join(ROOT, "templates", "reference.pptx");
 const VALID_FORMATS = new Set(["pptx", "pdf"]);
 const VALID_ASPECTS = new Set(["16:9", "4:3"]);
 
@@ -146,6 +149,7 @@ function pandocArgs({ input, output, format, aspect, title }) {
     // Pandoc PPTX sizing depends on its reference deck. Keep an explicit note
     // rather than pretending a CLI flag can force 4:3 in every environment.
   }
+  if (format === "pptx" && existsSync(REFERENCE_PPTX)) args.push("--reference-doc", REFERENCE_PPTX);
   return args;
 }
 
@@ -153,7 +157,7 @@ function runPandoc(options) {
   return spawnSync("pandoc", pandocArgs(options), { encoding: "utf8" });
 }
 
-function renderNotes({ source, format, aspect, templatePath, slideCount, output, warnings, conversionNotes, sourceEdited }) {
+function renderNotes({ source, format, aspect, templatePath, slideCount, output, warnings, conversionNotes, sourceEdited, engine }) {
   return `# Render notes - Presentation ${format.toUpperCase()} - ${source.split(/[\\/]/).pop()}
 
 Generated: ${new Date().toISOString().slice(0, 10)}
@@ -164,6 +168,9 @@ Template: ${templatePath}
 
 ## Outputs
 - ${format.toUpperCase()}: ${output}
+
+## Engine
+- ${engine}
 
 ## Slides
 - Count: ${slideCount}
@@ -179,7 +186,7 @@ ${sourceEdited ? "Source was edited." : "No source edits were made."}
 `;
 }
 
-function convert(args) {
+async function convert(args) {
   if (!args.format || !VALID_FORMATS.has(args.format)) {
     throw new Error(`Missing or invalid --format. Expected: pptx or pdf.\n${usage()}`);
   }
@@ -207,23 +214,42 @@ function convert(args) {
   const markdown = readFileSync(source, "utf8");
   const analysis = analyzeSlides(markdown);
   writeFileSync(paths.normalized, analysis.normalizedMarkdown, "utf8");
+  const inputForPandoc = paths.normalized;
 
   const conversionNotes = [];
   let success = false;
+  let engine = "none";
+  const title = analysis.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
+
   if (!commandExists("pandoc")) {
     conversionNotes.push("Pandoc was not found on PATH; requested output was not produced.");
-  } else {
-    const title = analysis.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
-    if (args.format === "pptx" && args.aspect === "4:3") {
+  } else if (args.format === "pdf") {
+    const html = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title });
+    const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
+    const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
+    if (r.ok) {
+      engine = "chromium";
+      success = existsSync(paths.output) && statSync(paths.output).size > 0;
+      conversionNotes.push("Rendered doc-hub-light slides via Chromium.");
+    } else {
+      const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title });
+      success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
+      engine = "pandoc-beamer";
+      conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to beamer. Install \`playwright\` for doc-hub-light slides.`);
+      if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || p.error?.message || "").trim().replace(/\r?\n/g, " ")}`);
+    }
+  } else { // pptx
+    if (args.aspect === "4:3" && !existsSync(REFERENCE_PPTX)) {
       conversionNotes.push("PPTX 4:3 output requires a matching Pandoc reference deck; this script records the requested aspect but cannot guarantee slide size without one.");
     }
-    const result = runPandoc({ input: paths.normalized, output: paths.output, format: args.format, aspect: args.aspect, title });
-    if (result.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0) {
-      conversionNotes.push("Converted with pandoc.");
+    const p = runPandoc({ input: inputForPandoc, output: paths.output, format: args.format, aspect: args.aspect, title });
+    engine = existsSync(REFERENCE_PPTX) ? "pandoc+reference.pptx" : "pandoc-default";
+    if (p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0) {
+      conversionNotes.push(existsSync(REFERENCE_PPTX) ? "Converted with pandoc + doc-hub-light reference.pptx." : "Converted with pandoc.");
       success = true;
     } else {
-      conversionNotes.push(`Pandoc failed with exit code ${result.status ?? "unknown"}.`);
-      const stderr = (result.stderr || result.error?.message || "").trim();
+      conversionNotes.push(`Pandoc failed with exit code ${p.status ?? "unknown"}.`);
+      const stderr = (p.stderr || p.error?.message || "").trim();
       if (stderr) conversionNotes.push(stderr.replace(/\r?\n/g, " "));
     }
   }
@@ -238,6 +264,7 @@ function convert(args) {
     warnings: analysis.warnings,
     conversionNotes,
     sourceEdited: false,
+    engine,
   }), "utf8");
 
   return { success, paths, slideCount: analysis.slideCount, warnings: analysis.warnings, conversionNotes };
@@ -265,7 +292,7 @@ try {
   } else if (args.help) {
     console.log(usage());
   } else {
-    const result = convert(args);
+    const result = await convert(args);
     console.log(`${args.format.toUpperCase()} presentation export ${result.success ? "created" : "failed"}`);
     console.log(`Slides: ${result.slideCount}`);
     console.log(`Notes: ${result.paths.notes}`);
