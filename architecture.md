@@ -1969,7 +1969,7 @@ flowchart TB
 ### /twt-spec-define
 
 **Category:** spec
-**Version:** 1.0.2
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional starting notes, a Figma URL, or answers; otherwise fully interactive

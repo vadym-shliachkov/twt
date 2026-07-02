@@ -1,8 +1,8 @@
 ---
 name: twt-spec-define
 category: spec
-description: (v1.0.2) Interview the user (brainstorming-style) into a north-star specification.md
-version: 1.0.2
+description: (v1.1.1) Interview the user (brainstorming-style) into a north-star specification.md
+version: 1.1.1
 accepts_arguments: true
 inputs:
   - Optional starting notes, a Figma URL, or answers; otherwise fully interactive
@@ -24,7 +24,7 @@ writes:
 
 ## Intent
 
-**Purpose:** Produce the canonical `specification.md` — the project's **north-star intent**: vision & goals, functional requirements (capability-level), and — most important — the **visual style** and **motion/animation** direction. Built through a brainstorming-style interview that runs until every field is filled, or refined from an existing spec.
+**Purpose:** Produce the canonical `specification.md` — the project's **north-star intent**: vision & goals, functional requirements (capability-level), and — most important — the **visual style** and **motion/animation** direction. Built through a brainstorming-style interview that runs until the idea is clearly specified and the user confirms it, or refined from an existing spec.
 
 **Non-goals:**
 - Doesn't produce the detailed per-page feature breakdown (that's the IA step — `/twt-ia-define` — which derives from this spec)
@@ -35,6 +35,7 @@ writes:
 **Success criteria:**
 - `specification.md` exists with every canonical section populated — each field either user-answered or model-decided (and model-decided ones logged under `## Assumptions`)
 - The **Visual Style** and **Motion & Animation** sections are concrete (specific direction, not vague adjectives like "modern/clean" with nothing behind them)
+- The interactive interview keeps asking while any area fails the concreteness gate (Step 4b) and ends with an explicit user reflect-and-confirm (with a safety cap); it does not stop merely because fields are non-empty
 - On re-run with an existing spec, enters refinement mode (rule 10) rather than starting over
 - No section contradicts `brand-brief.md`
 
@@ -48,6 +49,8 @@ If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: 
 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize. In collect mode, the 2–3 art-direction options MUST be logged as the primary open question in `decisions.md` (header 'Art direction'), with `visual_direction: model-assumed` and the appropriate `figma:` value in the draft — so the orchestrator surfaces the direction choice to the user.
 
+The brainstorming interview (Steps 3b–4b) is **interactive-only**; in collect mode there is no user, so draft best-effort and log to `decisions.md` every fork the concreteness gate (Step 4b) would have probed — especially any area it would flag vague (visual and motion above all), in addition to the art-direction open question already required above.
+
 ## Step 2 — Familiarize with provided information (before any question)
 Load context so the interview is grounded, never generic:
 - Read `.twt-artifacts/pre-design/content-fetch/_manifest.md` and skim the fetched content it points to (what the project is about, tone, offerings).
@@ -57,37 +60,44 @@ Load context so the interview is grounded, never generic:
 Summarize back to the user, in 2-3 lines, what you understood from the above — so they know you're in context before the interview starts.
 
 ## Step 3 — Entry gate (do you have direction, or should I drive?)
-**(Skipped in collect mode — see Step 1b.)** Ask via the **AskUserQuestion** tool (single-select, header "Direction"):
-- **Interview me** — you have things to say about the project; walk through the questions together.
+**(Skipped in collect mode — see Step 1b.)** After Step 2's summary, ask via the **AskUserQuestion** tool (single-select, header "Direction"):
+- **Interview me** — brainstorm the project together, one question at a time, until the idea is clearly specified.
 - **On your decision** — drive it from the loaded context using best practice, then show me the draft to review.
 
-If **On your decision**: fill every field yourself from the context + common practice, recording each choice under `## Assumptions`, then jump to Step 5 and present the draft for review. If **Interview me**: proceed to Step 4.
+If **On your decision**: fill every area yourself from the context + common practice, record each choice under `## Assumptions`, then jump to Step 5. If **Interview me**: proceed to Step 3b.
 
-## Step 4 — Gap-filling interview loop (until all gaps filled)
-Walk the canonical sections **in this order, weighting Visual Style and Motion & Animation most heavily** (spend the most questions there): Vision & Goals → Functional Requirements → **Visual Style** → **Motion & Animation** → Constraints & Non-goals.
+## Step 3b — Scope check (before deep questions)
+Assess scope first. If the project spans multiple **independent** subsystems (e.g. a marketing site + a separate web app + a standalone blog platform), flag it and help decompose: name the independent pieces, pick the **first** sub-scope to specify now, and note the rest for later spec cycles. A normal single-site project passes straight through — do not manufacture decomposition where there is one cohesive thing.
 
-**Visual Style & Motion — propose, don't just ask (especially when no Figma):**
-Instead of asking field-by-field, synthesize the loaded brand + content into **2–3 named art-direction options** and present them via the **AskUserQuestion** tool (header "Art direction") for the user to pick / edit / reject. Each option must specify:
-- a short **name + one-line vibe** (e.g. "Editorial-minimal — calm, type-led, lots of whitespace")
-- **palette rationale** relative to `brand-brief.md` (which brand colors lead, how used)
-- **type pairing** (display + body intent)
-- **visual density** (airy ↔ dense) and **imagery/illustration style**
-- **light/dark stance**
-- **motion personality** + key interactions + **reduced-motion stance**
-The user's pick (possibly edited) becomes the Visual Style + Motion content. If they reject all, offer a fresh set. Record which option was chosen.
+## Step 4 — Brainstorming interview (adaptive; until the idea is clear)
+**(Skipped in collect mode — see Step 1b.)** Interview like a thoughtful design partner — **not** a fixed form:
 
-For **each other unresolved field** (Vision & Goals, Functional Requirements, Constraints & Non-goals), ask **one** question via the **AskUserQuestion** tool. Every such question MUST offer, as options:
-1. **2-3 concrete best-practice candidate values** inferred from the loaded context (so the user can one-click a real answer — this is the "input" path; the tool's free-type escape also lets them type their own).
-2. An explicit **"On your decision"** option — *description:* "I'll choose the best-practice fit from what's known and log it as an assumption."
+- **One question at a time**, each driven by the previous answer. Prefer the **AskUserQuestion** tool for fixed-option forks — always offering 2–3 concrete best-practice candidates inferred from the loaded brand/content **plus** an explicit **"You decide"** option (§4). Use plain-text prompts for open input (names, URLs, pasted descriptions).
+- **Dig into vagueness.** When an answer is an empty adjective — "modern", "clean", "minimal", "engaging", "professional" — with nothing behind it, do **not** accept it and move on. Ask a targeted follow-up that forces something specific and renderable (a reference site to emulate, a concrete trait, a real example).
+- **Propose, don't just ask.** For any genuinely open direction, synthesize the loaded context into **2–3 named approaches** — each a short name + one-line vibe + the tradeoff — lead with your recommendation, and let the user pick / edit / reject. Required for **Visual Style** and **Motion** (art-direction options); apply the same pattern to any other open fork (tone, audience emphasis, scope priorities).
+- **Reflect as you go.** Every few questions, restate "here's what I understand so far" in 1–2 lines so the idea visibly takes shape and the user can correct course early.
+- **Weight the effort.** Spend the most questions on **Visual Style** and **Motion & Animation** (the north-star direction the design phase binds to); touch Vision & Goals, Functional Requirements, and Constraints & Non-goals through the same dialogue.
 
-If the user picks a candidate or free-types → record their answer. If the user picks **"On your decision"** → fill that field from best practice grounded in the loaded context, and add a line under `## Assumptions` naming the field and what you chose. Continue until **no field in any section is left blank**. (Pre-fill from brand-brief / content / Figma and confirm rather than re-ask where the answer is already implied.)
+Areas to pin down (reached through dialogue, not marched through): Vision & Goals · Functional Requirements · **Visual Style** · **Motion & Animation** · Constraints & Non-goals. Pre-fill from brand-brief / content / Figma and confirm rather than re-ask where the answer is already implied.
 
-Field checklist per section (don't leave any blank):
-- **Vision & Goals** — one-line vision; primary objective; 2-3 success signals.
-- **Functional Requirements** — must-have capabilities at feature level (north-star list; IA expands the detail later).
-- **Visual Style** — overall aesthetic direction; mood/keywords; visual density; imagery/illustration style; light/dark stance. Reject vagueness — pin down something specific and renderable.
-- **Motion & Animation** — motion personality (e.g. calm/snappy/playful); key micro-interactions; page/section transitions; easing & timing feel; scroll behavior; **reduced-motion stance**.
-- **Constraints & Non-goals** — tech/brand constraints; explicit out-of-scope.
+## Step 4b — Concreteness gate + reflect-and-confirm (when to stop)
+Do **not** stop just because every field is non-empty. Stop only when the idea is genuinely clear **and** the user confirms.
+
+**Model gate — keep going while anything is vague.** Self-assess each area against this checklist; while any fails, ask a targeted follow-up (Step 4) rather than moving on:
+- **Vision & Goals** — one *specific* vision line (not a platitude); ≥2 measurable success signals.
+- **Functional Requirements** — must-have capabilities at feature level, realistic and scoped (not a wishlist); rough priority clear.
+- **Visual Style** — concrete + renderable: specific aesthetic, palette lead (vs `brand-brief.md`), type intent, visual density, imagery style, light/dark stance. Empty adjectives fail.
+- **Motion & Animation** — motion personality, key micro-interactions, transitions, easing/timing feel, scroll behavior, **reduced-motion stance**.
+- **Constraints & Non-goals** — explicit tech/brand constraints and out-of-scope.
+
+**Reflect-and-confirm.** Once every area passes, reflect the whole idea back — a 2–3 line synthesis plus the key decisions (chosen direction, priorities, non-goals) — then ask via the **AskUserQuestion** tool (single-select, header "Captured?"):
+- **Yes, that's the idea** — proceed to Step 5 and write.
+- **Keep refining** — the user names what's off; return to Step 4.
+- **Adjust an area** — the user picks which; revisit just that area.
+
+Write the spec only after an explicit **Yes**.
+
+**Safety cap.** After roughly 8–10 substantive questions, or whenever the user says "just write it," stop escalating: present what's captured, mark any still-thin areas under `## Assumptions`, and ask confirm-or-continue rather than looping indefinitely.
 
 ## Step 5 — Write the spec
 Write/update `.twt-artifacts/pre-design/spec/specification.md` (create the parent dir if needed). Confirm before overwriting an existing file (rule 10). Set `visual_direction: user-confirmed` only when the user actively picked/edited an art-direction option (interactive, or via a resolved `decisions.md` answer in collect mode); set `model-assumed` when it was filled autonomously without user confirmation. Set `figma: used` only if a Figma source actually informed the visual decisions, else `none`. Structure:
