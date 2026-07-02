@@ -1,5 +1,7 @@
 # Presentation Export Style
 
+> Applied styling now comes from templates/house-style.css (+ house-doc.css / house-slide.css) and templates/reference.docx / reference.pptx. This file documents the intended look.
+
 Default house template for `/twt-export-presentation`. Use this for every Markdown-to-PPTX or Markdown-to-PDF presentation export unless the user explicitly confirms a custom template.
 
 ## Design intent

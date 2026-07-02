@@ -37,7 +37,7 @@ writes:
 
 ## Intent
 
-**Purpose:** Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven.
+**Purpose:** Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven. The shared doc-hub-light house style is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
 
 **Non-goals:**
 - Doesn't convert files directly inside the orchestrator
@@ -47,6 +47,7 @@ writes:
 
 **Success criteria:**
 - With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and template choices
+- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the shared doc-hub-light house style
 - Allows either an existing Markdown file or new source instructions
 - Offers only templates relevant to the selected output type, plus built-in default and create-new options
 - If creating a template, dispatches `/twt-export-template-create` first and then proceeds with the export
@@ -67,8 +68,8 @@ Before any project work, make sure this project is set up so the run isn't inter
 Parse `$ARGUMENTS` for:
 
 ```text
-pdf | docx | pptx | presentation-pdf
---format <pdf|docx|pptx|presentation-pdf>
+html | pdf | docx | pptx | presentation-pdf
+--format <html|pdf|docx|pptx|presentation-pdf>
 --input <markdown-path>
 --source <markdown-path>
 --instructions "<instructions>"
@@ -80,6 +81,7 @@ pdf | docx | pptx | presentation-pdf
 
 Accept these aliases:
 
+- `html` → HTML document
 - `pdf` or `document-pdf` → PDF document
 - `docx` or `word` → DOCX document
 - `pptx` or `powerpoint` → PPTX presentation
@@ -87,6 +89,7 @@ Accept these aliases:
 
 If `$ARGUMENTS` does not specify an output type, use the **AskUserQuestion** tool with header "Export Type" and single-select options:
 
+- **HTML document** — Create a polished HTML document from Markdown
 - **PDF document** — Create a polished document PDF from Markdown
 - **DOCX document** — Create an editable Word document from Markdown
 - **PPTX presentation** — Create an editable PowerPoint deck from Markdown slides

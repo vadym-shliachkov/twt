@@ -957,7 +957,7 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 **Version:** 1.0.1
 **Accepts arguments:** yes
 
-Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven.
+Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven. The shared doc-hub-light house style is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
 
 **Inputs:**
 - Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
@@ -994,6 +994,7 @@ Orchestrate export creation across document and presentation formats. The skill 
 
 **Success criteria:**
 - With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and template choices
+- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the shared doc-hub-light house style
 - Allows either an existing Markdown file or new source instructions
 - Offers only templates relevant to the selected output type, plus built-in default and create-new options
 - If creating a template, dispatches `/twt-export-template-create` first and then proceeds with the export
