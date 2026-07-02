@@ -1,8 +1,8 @@
 ---
 name: twt-spec-define
 category: spec
-description: (v1.1.1) Interview the user (brainstorming-style) into a north-star specification.md
-version: 1.1.1
+description: (v1.1.2) Interview the user (brainstorming-style) into a north-star specification.md
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional starting notes, a Figma URL, or answers; otherwise fully interactive
