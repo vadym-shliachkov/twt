@@ -1086,7 +1086,7 @@ flowchart TB
 ### /twt-export
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
