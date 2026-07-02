@@ -1,8 +1,8 @@
 ---
 name: twt-export-pdf
 category: export
-description: (v1.0.0) Convert Markdown to a polished PDF with the shared document template
-version: 1.0.0
+description: (v1.0.1) Convert Markdown to a polished PDF with the shared document template
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Markdown file path
@@ -37,6 +37,7 @@ writes:
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf`
 - Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
+- Default PDF renders the doc-hub-light house style via Chromium when the `playwright` npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)
 - Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
 
 ---

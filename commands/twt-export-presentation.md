@@ -1,8 +1,8 @@
 ---
 name: twt-export-presentation
 category: export
-description: (v1.0.0) Convert Markdown to PPTX or PDF slides via the presentation export script
-version: 1.0.0
+description: (v1.0.1) Convert Markdown to PPTX or PDF slides via the presentation export script
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3
@@ -39,6 +39,7 @@ writes:
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
+- PPTX uses `templates/reference.pptx`; PDF slides render doc-hub-light via Chromium (playwright) with a beamer fallback
 - Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path
 
 ---

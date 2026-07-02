@@ -1124,7 +1124,7 @@ flowchart TB
 ### /twt-export-docx
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Markdown file path
@@ -1153,7 +1153,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Markdown file path
@@ -1182,7 +1182,7 @@ flowchart TB
 ### /twt-export-presentation
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3

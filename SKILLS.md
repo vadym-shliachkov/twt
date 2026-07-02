@@ -1005,7 +1005,7 @@ Orchestrate export creation across document and presentation formats. The skill 
 ## /twt-export-docx
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished DOCX using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1039,6 +1039,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
 - Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
+- Uses the doc-hub-light `templates/reference.docx` by default (Montserrat headings, Inter body, hairline tables)
 - Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
 
 ---
@@ -1046,7 +1047,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1080,6 +1081,7 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf`
 - Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
+- Default PDF renders the doc-hub-light house style via Chromium when the `playwright` npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)
 - Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
 
 ---
@@ -1087,7 +1089,7 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 ## /twt-export-presentation
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Convert a Markdown slide deck into PPTX or PDF using the marketplace's deterministic presentation export script and default presentation template. The skill keeps model work light: it gathers choices, runs the script, reads render notes, and reports results.
@@ -1123,6 +1125,7 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
+- PPTX uses `templates/reference.pptx`; PDF slides render doc-hub-light via Chromium (playwright) with a beamer fallback
 - Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path
 
 ---

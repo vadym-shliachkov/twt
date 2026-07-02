@@ -1,8 +1,8 @@
 ---
 name: twt-export-docx
 category: export
-description: (v1.0.0) Convert Markdown to a polished DOCX with the shared document template
-version: 1.0.0
+description: (v1.0.1) Convert Markdown to a polished DOCX with the shared document template
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Markdown file path
@@ -37,6 +37,7 @@ writes:
 - Offers a template choice when multiple document/universal templates exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
 - Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
+- Uses the doc-hub-light `templates/reference.docx` by default (Montserrat headings, Inter body, hairline tables)
 - Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
 
 ---
