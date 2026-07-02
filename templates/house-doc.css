@@ -1,0 +1,13 @@
+/* doc-hub-light paged-document layer — HTML + PDF document exports. Layered on house-style.css. */
+@page { size: A4; margin: 22mm 24mm; }
+html { background: var(--hs-surface); }
+body { font-size: 11pt; }
+.doc-wrap { max-width: 780px; margin: 0 auto; }
+@media screen { .doc-wrap { padding: 40px 24px; } }
+h1 { font-size: 2rem; margin: 0 0 .2em; }
+.doc-wrap > .hs-accent-bar { margin: 0 0 28px; }
+h2 { font-size: 1.4rem; margin: 1.6em 0 .4em; }
+h3 { font-size: 1.15rem; margin: 1.3em 0 .3em; }
+p, li { line-height: 1.55; }
+table { width: 100%; margin: 1em 0; font-size: .95em; }
+img { max-width: 100%; }

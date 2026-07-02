@@ -8,11 +8,11 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CSS_PATH = join(HERE, '..', 'templates', 'house-style.css');
 
-export function readHouseCss() {
-  return readFileSync(CSS_PATH, 'utf8');
+export function readCss(name) {
+  return readFileSync(join(HERE, '..', 'templates', name), 'utf8');
 }
+export function readHouseCss() { return readCss('house-style.css'); }
 
 if (process.argv.includes('--self-test')) {
   const css = readHouseCss();
@@ -21,5 +21,7 @@ if (process.argv.includes('--self-test')) {
   assert.match(css, /--hs-font-heading:\s*Montserrat/, 'must define --hs-font-heading');
   assert.match(css, /\.hs-accent-bar/, 'must define the .hs-accent-bar utility');
   assert.ok(css.length > 400, 'stylesheet looks too short');
+  assert.match(readCss('house-doc.css'), /@page/, 'house-doc.css must define @page');
+  assert.match(readCss('house-slide.css'), /\.slide/, 'house-slide.css must define .slide');
   console.log('house-style self-test: OK');
 }

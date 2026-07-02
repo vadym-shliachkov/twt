@@ -1,0 +1,19 @@
+/* doc-hub-light slide layer — PDF slide exports (Chromium print). Page size is set by
+   pdf-render width/height per aspect; this styles the slide boxes. */
+@page { margin: 0; }
+body { margin: 0; }
+body.ar169 { --slide-w: 1280px; --slide-h: 720px; }
+body.ar43  { --slide-w: 1024px; --slide-h: 768px; }
+.slide {
+  box-sizing: border-box;
+  width: var(--slide-w); height: var(--slide-h);
+  padding: 64px 80px; background: var(--hs-surface); color: var(--hs-text);
+  page-break-after: always; break-after: page;
+  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+}
+.slide:last-child { page-break-after: auto; break-after: auto; }
+.slide h1 { font-size: 3rem; margin: 0 0 .3em; }
+.slide h2 { font-size: 2.1rem; margin: 0 0 .4em; }
+.slide ul, .slide p { font-size: 1.4rem; line-height: 1.4; }
+.slide-cover { justify-content: flex-end; }
+.slide-cover .hs-accent-bar { width: 120px; height: 6px; margin: 0 0 24px; }
