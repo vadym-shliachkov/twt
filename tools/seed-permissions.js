@@ -23,6 +23,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // Curated allowlist. Read-only / build-utility Bash the skills + bundled tools
 // run, plus WebFetch (content-fetch-site, live QA) and the Figma read MCP tools.
@@ -39,12 +40,31 @@ const path = require('path');
 // anything path-escaping a write.
 const BASH_UTILS = [
   'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
-  'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext',
+  'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext', 'pandoc',
   'cd', 'sed', 'sort', 'uniq', 'bc',
 ];
+
+// Playwright browser cache (read-only). The export skills render PDF / PDF-slides
+// via Chromium through the optional `playwright` package; those reads happen
+// inside `node` (already allowed) and don't prompt — but a skill or check that
+// inspects the installed browsers directly would trip a scope-read approval.
+// Pre-authorize the ms-playwright cache for THIS machine (computed at seed time,
+// so it's correct per-OS wherever /twt-setup runs). Read-only; never a write path.
+function toReadGlob(nativePath) {
+  const win = /^([A-Za-z]):[\\/](.*)$/.exec(nativePath);
+  if (win) return '//' + win[1].toLowerCase() + '/' + win[2].replace(/\\/g, '/');
+  return nativePath.replace(/\\/g, '/');
+}
+const msPlaywrightDir =
+  process.platform === 'win32' ? path.join(os.homedir(), 'AppData', 'Local', 'ms-playwright')
+  : process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
+  : path.join(os.homedir(), '.cache', 'ms-playwright');
+const PLAYWRIGHT_READS = [`Read(${toReadGlob(msPlaywrightDir)}/**)`];
+
 const ALLOW = [
   ...BASH_UTILS.map((c) => `Bash(${c}:*)`),
   ...BASH_UTILS.map((c) => `Bash(${c} *)`),
+  ...PLAYWRIGHT_READS,
   'WebFetch(domain:*)',
   'mcp__plugin_figma_figma__get_design_context',
   'mcp__plugin_figma_figma__get_screenshot',
