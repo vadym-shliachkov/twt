@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-// house-style.mjs — read point for the shared doc-hub-light CSS in templates/
-// (house-style.css + house-doc.css + house-slide.css). Consumers call
+// house-style.mjs — read point for the shared doc-hub-light CSS, now living inside
+// the built-in export theme (templates/themes/doc-hub-light/css/). Consumers call
 // readCss(name) / readHouseCss() and inline the result before their own <style>.
+// Name mapping keeps the old call sites working: house-style.css → tokens.css,
+// house-doc.css → doc.css, house-slide.css → slide.css.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const THEME_CSS = join(HERE, '..', 'templates', 'themes', 'doc-hub-light', 'css');
+const NAME_MAP = { 'house-style.css': 'tokens.css', 'house-doc.css': 'doc.css', 'house-slide.css': 'slide.css' };
 
 export function readCss(name) {
-  return readFileSync(join(HERE, '..', 'templates', name), 'utf8');
+  return readFileSync(join(THEME_CSS, NAME_MAP[name] || name), 'utf8');
 }
 export function readHouseCss() { return readCss('house-style.css'); }
 
@@ -22,7 +26,7 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(css, /--hs-font-heading:\s*Montserrat/, 'must define --hs-font-heading');
   assert.match(css, /\.hs-accent-bar/, 'must define the .hs-accent-bar utility');
   assert.ok(css.length > 400, 'stylesheet looks too short');
-  assert.match(readCss('house-doc.css'), /@page/, 'house-doc.css must define @page');
-  assert.match(readCss('house-slide.css'), /\.slide/, 'house-slide.css must define .slide');
+  assert.match(readCss('house-doc.css'), /@page/, 'doc layer must define @page');
+  assert.match(readCss('house-slide.css'), /\.slide/, 'slide layer must define .slide');
   console.log('house-style self-test: OK');
 }

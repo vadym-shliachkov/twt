@@ -1,0 +1,15 @@
+{
+  "name": "Doc Hub Light",
+  "slug": "doc-hub-light",
+  "version": "1.0.0",
+  "type": "universal",
+  "description": "Built-in house theme: quiet editorial documents and slides, near-black ink, cool-grey body, tri-color accent.",
+  "styleDirection": "minimal editorial",
+  "brandSource": "",
+  "instructions": "",
+  "fonts": {
+    "strategy": "bundled",
+    "faces": []
+  },
+  "createdAt": "2026-07-04T00:00:00.000Z"
+}

@@ -9,7 +9,7 @@ import { htmlToPdf } from "./pdf-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEMPLATE_PATH = join(ROOT, "templates", "document-export-style.md");
-const REFERENCE_DOCX = join(ROOT, "templates", "reference.docx");
+const REFERENCE_DOCX = join(ROOT, "templates", "themes", "doc-hub-light", "reference", "reference.docx");
 const VALID_FORMATS = new Set(["pdf", "docx", "html"]);
 
 function parseArgs(argv) {

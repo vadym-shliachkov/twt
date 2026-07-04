@@ -40,3 +40,26 @@ th,td{border:1px solid var(--hs-rule);padding:7px 10px;text-align:left;vertical-
 th{background:var(--hs-panel-soft);font-weight:600}
 blockquote{margin:1em 0;padding:.4em 1em;border-left:3px solid var(--hs-accent-blue);color:var(--hs-text)}
 .hs-accent-bar{display:block;width:72px;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--hs-accent-red) 0 33%,var(--hs-accent-blue) 33% 66%,var(--hs-accent-yellow) 66% 100%)}
+
+/* --tx-* is the theme-facing namespace used by export doc/slide/component layers.
+   --hs-* stays for the non-export consumers (gen-preview, reports, ds-audit).
+   Theme creation substitutes the --hs-* values; --tx-* follows automatically. */
+:root{
+  --tx-ink:var(--hs-ink);
+  --tx-text:var(--hs-text);
+  --tx-muted:var(--hs-muted);
+  --tx-rule:var(--hs-rule);
+  --tx-panel:var(--hs-panel-soft);
+  --tx-surface:var(--hs-surface);
+  --tx-accent:var(--hs-accent-blue);
+  --tx-accent-2:var(--hs-accent-red);
+  --tx-accent-3:var(--hs-accent-yellow);
+  --tx-ok:var(--hs-ok);
+  --tx-warn:var(--hs-warning);
+  --tx-danger:var(--hs-danger);
+  --tx-font-heading:var(--hs-font-heading);
+  --tx-font-body:var(--hs-font-body);
+  --tx-font-mono:var(--hs-font-mono);
+  --tx-radius:var(--hs-radius);
+  --tx-shadow:var(--hs-shadow);
+}

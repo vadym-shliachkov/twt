@@ -5,8 +5,8 @@ Usage:
     python tools/build-reference-docs.py
 
 Outputs:
-    templates/reference.docx
-    templates/reference.pptx
+    templates/themes/doc-hub-light/reference/reference.docx
+    templates/themes/doc-hub-light/reference/reference.pptx
 
 Design tokens applied:
     Headings/Title  font=Montserrat  color=090E22 (ink)
@@ -271,7 +271,7 @@ def main() -> None:
     root = Path(__file__).resolve().parent.parent
     tmp = Path(tempfile.gettempdir()) / "build-refdocs"
     tmp.mkdir(parents=True, exist_ok=True)
-    templates = root / "templates"
+    templates = root / "templates" / "themes" / "doc-hub-light" / "reference"
     templates.mkdir(parents=True, exist_ok=True)
 
     written = 0

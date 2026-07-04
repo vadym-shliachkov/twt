@@ -9,7 +9,7 @@ import { htmlToPdf } from "./pdf-render.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEMPLATE_PATH = join(ROOT, "templates", "presentation-export-style.md");
-const REFERENCE_PPTX = join(ROOT, "templates", "reference.pptx");
+const REFERENCE_PPTX = join(ROOT, "templates", "themes", "doc-hub-light", "reference", "reference.pptx");
 const VALID_FORMATS = new Set(["pptx", "pdf"]);
 const VALID_ASPECTS = new Set(["16:9", "4:3"]);
 
