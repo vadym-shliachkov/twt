@@ -58,7 +58,17 @@ export function readProfileCss(theme, profileId) {
   return existsSync(p) ? readFileSync(p, 'utf8') : '';
 }
 
-export function fontFaceCss() { return ''; } // implemented in Task 2 (bundled woff2 → base64 @font-face)
+export function fontFaceCss(theme) {
+  const faces = theme?.meta?.fonts?.faces || [];
+  const rules = [];
+  for (const f of faces) {
+    const p = join(theme.dir, f.file);
+    if (!existsSync(p)) continue; // system-stack fallback in tokens.css covers missing files
+    const b64 = readFileSync(p).toString('base64');
+    rules.push(`@font-face{font-family:'${f.family}';font-style:${f.style || 'normal'};font-weight:${f.weight};font-display:swap;src:url(data:font/woff2;base64,${b64}) format('woff2')}`);
+  }
+  return rules.join('\n');
+}
 
 export function themeDocCss(theme, profileId = 'generic') {
   return [fontFaceCss(theme), readThemeCss(theme, 'tokens'), readThemeCss(theme, 'doc'),
@@ -95,5 +105,12 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(themeDocCss(t, 'generic'), /@page/);
   assert.match(themeSlideCss(t), /\.slide/);
   assert.throws(() => resolveTheme('no-such-theme-xyz'));
+  const ff = fontFaceCss(t);
+  assert.match(ff, /@font-face/, 'emits @font-face');
+  assert.match(ff, /font-family:'Montserrat'/, 'covers Montserrat');
+  assert.match(ff, /data:font\/woff2;base64,/, 'inlines base64 woff2');
+  assert.equal((ff.match(/@font-face/g) || []).length, 9, 'one rule per bundled face');
+  assert.equal(fontFaceCss({ dir: t.dir, meta: { fonts: { faces: [] } } }), '', 'empty faces → empty string');
+  assert.match(themeDocCss(t, 'generic'), /@font-face/, 'doc css includes fonts');
   console.log('theme self-test: OK');
 }
