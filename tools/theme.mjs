@@ -109,7 +109,8 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(ff, /@font-face/, 'emits @font-face');
   assert.match(ff, /font-family:'Montserrat'/, 'covers Montserrat');
   assert.match(ff, /data:font\/woff2;base64,/, 'inlines base64 woff2');
-  assert.equal((ff.match(/@font-face/g) || []).length, 9, 'one rule per bundled face');
+  assert.equal((ff.match(/@font-face/g) || []).length, 4, 'one rule per bundled face');
+  assert.match(ff, /font-weight:400 700/, 'variable font declares a weight range');
   assert.equal(fontFaceCss({ dir: t.dir, meta: { fonts: { faces: [] } } }), '', 'empty faces → empty string');
   assert.match(themeDocCss(t, 'generic'), /@font-face/, 'doc css includes fonts');
   console.log('theme self-test: OK');
