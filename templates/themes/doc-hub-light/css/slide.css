@@ -21,8 +21,13 @@ body.ar43  { --slide-w: 1024px; --slide-h: 768px; }
 .slide-section { justify-content: center; }
 .slide-section h1, .slide-section h2 { font-size: 2.6rem; color: var(--hs-ink); }
 .slide-section .hs-accent-bar { width: 96px; height: 5px; margin: 0 0 20px; }
-/* Dense slides: shrink type instead of overflowing */
+/* Dense slides: shrink type and top-align instead of overflowing/clipping */
+.slide-dense, .slide-packed { justify-content: flex-start; }
+.slide-dense h1, .slide-packed h1 { font-size: 2.2rem; margin-bottom: .3em; }
 .slide-dense ul, .slide-dense p { font-size: 1.05rem; line-height: 1.35; }
-.slide-dense h1 { font-size: 2.2rem; }
+.slide-dense li, .slide-packed li { margin: .12em 0; }
+.slide-packed ul, .slide-packed p { font-size: .92rem; line-height: 1.3; }
+.slide-packed ul { columns: 2; column-gap: 48px; }
+.slide-packed ul ul { columns: 1; }
 .slide h1, .slide h2 { font-family: var(--hs-font-heading); }
 .slide code { font-size: .8em; }

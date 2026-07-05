@@ -2,10 +2,12 @@
 // export-html.mjs — build themed HTML from markdown for the export pipeline.
 // Pipeline: md → pandoc JSON AST → doc-type profile transforms → pandoc HTML →
 // theme shell (fonts + tokens + doc/slide + components CSS inlined).
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
+import os from 'node:os';
+import path from 'node:path';
 import { resolveTheme, themeDocCss, themeSlideCss } from './theme.mjs';
 import { transformAst } from './export-transform.mjs';
 
@@ -60,7 +62,10 @@ export function mdToSlidesHtml({ markdownPath, aspect = '16:9', title, theme }) 
     const lines = part.split(/\r?\n/).filter((l) => l.trim());
     const headingOnly = lines.length > 0 && lines.every((l) => /^#{1,6}\s+/.test(l));
     const words = part.replace(/```[\s\S]*?```/g, '').split(/\s+/).filter(Boolean).length;
-    const classes = ['slide', i === 0 ? 'slide-cover' : '', headingOnly && i !== 0 ? 'slide-section' : '', words > 90 ? 'slide-dense' : '']
+    const bullets = lines.filter((l) => /^\s*[-*+]\s+/.test(l)).length;
+    const dense = words > 60 || bullets > 7;
+    const packed = words > 110 || bullets > 12;
+    const classes = ['slide', i === 0 ? 'slide-cover' : '', headingOnly && i !== 0 ? 'slide-section' : '', packed ? 'slide-packed' : dense ? 'slide-dense' : '']
       .filter(Boolean).join(' ');
     const bar = (i === 0 || (headingOnly && i !== 0)) ? '<span class="hs-accent-bar"></span>' : '';
     return `<section class="${classes}">${bar}${mdToPlainHtml(part)}</section>`;
@@ -78,5 +83,25 @@ if (_isMain && process.argv.includes('--self-test')) {
   const deck = shellSlides({ slidesHtml: '<section class="slide"></section>', title: 'D', aspect: '16:9', css: '.slide{}' });
   assert.match(deck, /ar169/, 'sets aspect class');
   assert.match(deck, /\.slide/, 'inlines slide layer');
+
+  // Tiered dense/packed slide detection: cover + 9-bullet (~dense) + 14-bullet (~packed).
+  const denseBullets = Array.from({ length: 9 }, (_, n) => `- bullet point number ${n} with a few extra words here`).join('\n');
+  const packedBullets = Array.from({ length: 14 }, (_, n) => `- bullet point number ${n} with several extra words to pad out the count here today`).join('\n');
+  const tmpDeck = [
+    '# Cover Slide',
+    '---',
+    `## Dense Slide\n${denseBullets}`,
+    '---',
+    `## Packed Slide\n${packedBullets}`,
+  ].join('\n');
+  const tmpPath = path.join(os.tmpdir(), `export-html-self-test-${process.pid}.md`);
+  writeFileSync(tmpPath, tmpDeck, 'utf8');
+  const { html: deckHtml } = mdToSlidesHtml({ markdownPath: tmpPath });
+  assert.match(deckHtml, /slide-dense/, 'emits slide-dense for bullet-heavy slide under packed threshold');
+  assert.match(deckHtml, /slide-packed/, 'emits slide-packed for very bullet-heavy slide');
+  const denseSectionHtml = deckHtml.split('<section')[2];
+  assert.match(denseSectionHtml, /class="[^"]*\bslide-dense\b[^"]*"/, '9-bullet slide gets slide-dense');
+  assert.doesNotMatch(denseSectionHtml, /slide-packed/, '9-bullet slide is not slide-packed');
+
   console.log('export-html self-test: OK');
 }
