@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { extname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { mdToHtmlDoc } from "./export-html.mjs";
 import { htmlToPdf } from "./pdf-render.mjs";
+import { resolveThemeOrLegacy } from "./theme.mjs";
+import { classifyDoc } from "./export-doctype.mjs";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const TEMPLATE_PATH = join(ROOT, "templates", "document-export-style.md");
-const REFERENCE_DOCX = join(ROOT, "templates", "themes", "doc-hub-light", "reference", "reference.docx");
 const VALID_FORMATS = new Set(["pdf", "docx", "html"]);
 
 function parseArgs(argv) {
@@ -24,6 +22,8 @@ function parseArgs(argv) {
     else if (arg.startsWith("--input=")) out.input = arg.slice("--input=".length);
     else if (arg === "--template") out.template = argv[++i];
     else if (arg.startsWith("--template=")) out.template = arg.slice("--template=".length);
+    else if (arg === "--theme") out.theme = argv[++i];
+    else if (arg.startsWith("--theme=")) out.theme = arg.slice("--theme=".length);
     else if (arg === "--help" || arg === "-h") out.help = true;
     else if (!out.input) out.input = arg;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -34,9 +34,9 @@ function parseArgs(argv) {
 function usage() {
   return [
     "Usage:",
-    "  node tools/export-document.mjs --format html --input path/to/file.md [--template path/to/template.md] [--force]",
-    "  node tools/export-document.mjs --format pdf --input path/to/file.md [--template path/to/template.md] [--force]",
-    "  node tools/export-document.mjs --format docx --input path/to/file.md [--template path/to/template.md] [--force]",
+    "  node tools/export-document.mjs --format html --input path/to/file.md [--theme <slug-or-path>] [--force]",
+    "  node tools/export-document.mjs --format pdf --input path/to/file.md [--theme <slug-or-path>] [--force]",
+    "  node tools/export-document.mjs --format docx --input path/to/file.md [--theme <slug-or-path>] [--force]",
   ].join("\n");
 }
 
@@ -57,6 +57,7 @@ function outputPaths(inputPath, format, cwd = process.cwd()) {
     slug,
     dir,
     output: join(dir, `${slug}.${format}`),
+    html: join(dir, `${slug}.html`),
     notes: join(dir, "render-notes.md"),
     normalized: join(dir, `${slug}.normalized.md`),
   };
@@ -117,20 +118,23 @@ function commandExists(command) {
   return !result.error && result.status === 0;
 }
 
-function runPandoc({ input, output, format, title }) {
+function runPandoc({ input, output, format, title, referenceDocx }) {
   const args = [input, "--standalone", "--metadata", `title=${title}`, "-o", output];
   if (format === "pdf") args.push("--variable", "geometry:margin=24mm", "--variable", "fontsize=11pt");
-  if (format === "docx" && existsSync(REFERENCE_DOCX)) args.push("--reference-doc", REFERENCE_DOCX);
+  if (format === "docx" && referenceDocx && existsSync(referenceDocx)) args.push("--reference-doc", referenceDocx);
   return spawnSync("pandoc", args, { encoding: "utf8" });
 }
 
-function renderNotes({ source, format, templatePath, output, headingWarnings, adjustments, conversionNotes, sourceEdited, engine }) {
+function renderNotes({ source, format, theme, doc, output, headingWarnings, adjustments, conversionNotes, sourceEdited, engine }) {
   return `# Render notes - ${format.toUpperCase()} - ${source.split(/[\\/]/).pop()}
 
 Generated: ${new Date().toISOString().slice(0, 10)}
 Source: ${source}
 Requested format: ${format}
-Template: ${templatePath}
+Theme: ${theme.slug} (${theme.source})
+Doc type: ${doc.docType} → profile ${doc.profile}
+${doc.evidence.map((e) => `Evidence: ${e}`).join("\n")}
+Fonts: ${theme.meta?.fonts?.faces?.length ? "bundled (" + theme.meta.fonts.faces.length + " faces)" : "system stacks"}
 
 ## Outputs
 - ${format.toUpperCase()}: ${output}
@@ -157,8 +161,8 @@ async function convert(args) {
     throw new Error(`Missing or invalid --format. Expected: pdf, docx, or html.\n${usage()}`);
   }
   if (!args.input) throw new Error(`Missing --input.\n${usage()}`);
-  const templatePath = args.template ? resolve(args.template) : TEMPLATE_PATH;
-  if (!existsSync(templatePath)) throw new Error(`Document export template missing: ${templatePath}`);
+  const themeRef = args.theme ?? args.template;
+  const { theme, legacyTemplate } = resolveThemeOrLegacy(themeRef);
 
   const source = resolve(args.input);
   if (!existsSync(source)) throw new Error(`Input file not found: ${source}`);
@@ -173,8 +177,8 @@ async function convert(args) {
     throw new Error(`Output exists. Re-run with --force to overwrite: ${paths.output}`);
   }
 
-  readFileSync(templatePath, "utf8");
   const markdown = readFileSync(source, "utf8");
+  const doc = classifyDoc({ markdown, filePath: source });
   const audit = auditHeadings(markdown);
   const inputForPandoc = audit.adjustments.length ? paths.normalized : source;
   if (audit.adjustments.length) writeFileSync(paths.normalized, audit.normalizedMarkdown, "utf8");
@@ -184,27 +188,38 @@ async function convert(args) {
   let engine = "none";
   const title = audit.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
 
+  if (legacyTemplate) {
+    conversionNotes.push(`Legacy --template ignored (prose templates never styled output): ${legacyTemplate}. Used theme '${theme.slug}'. Create a real theme with /twt-export-template-create.`);
+  }
+
   if (args.format === "html") {
     if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; HTML not produced."); }
     else {
       try {
-        writeFileSync(paths.output, mdToHtmlDoc({ markdownPath: inputForPandoc, title }), "utf8");
-        engine = "html+house-style"; success = statSync(paths.output).size > 0;
-        conversionNotes.push("Built doc-hub-light HTML (house-style.css + house-doc.css).");
+        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile });
+        writeFileSync(paths.output, r.html, "utf8");
+        engine = "html+theme"; success = statSync(paths.output).size > 0;
+        conversionNotes.push(`Built themed HTML (theme=${theme.slug}, profile=${doc.profile}, transforms=${r.applied.join(", ") || "none"}).`);
+        if (r.transformError) conversionNotes.push(`Transform fallback: ${r.transformError} (rendered generic HTML instead).`);
       } catch (e) { conversionNotes.push("HTML build failed: " + e.message); }
     }
   } else if (args.format === "pdf") {
     if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; PDF not produced."); }
     else {
       try {
-        const html = mdToHtmlDoc({ markdownPath: inputForPandoc, title });
-        const r = await htmlToPdf({ html, outPath: paths.output });
-        if (r.ok) { engine = "chromium"; success = statSync(paths.output).size > 0; conversionNotes.push("Rendered doc-hub-light PDF via Chromium."); }
-        else {
+        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile });
+        writeFileSync(paths.html, r.html, "utf8"); // always saved for debugging
+        if (r.transformError) conversionNotes.push(`Transform fallback: ${r.transformError} (rendered generic HTML instead).`);
+        const pdfR = await htmlToPdf({ html: r.html, outPath: paths.output });
+        if (pdfR.ok) {
+          engine = "chromium"; success = statSync(paths.output).size > 0;
+          conversionNotes.push(`Rendered themed PDF via Chromium (theme=${theme.slug}, profile=${doc.profile}, transforms=${r.applied.join(", ") || "none"}).`);
+          conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
+        } else {
           const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", title });
           success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
           engine = "pandoc-latex";
-          conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to pandoc LaTeX. Install the \`playwright\` npm package for doc-hub-light PDF.`);
+          conversionNotes.push(`Playwright unavailable (${pdfR.reason}); fell back to pandoc LaTeX. Install the \`playwright\` npm package for themed PDF.`);
           if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || "").trim().replace(/\r?\n/g, " ")}`);
         }
       } catch (e) { conversionNotes.push("PDF build failed: " + e.message); }
@@ -212,10 +227,12 @@ async function convert(args) {
   } else { // docx
     if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; DOCX not produced."); }
     else {
-      const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "docx", title });
+      const referenceDocx = join(theme.dir, "reference", "reference.docx");
+      const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "docx", title, referenceDocx });
       success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
-      engine = existsSync(REFERENCE_DOCX) ? "pandoc+reference.docx" : "pandoc-default";
-      conversionNotes.push(existsSync(REFERENCE_DOCX) ? "Converted with pandoc + doc-hub-light reference.docx." : "Converted with pandoc (default reference; templates/reference.docx missing).");
+      engine = existsSync(referenceDocx) ? "pandoc+reference.docx" : "pandoc-default";
+      conversionNotes.push(existsSync(referenceDocx) ? "Converted with pandoc + theme reference.docx." : `Converted with pandoc (default reference; ${referenceDocx} missing).`);
+      conversionNotes.push("DOCX gets theme typography/colors via reference doc; doc-type components are HTML/PDF-only.");
       if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || "").trim().replace(/\r?\n/g, " ")}`);
     }
   }
@@ -223,7 +240,8 @@ async function convert(args) {
   writeFileSync(paths.notes, renderNotes({
     source,
     format: args.format,
-    templatePath,
+    theme,
+    doc,
     output: success ? paths.output : "failed",
     headingWarnings: audit.warnings,
     adjustments: audit.adjustments,
@@ -252,6 +270,7 @@ function selfTest() {
   assert.match(audited.normalizedMarkdown, /^### Skipped$/m);
   const paths = outputPaths("C:/tmp/My File.md", "pdf", "C:/work/project");
   assert.match(paths.output.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/pdf\/my-file\/my-file\.pdf$/);
+  assert.match(paths.html.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/pdf\/my-file\/my-file\.html$/);
   console.log("export-document self-test: OK");
 }
 

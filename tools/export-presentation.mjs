@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { extname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { mdToSlidesHtml } from "./export-html.mjs";
 import { htmlToPdf } from "./pdf-render.mjs";
+import { resolveThemeOrLegacy } from "./theme.mjs";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const TEMPLATE_PATH = join(ROOT, "templates", "presentation-export-style.md");
-const REFERENCE_PPTX = join(ROOT, "templates", "themes", "doc-hub-light", "reference", "reference.pptx");
 const VALID_FORMATS = new Set(["pptx", "pdf"]);
 const VALID_ASPECTS = new Set(["16:9", "4:3"]);
 
@@ -27,6 +24,8 @@ function parseArgs(argv) {
     else if (arg.startsWith("--input=")) out.input = arg.slice("--input=".length);
     else if (arg === "--template") out.template = argv[++i];
     else if (arg.startsWith("--template=")) out.template = arg.slice("--template=".length);
+    else if (arg === "--theme") out.theme = argv[++i];
+    else if (arg.startsWith("--theme=")) out.theme = arg.slice("--theme=".length);
     else if (arg === "--help" || arg === "-h") out.help = true;
     else if (!out.input) out.input = arg;
     else throw new Error(`Unknown argument: ${arg}`);
@@ -37,8 +36,8 @@ function parseArgs(argv) {
 function usage() {
   return [
     "Usage:",
-    "  node tools/export-presentation.mjs --format pptx --input path/to/deck.md [--aspect 16:9|4:3] [--template path/to/template.md] [--force]",
-    "  node tools/export-presentation.mjs --format pdf --input path/to/deck.md [--aspect 16:9|4:3] [--template path/to/template.md] [--force]",
+    "  node tools/export-presentation.mjs --format pptx --input path/to/deck.md [--aspect 16:9|4:3] [--theme <slug-or-path>] [--force]",
+    "  node tools/export-presentation.mjs --format pdf --input path/to/deck.md [--aspect 16:9|4:3] [--theme <slug-or-path>] [--force]",
   ].join("\n");
 }
 
@@ -59,6 +58,7 @@ function outputPaths(inputPath, format, cwd = process.cwd()) {
     slug,
     dir,
     output: join(dir, `${slug}.${format}`),
+    html: join(dir, `${slug}.html`),
     notes: join(dir, "render-notes.md"),
     normalized: join(dir, `${slug}.slides.md`),
   };
@@ -139,7 +139,7 @@ function commandExists(command) {
   return !result.error && result.status === 0;
 }
 
-function pandocArgs({ input, output, format, aspect, title }) {
+function pandocArgs({ input, output, format, aspect, title, referencePptx }) {
   const args = [input, "--standalone", "--slide-level=1", "--metadata", `title=${title}`, "-o", output];
   if (format === "pdf") {
     args.splice(1, 0, "-t", "beamer");
@@ -149,7 +149,7 @@ function pandocArgs({ input, output, format, aspect, title }) {
     // Pandoc PPTX sizing depends on its reference deck. Keep an explicit note
     // rather than pretending a CLI flag can force 4:3 in every environment.
   }
-  if (format === "pptx" && existsSync(REFERENCE_PPTX)) args.push("--reference-doc", REFERENCE_PPTX);
+  if (format === "pptx" && referencePptx && existsSync(referencePptx)) args.push("--reference-doc", referencePptx);
   return args;
 }
 
@@ -157,14 +157,15 @@ function runPandoc(options) {
   return spawnSync("pandoc", pandocArgs(options), { encoding: "utf8" });
 }
 
-function renderNotes({ source, format, aspect, templatePath, slideCount, output, warnings, conversionNotes, sourceEdited, engine }) {
+function renderNotes({ source, format, aspect, theme, slideCount, output, warnings, conversionNotes, sourceEdited, engine }) {
   return `# Render notes - Presentation ${format.toUpperCase()} - ${source.split(/[\\/]/).pop()}
 
 Generated: ${new Date().toISOString().slice(0, 10)}
 Source: ${source}
 Requested format: ${format}
 Aspect ratio: ${aspect}
-Template: ${templatePath}
+Theme: ${theme.slug} (${theme.source})
+Fonts: ${theme.meta?.fonts?.faces?.length ? "bundled (" + theme.meta.fonts.faces.length + " faces)" : "system stacks"}
 
 ## Outputs
 - ${format.toUpperCase()}: ${output}
@@ -194,8 +195,8 @@ async function convert(args) {
     throw new Error(`Missing or invalid --aspect. Expected: 16:9 or 4:3.\n${usage()}`);
   }
   if (!args.input) throw new Error(`Missing --input.\n${usage()}`);
-  const templatePath = args.template ? resolve(args.template) : TEMPLATE_PATH;
-  if (!existsSync(templatePath)) throw new Error(`Presentation export template missing: ${templatePath}`);
+  const themeRef = args.theme ?? args.template;
+  const { theme, legacyTemplate } = resolveThemeOrLegacy(themeRef);
 
   const source = resolve(args.input);
   if (!existsSync(source)) throw new Error(`Input file not found: ${source}`);
@@ -210,7 +211,6 @@ async function convert(args) {
     throw new Error(`Output exists. Re-run with --force to overwrite: ${paths.output}`);
   }
 
-  readFileSync(templatePath, "utf8");
   const markdown = readFileSync(source, "utf8");
   const analysis = analyzeSlides(markdown);
   writeFileSync(paths.normalized, analysis.normalizedMarkdown, "utf8");
@@ -220,36 +220,43 @@ async function convert(args) {
   let success = false;
   let engine = "none";
   const title = analysis.normalizedMarkdown.match(/^#\s+(.+)$/m)?.[1] || paths.slug;
+  const referencePptx = join(theme.dir, "reference", "reference.pptx");
+
+  if (legacyTemplate) {
+    conversionNotes.push(`Legacy --template ignored (prose templates never styled output): ${legacyTemplate}. Used theme '${theme.slug}'. Create a real theme with /twt-export-template-create.`);
+  }
 
   if (!commandExists("pandoc")) {
     conversionNotes.push("Pandoc was not found on PATH; requested output was not produced.");
   } else if (args.format === "pdf") {
     try {
-      const html = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title });
+      const { html } = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title, theme });
+      writeFileSync(paths.html, html, "utf8");
       const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
       const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
       if (r.ok) {
         engine = "chromium";
         success = existsSync(paths.output) && statSync(paths.output).size > 0;
-        conversionNotes.push("Rendered doc-hub-light slides via Chromium.");
+        conversionNotes.push(`Rendered themed slides via Chromium (theme=${theme.slug}).`);
+        conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
       } else {
-        const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title });
+        const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title, referencePptx });
         success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;
         engine = "pandoc-beamer";
-        conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to beamer. Install \`playwright\` for doc-hub-light slides.`);
+        conversionNotes.push(`Playwright unavailable (${r.reason}); fell back to beamer. Install \`playwright\` for themed slides.`);
         if (!success) conversionNotes.push(`Pandoc failed: ${(p.stderr || p.error?.message || "").trim().replace(/\r?\n/g, " ")}`);
       }
     } catch (e) {
       conversionNotes.push("Slide PDF build failed: " + e.message);
     }
   } else { // pptx
-    if (args.aspect === "4:3" && !existsSync(REFERENCE_PPTX)) {
+    if (args.aspect === "4:3" && !existsSync(referencePptx)) {
       conversionNotes.push("PPTX 4:3 output requires a matching Pandoc reference deck; this script records the requested aspect but cannot guarantee slide size without one.");
     }
-    const p = runPandoc({ input: inputForPandoc, output: paths.output, format: args.format, aspect: args.aspect, title });
-    engine = existsSync(REFERENCE_PPTX) ? "pandoc+reference.pptx" : "pandoc-default";
+    const p = runPandoc({ input: inputForPandoc, output: paths.output, format: args.format, aspect: args.aspect, title, referencePptx });
+    engine = existsSync(referencePptx) ? "pandoc+reference.pptx" : "pandoc-default";
     if (p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0) {
-      conversionNotes.push(existsSync(REFERENCE_PPTX) ? "Converted with pandoc + doc-hub-light reference.pptx." : "Converted with pandoc.");
+      conversionNotes.push(existsSync(referencePptx) ? "Converted with pandoc + theme reference.pptx." : "Converted with pandoc.");
       success = true;
     } else {
       conversionNotes.push(`Pandoc failed with exit code ${p.status ?? "unknown"}.`);
@@ -262,7 +269,7 @@ async function convert(args) {
     source,
     format: args.format,
     aspect: args.aspect,
-    templatePath,
+    theme,
     slideCount: analysis.slideCount,
     output: success ? paths.output : "failed",
     warnings: analysis.warnings,
