@@ -64,11 +64,11 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
-| /twt-export | export | Orchestrate PDF, DOCX, PPTX, and template-based exports |
+| /twt-export | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
 | /twt-export-docx | export | Convert Markdown to a polished DOCX with the shared document template |
 | /twt-export-pdf | export | Convert Markdown to a polished PDF with the shared document template |
 | /twt-export-presentation | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
-| /twt-export-template-create | export | Create reusable export templates from brand or user style instructions |
+| /twt-export-template-create | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |

@@ -30,11 +30,11 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
-| [/twt-export](#twt-export) | export | Orchestrate PDF, DOCX, PPTX, and template-based exports |
+| [/twt-export](#twt-export) | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
 | [/twt-export-docx](#twt-export-docx) | export | Convert Markdown to a polished DOCX with the shared document template |
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the shared document template |
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
-| [/twt-export-template-create](#twt-export-template-create) | export | Create reusable export templates from brand or user style instructions |
+| [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
@@ -954,13 +954,13 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 ## /twt-export
 
 **Category:** export
-**Version:** 1.0.2
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
-Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven. The shared doc-hub-light house style is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
+Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or theme when needed, then dispatches the specialized export skill so conversion remains script-driven. The built-in `doc-hub-light` theme is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
 
 **Inputs:**
-- Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
+- Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
 
 **Dependencies:**
 - Hard: none
@@ -968,36 +968,41 @@ Orchestrate export creation across document and presentation formats. The skill 
 
 **Reads:**
 - <markdown-path>
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 - tools/export-source-create.mjs
 - tools/export-document.mjs
 - tools/export-presentation.mjs
-- tools/export-template-create.mjs
+- tools/export-theme-create.mjs
 
 **Writes:**
 - .twt-artifacts/export/sources/<source-slug>.md
 - .twt-artifacts/export/sources/<source-slug>.notes.md
 - .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf
+- .twt-artifacts/export/pdf/<source-slug>/<source-slug>.html
 - .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx
 - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx
 - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf
-- .twt-artifacts/export/templates/<template-slug>/template.md
-- .twt-artifacts/export/templates/<template-slug>/template.json
-- .twt-artifacts/export/templates/<template-slug>/preview-notes.md
+- .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html
+- .twt-artifacts/export/themes/<theme-slug>/theme.json
+- .twt-artifacts/export/themes/<theme-slug>/css/*.css
+- .twt-artifacts/export/themes/<theme-slug>/fonts/*
+- .twt-artifacts/export/themes/<theme-slug>/reference/*
+- .twt-artifacts/export/themes/<theme-slug>/preview/preview.html
+- .twt-artifacts/export/themes/<theme-slug>/preview-notes.md
 
 **Non-goals:**
 - Doesn't convert files directly inside the orchestrator
 - Doesn't create both document and presentation outputs unless the user explicitly runs separate exports
-- Doesn't overwrite sources, templates, or outputs without explicit user consent
+- Doesn't overwrite sources, themes, or outputs without explicit user consent
 - Doesn't duplicate logic from `/twt-export-pdf`, `/twt-export-docx`, `/twt-export-presentation`, or `/twt-export-template-create`
 
 **Success criteria:**
-- With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and template choices
-- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the shared doc-hub-light house style
+- With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and theme choices
+- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the built-in `doc-hub-light` theme by default
 - Allows either an existing Markdown file or new source instructions
-- Offers only templates relevant to the selected output type, plus built-in default and create-new options
-- If creating a template, dispatches `/twt-export-template-create` first and then proceeds with the export
+- Offers only themes relevant to the selected output type, plus the built-in default and a create-new option
+- If creating a theme, dispatches `/twt-export-template-create` first and then proceeds with the export
 - Delegates source creation to `tools/export-source-create.mjs`
 - Delegates final conversion to the relevant child export skill, which delegates to `tools/export-document.mjs` or `tools/export-presentation.mjs`
 
@@ -1006,7 +1011,7 @@ Orchestrate export creation across document and presentation formats. The skill 
 ## /twt-export-docx
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished DOCX using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1022,8 +1027,8 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 - <markdown-path>
 - tools/export-document.mjs
 - templates/document-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 - .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx
@@ -1037,18 +1042,18 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 
 **Success criteria:**
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input <markdown-path>`
-- Offers a template choice when multiple document/universal templates exist
+- Offers a theme choice when custom themes exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
-- Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
-- Uses the doc-hub-light `templates/reference.docx` by default (Montserrat headings, Inter body, hairline tables)
-- Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
+- Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, theme used, and output path
+- Themed via the built-in `doc-hub-light` theme's `reference.docx` by default (Montserrat headings, Inter body, hairline tables); custom themes provide their own themed `reference.docx` when built
+- Theme reference.docx gives global typography/colors; doc-type components are HTML/PDF-only — DOCX has no intermediate HTML
 
 ---
 
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1064,11 +1069,12 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 - <markdown-path>
 - tools/export-document.mjs
 - templates/document-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 - .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf
+- .twt-artifacts/export/pdf/<source-slug>/<source-slug>.html
 - .twt-artifacts/export/pdf/<source-slug>/render-notes.md
 
 **Non-goals:**
@@ -1079,18 +1085,19 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 
 **Success criteria:**
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format pdf --input <markdown-path>`
-- Offers a template choice when multiple document/universal templates exist
+- Offers a theme choice when custom themes exist
 - Produces `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf`
-- Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
-- Default PDF renders the doc-hub-light house style via Chromium when the `playwright` npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)
-- Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
+- Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, theme used, doc-type profile applied, and output path
+- Themed via the built-in `doc-hub-light` theme by default (css layers + bundled fonts), rendered via Chromium when the `playwright` npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)
+- Doc-type profile (report/brief/spec/generic) is detected and applied automatically
+- Intermediate HTML is always saved alongside the PDF at `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.html`
 
 ---
 
 ## /twt-export-presentation
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Convert a Markdown slide deck into PPTX or PDF using the marketplace's deterministic presentation export script and default presentation template. The skill keeps model work light: it gathers choices, runs the script, reads render notes, and reports results.
@@ -1106,12 +1113,13 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 - <markdown-path>
 - tools/export-presentation.mjs
 - templates/presentation-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx
 - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf
+- .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html
 - .twt-artifacts/export/presentation/<source-slug>/render-notes.md
 
 **Non-goals:**
@@ -1122,25 +1130,25 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 
 **Success criteria:**
 - With no `$ARGUMENTS`, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path
-- Offers a template choice when multiple presentation/universal templates exist
+- Offers a theme choice when custom themes exist (applicable types: `presentation` or `universal`)
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
-- PPTX uses `templates/reference.pptx`; PDF slides render doc-hub-light via Chromium (playwright) with a beamer fallback
-- Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path
+- PPTX uses the theme's `reference.pptx` (built-in `doc-hub-light` by default); PDF slides render the theme via Chromium (playwright) with a beamer fallback, and the intermediate HTML is always saved alongside the PDF
+- Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, theme used, and output path
 
 ---
 
 ## /twt-export-template-create
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 2.0.1
 **Accepts arguments:** yes
 
-Create a named, reusable export template that later document and presentation export commands can offer in their template menus. Templates may be based on an existing brand brief, user-provided style instructions, or both.
+Create a named, reusable export theme — css layers, bundled fonts, reference docs, and a preview — that later document and presentation export commands can offer in their theme menus. Themes may be based on an existing brand brief, user-provided style instructions, or both.
 
 **Inputs:**
-- Optional template name, type, brand path, style direction, and instructions
+- Optional theme name, type, brand path, style direction, and instructions
 
 **Dependencies:**
 - Hard: none
@@ -1148,25 +1156,29 @@ Create a named, reusable export template that later document and presentation ex
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
-- tools/export-template-create.mjs
+- .twt-artifacts/design/design-system/tokens.css
+- tools/export-theme-create.mjs
 
 **Writes:**
-- .twt-artifacts/export/templates/<template-slug>/template.md
-- .twt-artifacts/export/templates/<template-slug>/template.json
-- .twt-artifacts/export/templates/<template-slug>/preview-notes.md
+- .twt-artifacts/export/themes/<theme-slug>/theme.json
+- .twt-artifacts/export/themes/<theme-slug>/css/*.css
+- .twt-artifacts/export/themes/<theme-slug>/fonts/*
+- .twt-artifacts/export/themes/<theme-slug>/reference/*
+- .twt-artifacts/export/themes/<theme-slug>/preview/preview.html
+- .twt-artifacts/export/themes/<theme-slug>/preview-notes.md
 
 **Non-goals:**
 - Doesn't export a PDF, DOCX, PPTX, or presentation itself
-- Doesn't overwrite an existing template unless the user explicitly asks
-- Doesn't use vague names like `template-1`, `new-template`, or `default-copy`
+- Doesn't overwrite an existing theme unless the user explicitly asks
+- Doesn't use vague names like `theme-1`, `new-theme`, or `default-copy`
 - Doesn't invent brand facts when no brand source is provided
 
 **Success criteria:**
-- Creates `.twt-artifacts/export/templates/<template-slug>/template.md`
-- Creates `.twt-artifacts/export/templates/<template-slug>/template.json` with name, slug, type, style, description, brand source, and instructions
-- Creates `.twt-artifacts/export/templates/<template-slug>/preview-notes.md`
-- Template names are human-distinguishable and combine context, style direction, and scope where possible
-- With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-template-create.mjs`
+- Creates the whole theme directory `.twt-artifacts/export/themes/<theme-slug>/` (css layers, fonts, reference docs, preview)
+- Creates `.twt-artifacts/export/themes/<theme-slug>/theme.json` with name, slug, type, style, description, brand source, and instructions
+- Creates `.twt-artifacts/export/themes/<theme-slug>/preview-notes.md`
+- Theme names are human-distinguishable and combine context, style direction, and scope where possible
+- With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-theme-create.mjs`
 
 ---
 

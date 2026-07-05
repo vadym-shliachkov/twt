@@ -222,11 +222,11 @@ flowchart TB
 
 ### export
 
-- /twt-export - Orchestrate PDF, DOCX, PPTX, and template-based exports
+- /twt-export - Orchestrate PDF, DOCX, PPTX, and theme-based exports
 - /twt-export-docx - Convert Markdown to a polished DOCX with the shared document template
 - /twt-export-pdf - Convert Markdown to a polished PDF with the shared document template
 - /twt-export-presentation - Convert Markdown to PPTX or PDF slides via the presentation export script
-- /twt-export-template-create - Create reusable export templates from brand or user style instructions
+- /twt-export-template-create - Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
 
 ### html
 
@@ -1086,10 +1086,10 @@ flowchart TB
 ### /twt-export
 
 **Category:** export
-**Version:** 1.0.2
+**Version:** 1.1.1
 
 **Inputs:**
-- Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
+- Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
 
 **Dependencies:**
 - Hard: none
@@ -1101,12 +1101,12 @@ flowchart TB
 
 **Reads:**
 - <markdown-path>
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 - tools/export-source-create.mjs
 - tools/export-document.mjs
 - tools/export-presentation.mjs
-- tools/export-template-create.mjs
+- tools/export-theme-create.mjs
 
 **Writes:**
 | Path | Notes |
@@ -1114,17 +1114,22 @@ flowchart TB
 | .twt-artifacts/export/sources/<source-slug>.md |  |
 | .twt-artifacts/export/sources/<source-slug>.notes.md |  |
 | .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/pdf/<source-slug>/<source-slug>.html |  |
 | .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx |  |
 | .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx |  |
 | .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf |  |
-| .twt-artifacts/export/templates/<template-slug>/template.md |  |
-| .twt-artifacts/export/templates/<template-slug>/template.json |  |
-| .twt-artifacts/export/templates/<template-slug>/preview-notes.md |  |
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html |  |
+| .twt-artifacts/export/themes/<theme-slug>/theme.json |  |
+| .twt-artifacts/export/themes/<theme-slug>/css/*.css |  |
+| .twt-artifacts/export/themes/<theme-slug>/fonts/* |  |
+| .twt-artifacts/export/themes/<theme-slug>/reference/* |  |
+| .twt-artifacts/export/themes/<theme-slug>/preview/preview.html |  |
+| .twt-artifacts/export/themes/<theme-slug>/preview-notes.md |  |
 
 ### /twt-export-docx
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - Markdown file path
@@ -1141,8 +1146,8 @@ flowchart TB
 - <markdown-path>
 - tools/export-document.mjs
 - templates/document-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 | Path | Notes |
@@ -1153,7 +1158,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - Markdown file path
@@ -1170,19 +1175,20 @@ flowchart TB
 - <markdown-path>
 - tools/export-document.mjs
 - templates/document-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/pdf/<source-slug>/<source-slug>.html |  |
 | .twt-artifacts/export/pdf/<source-slug>/render-notes.md |  |
 
 ### /twt-export-presentation
 
 **Category:** export
-**Version:** 1.0.1
+**Version:** 1.1.1
 
 **Inputs:**
 - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3
@@ -1199,23 +1205,24 @@ flowchart TB
 - <markdown-path>
 - tools/export-presentation.mjs
 - templates/presentation-export-style.md
-- .twt-artifacts/export/templates/*/template.json
-- .twt-artifacts/export/templates/*/template.md
+- .twt-artifacts/export/themes/*/theme.json
+- templates/themes/doc-hub-light/theme.json
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx |  |
 | .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf |  |
+| .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html |  |
 | .twt-artifacts/export/presentation/<source-slug>/render-notes.md |  |
 
 ### /twt-export-template-create
 
 **Category:** export
-**Version:** 1.0.0
+**Version:** 2.0.1
 
 **Inputs:**
-- Optional template name, type, brand path, style direction, and instructions
+- Optional theme name, type, brand path, style direction, and instructions
 
 **Dependencies:**
 - Hard: none
@@ -1227,14 +1234,18 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
-- tools/export-template-create.mjs
+- .twt-artifacts/design/design-system/tokens.css
+- tools/export-theme-create.mjs
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/export/templates/<template-slug>/template.md |  |
-| .twt-artifacts/export/templates/<template-slug>/template.json |  |
-| .twt-artifacts/export/templates/<template-slug>/preview-notes.md |  |
+| .twt-artifacts/export/themes/<theme-slug>/theme.json |  |
+| .twt-artifacts/export/themes/<theme-slug>/css/*.css |  |
+| .twt-artifacts/export/themes/<theme-slug>/fonts/* |  |
+| .twt-artifacts/export/themes/<theme-slug>/reference/* |  |
+| .twt-artifacts/export/themes/<theme-slug>/preview/preview.html |  |
+| .twt-artifacts/export/themes/<theme-slug>/preview-notes.md |  |
 
 ### /twt-html-block-creator
 
