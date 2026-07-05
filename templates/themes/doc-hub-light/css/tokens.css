@@ -2,7 +2,7 @@
    every generated HTML document (design-system preview, reports dashboard,
    design-system audit; exports in a later pass). Derived from gen-preview.mjs.
    Tokens are namespaced --hs-* so they never collide with a project's
-   tokens.css --color-*/--font-* variables when both appear on one page. */
+   tokens.css --color- / --font- variables when both appear on one page. */
 :root{
   /* color */
   --hs-ink:#090e22;

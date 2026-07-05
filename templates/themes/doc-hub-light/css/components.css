@@ -1,2 +1,53 @@
-/* doc-hub-light component layer — doc-type components (kv grids, chips, scores,
-   swatches, finding cards). Populated by the export transform engine. */
+/* doc-hub-light component layer — classes emitted by tools/export-transform.mjs.
+   Contract: tx-doc-header, tx-kv(--summary), tx-score(--good/--mid/--low),
+   tx-chip(--ok/--warn/--danger/--info), tx-swatch, tx-table-wide, tx-finding, tx-toc. */
+
+/* Document header: H1 + accent bar + optional meta line */
+.tx-doc-header{margin:0 0 30px}
+.tx-doc-header h1{margin:0 0 .2em}
+.tx-doc-header .hs-accent-bar{margin:0 0 14px}
+.tx-doc-header .tx-meta{font-size:.9rem;color:var(--tx-muted);margin:0}
+
+/* Key-value grid (metadata runs, brief identity blocks) */
+dl.tx-kv{display:grid;grid-template-columns:minmax(140px,max-content) 1fr;gap:6px 18px;margin:1em 0;padding:14px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
+dl.tx-kv dt{font-family:var(--tx-font-heading);font-weight:600;font-size:.82rem;letter-spacing:.02em;color:var(--tx-ink);align-self:baseline}
+dl.tx-kv dd{margin:0;font-size:.95rem;align-self:baseline}
+/* Summary variant: leading metadata of a report — card row on print/wide */
+dl.tx-kv--summary{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;background:transparent;border:none;padding:0}
+dl.tx-kv--summary>div{background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius);padding:10px 14px}
+dl.tx-kv--summary dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);font-weight:600}
+dl.tx-kv--summary dd{font-size:1.02rem;color:var(--tx-ink);margin-top:2px}
+
+/* Score chips (NN/100) */
+.tx-score{display:inline-block;font-family:var(--tx-font-mono);font-size:.82em;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);white-space:nowrap}
+.tx-score--good{color:var(--tx-ok);border-color:color-mix(in srgb,var(--tx-ok) 35%,white);background:color-mix(in srgb,var(--tx-ok) 8%,white)}
+.tx-score--mid{color:var(--tx-warn);border-color:color-mix(in srgb,var(--tx-warn) 35%,white);background:color-mix(in srgb,var(--tx-warn) 8%,white)}
+.tx-score--low{color:var(--tx-danger);border-color:color-mix(in srgb,var(--tx-danger) 35%,white);background:color-mix(in srgb,var(--tx-danger) 8%,white)}
+
+/* Severity / finding chips */
+.tx-chip{display:inline-block;font-family:var(--tx-font-heading);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.tx-chip--ok{color:var(--tx-ok);background:color-mix(in srgb,var(--tx-ok) 10%,white)}
+.tx-chip--warn{color:var(--tx-warn);background:color-mix(in srgb,var(--tx-warn) 12%,white)}
+.tx-chip--danger{color:var(--tx-danger);background:color-mix(in srgb,var(--tx-danger) 10%,white)}
+.tx-chip--info{color:var(--tx-accent);background:color-mix(in srgb,var(--tx-accent) 10%,white)}
+
+/* Palette swatch (hex cells in brief palette tables) */
+.tx-swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--tx-rule);vertical-align:-2px;margin-right:7px}
+
+/* Wide findings tables: tighter type, zebra, no harsh grid */
+table.tx-table-wide{font-size:.84em}
+table.tx-table-wide th,table.tx-table-wide td{border:none;border-bottom:1px solid var(--tx-rule);padding:5px 9px}
+table.tx-table-wide thead th{background:var(--tx-panel);border-bottom:2px solid var(--tx-rule)}
+table.tx-table-wide tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--tx-panel) 55%,white)}
+
+/* Finding card (Where / Problem / Recommendation) */
+.tx-finding{break-inside:avoid;margin:1em 0;padding:14px 18px;border:1px solid var(--tx-rule);border-left:3px solid var(--tx-accent);border-radius:var(--tx-radius);background:var(--tx-surface)}
+.tx-finding dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0}
+.tx-finding dt{font-family:var(--tx-font-heading);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--tx-muted)}
+.tx-finding dd{margin:0;font-size:.95rem}
+
+/* Table of contents (long reports) */
+nav.tx-toc{margin:1.2em 0 1.6em;padding:12px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
+nav.tx-toc .tx-toc-title{font-family:var(--tx-font-heading);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);margin:0 0 6px}
+nav.tx-toc ol{margin:0;padding-left:1.2em;columns:2;column-gap:32px;font-size:.92rem}
+nav.tx-toc a{text-decoration:none}
