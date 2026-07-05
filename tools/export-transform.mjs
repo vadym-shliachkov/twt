@@ -36,6 +36,7 @@ export function inlinesToHtml(inlines = []) {
     else if (t === 'Image') out += `<img src="${esc(c[2][0])}" alt="${esc(inlinesToText(c[1]))}">`;
     else if (t === 'RawInline') out += c[0] === 'html' ? c[1] : '';
     else if (t === 'Quoted') out += `“${inlinesToHtml(c[1])}”`;
+    else if (t === 'Span') out += inlinesToHtml(c[1]);
     else if (Array.isArray(c) && c.every((x) => x && x.t)) out += inlinesToHtml(c);
     // unknown inline types degrade to nothing rather than crashing
   }
@@ -50,6 +51,7 @@ export function inlinesToText(inlines = []) {
     else if (t === 'Space' || t === 'SoftBreak' || t === 'LineBreak') out += ' ';
     else if (t === 'Code') out += c[1];
     else if (t === 'Link' || t === 'Image') out += inlinesToText(c[1]);
+    else if (t === 'Span') out += inlinesToText(c[1]);
     else if (Array.isArray(c) && c.every((x) => x && x.t)) out += inlinesToText(c);
   }
   return out;
@@ -109,7 +111,7 @@ function walkInlines(inlines, fn) {
     const rep = fn(n);
     if (rep) { inlines[i] = rep; continue; }
     if (n && Array.isArray(n.c) && ['Strong', 'Emph', 'Quoted', 'Span', 'Link'].includes(n.t)) {
-      walkInlines(n.t === 'Link' || n.t === 'Quoted' ? n.c[1] : n.c, fn);
+      walkInlines(n.t === 'Link' || n.t === 'Quoted' || n.t === 'Span' ? n.c[1] : n.c, fn);
     }
   }
 }
@@ -334,6 +336,10 @@ if (_isMain && process.argv.includes('--self-test')) {
   // fall-through: unmatched structures survive
   const surv = astToHtml(transformAst(pandocAst('Just a paragraph.\n\n- plain\n- list\n'), 'report').ast);
   assert.match(surv, /<li>plain<\/li>/);
+
+  // Span inlines (c=[Attr,[Inline]]): content must survive serializers and be reachable by walkers
+  assert.match(astToHtml(transformAst(pandocAst('# Report [Draft]{.x}\n\ntext'), 'generic').ast), /Report Draft/, 'span content survives docHeader');
+  assert.match(astToHtml(transformAst(pandocAst('Score [85/100]{.x} ok.'), 'report').ast), /tx-score--good/, 'score chip fires inside a span');
 
   console.log('export-transform self-test: OK');
 }
