@@ -6,7 +6,7 @@
 // |--------------------------------------------------|-----------------------|---------|
 // | analysis-report.md (twt-text-analysis)           | analysis-report       | report  |
 // | validation-report.md (all *-validate)            | validation-report     | report  |
-// | qa-report.md, *-report.md under qa/ (twt-qa*)    | qa-report             | report  |
+// | qa-report.md (twt-qa)                            | qa-report             | report  |
 // | gaps.md (twt-qa)                                 | qa-gaps               | report  |
 // | brand-brief.md (twt-brand-define)                | brand-brief           | brief   |
 // | positioning.md (twt-positioning-define)          | positioning           | brief   |
@@ -23,6 +23,7 @@
 // | layout-*.md / layouts (twt-layout-define)        | layout                | spec    |
 // | design-read.md (external design skills)          | design-read           | spec    |
 // | decisions.md / asset-manifest.md                 | decisions             | spec    |
+// | any other *-report.md (fallback)                 | generic-report        | report  |
 // | content-fetch output, curation outlines, logs    | (unregistered)        | generic |
 // Unregistered files fall to structural fingerprints, then to 'generic'. New
 // artifact → add one REGISTRY row, or accept generic rendering.
@@ -39,7 +40,7 @@ export const PROFILES = ['report', 'brief', 'spec', 'generic', 'slides'];
 export const REGISTRY = [
   { id: 'analysis-report',   profile: 'report', file: /^analysis-report[^/]*\.md$/ },
   { id: 'validation-report', profile: 'report', file: /^validation-report\.md$/ },
-  { id: 'qa-report',         profile: 'report', file: /^(qa-report|[a-z0-9-]+-report)\.md$/ },
+  { id: 'qa-report',         profile: 'report', file: /^qa-report\.md$/ },
   { id: 'qa-gaps',           profile: 'report', file: /^gaps\.md$/ },
   { id: 'brand-brief',       profile: 'brief',  file: /^brand-brief\.md$/ },
   { id: 'positioning',       profile: 'brief',  file: /^positioning\.md$/ },
@@ -56,6 +57,7 @@ export const REGISTRY = [
   { id: 'layout',            profile: 'spec',   file: /^layout[a-z0-9-]*\.md$/ },
   { id: 'design-read',       profile: 'spec',   file: /^design-read\.md$/ },
   { id: 'decisions',         profile: 'spec',   file: /^(decisions|asset-manifest)\.md$/ },
+  { id: 'generic-report',    profile: 'report', file: /^[a-z0-9-]+-report\.md$/ },
 ];
 
 function stripFences(md) {
@@ -96,7 +98,7 @@ export function classifyDoc({ markdown, filePath = '' }) {
   if (kv >= 4) {
     return { docType: 'structural-brief', profile: 'brief', evidence: [`run of ${kv} '**Label:** value' bullets near the top`] };
   }
-  if (/#[0-9a-f]{6}\b/i.test(md) && /^\|.*\|\s*$/m.test(md)) {
+  if (/^\|.*#[0-9a-f]{6}\b.*\|\s*$/mi.test(md)) {
     return { docType: 'structural-brief', profile: 'brief', evidence: ['hex color values inside a table (palette)'] };
   }
   return { docType: 'generic', profile: 'generic', evidence: ['no registry or structural match'] };
@@ -126,6 +128,12 @@ if (_isMain && process.argv.includes('--self-test')) {
   const g = classifyDoc({ markdown: '# Hello\n\nJust prose.', filePath: 'random.md' });
   assert.equal(g.docType, 'generic');
   assert.equal(g.profile, 'generic');
+  // regressions: specific registry rule wins over the *-report catch-all
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'layout-report.md' }).profile, 'spec');
+  // regressions: hex in prose + unrelated table must not read as brief
+  assert.equal(classifyDoc({ markdown: '# n\n\nRef #a1b2c3 in prose.\n\n| a | b |\n|---|---|\n| 1 | 2 |', filePath: 'notes.md' }).docType, 'generic');
+  // regressions: hex inside a table row still detected as brief
+  assert.equal(classifyDoc({ markdown: '# p\n\n| Name | Hex |\n|---|---|\n| Ink | #090E22 |', filePath: 'notes.md' }).profile, 'brief');
   console.log('export-doctype self-test: OK');
 }
 
