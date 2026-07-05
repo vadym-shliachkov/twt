@@ -1086,7 +1086,7 @@ flowchart TB
 ### /twt-export
 
 **Category:** export
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
@@ -1129,7 +1129,7 @@ flowchart TB
 ### /twt-export-docx
 
 **Category:** export
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Markdown file path
@@ -1158,7 +1158,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Markdown file path
