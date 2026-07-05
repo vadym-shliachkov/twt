@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
-export async function htmlToPdf({ html, outPath, format, landscape = false, margin, width, height }) {
+export async function htmlToPdf({ html, outPath, format, landscape = false, margin, width, height, readySignal }) {
   let pw;
   try { pw = await import('playwright'); }
   catch { return { ok: false, engine: 'none', reason: 'playwright npm package not installed' }; }
@@ -15,6 +15,10 @@ export async function htmlToPdf({ html, outPath, format, landscape = false, marg
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load' });
+    // Let in-page scripts finish before printing (e.g. the slide paginator that
+    // splits overflowing slides once web fonts settle). Never fatal on timeout —
+    // the paginator's own font-ready fallback keeps this bounded.
+    if (readySignal) { try { await page.waitForFunction(readySignal, { timeout: 8000 }); } catch { /* proceed with best-effort layout */ } }
     const opts = { path: outPath, printBackground: true };
     if (width && height) { opts.width = width; opts.height = height; }
     else { opts.preferCSSPageSize = true; if (format) opts.format = format; if (landscape) opts.landscape = true; }

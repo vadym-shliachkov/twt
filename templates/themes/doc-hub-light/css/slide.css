@@ -1,33 +1,128 @@
-/* doc-hub-light slide layer — PDF slide exports (Chromium print). Page size is set by
-   pdf-render width/height per aspect; this styles the slide boxes. */
+/* doc-hub-light slide layer — themed PDF slide exports (Chromium print). Page size
+   is set by pdf-render width/height per aspect; this styles the slide boxes.
+
+   Layout model (see tools/export-html.mjs mdToSlidesHtml + SLIDE_PAGINATOR):
+   every content slide has ONE title size and ONE body size — density is solved by
+   splitting into "(cont.)" slides at render time, never by shrinking type. Content
+   is always top-aligned, so the title sits in the same place on every slide. An
+   accent side-rail carries the slide number; a tri-color rule underlines the title;
+   a thin footer shows the deck title + page. Cover and section dividers opt out of
+   the rail so the deck keeps a visual rhythm. */
 @page { margin: 0; }
-body { margin: 0; }
-body.ar169 { --slide-w: 1280px; --slide-h: 720px; }
-body.ar43  { --slide-w: 1024px; --slide-h: 768px; }
+html, body { margin: 0; padding: 0; }
+body.ar169 { --slide-w: 1280px; --slide-h: 720px; --rail-w: 88px; --pad: 64px; }
+body.ar43  { --slide-w: 1024px; --slide-h: 768px; --rail-w: 76px; --pad: 56px; }
+
 .slide {
+  position: relative;
   box-sizing: border-box;
   width: var(--slide-w); height: var(--slide-h);
-  padding: 64px 80px; background: var(--hs-surface); color: var(--hs-text);
+  overflow: hidden;
+  background: var(--tx-surface); color: var(--tx-text);
+  font-family: var(--tx-font-body);
   page-break-after: always; break-after: page;
-  display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--rail-w) 1fr;
+  grid-template-rows: 1fr auto;
 }
 .slide:last-child { page-break-after: auto; break-after: auto; }
-.slide h1 { font-size: 3rem; margin: 0 0 .3em; }
-.slide h2 { font-size: 2.1rem; margin: 0 0 .4em; }
-.slide ul, .slide p { font-size: 1.4rem; line-height: 1.4; }
-.slide-cover { justify-content: flex-end; }
-.slide-cover .hs-accent-bar { width: 120px; height: 6px; margin: 0 0 24px; }
-/* Section divider slide (a slide whose content is a single heading) */
-.slide-section { justify-content: center; }
-.slide-section h1, .slide-section h2 { font-size: 2.6rem; color: var(--hs-ink); }
-.slide-section .hs-accent-bar { width: 96px; height: 5px; margin: 0 0 20px; }
-/* Dense slides: shrink type and top-align instead of overflowing/clipping */
-.slide-dense, .slide-packed { justify-content: flex-start; }
-.slide-dense h1, .slide-packed h1 { font-size: 2.2rem; margin-bottom: .3em; }
-.slide-dense ul, .slide-dense p { font-size: 1.05rem; line-height: 1.35; }
-.slide-dense li, .slide-packed li { margin: .12em 0; }
-.slide-packed ul, .slide-packed p { font-size: .92rem; line-height: 1.3; }
-.slide-packed ul { columns: 2; column-gap: 48px; }
-.slide-packed ul ul { columns: 1; }
-.slide h1, .slide h2 { font-family: var(--hs-font-heading); }
-.slide code { font-size: .8em; }
+.slide h1, .slide h2, .slide h3 { font-family: var(--tx-font-heading); }
+
+/* ---- accent side-rail (content slides) ---- */
+.slide-rail {
+  grid-column: 1; grid-row: 1 / 3;
+  background: var(--tx-accent); color: #fff;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: var(--pad);
+}
+.slide-rail .rail-num {
+  font-family: var(--tx-font-heading); font-weight: 700;
+  font-size: 24px; letter-spacing: .06em;
+}
+
+/* ---- content column ---- */
+.slide-main {
+  grid-column: 2; grid-row: 1;
+  box-sizing: border-box;
+  min-height: 0; overflow: hidden;
+  padding: var(--pad) var(--pad) 8px;
+  display: flex; flex-direction: column;
+}
+.slide-title {
+  font-family: var(--tx-font-heading); color: var(--tx-ink);
+  font-size: 34px; line-height: 1.12; font-weight: 800;
+  margin: 0 0 6px; flex: none;
+}
+.slide-rule {
+  display: block; flex: none;
+  width: 64px; height: 4px; border-radius: 999px; margin: 0 0 26px;
+  background: linear-gradient(90deg,var(--tx-accent-2) 0 33%,var(--tx-accent) 33% 66%,var(--tx-accent-3) 66% 100%);
+}
+.slide-flow { flex: 1 1 auto; min-height: 0; }
+.slide-flow > :first-child { margin-top: 0; }
+.slide-flow > :last-child { margin-bottom: 0; }
+.slide-flow p { font-size: 22px; line-height: 1.45; margin: 0 0 16px; }
+.slide-flow ul, .slide-flow ol { font-size: 22px; line-height: 1.45; margin: 0 0 18px; padding-left: 1.15em; }
+.slide-flow li { margin: 0 0 8px; padding-left: 4px; }
+.slide-flow li::marker { color: var(--tx-accent); }
+.slide-flow strong { color: var(--tx-ink); }
+.slide-flow code { font-size: .82em; }
+.slide-flow pre { font-size: 16px; line-height: 1.4; overflow: hidden; }
+
+/* Lead-in labels that head a list — "Examples:", "Possible services:", etc.
+   (the paginator strips the colon and adds .lead-label). */
+.slide-flow p.lead-label {
+  font-family: var(--tx-font-heading); font-weight: 700; font-size: 15px;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--tx-muted);
+  margin: 0 0 10px;
+}
+
+/* ---- pros / cons two-column (paired by the paginator) ---- */
+.pros-cons {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 44px;
+  margin: 0 0 18px;
+}
+.pros-cons .pc-col > p:first-child {
+  font-family: var(--tx-font-heading); font-weight: 700; font-size: 15px;
+  text-transform: uppercase; letter-spacing: .07em; margin: 0 0 10px;
+}
+.pros-cons .pc-pros > p:first-child { color: var(--tx-ok); }
+.pros-cons .pc-cons > p:first-child { color: var(--tx-danger); }
+.pros-cons ul { margin: 0; }
+
+/* ---- footer ---- */
+.slide-foot {
+  grid-column: 2; grid-row: 2;
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 0 var(--pad) 22px;
+  padding-top: 9px; border-top: 1px solid var(--tx-rule);
+  font-family: var(--tx-font-heading); font-size: 12px; letter-spacing: .05em;
+  color: var(--tx-muted); text-transform: uppercase;
+}
+
+/* ---- cover ---- */
+.slide-cover {
+  grid-template-columns: 1fr; grid-template-rows: 1fr;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: var(--pad) calc(var(--pad) + 20px);
+}
+.slide-cover .hs-accent-bar { width: 120px; height: 6px; margin: 0 0 30px; }
+.slide-cover h1 {
+  font-family: var(--tx-font-heading); font-weight: 800; color: var(--tx-ink);
+  font-size: 56px; line-height: 1.05; margin: 0;
+}
+.slide-cover h2 { font-size: 28px; color: var(--tx-muted); font-weight: 600; margin: 18px 0 0; }
+.slide-cover p { font-size: 24px; color: var(--tx-muted); margin: 18px 0 0; }
+
+/* ---- section divider ---- */
+.slide-section {
+  grid-template-columns: 1fr; grid-template-rows: 1fr;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--pad) calc(var(--pad) + 20px);
+  background: var(--tx-panel);
+}
+.slide-section .hs-accent-bar { width: 96px; height: 5px; margin: 0 0 24px; }
+.slide-section h1, .slide-section h2 {
+  font-family: var(--tx-font-heading); font-weight: 800; color: var(--tx-ink);
+  font-size: 46px; line-height: 1.1; margin: 0;
+}

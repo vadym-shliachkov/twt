@@ -202,7 +202,7 @@ async function convert(args) {
       writeFileSync(paths.html, html, "utf8");
       conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
       const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
-      const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
+      const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h, readySignal: "window.__slidesReady === true" });
       if (r.ok) {
         engine = "chromium";
         success = existsSync(paths.output) && statSync(paths.output).size > 0;
