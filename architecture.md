@@ -1188,7 +1188,7 @@ flowchart TB
 ### /twt-export-presentation
 
 **Category:** export
-**Version:** 1.1.1
+**Version:** 1.2.1
 
 **Inputs:**
 - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3

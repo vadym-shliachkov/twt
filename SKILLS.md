@@ -1097,7 +1097,7 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 ## /twt-export-presentation
 
 **Category:** export
-**Version:** 1.1.1
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Convert a Markdown slide deck into PPTX or PDF using the marketplace's deterministic presentation export script and default presentation template. The skill keeps model work light: it gathers choices, runs the script, reads render notes, and reports results.
