@@ -293,6 +293,7 @@ function selfTest() {
   assert.equal(parseArgs(["--format", "pdf", "--input", "deck.md"]).aspect, "16:9");
   const paths = outputPaths("C:/tmp/My Deck.md", "pptx", "C:/work/project");
   assert.match(paths.output.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/presentation\/my-deck\/my-deck\.pptx$/);
+  assert.match(paths.html.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/presentation\/my-deck\/my-deck\.html$/);
   console.log("export-presentation self-test: OK");
 }
 
