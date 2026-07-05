@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import { extname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
-import { mdToSlidesHtml } from "./export-html.mjs";
+import { mdToSlidesHtml, splitSlides } from "./export-html.mjs";
 import { htmlToPdf } from "./pdf-render.mjs";
 import { resolveThemeOrLegacy } from "./theme.mjs";
 
@@ -62,38 +62,6 @@ function outputPaths(inputPath, format, cwd = process.cwd()) {
     notes: join(dir, "render-notes.md"),
     normalized: join(dir, `${slug}.slides.md`),
   };
-}
-
-function splitSlides(markdown) {
-  const lines = markdown.split(/\r?\n/);
-  const slides = [];
-  let current = [];
-  let inFence = false;
-  let fenceMarker = "";
-
-  for (const line of lines) {
-    const fence = line.match(/^\s*(```+|~~~+)/);
-    if (fence && !inFence) {
-      inFence = true;
-      fenceMarker = fence[1][0];
-      current.push(line);
-      continue;
-    }
-    if (inFence && line.trim().startsWith(fenceMarker.repeat(3))) {
-      inFence = false;
-      fenceMarker = "";
-      current.push(line);
-      continue;
-    }
-    if (!inFence && /^-{3,}\s*$/.test(line)) {
-      if (current.join("\n").trim()) slides.push(current.join("\n").trim());
-      current = [];
-      continue;
-    }
-    current.push(line);
-  }
-  if (current.join("\n").trim()) slides.push(current.join("\n").trim());
-  return slides;
 }
 
 function analyzeSlides(markdown) {
@@ -232,13 +200,13 @@ async function convert(args) {
     try {
       const { html } = mdToSlidesHtml({ markdownPath: inputForPandoc, aspect: args.aspect, title, theme });
       writeFileSync(paths.html, html, "utf8");
+      conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
       const [w, h] = args.aspect === "4:3" ? ["1024px", "768px"] : ["1280px", "720px"];
       const r = await htmlToPdf({ html, outPath: paths.output, width: w, height: h });
       if (r.ok) {
         engine = "chromium";
         success = existsSync(paths.output) && statSync(paths.output).size > 0;
         conversionNotes.push(`Rendered themed slides via Chromium (theme=${theme.slug}).`);
-        conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
       } else {
         const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", aspect: args.aspect, title, referencePptx });
         success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;

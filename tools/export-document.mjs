@@ -209,12 +209,12 @@ async function convert(args) {
       try {
         const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile });
         writeFileSync(paths.html, r.html, "utf8"); // always saved for debugging
+        conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
         if (r.transformError) conversionNotes.push(`Transform fallback: ${r.transformError} (rendered generic HTML instead).`);
         const pdfR = await htmlToPdf({ html: r.html, outPath: paths.output });
         if (pdfR.ok) {
           engine = "chromium"; success = statSync(paths.output).size > 0;
           conversionNotes.push(`Rendered themed PDF via Chromium (theme=${theme.slug}, profile=${doc.profile}, transforms=${r.applied.join(", ") || "none"}).`);
-          conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
         } else {
           const p = runPandoc({ input: inputForPandoc, output: paths.output, format: "pdf", title });
           success = p.status === 0 && existsSync(paths.output) && statSync(paths.output).size > 0;

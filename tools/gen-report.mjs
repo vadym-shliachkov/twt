@@ -142,7 +142,7 @@ const html = `<!doctype html>
 <title>Project review — twt reports</title>
 <style>${readHouseCss()}</style>
 <style>
-  /* gen-report.mjs — gr- namespaced; doc-hub-light via shared house-style.css */
+  /* gen-report.mjs — gr- namespaced; doc-hub-light via shared theme tokens.css (house-style.mjs) */
   .gr-wrap{max-width:960px;margin:0 auto;padding:0 20px 64px}
   .gr-head{padding:40px 0 8px}
   .gr-head h1{margin:0 0 6px;font-size:1.9rem;font-family:var(--hs-font-heading);color:var(--hs-ink)}

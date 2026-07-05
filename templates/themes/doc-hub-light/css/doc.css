@@ -1,4 +1,4 @@
-/* doc-hub-light paged-document layer — HTML + PDF document exports. Layered on house-style.css. */
+/* doc-hub-light paged-document layer — HTML + PDF document exports. Layered on tokens.css. */
 @page { size: A4; margin: 22mm 24mm; }
 html { background: var(--hs-surface); }
 body { font-size: 11pt; }

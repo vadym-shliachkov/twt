@@ -13,6 +13,41 @@ import { transformAst } from './export-transform.mjs';
 
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+// Fence-aware slide splitter: a lone `---` line inside a ``` or ~~~ code fence is
+// content, not a slide boundary. Shared by the HTML/PDF path (mdToSlidesHtml below)
+// and tools/export-presentation.mjs (pptx/pdf conversion + slide analysis).
+export function splitSlides(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const slides = [];
+  let current = [];
+  let inFence = false;
+  let fenceMarker = "";
+
+  for (const line of lines) {
+    const fence = line.match(/^\s*(```+|~~~+)/);
+    if (fence && !inFence) {
+      inFence = true;
+      fenceMarker = fence[1][0];
+      current.push(line);
+      continue;
+    }
+    if (inFence && line.trim().startsWith(fenceMarker.repeat(3))) {
+      inFence = false;
+      fenceMarker = "";
+      current.push(line);
+      continue;
+    }
+    if (!inFence && /^-{3,}\s*$/.test(line)) {
+      if (current.join("\n").trim()) slides.push(current.join("\n").trim());
+      current = [];
+      continue;
+    }
+    current.push(line);
+  }
+  if (current.join("\n").trim()) slides.push(current.join("\n").trim());
+  return slides;
+}
+
 function pandoc(args, input) {
   const r = spawnSync('pandoc', args, { encoding: 'utf8', input });
   if (r.status !== 0) throw new Error('pandoc failed: ' + ((r.stderr || r.error?.message || '').trim()));
@@ -57,7 +92,7 @@ export function mdToSlidesHtml({ markdownPath, aspect = '16:9', title, theme }) 
   const md = readFileSync(markdownPath, 'utf8');
   const t = title || md.match(/^#\s+(.+)$/m)?.[1] || 'Presentation';
   const resolved = theme || resolveTheme();
-  const parts = md.split(/^\s*---\s*$/m).map((s) => s.trim()).filter(Boolean);
+  const parts = splitSlides(md);
   const slidesHtml = parts.map((part, i) => {
     const lines = part.split(/\r?\n/).filter((l) => l.trim());
     const headingOnly = lines.length > 0 && lines.every((l) => /^#{1,6}\s+/.test(l));
@@ -102,6 +137,25 @@ if (_isMain && process.argv.includes('--self-test')) {
   const denseSectionHtml = deckHtml.split('<section')[2];
   assert.match(denseSectionHtml, /class="[^"]*\bslide-dense\b[^"]*"/, '9-bullet slide gets slide-dense');
   assert.doesNotMatch(denseSectionHtml, /slide-packed/, '9-bullet slide is not slide-packed');
+
+  // Fence-aware splitting: a lone `---` line inside a code fence is content, not a
+  // slide boundary — must not tear the slide in two.
+  assert.equal(splitSlides('# Cover\n---\n# Slide 2\n```\nfoo\n---\nbar\n```').length, 2, 'splitSlides keeps fenced --- as content');
+  const fencedDeck = [
+    '# Cover Slide',
+    '---',
+    '## Slide 2 With Fence',
+    '```',
+    'some code',
+    '---',
+    'more code',
+    '```',
+  ].join('\n');
+  const fencedPath = path.join(os.tmpdir(), `export-html-self-test-fence-${process.pid}.md`);
+  writeFileSync(fencedPath, fencedDeck, 'utf8');
+  const { html: fencedHtml } = mdToSlidesHtml({ markdownPath: fencedPath });
+  const sectionCount = (fencedHtml.match(/<section/g) || []).length;
+  assert.equal(sectionCount, 2, 'lone --- inside a code fence must not split the slide in two');
 
   console.log('export-html self-test: OK');
 }
