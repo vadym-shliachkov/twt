@@ -1,7 +1,7 @@
 ---
 name: twt-export-docx
 category: export
-description: (v1.1.1) Convert Markdown to a polished DOCX with the shared document template
+description: (v1.1.1) Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling
 version: 1.1.1
 accepts_arguments: true
 inputs:
@@ -54,7 +54,7 @@ Resolve theme choice:
 - If `$ARGUMENTS` includes `--theme <slug-or-path>`, pass it through unchanged.
 - If `$ARGUMENTS` includes legacy `--template <path>`, pass it through; the script maps theme dirs to `--theme` and ignores prose template.md files with a warning in render-notes.
 - Discover custom themes by reading `.twt-artifacts/export/themes/*/theme.json`.
-- Applicable themes are `type: document` or `type: universal` (for presentations: `type: presentation` or `universal`).
+- Applicable themes are `type: document` or `type: universal`.
 - If no custom themes exist, use the built-in `doc-hub-light` theme (no flag needed).
 - If custom themes exist, use the **AskUserQuestion** tool with header "Theme" and single-select options:
   - **Built-in doc-hub-light** — house style: quiet editorial, tri-color accent

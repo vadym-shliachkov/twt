@@ -152,7 +152,9 @@ Determine applicable theme types:
 - PDF/DOCX document exports: `document` and `universal`
 - PPTX/PDF presentation exports: `presentation` and `universal`
 
-Use the **AskUserQuestion** tool with header "Theme" and single-select options:
+If no applicable custom themes exist, use the built-in `doc-hub-light` theme without asking (no flag needed) — unless the user explicitly asked to create a theme, in which case dispatch `/twt-export-template-create`.
+
+If at least one applicable custom theme exists, use the **AskUserQuestion** tool with header "Theme" and single-select options:
 
 - **Built-in doc-hub-light** — house style: quiet editorial, tri-color accent
 - **Create new** — Create a reusable theme first, then continue exporting
