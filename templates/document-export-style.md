@@ -1,6 +1,6 @@
 # Document Export Style
 
-> Applied styling now comes from templates/house-style.css (+ house-doc.css / house-slide.css) and templates/reference.docx / reference.pptx. This file documents the intended look.
+> Applied styling comes from the built-in export theme `templates/themes/doc-hub-light/` (css layers + bundled fonts + reference docs). This file documents the intended look for humans; it is not read by the export scripts. Custom themes: /twt-export-template-create.
 
 Default house template for `/twt-export-pdf` and `/twt-export-docx`. Use this on every Markdown-to-PDF or Markdown-to-DOCX export unless the user explicitly confirms a custom template.
 

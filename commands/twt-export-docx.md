@@ -1,8 +1,8 @@
 ---
 name: twt-export-docx
 category: export
-description: (v1.0.1) Convert Markdown to a polished DOCX with the shared document template
-version: 1.0.1
+description: (v1.1.0) Convert Markdown to a polished DOCX with the shared document template
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Markdown file path
@@ -13,8 +13,8 @@ reads:
   - <markdown-path>
   - tools/export-document.mjs
   - templates/document-export-style.md
-  - .twt-artifacts/export/templates/*/template.json
-  - .twt-artifacts/export/templates/*/template.md
+  - .twt-artifacts/export/themes/*/theme.json
+  - templates/themes/doc-hub-light/theme.json
 writes:
   - .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx
   - .twt-artifacts/export/docx/<source-slug>/render-notes.md
@@ -34,11 +34,11 @@ writes:
 
 **Success criteria:**
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input <markdown-path>`
-- Offers a template choice when multiple document/universal templates exist
+- Offers a theme choice when custom themes exist
 - Produces `.twt-artifacts/export/docx/<source-slug>/<source-slug>.docx`
-- Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, template used, and output path
-- Uses the doc-hub-light `templates/reference.docx` by default (Montserrat headings, Inter body, hairline tables)
-- Uses `templates/document-export-style.md` through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes
+- Writes `.twt-artifacts/export/docx/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, theme used, and output path
+- Themed via the built-in `doc-hub-light` theme's `reference.docx` by default (Montserrat headings, Inter body, hairline tables); custom themes provide their own themed `reference.docx` when built
+- Theme reference.docx gives global typography/colors; doc-type components are HTML/PDF-only — DOCX has no intermediate HTML
 
 ---
 
@@ -50,29 +50,29 @@ The source must be a local `.md` or `.markdown` file. If the input is a URL, PDF
 
 If the user wants to overwrite an existing export, pass `--force` through to the script.
 
-Resolve template choice:
-- If `$ARGUMENTS` includes `--template <path>`, pass it through unchanged.
-- Discover custom templates by reading `.twt-artifacts/export/templates/*/template.json`.
-- Applicable templates are `type: document` or `type: universal`.
-- If no applicable custom templates exist, use built-in `templates/document-export-style.md`.
-- If exactly one applicable custom template exists, use it by default and mention it in the report.
-- If more than one applicable template exists, use the **AskUserQuestion** tool with header "Template" and single-select options:
-  - **Built-in default** — Use `templates/document-export-style.md`
-  - One option for each custom template, labeled with its human-readable `name`, `type`, and `description`
-  - **You decide** — Pick the most specific applicable custom template; if unclear, pick the built-in default
+Resolve theme choice:
+- If `$ARGUMENTS` includes `--theme <slug-or-path>`, pass it through unchanged.
+- If `$ARGUMENTS` includes legacy `--template <path>`, pass it through; the script maps theme dirs to `--theme` and ignores prose template.md files with a warning in render-notes.
+- Discover custom themes by reading `.twt-artifacts/export/themes/*/theme.json`.
+- Applicable themes are `type: document` or `type: universal` (for presentations: `type: presentation` or `universal`).
+- If no custom themes exist, use the built-in `doc-hub-light` theme (no flag needed).
+- If custom themes exist, use the **AskUserQuestion** tool with header "Theme" and single-select options:
+  - **Built-in doc-hub-light** — house style: quiet editorial, tri-color accent
+  - One option per custom theme, labeled with its `name`, `type`, and `description`
+  - **You decide** — Pick the most specific applicable custom theme; if unclear, pick built-in
 
 ## Step 2 — Run the export script
 
 Run from the repository or project root that contains `tools/export-document.mjs`:
 
 ```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --template "<template-path>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --theme "<theme-ref>"
 ```
 
 If `--force` was requested:
 
 ```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --template "<template-path>" --force
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs" --format docx --input "<markdown-path>" --theme "<theme-ref>" --force
 ```
 
 The script handles slugging, output folders, heading nesting checks, temporary normalized export copies, Pandoc invocation, output verification, and `render-notes.md`.
@@ -84,6 +84,8 @@ If the script is missing, stop with: "Export helper missing — run this from th
 Read `.twt-artifacts/export/docx/<source-slug>/render-notes.md` after the script finishes. Use it as the source of truth for:
 
 - DOCX path or failure
+- theme used (slug + source) and doc type detected → profile
+- font source (bundled vs system stacks)
 - heading nesting warnings
 - temporary export-copy adjustments
 - conversion tool used
@@ -95,7 +97,8 @@ Read `.twt-artifacts/export/docx/<source-slug>/render-notes.md` after the script
 Tell the user:
 
 - DOCX path
-- That `templates/document-export-style.md` was used
+- Theme used (built-in `doc-hub-light` or custom slug)
+- That the theme's reference.docx supplies global typography/colors (doc-type components are HTML/PDF-only)
 - Any heading nesting warnings
 - Any conversion limitations
 - Whether the DOCX was successfully produced

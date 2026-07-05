@@ -1,11 +1,11 @@
 ---
 name: twt-export
 category: export
-description: (v1.0.2) Orchestrate PDF, DOCX, PPTX, and template-based exports
-version: 1.0.2
+description: (v1.1.0) Orchestrate PDF, DOCX, PPTX, and theme-based exports
+version: 1.1.0
 accepts_arguments: true
 inputs:
-  - Optional export type, source Markdown path or source instructions, template choice, aspect ratio, and force flag
+  - Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
 dependencies:
   hard: []
   soft:
@@ -15,42 +15,47 @@ dependencies:
     - twt-export-template-create
 reads:
   - <markdown-path>
-  - .twt-artifacts/export/templates/*/template.json
-  - .twt-artifacts/export/templates/*/template.md
+  - .twt-artifacts/export/themes/*/theme.json
+  - templates/themes/doc-hub-light/theme.json
   - tools/export-source-create.mjs
   - tools/export-document.mjs
   - tools/export-presentation.mjs
-  - tools/export-template-create.mjs
+  - tools/export-theme-create.mjs
 writes:
   - .twt-artifacts/export/sources/<source-slug>.md
   - .twt-artifacts/export/sources/<source-slug>.notes.md
   - .twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf
+  - .twt-artifacts/export/pdf/<source-slug>/<source-slug>.html
   - .twt-artifacts/export/docx/<source-slug>/<source-slug>.docx
   - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx
   - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf
-  - .twt-artifacts/export/templates/<template-slug>/template.md
-  - .twt-artifacts/export/templates/<template-slug>/template.json
-  - .twt-artifacts/export/templates/<template-slug>/preview-notes.md
+  - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html
+  - .twt-artifacts/export/themes/<theme-slug>/theme.json
+  - .twt-artifacts/export/themes/<theme-slug>/css/*.css
+  - .twt-artifacts/export/themes/<theme-slug>/fonts/*
+  - .twt-artifacts/export/themes/<theme-slug>/reference/*
+  - .twt-artifacts/export/themes/<theme-slug>/preview/preview.html
+  - .twt-artifacts/export/themes/<theme-slug>/preview-notes.md
 ---
 
 # /twt-export
 
 ## Intent
 
-**Purpose:** Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or template when needed, then dispatches the specialized export skill so conversion remains script-driven. The shared doc-hub-light house style is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
+**Purpose:** Orchestrate export creation across document and presentation formats. The skill gathers choices, creates a source or theme when needed, then dispatches the specialized export skill so conversion remains script-driven. The built-in `doc-hub-light` theme is the default for all exports; per-project brand customization stays with `/twt-export-template-create`.
 
 **Non-goals:**
 - Doesn't convert files directly inside the orchestrator
 - Doesn't create both document and presentation outputs unless the user explicitly runs separate exports
-- Doesn't overwrite sources, templates, or outputs without explicit user consent
+- Doesn't overwrite sources, themes, or outputs without explicit user consent
 - Doesn't duplicate logic from `/twt-export-pdf`, `/twt-export-docx`, `/twt-export-presentation`, or `/twt-export-template-create`
 
 **Success criteria:**
-- With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and template choices
-- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the shared doc-hub-light house style
+- With no `$ARGUMENTS`, uses AskUserQuestion to choose output type before asking for source and theme choices
+- Supports HTML, PDF, DOCX, PPTX, and PDF presentation formats, all using the built-in `doc-hub-light` theme by default
 - Allows either an existing Markdown file or new source instructions
-- Offers only templates relevant to the selected output type, plus built-in default and create-new options
-- If creating a template, dispatches `/twt-export-template-create` first and then proceeds with the export
+- Offers only themes relevant to the selected output type, plus the built-in default and a create-new option
+- If creating a theme, dispatches `/twt-export-template-create` first and then proceeds with the export
 - Delegates source creation to `tools/export-source-create.mjs`
 - Delegates final conversion to the relevant child export skill, which delegates to `tools/export-document.mjs` or `tools/export-presentation.mjs`
 
@@ -74,7 +79,8 @@ html | pdf | docx | pptx | presentation-pdf
 --source <markdown-path>
 --instructions "<instructions>"
 --title "<title>"
---template <template-path>
+--theme <slug-or-path>
+--template <legacy-path>
 --aspect <16:9|4:3>
 --force
 ```
@@ -129,27 +135,29 @@ Use `--type document` for PDF/DOCX document outputs and `--type presentation` fo
 
 Use the script's reported `Source:` path as the export input. If the generated source contains only instructions rather than final content, tell the user before proceeding and continue unless they ask to pause.
 
-## Step 3 — Resolve template
+## Step 3 — Resolve theme
 
-If `$ARGUMENTS` includes `--template <path>`, pass that path to the child export skill unchanged.
+If `$ARGUMENTS` includes `--theme <slug-or-path>`, pass it through to the child export skill unchanged.
 
-Otherwise, discover custom templates by reading:
+If `$ARGUMENTS` includes legacy `--template <path>`, pass it through; the script maps theme dirs to `--theme` and ignores prose template.md files with a warning in render-notes.
+
+Otherwise, discover custom themes by reading:
 
 ```text
-.twt-artifacts/export/templates/*/template.json
+.twt-artifacts/export/themes/*/theme.json
 ```
 
-Determine applicable template types:
+Determine applicable theme types:
 
 - PDF/DOCX document exports: `document` and `universal`
 - PPTX/PDF presentation exports: `presentation` and `universal`
 
-Use the **AskUserQuestion** tool with header "Template" and single-select options:
+Use the **AskUserQuestion** tool with header "Theme" and single-select options:
 
-- **Built-in default** — Use `templates/document-export-style.md` for document outputs or `templates/presentation-export-style.md` for presentation outputs
-- **Create new** — Create a reusable template first, then continue exporting
-- One option for each applicable custom template, labeled with its human-readable `name`, `type`, and `description`
-- **You decide** — Pick the most specific applicable custom template; if unclear, pick the built-in default
+- **Built-in doc-hub-light** — house style: quiet editorial, tri-color accent
+- **Create new** — Create a reusable theme first, then continue exporting
+- One option for each applicable custom theme, labeled with its human-readable `name`, `type`, and `description`
+- **You decide** — Pick the most specific applicable custom theme; if unclear, pick built-in
 
 If the user chooses **Create new**, dispatch `/twt-export-template-create` with:
 
@@ -157,34 +165,34 @@ If the user chooses **Create new**, dispatch `/twt-export-template-create` with:
 - `--type presentation` for PPTX/PDF presentation outputs
 - the user's brand or style instructions if provided
 
-After `/twt-export-template-create` finishes, read its reported `template.md` path or `.twt-artifacts/export/templates/<template-slug>/template.json`, then use that template path for the export.
+After `/twt-export-template-create` finishes, read its reported theme dir or `.twt-artifacts/export/themes/<theme-slug>/theme.json`, then use that theme slug for the export.
 
 ## Step 4 — Dispatch the specialized export
 
-Do not run Pandoc or conversion commands directly from this orchestrator. Dispatch the matching child skill with the resolved source and template.
+Do not run Pandoc or conversion commands directly from this orchestrator. Dispatch the matching child skill with the resolved source and theme.
 
 For a PDF document, dispatch `/twt-export-pdf`:
 
 ```text
-/twt-export-pdf "<source-path>" --template "<template-path>"
+/twt-export-pdf "<source-path>" --theme "<theme-ref>"
 ```
 
 For a DOCX document, dispatch `/twt-export-docx`:
 
 ```text
-/twt-export-docx "<source-path>" --template "<template-path>"
+/twt-export-docx "<source-path>" --theme "<theme-ref>"
 ```
 
 For a PPTX presentation, dispatch `/twt-export-presentation`:
 
 ```text
-/twt-export-presentation "<source-path>" --format pptx --aspect <16:9|4:3> --template "<template-path>"
+/twt-export-presentation "<source-path>" --format pptx --aspect <16:9|4:3> --theme "<theme-ref>"
 ```
 
 For a PDF presentation, dispatch `/twt-export-presentation`:
 
 ```text
-/twt-export-presentation "<source-path>" --format pdf --aspect <16:9|4:3> --template "<template-path>"
+/twt-export-presentation "<source-path>" --format pdf --aspect <16:9|4:3> --theme "<theme-ref>"
 ```
 
 If overwrite was explicitly requested, append `--force`.
@@ -195,9 +203,9 @@ Report:
 
 - requested export type
 - source path used, including whether it was existing or created from instructions
-- template path used, including whether it was built-in, selected, or newly created
+- theme used, including whether it was built-in `doc-hub-light`, a selected custom theme, or newly created
 - child export skill dispatched
 - output path and render notes path from the child skill's report
 - any warnings from source creation or render notes
 
-If a source or template has problems, report them clearly and still proceed to export unless the issue makes the script impossible to run, such as a missing source path or missing template file.
+If a source or theme has problems, report them clearly and still proceed to export unless the issue makes the script impossible to run, such as a missing source path or missing theme file.

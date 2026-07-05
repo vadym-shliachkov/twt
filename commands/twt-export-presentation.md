@@ -1,8 +1,8 @@
 ---
 name: twt-export-presentation
 category: export
-description: (v1.0.1) Convert Markdown to PPTX or PDF slides via the presentation export script
-version: 1.0.1
+description: (v1.1.0) Convert Markdown to PPTX or PDF slides via the presentation export script
+version: 1.1.0
 accepts_arguments: true
 inputs:
   - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3
@@ -13,11 +13,12 @@ reads:
   - <markdown-path>
   - tools/export-presentation.mjs
   - templates/presentation-export-style.md
-  - .twt-artifacts/export/templates/*/template.json
-  - .twt-artifacts/export/templates/*/template.md
+  - .twt-artifacts/export/themes/*/theme.json
+  - templates/themes/doc-hub-light/theme.json
 writes:
   - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pptx
   - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.pdf
+  - .twt-artifacts/export/presentation/<source-slug>/<source-slug>.html
   - .twt-artifacts/export/presentation/<source-slug>/render-notes.md
 ---
 
@@ -35,12 +36,12 @@ writes:
 
 **Success criteria:**
 - With no `$ARGUMENTS`, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path
-- Offers a template choice when multiple presentation/universal templates exist
+- Offers a theme choice when custom themes exist (applicable types: `presentation` or `universal`)
 - Delegates conversion to `node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input <markdown-path>`
 - Defaults aspect ratio to `16:9` when the user does not choose one
 - Produces the requested artifact under `.twt-artifacts/export/presentation/<source-slug>/`
-- PPTX uses `templates/reference.pptx`; PDF slides render doc-hub-light via Chromium (playwright) with a beamer fallback
-- Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path
+- PPTX uses the theme's `reference.pptx` (built-in `doc-hub-light` by default); PDF slides render the theme via Chromium (playwright) with a beamer fallback, and the intermediate HTML is always saved alongside the PDF
+- Writes `render-notes.md` with slide count, aspect ratio, structure/density warnings, conversion warnings, theme used, and output path
 
 ---
 
@@ -68,29 +69,29 @@ If `$ARGUMENTS` includes a Markdown path but omits `--format`, ask the same "For
 
 The source must be a local `.md` or `.markdown` file. If the input is a URL, PDF, PPTX, DOCX, or folder, stop and ask for a Markdown deck file.
 
-Resolve template choice:
-- If `$ARGUMENTS` includes `--template <path>`, pass it through unchanged.
-- Discover custom templates by reading `.twt-artifacts/export/templates/*/template.json`.
-- Applicable templates are `type: presentation` or `type: universal`.
-- If no applicable custom templates exist, use built-in `templates/presentation-export-style.md`.
-- If exactly one applicable custom template exists, use it by default and mention it in the report.
-- If more than one applicable template exists, use the **AskUserQuestion** tool with header "Template" and single-select options:
-  - **Built-in default** — Use `templates/presentation-export-style.md`
-  - One option for each custom template, labeled with its human-readable `name`, `type`, and `description`
-  - **You decide** — Pick the most specific applicable custom template; if unclear, pick the built-in default
+Resolve theme choice:
+- If `$ARGUMENTS` includes `--theme <slug-or-path>`, pass it through unchanged.
+- If `$ARGUMENTS` includes legacy `--template <path>`, pass it through; the script maps theme dirs to `--theme` and ignores prose template.md files with a warning in render-notes.
+- Discover custom themes by reading `.twt-artifacts/export/themes/*/theme.json`.
+- Applicable themes are `type: presentation` or `type: universal`.
+- If no custom themes exist, use the built-in `doc-hub-light` theme (no flag needed).
+- If custom themes exist, use the **AskUserQuestion** tool with header "Theme" and single-select options:
+  - **Built-in doc-hub-light** — house style: quiet editorial, tri-color accent
+  - One option per custom theme, labeled with its `name`, `type`, and `description`
+  - **You decide** — Pick the most specific applicable custom theme; if unclear, pick built-in
 
 ## Step 2 — Run the export script
 
 Run from the repository or project root that contains `tools/export-presentation.mjs`:
 
 ```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --theme "<theme-ref>"
 ```
 
 If `--force` was requested:
 
 ```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --template "<template-path>" --force
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs" --format <pptx|pdf> --aspect <16:9|4:3> --input "<markdown-path>" --theme "<theme-ref>" --force
 ```
 
 The script handles slide parsing, output folders, aspect validation, density warnings, Pandoc invocation, output verification, and `render-notes.md`.
@@ -102,6 +103,8 @@ If the script is missing, stop with: "Presentation export helper missing — run
 Read `.twt-artifacts/export/presentation/<source-slug>/render-notes.md` after the script finishes. Use it as the source of truth for:
 
 - output path or failure
+- theme used (slug + source)
+- font source (bundled vs system stacks)
 - requested format
 - aspect ratio
 - slide count
@@ -115,8 +118,9 @@ Tell the user:
 
 - Output path
 - Format and aspect ratio
-- That `templates/presentation-export-style.md` was used
+- Theme used (built-in `doc-hub-light` or custom slug)
 - Slide count
+- If PDF, that the intermediate HTML was saved alongside it
 - Any structure or density warnings
 - Any conversion limitations
 - Whether the requested presentation artifact was successfully produced

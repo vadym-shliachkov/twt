@@ -1,42 +1,46 @@
 ---
 name: twt-export-template-create
 category: export
-description: (v1.0.0) Create reusable export templates from brand or user style instructions
-version: 1.0.0
+description: (v2.0.0) Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
+version: 2.0.0
 accepts_arguments: true
 inputs:
-  - Optional template name, type, brand path, style direction, and instructions
+  - Optional theme name, type, brand path, style direction, and instructions
 dependencies:
   hard: []
   soft:
     - twt-brand-define
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
-  - tools/export-template-create.mjs
+  - .twt-artifacts/design/design-system/tokens.css
+  - tools/export-theme-create.mjs
 writes:
-  - .twt-artifacts/export/templates/<template-slug>/template.md
-  - .twt-artifacts/export/templates/<template-slug>/template.json
-  - .twt-artifacts/export/templates/<template-slug>/preview-notes.md
+  - .twt-artifacts/export/themes/<theme-slug>/theme.json
+  - .twt-artifacts/export/themes/<theme-slug>/css/*.css
+  - .twt-artifacts/export/themes/<theme-slug>/fonts/*
+  - .twt-artifacts/export/themes/<theme-slug>/reference/*
+  - .twt-artifacts/export/themes/<theme-slug>/preview/preview.html
+  - .twt-artifacts/export/themes/<theme-slug>/preview-notes.md
 ---
 
 # /twt-export-template-create
 
 ## Intent
 
-**Purpose:** Create a named, reusable export template that later document and presentation export commands can offer in their template menus. Templates may be based on an existing brand brief, user-provided style instructions, or both.
+**Purpose:** Create a named, reusable export theme — css layers, bundled fonts, reference docs, and a preview — that later document and presentation export commands can offer in their theme menus. Themes may be based on an existing brand brief, user-provided style instructions, or both.
 
 **Non-goals:**
 - Doesn't export a PDF, DOCX, PPTX, or presentation itself
-- Doesn't overwrite an existing template unless the user explicitly asks
-- Doesn't use vague names like `template-1`, `new-template`, or `default-copy`
+- Doesn't overwrite an existing theme unless the user explicitly asks
+- Doesn't use vague names like `theme-1`, `new-theme`, or `default-copy`
 - Doesn't invent brand facts when no brand source is provided
 
 **Success criteria:**
-- Creates `.twt-artifacts/export/templates/<template-slug>/template.md`
-- Creates `.twt-artifacts/export/templates/<template-slug>/template.json` with name, slug, type, style, description, brand source, and instructions
-- Creates `.twt-artifacts/export/templates/<template-slug>/preview-notes.md`
-- Template names are human-distinguishable and combine context, style direction, and scope where possible
-- With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-template-create.mjs`
+- Creates the whole theme directory `.twt-artifacts/export/themes/<theme-slug>/` (css layers, fonts, reference docs, preview)
+- Creates `.twt-artifacts/export/themes/<theme-slug>/theme.json` with name, slug, type, style, description, brand source, and instructions
+- Creates `.twt-artifacts/export/themes/<theme-slug>/preview-notes.md`
+- Theme names are human-distinguishable and combine context, style direction, and scope where possible
+- With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-theme-create.mjs`
 
 ---
 
@@ -94,34 +98,38 @@ Avoid:
 
 If the user gives a vague name, improve it while preserving their intent and mention the improved name in the report.
 
-## Step 3 — Run the template creator script
+## Step 3 — Derive token values (model judgment, deterministic files)
 
-Run from the repository or project root that contains `tools/export-template-create.mjs`:
+The script generates every file; your job is only to choose the token values it substitutes.
+
+If a brand source was chosen, read it (brand-brief.md and/or `.twt-artifacts/design/design-system/tokens.css`) and map brand colors to theme token roles:
+
+- `ink` — darkest brand neutral (headings)
+- `text` — body text color
+- `muted` — secondary/caption color
+- `rule` — hairline border color
+- `panel` — soft panel fill
+- `surface` — page background
+- `accent` — primary accent (links, blockquote, chips)
+- `accent2` / `accent3` — secondary accents (only if the brand defines them; otherwise omit and the house tri-color remains)
+- `ok` / `warn` / `danger` — status colors (keep house defaults unless the brand defines semantic colors)
+
+Contrast rule: `ink` and `text` must stay readable on `surface` (AA for body text). If a brand color fails, keep the house value for that role and say so in the report.
+
+Fonts: pass `--font-heading` / `--font-body` / `--font-mono` only when the brand names fonts. Bundled families (Montserrat, Inter, IBM Plex Mono) embed automatically; any other family falls back to system stacks — tell the user.
+
+## Step 4 — Run the theme creator script
 
 ```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-template-create.mjs" --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --instructions "<instructions>"
+node "${CLAUDE_PLUGIN_ROOT}/tools/export-theme-create.mjs" --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --instructions "<instructions>" --brand "<brand-path-if-any>" --token ink=#0A1A2F --token accent=#C8102E
 ```
 
-If using a brand source:
+Pass one `--token key=value` per chosen override; omit tokens you didn't change. Add `--force` only when the user explicitly confirmed overwriting.
 
-```powershell
-node "${CLAUDE_PLUGIN_ROOT}/tools/export-template-create.mjs" --name "<wise-name>" --type <document|presentation|universal> --style "<style>" --brand "<brand-path>" --instructions "<instructions>"
-```
+The script creates the whole theme: substituted css layers (tokens/doc/slide/components), copied bundled fonts, themed reference.docx/pptx (python builder, falls back to house reference docs with a note), preview/preview.html, theme.json, preview-notes.md.
 
-If overwriting was explicitly requested, add `--force`.
+If the script is missing, stop with: "Export theme helper missing — run this from the marketplace checkout or install/copy `tools/export-theme-create.mjs`."
 
-The script handles slugging, folder creation, metadata, template body, preview notes, and overwrite protection.
+## Step 5 — Report
 
-If the script is missing, stop with: "Export template helper missing — run this from the marketplace checkout or install/copy `tools/export-template-create.mjs`."
-
-## Step 4 — Report
-
-Tell the user:
-
-- Template name
-- Template type
-- Template path
-- Metadata path
-- Preview notes path
-- Brand source used, if any
-- How to use it next with `--template "<template-path>"` or by choosing it from an export command's template menu
+Tell the user: theme name/slug, theme dir, which tokens were overridden (and any kept for contrast reasons), font decision, reference-doc build result, preview path, and how to use it: `--theme <slug>` on any export command or pick it from the export theme menu.
