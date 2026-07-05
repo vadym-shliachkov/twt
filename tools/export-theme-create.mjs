@@ -24,6 +24,11 @@ const TOKEN_VARS = {
   ok: '--hs-ok', warn: '--hs-warning', danger: '--hs-danger',
 };
 const FONT_VARS = { fontHeading: '--hs-font-heading', fontBody: '--hs-font-body', fontMono: '--hs-font-mono' };
+const FONT_FALLBACKS = {
+  fontHeading: 'ui-sans-serif,system-ui,sans-serif',
+  fontBody: 'ui-sans-serif,system-ui,sans-serif',
+  fontMono: 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace',
+};
 const BUNDLED_FAMILIES = new Set(['Inter', 'Montserrat', 'IBM Plex Mono']);
 
 const PREVIEW_SAMPLE_MD = `# Theme Preview — Sample Report
@@ -72,7 +77,7 @@ function substituteTokens(css, tokens, fonts) {
   for (const [key, family] of Object.entries(fonts || {})) {
     if (!family) continue;
     const varName = FONT_VARS[key];
-    out = out.replace(new RegExp(`(${varName}:)[^;]+;`), (m, p1) => `${p1}${family},ui-sans-serif,system-ui,sans-serif;`);
+    out = out.replace(new RegExp(`(${varName}:)[^;]+;`), (m, p1) => `${p1}${family},${FONT_FALLBACKS[key]};`);
   }
   return out;
 }
@@ -157,7 +162,7 @@ if (_isMain && process.argv.includes('--self-test')) {
   rmSync(cwd, { recursive: true, force: true }); mkdirSync(cwd, { recursive: true });
   const res = createTheme({
     name: 'Acme Executive Report', type: 'document', style: 'executive premium',
-    tokens: { ink: '#0A1A2F', accent: '#C8102E' }, fontHeading: 'Montserrat', fontBody: 'Inter',
+    tokens: { ink: '#0A1A2F', accent: '#C8102E' }, fontHeading: 'Montserrat', fontBody: 'Inter', fontMono: 'JetBrains Mono',
     skipReference: true, skipPreview: true, force: false,
   }, cwd);
   assert.equal(res.slug, 'acme-executive-report');
@@ -168,6 +173,7 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(tokens, /--hs-ink:\s*#0A1A2F/i, 'ink substituted');
   assert.match(tokens, /--hs-accent-blue:\s*#C8102E/i, 'accent substituted');
   assert.match(tokens, /--tx-ink:var\(--hs-ink\)/, 'tx aliases intact');
+  assert.match(tokens, /--hs-font-mono:JetBrains Mono,ui-monospace/, 'mono keeps monospace fallbacks');
   const meta = JSON.parse(readFileSync(join(dir, 'theme.json'), 'utf8'));
   assert.equal(meta.type, 'document');
   assert.ok(meta.fonts.faces.length > 0, 'bundled fonts copied for known families');
