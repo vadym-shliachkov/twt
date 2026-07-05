@@ -154,6 +154,15 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - Bash remains correct for genuine non-file work the file tools can't do — running `node`/`python` tools, `pdftotext`, installers, git. This rule is about *reading artifacts*, not banning Bash.
 - **No throwaway scripts, heredocs, or command chains.** Never write a one-off `.mjs`/`.js`/`.py`/`.sh` helper via a heredoc (`cat > /tmp/x.mjs <<'EOF' … EOF; node /tmp/x.mjs`) to transform a file, fill template slots, or compute something — heredocs carry quotes + braces that trip the shell **obfuscation guard** and force a permission prompt every single time, and they re-implement logic a bundled `tools/*.mjs` (or the Edit tool) already does. Edit files with the **Edit** tool; compute with the **bundled tools** (`gen-preview.mjs`, `qa-scan.mjs`, …) and read their JSON output. Likewise avoid compound chains (`cmd1 && cmd2`, `a; b; c`) and `perl -pe`/`sed -i` in-place edits over files — each is unmatchable by the allowlist and prompts. Keep every Bash call a **single, simple, allowlistable command** (`node "${CLAUDE_PLUGIN_ROOT}/tools/foo.mjs" <arg>`), one per invocation.
 
+## 16. Export themes and doc-type profiles
+
+- A theme is a directory: `theme.json` + `css/{tokens,doc,slide,components}.css` (+ optional `css/profiles/<id>.css`, `fonts/*.woff2`, `reference/reference.{docx,pptx}`, `preview/`). Built-in themes live in `templates/themes/`; project themes in `.twt-artifacts/export/themes/<slug>/`. The built-in `doc-hub-light` is the default everywhere; brand themes are opt-in via `/twt-export-template-create`.
+- Theme CSS uses the `--tx-*` namespace; `--hs-*` remains as compat aliases for the non-export HTML generators. Theme creation substitutes `--hs-*` values; `--tx-*` follows.
+- Doc-type detection is deterministic (`tools/export-doctype.mjs`): filename registry first, structural fingerprints second, `generic` fallback. Profiles: `report`, `brief`, `spec`, `generic`, `slides`. New artifact → add one registry row or accept generic.
+- Rendering uses pandoc-AST block transforms (`tools/export-transform.mjs`) that emit typed components. Guarantees: unmatched blocks render as plain pandoc HTML; any transform error falls back to the untransformed path and is logged in render-notes. Exports never hard-fail on styling.
+- Document exports always save the intermediate `<slug>.html` beside the PDF. render-notes must state: theme (slug + source), doc type + evidence, transforms applied, font source.
+- DOCX/PPTX get theme-consistent reference docs only (global typography/colors); doc-type components are HTML/PDF-only and render-notes says so.
+
 ---
 
 ## Out of scope for this document

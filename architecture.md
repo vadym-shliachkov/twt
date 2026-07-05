@@ -223,8 +223,8 @@ flowchart TB
 ### export
 
 - /twt-export - Orchestrate PDF, DOCX, PPTX, and theme-based exports
-- /twt-export-docx - Convert Markdown to a polished DOCX with the shared document template
-- /twt-export-pdf - Convert Markdown to a polished PDF with the shared document template
+- /twt-export-docx - Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling
+- /twt-export-pdf - Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
 - /twt-export-presentation - Convert Markdown to PPTX or PDF slides via the presentation export script
 - /twt-export-template-create - Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
 
