@@ -1053,7 +1053,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.

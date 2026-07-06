@@ -76,8 +76,11 @@ nav.tx-toc a{text-decoration:none}
 .tx-block__chips{margin-left:auto;display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
 .tx-block__decision{font-size:.74rem;color:var(--tx-muted);font-style:italic}
 .tx-block__purpose{margin:0 0 15px;color:var(--tx-text);font-size:.95rem}
-.tx-block__orig{display:flex;gap:10px;align-items:baseline;margin:0 0 15px}
-.tx-orig__body{flex:1;min-width:0}
+/* The Original is the verbatim copy under review — render it as a distinct quote
+   panel (inset panel fill + ink left rule + ink body) so it reads independently
+   from the analyst's reason/weakness prose, not as another labelled note. */
+.tx-block__orig{margin:0 0 15px;padding:9px 13px 10px;background:var(--tx-panel);border-left:3px solid var(--tx-ink);border-radius:0 8px 8px 0}
+.tx-orig__body{margin-top:3px;min-width:0;color:var(--tx-ink)}
 .tx-orig__body pre{margin:0}
 .tx-orig__body code,.tx-orig__body pre,.tx-suggest__body code,.tx-suggest__body pre{overflow-wrap:anywhere}
 /* Verbatim originals/rewrites can be long — wrap in the paged PDF instead of clipping */

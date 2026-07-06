@@ -1,8 +1,8 @@
 ---
 name: twt-export-pdf
 category: export
-description: (v1.1.2) Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
-version: 1.1.2
+description: (v1.1.3) Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Markdown file path

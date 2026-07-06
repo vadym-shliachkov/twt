@@ -1158,7 +1158,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Markdown file path

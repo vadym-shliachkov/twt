@@ -202,7 +202,24 @@ function parseMetric(text) {
   return { name: m[1].trim(), value: m[2], evidence: (m[3] || '').trim() };
 }
 
-function metricsHtml(items) {
+// A single bullet line often packs several metrics separated by "·"
+// ("Clarity: 90 · Scanability: 90 · Content Density: 88"). Split those back into
+// one metric each before parsing, or the whole line collapses into one bogus
+// metric named after everything up to the last colon.
+function splitMetricItems(items) {
+  const out = [];
+  for (const it of items) {
+    const parts = it.split('·').map((s) => s.trim()).filter(Boolean);
+    // Only split when every piece looks like its own "Name: value" metric —
+    // otherwise a lone "·" inside evidence prose would shatter one metric.
+    if (parts.length > 1 && parts.every((p) => /:\s*(N\/A|\d{1,3})\b/i.test(p))) out.push(...parts);
+    else out.push(it);
+  }
+  return out;
+}
+
+function metricsHtml(rawItems) {
+  const items = splitMetricItems(rawItems);
   const parsed = items.map(parseMetric);
   if (parsed.every((p) => p.note !== undefined)) {
     return `<p class="tx-block__scaffold">${esc(parsed.map((p) => p.note).join(' '))}</p>`;
@@ -598,6 +615,14 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(anaOut, /tx-score tx-score--mid">70\/100/, 'overall becomes a score chip in the head');
   assert.match(anaOut, /tx-metric__fill tx-metric__fill--low" style="width:65%"/, 'metric renders a proportional bar');
   assert.match(anaOut, /tx-metric__val--na">N\/A/, 'N\\/A metric renders without a bar');
+
+  // A single bullet packing several "·"-joined metrics splits into one bar each
+  const compactMd = ['# T', '', '## Block 14 — List', '', 'Applicable Metrics:',
+    '- Clarity: 90 · Scanability: 90 · Content Density: 88', '', 'Overall:', '88/100', '',
+    'Finding Type:', 'No issue', '', 'Decision:', 'Keep original'].join('\n');
+  const compactOut = astToHtml(transformAst(pandocAst(compactMd), 'report').ast);
+  const metricNames = [...compactOut.matchAll(/tx-metric__name">([^<]*)</g)].map((m) => m[1]);
+  assert.deepEqual(metricNames, ['Clarity', 'Scanability', 'Content Density'], 'compact "·"-joined metrics split into separate bars');
   assert.match(anaOut, /tx-block__suggest/, 'validated rewrite renders a suggestion box');
   assert.match(anaOut, /tx-check tx-check--ok/, 'rewrite validation renders pass checks');
   assert.ok(!anaOut.includes('<nav class="tx-toc">'), 'per-block headers do not seed a TOC');
