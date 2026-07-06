@@ -348,7 +348,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.

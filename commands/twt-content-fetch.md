@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch
 category: content
-description: (v1.1.2) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
-version: 1.1.2
+description: (v1.1.3) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links

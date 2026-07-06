@@ -571,7 +571,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
