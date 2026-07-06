@@ -285,7 +285,8 @@ function renderAnalysisCard(headText, seg) {
       + (checks ? `<div class="tx-suggest__checks">${checks}</div>` : '') + `</div>`);
   }
 
-  return `<section class="tx-block tx-block--${tier}">${parts.join('')}</section>`;
+  const anchor = num ? ` id="tx-block-${esc(num)}"` : '';
+  return `<section${anchor} class="tx-block tx-block--${tier}">${parts.join('')}</section>`;
 }
 
 const TRANSFORMS = [
@@ -372,6 +373,29 @@ const TRANSFORMS = [
         const summary = profile === 'report' && isFirst;
         blocks[i] = rawBlock(kvListHtml(pairs, summary));
         hit = true;
+      }
+      return hit;
+    },
+  },
+  {
+    // Turn the summary table's "Block" column into anchor links to each block card
+    // (cards carry id="tx-block-N"). Must run before severityChips so the linkified
+    // number cell no longer reads as plain text.
+    name: 'summaryBlockLinks',
+    profiles: ['report'],
+    apply(blocks) {
+      let hit = false;
+      for (const b of blocks) {
+        if (b.t !== 'Table') continue;
+        const rows = tableRows(b);
+        const header = rows.find((r) => r.head);
+        if (!header || cellText(header.row[1][0]).toLowerCase() !== 'block') continue;
+        for (const { row, head } of rows) {
+          if (head) continue;
+          const cell = row[1][0];
+          const n = cellText(cell).trim();
+          if (/^\d+$/.test(n)) { setCellHtml(cell, `<a class="tx-blink" href="#tx-block-${n}">${n}</a>`); hit = true; }
+        }
       }
       return hit;
     },
@@ -497,6 +521,9 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(tblOut, /tx-table-wide/);
   assert.match(tblOut, /tx-chip tx-chip--ok">No issue/);
   assert.match(tblOut, /tx-chip tx-chip--danger">Problem/);
+  // summary "Block" column becomes anchor links to each card
+  assert.match(tblOut, /<a class="tx-blink" href="#tx-block-1">1<\/a>/, 'block-number cell links to the card anchor');
+  assert.match(tblOut, /<a class="tx-blink" href="#tx-block-2">2<\/a>/);
 
   // palette swatches (brief)
   const palMd = '| Name | Hex |\n|---|---|\n| Ink | #090E22 |\n| Blue | #0B68B7 |\n';
@@ -565,7 +592,7 @@ if (_isMain && process.argv.includes('--self-test')) {
     '74%',
   ].join('\n');
   const anaOut = astToHtml(transformAst(pandocAst(anaMd), 'report').ast);
-  assert.match(anaOut, /<section class="tx-block tx-block--warn">/, 'block card carries finding-type tier');
+  assert.match(anaOut, /<section id="tx-block-13" class="tx-block tx-block--warn">/, 'block card carries finding-type tier and anchor id');
   assert.match(anaOut, /tx-block__n">Block 13</, 'card shows block number');
   assert.match(anaOut, /tx-block__type">Paragraph \(list lead-in label\)</, 'card shows block type');
   assert.match(anaOut, /tx-score tx-score--mid">70\/100/, 'overall becomes a score chip in the head');
