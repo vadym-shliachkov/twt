@@ -91,6 +91,36 @@ function Get-YamlList {
     return $items
 }
 
+# Setup-gate presence (setup-gate convention): every user-facing command must
+# open with the "Step 0 ... permission allowlist" gate. Excluded: the meta
+# skills (twt-setup, twt-marketplace-docs, twt-status) and dispatched
+# sub-variants (twt-content-fetch-*, twt-export-*), which run under a gated
+# parent. Sub-skills in skills/ never carry the gate. The gate BODY is synced
+# by gen-docs.mjs from templates/blocks/setup-gate.md; this only checks presence.
+$isCommand = (Split-Path $resolvedPath -Leaf) -ine 'SKILL.md'
+$gateExempt = @('twt-setup','twt-marketplace-docs','twt-status')
+$gateExemptPrefix = @('twt-content-fetch-','twt-export-')
+if ($isCommand) {
+    $exempt = ($gateExempt -contains $expectedName) -or
+              (($gateExemptPrefix | Where-Object { $expectedName.StartsWith($_) }).Count -gt 0)
+    if (-not $exempt -and $text -notmatch '(?im)^## Step 0.*permission allowlist') {
+        Fail "MISSING SETUP GATE in ${Path}: user-facing commands must open with the Step 0 permission-allowlist gate (see SKILL_TEMPLATE.md); if this command is a meta skill or dispatched sub-variant, add it to the exempt list in tools/check-skill.ps1"
+    }
+}
+
+# Runtime self-containment (CONVENTIONS section 14): skills must not reference
+# a templates/ path at runtime; formats are carried inline. Exception: the
+# export skills (twt-export*) genuinely load templates/themes + export styles,
+# and twt-marketplace-docs is author-time-only meta.
+$tplExemptPrefix = @('twt-export','twt-marketplace-docs')
+$tplExempt = (($tplExemptPrefix | Where-Object { $expectedName.StartsWith($_) }).Count -gt 0)
+if (-not $tplExempt) {
+    $body = ($text -split "(?m)^---\s*$", 3)[2]
+    if ($body -cmatch '(?m)templates/') {
+        Fail "TEMPLATES PATH AT RUNTIME in ${Path}: skills are self-contained (CONVENTIONS section 14) and must inline formats instead of referencing templates/..."
+    }
+}
+
 # Validator write-scoping (CONVENTIONS section 11):
 # a *-validate skill may write ONLY its sibling validation-report.md.
 if ($expectedName -match '-validate$') {

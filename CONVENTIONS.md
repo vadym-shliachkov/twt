@@ -98,6 +98,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - `SKILLS.md` and `architecture.md` are **auto-generated** by `/twt-marketplace-docs` (via `tools/gen-docs.mjs`); per-category `skills/<cat>/README.md` files no longer exist
 - `/twt-marketplace-docs` also stamps `(vX.Y.Z)` into each skill's committed `description:` field, derived from its `version:` frontmatter — this replaces the version injection that the legacy installer performed at copy time
 - Never hand-edit generated files. Edit frontmatter or `CONVENTIONS.md` and regenerate.
+- **Shared inline blocks are synced, not hand-copied.** The Step 0 setup gate's canonical text lives in `templates/blocks/setup-gate.md`; `/twt-marketplace-docs` re-stamps it into every `commands/*.md` whose body contains a `## Step 0 … permission allowlist` heading. To change the gate, edit the canonical block and regenerate — never edit one command's copy.
 - The root `README.md` is hand-edited except for the marked block between `<!-- TWT_SKILLS_TABLE_START -->` and `<!-- TWT_SKILLS_TABLE_END -->`.
 - To merge the curated runtime permission allowlist into a target project's `settings.json`, run `/twt-setup` (opt-in, per project) — not auto-seeded at install time.
 
@@ -142,7 +143,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 ## 14. Self-contained at runtime (stay in-project)
 
-- Skills are surfaced by the native plugin (from `commands/` and `skills/`) or by the legacy copy-installer; in both cases the marketplace's `templates/`, `CONVENTIONS.md`, and sibling skills **do not travel** with the running skill. A skill must therefore carry **inline** every artifact format it writes (the `decisions.md`, `design-read.md`, asset-manifest, session-log, etc. schemas) — never reference a `templates/…` path at runtime. Bundled Node scripts are invoked as `node "${CLAUDE_PLUGIN_ROOT}/tools/..."` (plugin) or by absolute path (legacy).
+- Skills are surfaced by the native plugin (from `commands/` and `skills/`); the marketplace's `templates/`, `CONVENTIONS.md`, and sibling skills **do not travel** with the running skill's context. A skill must therefore carry **inline** every artifact format it writes (the `decisions.md`, `design-read.md`, asset-manifest, session-log, etc. schemas) — never reference a `templates/…` path at runtime. Bundled Node scripts are invoked as `node "${CLAUDE_PLUGIN_ROOT}/tools/..."`.
 - A running skill operates **only inside the current project** (its working tree + `.twt-artifacts/`). It must **never** read outside the project — no sibling project folders, no home directory, no filesystem-wide `find` — to locate templates, conventions, or "format examples." Everything it needs is in the skill text or the project. The scope-guard hook is the backstop, not a license to reach out.
 - Exception: the export skills (`twt-export-*`) genuinely need `tools/export-*.mjs` + `templates/*-export-style.md` from the marketplace checkout. If those are missing they **stop with a clear message** — they never search the disk for them.
 

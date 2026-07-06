@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Derived docs are current (gen-docs --check)
+        run: node tools/gen-docs.mjs --check
+
+      - name: Skill lint (check-skill.ps1 over all commands + sub-skills)
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem commands -Filter *.md -File | Where-Object Name -ne 'README.md') +
+                   @(Get-ChildItem skills -Recurse -Filter SKILL.md -File)
+          $fails = 0
+          foreach ($f in $files) {
+            & pwsh -NoProfile -File tools/check-skill.ps1 $f.FullName
+            if ($LASTEXITCODE -ne 0) { $fails++ }
+          }
+          if ($fails) { Write-Error "$fails skill file(s) failed lint"; exit 1 }
+          Write-Host "All $($files.Count) skill files pass."
