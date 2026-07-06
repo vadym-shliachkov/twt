@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: (v1.3.2) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
-version: 1.3.2
+description: (v1.3.3) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+version: 1.3.3
 accepts_arguments: true
 inputs:
   - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact

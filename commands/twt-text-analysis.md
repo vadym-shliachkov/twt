@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.2.7) Block-type-aware text-quality audit with validated suggestions only; never applies changes
-version: 1.2.7
+description: (v1.2.8) Block-type-aware text-quality audit with validated suggestions only; never applies changes
+version: 1.2.8
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint

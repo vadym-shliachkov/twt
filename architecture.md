@@ -505,7 +505,7 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.3.2
+**Version:** 1.3.3
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -1886,7 +1886,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.1
+**Version:** 1.12.2
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2058,7 +2058,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.7
+**Version:** 1.2.8
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
