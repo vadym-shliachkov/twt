@@ -39,7 +39,7 @@
           <h1>/twt-export-presentation</h1>
           <p class="lede">Convert a Markdown deck into polished PPTX or PDF slides.</p>
           <div class="fact-row">
-            <span>Version 1.0.0</span>
+            <span>Version 1.2.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -56,11 +56,11 @@
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-presentation.mjs</code><span class="file-desc">The script that renders Markdown into slide decks.</span></li><li><code>templates/presentation-export-style.md</code><span class="file-desc">The shared style template for exported slides.</span></li><li><code>.twt-artifacts/export/templates/*/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/*/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li></ul>
+    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-presentation.mjs</code><span class="file-desc">The script that renders Markdown into slide decks.</span></li><li><code>templates/presentation-export-style.md</code><span class="file-desc">The shared style template for exported slides.</span></li><li><code>.twt-artifacts/export/themes/*/theme.json</code><span class="file-desc">A JSON data file.</span></li><li><code>templates/themes/doc-hub-light/theme.json</code><span class="file-desc">A JSON data file.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pptx</code><span class="file-desc">The finished slide deck in PowerPoint format.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished slide deck as a PDF.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/render-notes.md</code><span class="file-desc">Notes from the export run — settings used and anything worth flagging.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pptx</code><span class="file-desc">The finished slide deck in PowerPoint format.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished slide deck as a PDF.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/&lt;source-slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/render-notes.md</code><span class="file-desc">Notes from the export run — settings used and anything worth flagging.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -68,7 +68,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>With no <code>$ARGUMENTS</code>, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path</li><li>Offers a template choice when multiple presentation/universal templates exist</li><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs&quot; --format &lt;pptx|pdf&gt; --aspect &lt;16:9|4:3&gt; --input &lt;markdown-path&gt;</code></li><li>Defaults aspect ratio to <code>16:9</code> when the user does not choose one</li><li>Produces the requested artifact under <code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/</code></li><li>Writes <code>render-notes.md</code> with slide count, aspect ratio, structure/density warnings, conversion warnings, template used, and output path</li></ul>
+    <ul><li>With no <code>$ARGUMENTS</code>, presents menu choices for format and aspect ratio using AskUserQuestion, and asks for the Markdown path</li><li>Offers a theme choice when custom themes exist (applicable types: <code>presentation</code> or <code>universal</code>)</li><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-presentation.mjs&quot; --format &lt;pptx|pdf&gt; --aspect &lt;16:9|4:3&gt; --input &lt;markdown-path&gt;</code></li><li>Defaults aspect ratio to <code>16:9</code> when the user does not choose one</li><li>Produces the requested artifact under <code>.twt-artifacts/export/presentation/&lt;source-slug&gt;/</code></li><li>PPTX uses the theme's <code>reference.pptx</code> (built-in <code>doc-hub-light</code> by default); PDF slides render the theme via Chromium (playwright) with a beamer fallback, and the intermediate HTML is always saved alongside the PDF</li><li>Writes <code>render-notes.md</code> with slide count, aspect ratio, structure/density warnings, conversion warnings, theme used, and output path</li></ul>
   </section>
       </section>
   </main>

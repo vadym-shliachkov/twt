@@ -39,7 +39,7 @@
           <h1>/twt-brand-fetch</h1>
           <p class="lede">Pull existing brand signals from a brand book, Figma, screenshots, or a live site into raw notes.</p>
           <div class="fact-row">
-            <span>Version 1.0.0</span>
+            <span>Version 1.1.2</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -52,23 +52,23 @@
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>A brand book (PDF), Figma URL, screenshots, or a live site URL</p>
+    <p>A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>&lt;brand source&gt;</code><span class="file-desc">The brand source you point it at — a brand book, Figma file, screenshots, or a live site.</span></li><li><code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/index.md</code><span class="file-desc">The cleaned Markdown text extracted from a PDF.</span></li></ul>
+    <ul class="file-list"><li><code>&lt;brand source&gt;</code><span class="file-desc">The brand source you point it at — a brand book, Figma file, screenshots, or a live site.</span></li><li><code>.twt-artifacts/pre-design/content-fetch/pdf/&lt;filename&gt;/index.md</code><span class="file-desc">The cleaned Markdown text extracted from a PDF.</span></li><li><code>references/brand-book-checklist.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/pre-design/content-fetch/_manifest.md</code><span class="file-desc">An index of everything that was fetched and where each piece came from.</span></li><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>.twt-artifacts/pre-design/spec/specification.md</code><span class="file-desc">The north-star spec describing what you're building and why.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/_fetched-brand.md</code><span class="file-desc">Raw brand notes pulled from a source (brand book, Figma, site), used as the starting point for the brief.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/_fetched-brand.md</code><span class="file-desc">Raw brand notes pulled from a source (brand book, Figma, site), used as the starting point for the brief.</span></li><li><code>.twt-artifacts/pre-design/brand/_coverage.md</code><span class="file-desc">A Markdown document.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Doesn't produce the canonical <code>brand-brief.md</code> (that's <code>/twt-brand-define</code>)</li><li>Doesn't invent brand attributes when the source is silent — records gaps instead</li><li>Doesn't validate quality (that's <code>/twt-brand-validate</code>)</li></ul>
+    <ul><li>Doesn't produce the canonical <code>brand-brief.md</code> (that's <code>/twt-brand-define</code>)</li><li>Doesn't invent brand attributes when the sources are silent — records gaps instead</li><li>Doesn't validate quality (that's <code>/twt-brand-validate</code>)</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li><code>_fetched-brand.md</code> captures every brand attribute found, tagged with where it came from</li><li>Missing attributes are explicitly listed as gaps</li><li>Runs without prompting when dispatched by <code>/twt-brand</code></li></ul>
+    <ul><li><code>_fetched-brand.md</code> captures every brand attribute found, tagged with where it came from</li><li>Missing attributes are explicitly listed as gaps</li><li>With no brand source, still produces <code>_fetched-brand.md</code> + <code>_coverage.md</code> from project artifacts (and the site if a URL exists), recording gaps rather than inventing values</li><li><code>_coverage.md</code> has one row per <code>references/brand-book-checklist.md</code> part with a <code>Found/Partial/Silent/Not-extracted</code> status and a source tag</li><li>Runs without prompting when dispatched by <code>/twt-brand</code></li></ul>
   </section>
       </section>
   </main>

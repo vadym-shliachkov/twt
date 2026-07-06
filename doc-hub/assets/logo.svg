@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="twt logo">
-  <rect width="128" height="128" rx="0" fill="#fffef6"/>
-  <rect x="8" y="8" width="112" height="112" fill="none" stroke="#101214" stroke-width="4"/>
-  <path d="M18 25 C35 38 47 52 61 72" fill="none" stroke="#101214" stroke-width="8" stroke-linecap="round"/>
-  <path d="M47 86 C60 78 71 69 86 58" fill="none" stroke="#101214" stroke-width="8" stroke-linecap="round"/>
+  <rect width="128" height="128" rx="18" fill="#ffffff"/>
+  <rect x="8" y="8" width="112" height="112" rx="12" fill="none" stroke="#090e22" stroke-width="4"/>
+  <path d="M18 25 C35 38 47 52 61 72" fill="none" stroke="#090e22" stroke-width="8" stroke-linecap="round"/>
+  <path d="M47 86 C60 78 71 69 86 58" fill="none" stroke="#090e22" stroke-width="8" stroke-linecap="round"/>
   <path d="M66 56 C78 72 91 88 104 104" fill="none" stroke="#ca221f" stroke-width="8" stroke-linecap="round"/>
   <path d="M76 83 C91 73 107 63 121 55" fill="none" stroke="#ca221f" stroke-width="8" stroke-linecap="round"/>
   <circle cx="94" cy="51" r="14" fill="#0b68b7"/>

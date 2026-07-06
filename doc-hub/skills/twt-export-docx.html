@@ -39,7 +39,7 @@
           <h1>/twt-export-docx</h1>
           <p class="lede">Convert Markdown into a polished, on-brand DOCX document.</p>
           <div class="fact-row">
-            <span>Version 1.0.0</span>
+            <span>Version 1.1.2</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -56,7 +56,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-document.mjs</code><span class="file-desc">The script that renders Markdown into DOCX/PDF documents.</span></li><li><code>templates/document-export-style.md</code><span class="file-desc">The shared style template for exported documents.</span></li><li><code>.twt-artifacts/export/templates/*/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/*/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li></ul>
+    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-document.mjs</code><span class="file-desc">The script that renders Markdown into DOCX/PDF documents.</span></li><li><code>templates/document-export-style.md</code><span class="file-desc">The shared style template for exported documents.</span></li><li><code>.twt-artifacts/export/themes/*/theme.json</code><span class="file-desc">A JSON data file.</span></li><li><code>templates/themes/doc-hub-light/theme.json</code><span class="file-desc">A JSON data file.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
@@ -68,7 +68,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format docx --input &lt;markdown-path&gt;</code></li><li>Offers a template choice when multiple document/universal templates exist</li><li>Produces <code>.twt-artifacts/export/docx/&lt;source-slug&gt;/&lt;source-slug&gt;.docx</code></li><li>Writes <code>.twt-artifacts/export/docx/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, template used, and output path</li><li>Uses <code>templates/document-export-style.md</code> through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes</li></ul>
+    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format docx --input &lt;markdown-path&gt;</code></li><li>Offers a theme choice when custom themes exist</li><li>Produces <code>.twt-artifacts/export/docx/&lt;source-slug&gt;/&lt;source-slug&gt;.docx</code></li><li>Writes <code>.twt-artifacts/export/docx/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, theme used, and output path</li><li>Themed via the built-in <code>doc-hub-light</code> theme's <code>reference.docx</code> by default (Montserrat headings, Inter body, hairline tables); custom themes provide their own themed <code>reference.docx</code> when built</li><li>Theme reference.docx gives global typography/colors; doc-type components are HTML/PDF-only — DOCX has no intermediate HTML</li></ul>
   </section>
       </section>
   </main>

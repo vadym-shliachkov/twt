@@ -39,7 +39,7 @@
           <h1>/twt-export-pdf</h1>
           <p class="lede">Convert Markdown into a polished, on-brand PDF document.</p>
           <div class="fact-row">
-            <span>Version 1.0.0</span>
+            <span>Version 1.1.2</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -56,11 +56,11 @@
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-document.mjs</code><span class="file-desc">The script that renders Markdown into DOCX/PDF documents.</span></li><li><code>templates/document-export-style.md</code><span class="file-desc">The shared style template for exported documents.</span></li><li><code>.twt-artifacts/export/templates/*/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/*/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li></ul>
+    <ul class="file-list"><li><code>&lt;markdown-path&gt;</code><span class="file-desc">The Markdown file you give it.</span></li><li><code>tools/export-document.mjs</code><span class="file-desc">The script that renders Markdown into DOCX/PDF documents.</span></li><li><code>templates/document-export-style.md</code><span class="file-desc">The shared style template for exported documents.</span></li><li><code>.twt-artifacts/export/themes/*/theme.json</code><span class="file-desc">A JSON data file.</span></li><li><code>templates/themes/doc-hub-light/theme.json</code><span class="file-desc">A JSON data file.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished, on-brand PDF document.</span></li><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code><span class="file-desc">Notes from the export run — settings used and anything worth flagging.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code><span class="file-desc">The finished, on-brand PDF document.</span></li><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code><span class="file-desc">Notes from the export run — settings used and anything worth flagging.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -68,7 +68,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format pdf --input &lt;markdown-path&gt;</code></li><li>Offers a template choice when multiple document/universal templates exist</li><li>Produces <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code></li><li>Writes <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, template used, and output path</li><li>Uses <code>templates/document-export-style.md</code> through the script for minimal, readable typography, spacing, page margins, tables, lists, code blocks, and blockquotes</li></ul>
+    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format pdf --input &lt;markdown-path&gt;</code></li><li>Offers a theme choice when custom themes exist</li><li>Produces <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code></li><li>Writes <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, theme used, doc-type profile applied, and output path</li><li>Themed via the built-in <code>doc-hub-light</code> theme by default (css layers + bundled fonts), rendered via Chromium when the <code>playwright</code> npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)</li><li>Doc-type profile (report/brief/spec/generic) is detected and applied automatically</li><li>Intermediate HTML is always saved alongside the PDF at <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.html</code></li></ul>
   </section>
       </section>
   </main>

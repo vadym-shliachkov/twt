@@ -13,9 +13,9 @@ reads:
   - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
   - .twt-artifacts/pre-design/brand/brand-brief.md
 writes:
-  - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
-  - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx
-  - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
+  - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md
+  - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx
+  - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/optimized.md
 ---
 
 # /twt-text-analysis
@@ -64,7 +64,7 @@ Parse `$ARGUMENTS`:
 - Any other non-trivial text -> treat the text itself as the subject.
 - Empty -> prompt (plain text, free-form): "Paste the text to analyze, or give a file path." In collect mode, write the missing-subject question to `decisions.md` and stop.
 
-Derive a kebab-case `<subject-slug>` from the file name or the first words of pasted text. If the subject is pasted text, persist it verbatim to `.twt-artifacts/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
+Derive a kebab-case `<subject-slug>` from the file name or the first words of pasted text. If the subject is pasted text, persist it verbatim to `.twt-artifacts/pre-design/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
 
 Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present. Brand voice is context, not a metric: copy that is intentionally on-voice is not penalized as cliche unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
 
@@ -208,7 +208,7 @@ Do not use `> NEEDS:` markers as a fake rewrite. Missing facts belong in `Weakne
 
 ## Step 6 - Write the report
 
-Write `.twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md`. Open with a header containing subject label, mode (`auto`, `manual`, `collect`, or default), document Overall, block count, how many Problems, how many Opportunities, and how many validated suggested versions. Add a one-row-per-block summary table:
+Write `.twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md`. Open with a header containing subject label, mode (`auto`, `manual`, `collect`, or default), document Overall, block count, how many Problems, how many Opportunities, and how many validated suggested versions. Add a one-row-per-block summary table:
 
 ```markdown
 | Block | Type | Overall | Finding Type | Decision | Confidence |
@@ -280,10 +280,10 @@ If a previous `optimized.md` exists, regenerate it; it is a derived artifact, sa
 Always emit a spreadsheet mirror of the report so reviewers can sort, filter, and colour-scan the findings. Do not build the workbook by hand — run the deterministic generator, which parses the `analysis-report.md` you just wrote:
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/tools/analysis-to-xlsx.py" --input ".twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md"
+python "${CLAUDE_PLUGIN_ROOT}/tools/analysis-to-xlsx.py" --input ".twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md"
 ```
 
-It writes `.twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx` — one row per block, with columns: **Block · Type · Score · Finding Type · Original · Suggested Version · Weaknesses · Can Fix Safely · Reason · Rewrite Validation · Confidence**. The `Finding Type` cell is colour-coded (green No issue · amber Opportunity · red Problem), the header row is frozen, and an auto-filter is applied. Because it reads the report, it must run after Step 6.
+It writes `.twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx` — one row per block, with columns: **Block · Type · Score · Finding Type · Original · Suggested Version · Weaknesses · Can Fix Safely · Reason · Rewrite Validation · Confidence**. The `Finding Type` cell is colour-coded (green No issue · amber Opportunity · red Problem), the header row is frozen, and an auto-filter is applied. Because it reads the report, it must run after Step 6.
 
 Environment notes (mirror `/twt-content-approval-checklist`): the script needs `openpyxl`. If it prints the missing-dependency hint, run `python -m pip install openpyxl` once and re-run; on Windows where `python` is unavailable but `py` exists, use `py`. If Python is unavailable entirely, note it and continue — the markdown artifacts remain the source of truth.
 

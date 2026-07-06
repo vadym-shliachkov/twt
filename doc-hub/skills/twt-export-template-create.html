@@ -39,7 +39,7 @@
           <h1>/twt-export-template-create</h1>
           <p class="lede">Create a reusable export template from a brand brief, your own style notes, or both.</p>
           <div class="fact-row">
-            <span>Version 1.0.0</span>
+            <span>Version 2.0.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -52,23 +52,23 @@
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Optional template name, type, brand path, style direction, and instructions</p>
+    <p>Optional theme name, type, brand path, style direction, and instructions</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>tools/export-template-create.mjs</code><span class="file-desc">The helper that builds a reusable export template.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>tools/export-theme-create.mjs</code><span class="file-desc">A generated file.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.md</code><span class="file-desc">The human-readable description of an export template.</span></li><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.json</code><span class="file-desc">The machine-readable export template definition.</span></li><li><code>.twt-artifacts/export/templates/&lt;template-slug&gt;/preview-notes.md</code><span class="file-desc">Notes about a template preview.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/theme.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/css/*.css</code><span class="file-desc">A stylesheet.</span></li><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/fonts/*</code><span class="file-desc">A generated file.</span></li><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/reference/*</code><span class="file-desc">A generated file.</span></li><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/preview/preview.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/preview-notes.md</code><span class="file-desc">A Markdown document.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Doesn't export a PDF, DOCX, PPTX, or presentation itself</li><li>Doesn't overwrite an existing template unless the user explicitly asks</li><li>Doesn't use vague names like <code>template-1</code>, <code>new-template</code>, or <code>default-copy</code></li><li>Doesn't invent brand facts when no brand source is provided</li></ul>
+    <ul><li>Doesn't export a PDF, DOCX, PPTX, or presentation itself</li><li>Doesn't overwrite an existing theme unless the user explicitly asks</li><li>Doesn't use vague names like <code>theme-1</code>, <code>new-theme</code>, or <code>default-copy</code></li><li>Doesn't invent brand facts when no brand source is provided</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Creates <code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.md</code></li><li>Creates <code>.twt-artifacts/export/templates/&lt;template-slug&gt;/template.json</code> with name, slug, type, style, description, brand source, and instructions</li><li>Creates <code>.twt-artifacts/export/templates/&lt;template-slug&gt;/preview-notes.md</code></li><li>Template names are human-distinguishable and combine context, style direction, and scope where possible</li><li>With no <code>$ARGUMENTS</code>, gathers choices through menus and free-text prompts before running <code>tools/export-template-create.mjs</code></li></ul>
+    <ul><li>Creates the whole theme directory <code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/</code> (css layers, fonts, reference docs, preview)</li><li>Creates <code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/theme.json</code> with name, slug, type, style, description, brand source, and instructions</li><li>Creates <code>.twt-artifacts/export/themes/&lt;theme-slug&gt;/preview-notes.md</code></li><li>Theme names are human-distinguishable and combine context, style direction, and scope where possible</li><li>With no <code>$ARGUMENTS</code>, gathers choices through menus and free-text prompts before running <code>tools/export-theme-create.mjs</code></li></ul>
   </section>
       </section>
   </main>

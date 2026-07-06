@@ -39,7 +39,7 @@
           <h1>/twt-text-analysis</h1>
           <p class="lede">Audit copy by block type and suggest only rewrites that pass the safe-improvement gate.</p>
           <div class="fact-row">
-            <span>Version 1.2.4</span>
+            <span>Version 1.2.7</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -60,7 +60,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/content/text-analysis/&lt;subject-slug&gt;/analysis-report.md</code><span class="file-desc">A block-by-block text-quality score with suggested rewrites.</span></li><li><code>.twt-artifacts/content/text-analysis/&lt;subject-slug&gt;/optimized.md</code><span class="file-desc">A suggested stronger rewrite produced during text analysis.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content/text-analysis/&lt;subject-slug&gt;/analysis-report.md</code><span class="file-desc">A block-by-block text-quality score with suggested rewrites.</span></li><li><code>.twt-artifacts/pre-design/content/text-analysis/&lt;subject-slug&gt;/analysis-report.xlsx</code><span class="file-desc">A spreadsheet workbook.</span></li><li><code>.twt-artifacts/pre-design/content/text-analysis/&lt;subject-slug&gt;/optimized.md</code><span class="file-desc">A suggested stronger rewrite produced during text analysis.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -68,7 +68,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>The content is split into independently scored blocks and each block is assigned a semantic type: heading, paragraph, mission/vision/brand positioning, CTA, caption, error message, list, hint text, description, or feature explanation.</li><li>Each block is scored only on metrics that apply to its type; irrelevant metrics are marked N/A and never used as a reason to rewrite.</li><li>Every finding is classified as <strong>Problem</strong>, <strong>Opportunity</strong>, or <strong>No issue</strong>, with a confidence score and a clear reason.</li><li>A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.</li><li>When no better wording is available, the report says exactly: <code>Suggested Version: No better wording found.</code> and <code>Decision: Keep original.</code> This is a valid successful outcome.</li><li>Two artifacts are written and nothing else changes: <code>analysis-report.md</code> (the scored critique) and <code>optimized.md</code> (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.</li></ul>
+    <ul><li>The content is split into independently scored blocks and each block is assigned a semantic type: heading, paragraph, mission/vision/brand positioning, CTA, caption, error message, list, hint text, description, or feature explanation.</li><li>Each block is scored only on metrics that apply to its type; irrelevant metrics are marked N/A and never used as a reason to rewrite.</li><li>Every finding is classified as <strong>Problem</strong>, <strong>Opportunity</strong>, or <strong>No issue</strong>, with a confidence score and a clear reason.</li><li>A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.</li><li>When no better wording is available, the report says exactly: <code>Suggested Version: No better wording found.</code> and <code>Decision: Keep original.</code> This is a valid successful outcome.</li><li>Three derived artifacts are written and nothing else changes: <code>analysis-report.md</code> (the scored critique), <code>analysis-report.xlsx</code> (the same per-block findings as a sortable/filterable spreadsheet), and <code>optimized.md</code> (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.</li></ul>
   </section>
       </section>
   </main>

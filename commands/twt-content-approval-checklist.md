@@ -15,8 +15,8 @@ dependencies:
     - twt-mockup-define
 reads:
   - Figma URL or Figma design context supplied via $ARGUMENTS
-  - .twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md
-  - .twt-artifacts/content/text-analysis/<page-slug>/optimized.md
+  - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
+  - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/components.md
   - .twt-artifacts/design/layout/layouts/
@@ -119,9 +119,9 @@ Quality-check the discovered copy before building the workbook, and use the resu
 
 For each discovered page (and the two shared sheets), do this:
 
-1. **Assemble that page's text copy** into one markdown buffer — the headline/body/CTA/microcopy strings you pulled into `current content` from the mockup, layout, curation outline, or Figma — and persist it to `.twt-artifacts/content/text-analysis/<page-slug>/source.md` (so the child analyzes a file on disk). Skip non-text rows (links, images, videos, SEO slugs); text-analysis judges prose, not URLs.
+1. **Assemble that page's text copy** into one markdown buffer — the headline/body/CTA/microcopy strings you pulled into `current content` from the mockup, layout, curation outline, or Figma — and persist it to `.twt-artifacts/pre-design/content/text-analysis/<page-slug>/source.md` (so the child analyzes a file on disk). Skip non-text rows (links, images, videos, SEO slugs); text-analysis judges prose, not URLs.
 2. **Dispatch** `/twt-text-analysis` on that file with the `subagent-collect` token (no questions, no apply). Issue the per-page dispatches as a single parallel batch where practical — each writes to its own `<page-slug>/` folder, so there is no write conflict.
-3. **Read back** `.twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md` (and `optimized.md`) with the Read tool. For every block whose report has `Decision: Rewrite recommended` and a **Suggested Version** that is not `No better wording found.`, put that suggested text into the matching field's **`recommended content`** cell. Match blocks to fields by their text — a block whose original equals the `current content` of a field maps to that field.
+3. **Read back** `.twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md` (and `optimized.md`) with the Read tool. For every block whose report has `Decision: Rewrite recommended` and a **Suggested Version** that is not `No better wording found.`, put that suggested text into the matching field's **`recommended content`** cell. Match blocks to fields by their text — a block whose original equals the `current content` of a field maps to that field.
 4. Where a block has `Decision: Keep original`, `Manual review only`, `Minor improvement suggested`, or `Suggested Version: No better wording found.`, leave `recommended content` as the normal note (`Needs approved final copy`, etc.) — do not fabricate a suggestion. Where text-analysis explains a missing fact in `Reason` or `Weaknesses`, surface that note in `recommended content` so the reviewer knows what information is missing.
 
 If text-analysis is unavailable or returns nothing for a page, continue without it — the workbook still builds; just fall back to the standard `recommended content` notes. Record in the Step 6 report how many fields received a text-analysis suggestion.

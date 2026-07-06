@@ -273,8 +273,8 @@ Create the content approval workbook that proves every page, shared header/foote
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
-- .twt-artifacts/content/text-analysis/<page-slug>/analysis-report.md
-- .twt-artifacts/content/text-analysis/<page-slug>/optimized.md
+- .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
+- .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/components.md
 - .twt-artifacts/design/layout/layouts/
@@ -1990,7 +1990,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - .twt-artifacts/<html-site|elementor-theme>/phase-review.md
 - .twt-artifacts/reports/index.html
 - .twt-artifacts/reports/ (copied headline reports)
-- .twt-artifacts/content/text-analysis/
+- .twt-artifacts/pre-design/content/text-analysis/
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**
@@ -2145,9 +2145,9 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
-- .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
-- .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx
-- .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
+- .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md
+- .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx
+- .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/optimized.md
 
 **Non-goals:**
 - **Never applies changes.** It does not modify the subject file, does not ask whether to replace text with the suggestions, and does not "switch to auto-apply." Implementing suggested copy is a different call: `/twt-content-optimize` (rewrite a text file) or `/twt-content-approval-implement` (push approved content into the build). This skill stops at the report.
