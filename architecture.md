@@ -2058,7 +2058,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.4
+**Version:** 1.2.5
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
@@ -2079,6 +2079,7 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md |  |
+| .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx |  |
 | .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md |  |
 
 ## Cross-skill dependency table

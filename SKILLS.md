@@ -2128,7 +2128,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.4
+**Version:** 1.2.5
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.
@@ -2146,6 +2146,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 
 **Writes:**
 - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
+- .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx
 - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
 
 **Non-goals:**
@@ -2161,4 +2162,4 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 - Every finding is classified as **Problem**, **Opportunity**, or **No issue**, with a confidence score and a clear reason.
 - A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
 - When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
-- Two artifacts are written and nothing else changes: `analysis-report.md` (the scored critique) and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
+- Three derived artifacts are written and nothing else changes: `analysis-report.md` (the scored critique), `analysis-report.xlsx` (the same per-block findings as a sortable/filterable spreadsheet), and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.

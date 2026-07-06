@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.2.4) Block-type-aware text-quality audit with validated suggestions only; never applies changes
-version: 1.2.4
+description: (v1.2.5) Block-type-aware text-quality audit with validated suggestions only; never applies changes
+version: 1.2.5
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint
@@ -14,6 +14,7 @@ reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
 writes:
   - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md
+  - .twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx
   - .twt-artifacts/content/text-analysis/<subject-slug>/optimized.md
 ---
 
@@ -36,7 +37,7 @@ writes:
 - Every finding is classified as **Problem**, **Opportunity**, or **No issue**, with a confidence score and a clear reason.
 - A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
 - When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
-- Two artifacts are written and nothing else changes: `analysis-report.md` (the scored critique) and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
+- Three derived artifacts are written and nothing else changes: `analysis-report.md` (the scored critique), `analysis-report.xlsx` (the same per-block findings as a sortable/filterable spreadsheet), and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
 
 ---
 
@@ -276,9 +277,21 @@ This skill is read-only with respect to the subject. In every mode, it does exac
 
 If a previous `optimized.md` exists, regenerate it; it is a derived artifact, safe to overwrite.
 
+## Step 7b - Write the analysis workbook (analysis-report.xlsx)
+
+Always emit a spreadsheet mirror of the report so reviewers can sort, filter, and colour-scan the findings. Do not build the workbook by hand — run the deterministic generator, which parses the `analysis-report.md` you just wrote:
+
+```bash
+python "${CLAUDE_PLUGIN_ROOT}/tools/analysis-to-xlsx.py" --input ".twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.md"
+```
+
+It writes `.twt-artifacts/content/text-analysis/<subject-slug>/analysis-report.xlsx` — one row per block, with columns: **Block · Type · Score · Finding Type · Original · Suggested Version · Weaknesses · Can Fix Safely · Reason · Rewrite Validation · Confidence**. The `Finding Type` cell is colour-coded (green No issue · amber Opportunity · red Problem), the header row is frozen, and an auto-filter is applied. Because it reads the report, it must run after Step 6.
+
+Environment notes (mirror `/twt-content-approval-checklist`): the script needs `openpyxl`. If it prints the missing-dependency hint, run `python -m pip install openpyxl` once and re-run; on Windows where `python` is unavailable but `py` exists, use `py`. If Python is unavailable entirely, note it and continue — the markdown artifacts remain the source of truth.
+
 ## Step 8 - Report back
 
-State the document Overall, counts for Problems / Opportunities / validated suggested versions, the two files written (`analysis-report.md`, `optimized.md`) with their paths, and explicitly that no source text was changed. End with the next-step pointer: "To implement validated suggestions, run `/twt-content-optimize <file>` or, for built pages, approve the copy and run `/twt-content-approval-implement`."
+State the document Overall, counts for Problems / Opportunities / validated suggested versions, the three files written (`analysis-report.md`, `analysis-report.xlsx`, `optimized.md`) with their paths, and explicitly that no source text was changed. End with the next-step pointer: "To implement validated suggestions, run `/twt-content-optimize <file>` or, for built pages, approve the copy and run `/twt-content-approval-implement`."
 
 ---
 
