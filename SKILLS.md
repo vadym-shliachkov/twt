@@ -19,7 +19,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
 | [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
-| [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content and save as clean Markdown |
+| [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-content-validate](#twt-content-validate) | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
 | [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
@@ -29,14 +29,14 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
-| [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme for a WordPress project |
+| [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
 | [/twt-export](#twt-export) | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
 | [/twt-export-docx](#twt-export-docx) | export | Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
-| [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md) |
+| [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
@@ -53,7 +53,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-design](#twt-qa-design) | qa | Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system) |
 | [/twt-qa-elementor](#twt-qa-elementor) | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
-| [/twt-search-site](#twt-search-site) | search | Search a website for an exact string; report page links with ±100 chars of context per match |
+| [/twt-search-site](#twt-search-site) | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
 | [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
@@ -484,7 +484,7 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 ## /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Pull a website's pages into the local working directory as clean, frontmatter-tagged Markdown — for use as reference material in copy migrations, content audits, or as input to other skills.
@@ -505,8 +505,8 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 - .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md
 
 **Non-goals:**
-- Not a full archive tool; uses WebFetch, not a real browser
-- Doesn't extract structured data (tables, forms) — text only
+- Not a full archive tool; uses an HTML fetcher, not a real browser — JavaScript-rendered-only content is not captured
+- Doesn't extract structured data beyond basic tables — text-first
 - Doesn't follow external links
 
 **Success criteria:**
@@ -910,7 +910,7 @@ Build an Elementor widget or full-page template that follows the project's exist
 ## /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.1.2
+**Version:** 1.2.1
 **Accepts arguments:** no
 
 Scaffold a Hello Elementor child theme and write the canonical project conventions file (`conventions.md`) that downstream `/twt-elementor-*` skills depend on. Run once per WordPress project.
@@ -1230,7 +1230,7 @@ Build a static HTML page or a single section into the scaffolded `site/`, inlini
 ## /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.1.2
+**Version:** 1.2.1
 **Accepts arguments:** no
 
 Scaffold a dependency-free static HTML/CSS site once per project and write the canonical `conventions.md` that `/twt-html-block-creator` loads. Chrome (header/footer/nav) lives once in `partials/`; `tokens.css` is mirrored from the design-system spine. Run once per static-site project.
@@ -1261,7 +1261,7 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 **Non-goals:**
 - Doesn't build pages or sections (that's `/twt-html-block-creator`)
 - Doesn't author design tokens (mirrors the design-system spine, or writes a clearly-marked scaffold)
-- Doesn't add any build tooling — pure HTML + CSS, no Node/bundler/SSG
+- Doesn't add any build tooling — pure HTML + CSS, no Node/bundler/SSG (the scaffolder script is author-time tooling, not a site dependency)
 - Doesn't overwrite existing files without confirmation
 
 **Success criteria:**
@@ -1893,7 +1893,7 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 ## /twt-search-site
 
 **Category:** search
-**Version:** 1.0.2
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Find every occurrence of a specific string across a website's pages and produce a report listing the exact page URLs where it appears, with up to 100 characters of surrounding text before and after each match for context. Standalone utility — not part of the four-phase pipeline.
@@ -2128,7 +2128,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.5
+**Version:** 1.2.7
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.

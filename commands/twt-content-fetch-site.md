@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-site
 category: content
-description: (v1.1.1) Fetch a website's content and save as clean Markdown
-version: 1.1.1
+description: (v1.2.1) Fetch a website's content via the bundled crawler and save as clean Markdown
+version: 1.2.1
 accepts_arguments: true
 inputs:
   - URL (homepage or full crawl up to 50 pages)
@@ -26,8 +26,8 @@ writes:
 **Purpose:** Pull a website's pages into the local working directory as clean, frontmatter-tagged Markdown — for use as reference material in copy migrations, content audits, or as input to other skills.
 
 **Non-goals:**
-- Not a full archive tool; uses WebFetch, not a real browser
-- Doesn't extract structured data (tables, forms) — text only
+- Not a full archive tool; uses an HTML fetcher, not a real browser — JavaScript-rendered-only content is not captured
+- Doesn't extract structured data beyond basic tables — text-first
 - Doesn't follow external links
 
 **Success criteria:**
@@ -50,163 +50,47 @@ Arguments passed to this command: $ARGUMENTS
 
 ---
 
-## Step 2 — Parse the URL
+## Step 2 — Choose fetch scope
 
-Extract the **domain** from the URL:
-- `https://www.example.com/page` → domain is `www.example.com`
-- `https://docs.acme.io/guide` → domain is `docs.acme.io`
-
-The **base output directory** for all saved files will be:
-```
-.twt-artifacts/pre-design/content-fetch/site/<domain>/
-```
-
----
-
-## Step 3 — Choose fetch scope
-
-Tell the user the resolved URL (`<url>`) and domain (`<domain>`), and that output will go to `.twt-artifacts/pre-design/content-fetch/site/<domain>/`.
+Extract the **domain** from the URL (`https://docs.acme.io/guide` → `docs.acme.io`). Tell the user the resolved URL and domain, and that output will go to `.twt-artifacts/pre-design/content-fetch/site/<domain>/`.
 
 Ask via the **AskUserQuestion** tool (single-select, header "Fetch scope") which scope to use:
 - **Fetch homepage** — retrieve only the homepage
 - **Fetch all pages** — crawl every page found under this domain (up to 50 pages)
 - **You decide** — I pick the fitting scope (all pages for a multi-page site, homepage for a single landing page)
 
-Record the choice and continue.
+Record the choice and continue. (When dispatched with `subagent-collect`, don't ask — default to **all pages** unless the dispatch prompt says otherwise.)
 
 ---
 
-## Step 4a — Option 1: Fetch Homepage
+## Step 3 — Run the crawler script
 
-1. Use the **WebFetch** tool to fetch the target URL.
-2. Convert the raw content to clean Markdown:
-   - Keep: headings (h1–h6), paragraphs, lists, tables, code blocks, links, bold/italic
-   - Remove: navigation, header, footer, sidebar, ads, scripts, styles
-   - Prefer content inside `<main>`, `<article>`, or `.content` elements
-3. Determine the output file path:
-   - Root URL (`/`) → `index.md`
-   - Any other URL → map to its path (see §Path mapping below)
-4. Create all intermediate directories as needed.
-5. Write the file using this format:
+Crawling, HTML→Markdown conversion, and file layout are **deterministic**, so they are delegated to the bundled crawler — fetching up to 50 pages through the model wastes tokens and produces inconsistent Markdown. Run (Bash, single command):
 
-```markdown
----
-url: <original-url>
-title: <page-title>
-fetched_at: <YYYY-MM-DD>
----
-
-<clean markdown content>
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/site-crawl.mjs" fetch "<url>" --scope <all|homepage>
 ```
 
-6. Report to the user:
-   ```
-   ✓ Homepage saved → .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md
-   ```
+The script crawls internal pages breadth-first (same hostname only; query strings/fragments stripped; asset files, auth paths, and `mailto:`/`tel:`/`javascript:` links excluded; hard cap 50 pages — `--max <n>` to change it) and, per page:
+- prefers the `<main>`/`<article>` content region and strips nav/header/footer/aside/script chrome
+- converts headings, paragraphs, lists, links (absolutized), bold/italic/code, code blocks, and tables to Markdown
+- writes `<url-path>/index.md` under the domain folder (`/` → `index.md`, `/about` → `about/index.md`, `/docs/api.html` → `docs/api/index.md`) with `url` / `title` / `fetched_at` frontmatter
+
+In crawl scope it also writes `_sitemap.md` (domain, crawl date, page count, page→file table). It prints per-page progress to stderr and a final JSON summary to stdout: `out_dir`, `pages_written`, `sitemap`, `cap_hit`, `unreachable[]`.
+
+**Fallback (script unavailable):** if the plugin root or Node is missing, fetch the page(s) with the **WebFetch** tool instead (same link rules and cap), convert to Markdown yourself, and write the same file layout and frontmatter — note the fallback in your report.
 
 ---
 
-## Step 4b — Option 2: Fetch All Pages
+## Step 4 — Spot-check the conversion
 
-Run this crawl algorithm:
-
-### Initialise
-```
-visited  = []          # URLs already fetched
-queue    = [<url>]     # URLs yet to fetch
-max      = 50          # hard page limit
-```
-
-### Loop — while queue is not empty AND len(visited) < max
-
-For each URL in the queue:
-
-1. Skip if already in `visited`.
-2. Use **WebFetch** to fetch the URL.
-3. Convert HTML to clean Markdown (same rules as Option 1).
-4. Determine the output file path (see §Path mapping).
-5. Write the file (same frontmatter format as Option 1).
-6. Add URL to `visited`.
-7. Extract all `<a href="...">` links from the raw page content.
-8. Filter links — keep only **internal links** (same domain). See §Link filtering.
-9. Add any unvisited internal links to `queue`.
-10. Print progress:
-    ```
-    [3/50] Fetched: /about → .twt-artifacts/pre-design/content-fetch/site/<domain>/about/index.md
-    ```
-
-### After the loop completes
-
-Create `.twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md`:
-
-```markdown
----
-domain: <domain>
-crawled_at: <YYYY-MM-DD>
-total_pages: <count>
----
-
-# Site Map: <domain>
-
-| Page | File |
-|------|------|
-| <url> | <file-path> |
-...
-```
-
-Report the summary:
-```
-✓ Crawl complete
-  Domain : <domain>
-  Pages  : <count> fetched
-  Output : .twt-artifacts/pre-design/content-fetch/site/<domain>/
-  Index  : .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md
-```
+The converter is pragmatic, not spec-complete. **Read** one or two of the written files (start with the homepage) and check for leftover noise: cookie-banner text, repeated menu labels, empty headings, mangled tables. If a file is noisy, clean **that file** with the Edit tool (remove chrome text, fix obvious structure) — don't re-fetch. If pages came back empty or near-empty (a JavaScript-rendered site), tell the user and offer the WebFetch fallback for the affected pages.
 
 ---
 
-## Path Mapping
+## Step 5 — Report
 
-Convert a URL path to a file path under the domain folder:
-
-| URL path              | File path                          |
-|-----------------------|------------------------------------|
-| `/`                   | `index.md`                         |
-| `/about`              | `about/index.md`                   |
-| `/about/team`         | `about/team/index.md`              |
-| `/blog/my-post`       | `blog/my-post/index.md`            |
-| `/page.html`          | `page/index.md`                    |
-| `/docs/api.html`      | `docs/api/index.md`                |
-
-Strip query strings and fragments from URLs before mapping.
-
----
-
-## Link Filtering (for Option 2)
-
-**Include** a link if it meets ANY of these:
-- Starts with `/` (relative path on the same site)
-- Is an absolute URL with the same hostname as the target domain
-
-**Exclude** a link if it matches ANY of these:
-- Different hostname (external site)
-- Starts with `mailto:`, `tel:`, `javascript:`
-- Is a pure fragment (`#anchor`)
-- Ends with `.pdf`, `.zip`, `.jpg`, `.jpeg`, `.png`, `.gif`, `.svg`, `.webp`, `.css`, `.js`, `.ico`, `.woff`, `.woff2`, `.ttf`
-- Contains `/wp-admin`, `/wp-login`, `/login`, `/logout`, `/signin`, `/signout`
-
----
-
-## Content Conversion Rules
-
-When converting HTML to Markdown:
-- Map `<h1>`–`<h6>` → `#`–`######`
-- Map `<ul>`/`<li>` → `- item`
-- Map `<ol>`/`<li>` → `1. item`
-- Map `<a href="...">text</a>` → `[text](href)`
-- Map `<code>` → backtick inline code
-- Map `<pre><code>` → fenced code block
-- Map `<table>` → Markdown table
-- Map `<strong>`/`<b>` → `**bold**`
-- Map `<em>`/`<i>` → `_italic_`
-- Strip: `<nav>`, `<header>`, `<footer>`, `<aside>`, `<script>`, `<style>`, elements with class containing `nav`, `menu`, `sidebar`, `ad`, `advertisement`, `cookie`, `banner`, `popup`
+From the script's JSON summary, tell the user:
+- Output directory and number of pages written (plus `_sitemap.md` path in crawl scope)
+- Whether the 50-page cap was hit and any unreachable pages
+- Any files you cleaned in the spot-check, and any pages that need the JavaScript-rendering caveat

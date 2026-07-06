@@ -189,7 +189,7 @@ flowchart TB
 - /twt-content-fetch-doc - Extract a Word/Google Doc's content and save as clean Markdown
 - /twt-content-fetch-figma - Extract a Figma file's visible text content and save as clean Markdown
 - /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
-- /twt-content-fetch-site - Fetch a website's content and save as clean Markdown
+- /twt-content-fetch-site - Fetch a website's content via the bundled crawler and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 - /twt-text-analysis - Block-type-aware text-quality audit with validated suggestions only; never applies changes
@@ -218,7 +218,7 @@ flowchart TB
 ### elementor
 
 - /twt-elementor-block-creator - Build an Elementor widget or full-page template following project conventions
-- /twt-elementor-theme-creator - Scaffold a production-ready Hello Elementor child theme for a WordPress project
+- /twt-elementor-theme-creator - Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script
 
 ### export
 
@@ -231,7 +231,7 @@ flowchart TB
 ### html
 
 - /twt-html-block-creator - Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
-- /twt-html-site-creator - Scaffold a dependency-free static HTML/CSS site (partials, mirrored tokens.css, conventions.md)
+- /twt-html-site-creator - Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md)
 
 ### ia
 
@@ -278,7 +278,7 @@ flowchart TB
 
 ### search
 
-- /twt-search-site - Search a website for an exact string; report page links with ±100 chars of context per match
+- /twt-search-site - Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
 
 ### site
 
@@ -670,7 +670,7 @@ flowchart TB
 ### /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.1.1
+**Version:** 1.2.1
 
 **Inputs:**
 - URL (homepage or full crawl up to 50 pages)
@@ -1052,7 +1052,7 @@ flowchart TB
 ### /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.1.2
+**Version:** 1.2.1
 
 **Inputs:**
 - project name
@@ -1284,7 +1284,7 @@ flowchart TB
 ### /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.1.2
+**Version:** 1.2.1
 
 **Inputs:**
 - project name (asked); short slug (auto-derived, user confirms); output root (default ./site)
@@ -1837,7 +1837,7 @@ flowchart TB
 ### /twt-search-site
 
 **Category:** search
-**Version:** 1.0.2
+**Version:** 1.1.1
 
 **Inputs:**
 - Search string (first argument; wrap in quotes if it contains spaces)
@@ -2058,7 +2058,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.5
+**Version:** 1.2.7
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
