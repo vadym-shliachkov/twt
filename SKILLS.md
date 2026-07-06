@@ -152,9 +152,9 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 
 **Reads:**
 - <brand source>
-- .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
 - references/brand-book-checklist.md
-- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/content/fetched/_manifest.md
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/spec/specification.md
 
@@ -364,7 +364,7 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 - <provided sources>
 
 **Writes:**
-- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/content/fetched/_manifest.md
 
 **Non-goals:**
 - Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma`)
@@ -397,8 +397,8 @@ Pull a Word or Google Doc's content into the working directory as clean, frontma
 - <doc-path-or-url>
 
 **Writes:**
-- .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md
-- .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md
 
 **Non-goals:**
 - Doesn't preserve tracked changes, comments, or revision history
@@ -406,7 +406,7 @@ Pull a Word or Google Doc's content into the working directory as clean, frontma
 - For Google Docs, requires a publicly accessible or already-exported source — does not authenticate
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/doc/<filename>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`
 - `index.md` has frontmatter (source, title, fetched-at)
 - Heading hierarchy and lists preserved
 
@@ -431,8 +431,8 @@ Pull a Figma design's **visible text content** — headings, body copy, button/C
 - <figma-url> (via the Figma MCP read tools)
 
 **Writes:**
-- .twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md
-- .twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md
+- .twt-artifacts/pre-design/content/fetched/figma/<file-key>/<frame-slug>/index.md
+- .twt-artifacts/pre-design/content/fetched/figma/<file-key>/_index.md
 
 **Non-goals:**
 - Not a design importer — it does **not** extract tokens, components, layout, or build anything (that's the Design phase / `/twt-site-dev`). It captures **text content only**.
@@ -440,7 +440,7 @@ Pull a Figma design's **visible text content** — headings, body copy, button/C
 - Doesn't write into Figma — read-only. (`use_figma` and its mandatory `figma-use` skill are not needed here.)
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/`, one Markdown file per top-level frame/page/screen.
+- Output appears under `.twt-artifacts/pre-design/content/fetched/figma/<file-key>/`, one Markdown file per top-level frame/page/screen.
 - Every file has frontmatter (source Figma URL, frame name, node-id, fetched-at).
 - Lorem ipsum / placeholder copy is preserved verbatim and flagged, not silently dropped.
 - An `_index.md` lists every frame written, so downstream skills (and `/twt-content-fetch`) can discover the set.
@@ -466,8 +466,8 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 - <pdf-path>
 
 **Writes:**
-- .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
-- .twt-artifacts/pre-design/content-fetch/pdf/<filename>/_meta.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md
 
 **Non-goals:**
 - Not OCR for scanned/image-only PDFs — text-layer extraction only (flag when a PDF appears image-only)
@@ -475,7 +475,7 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 - Doesn't extract embedded images as files (notes their presence only)
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/pdf/<filename>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`
 - `index.md` has frontmatter (source path, title, fetched-at, page count)
 - Headings and lists are preserved where the PDF's text structure allows
 
@@ -500,9 +500,9 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 - <url>
 
 **Writes:**
-- .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md
-- .twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md
-- .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md
+- .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md
+- .twt-artifacts/pre-design/content/fetched/site/<domain>/<path>/index.md
+- .twt-artifacts/pre-design/content/fetched/site/<domain>/_sitemap.md
 
 **Non-goals:**
 - Not a full archive tool; uses an HTML fetcher, not a real browser — JavaScript-rendered-only content is not captured
@@ -510,7 +510,7 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 - Doesn't follow external links
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/site/<domain>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/site/<domain>/`
 - Every page has frontmatter (source URL, title, fetched-at)
 - Crawl mode produces `_sitemap.md` indexing every file written
 
@@ -610,7 +610,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 - Soft: twt-content-fetch, twt-brand-define, twt-ia-define
 
 **Reads:**
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
@@ -1289,7 +1289,7 @@ Produce the canonical site structure — `sitemap.md` (page hierarchy with purpo
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/ia/validation-report.md
@@ -1330,7 +1330,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 
 **Writes:**
 - .twt-artifacts/pre-design/ia/validation-report.md

@@ -13,7 +13,7 @@ dependencies:
     - twt-content-fetch
 reads:
   - .twt-artifacts/pre-design/positioning/positioning.md
-  - .twt-artifacts/pre-design/content-fetch/
+  - .twt-artifacts/pre-design/content/fetched/
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/ia/functional-scope.md
   - .twt-artifacts/pre-design/ia/validation-report.md

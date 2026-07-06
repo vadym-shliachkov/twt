@@ -13,8 +13,8 @@ dependencies:
 reads:
   - <pdf-path>
 writes:
-  - .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
-  - .twt-artifacts/pre-design/content-fetch/pdf/<filename>/_meta.md
+  - .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
+  - .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md
 ---
 
 # /twt-content-fetch-pdf
@@ -29,7 +29,7 @@ writes:
 - Doesn't extract embedded images as files (notes their presence only)
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/pdf/<filename>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`
 - `index.md` has frontmatter (source path, title, fetched-at, page count)
 - Headings and lists are preserved where the PDF's text structure allows
 
@@ -39,7 +39,7 @@ writes:
 Use `$ARGUMENTS` if it points to a `.pdf` (or a folder). Otherwise ask: "Provide the path to the PDF file (or a folder of PDFs):". Wait for the answer.
 
 ## Step 2 — Derive the output folder
-`<filename>` = the PDF base name, slugified (lowercase, kebab-case). Base output: `.twt-artifacts/pre-design/content-fetch/pdf/<filename>/`. For a folder input, process each PDF into its own `<filename>/` subfolder.
+`<filename>` = the PDF base name, slugified (lowercase, kebab-case). Base output: `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`. For a folder input, process each PDF into its own `<filename>/` subfolder.
 
 ## Step 3 — Read and convert
 Use the Read tool's PDF support to read the PDF. Convert to clean Markdown: keep headings, paragraphs, lists, tables; drop running headers/footers and page numbers. If the text layer is empty/garbled, STOP and tell the user it looks image-only (OCR out of scope).

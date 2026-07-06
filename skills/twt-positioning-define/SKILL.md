@@ -13,7 +13,7 @@ dependencies:
     - twt-content-fetch
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
-  - .twt-artifacts/pre-design/content-fetch/
+  - .twt-artifacts/pre-design/content/fetched/
   - .twt-artifacts/pre-design/positioning/positioning.md
   - .twt-artifacts/pre-design/positioning/validation-report.md
 writes:
@@ -48,7 +48,7 @@ If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
 
 ## Step 2 — Gather soft context
-**(Skipped in collect mode — see Step 1b.)** If present, read `brand-brief.md` (voice/audience signals) and `.twt-artifacts/pre-design/content-fetch/` (what the client actually emphasizes). Use as input; if absent, rely on interview (degrade gracefully).
+**(Skipped in collect mode — see Step 1b.)** If present, read `brand-brief.md` (voice/audience signals) and `.twt-artifacts/pre-design/content/fetched/` (what the client actually emphasizes). Use as input; if absent, rely on interview (degrade gracefully).
 
 ## Step 3 — Interview / refine
 Walk: Audience segments (+needs) → Value propositions (rank, tie each to a need) → Promotion priorities (elevate/de-emphasize) → Market context (alternatives, differentiation). Refinement mode touches only chosen sections.

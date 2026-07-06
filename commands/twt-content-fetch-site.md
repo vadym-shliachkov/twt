@@ -14,9 +14,9 @@ dependencies:
 reads:
   - <url>
 writes:
-  - .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md
-  - .twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md
-  - .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md
+  - .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md
+  - .twt-artifacts/pre-design/content/fetched/site/<domain>/<path>/index.md
+  - .twt-artifacts/pre-design/content/fetched/site/<domain>/_sitemap.md
 ---
 
 # /twt-content-fetch-site
@@ -31,7 +31,7 @@ writes:
 - Doesn't follow external links
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/site/<domain>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/site/<domain>/`
 - Every page has frontmatter (source URL, title, fetched-at)
 - Crawl mode produces `_sitemap.md` indexing every file written
 
@@ -52,7 +52,7 @@ Arguments passed to this command: $ARGUMENTS
 
 ## Step 2 — Choose fetch scope
 
-Extract the **domain** from the URL (`https://docs.acme.io/guide` → `docs.acme.io`). Tell the user the resolved URL and domain, and that output will go to `.twt-artifacts/pre-design/content-fetch/site/<domain>/`.
+Extract the **domain** from the URL (`https://docs.acme.io/guide` → `docs.acme.io`). Tell the user the resolved URL and domain, and that output will go to `.twt-artifacts/pre-design/content/fetched/site/<domain>/`.
 
 Ask via the **AskUserQuestion** tool (single-select, header "Fetch scope") which scope to use:
 - **Fetch homepage** — retrieve only the homepage

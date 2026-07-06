@@ -13,7 +13,7 @@ dependencies:
     - twt-brand-define
     - twt-ia-define
 reads:
-  - .twt-artifacts/pre-design/content-fetch/
+  - .twt-artifacts/pre-design/content/fetched/
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/curation/inventory.md

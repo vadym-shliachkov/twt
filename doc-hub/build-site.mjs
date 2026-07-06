@@ -283,15 +283,14 @@ const artifactDescriptions = {
   ".twt-artifacts/pre-design/curation/outlines/<page-slug>.md": "The section-by-section content outline for a single page.",
 
   // Content fetch
-  ".twt-artifacts/pre-design/content-fetch/": "The folder of content pulled in from your sources, all as clean Markdown.",
-  ".twt-artifacts/pre-design/content-fetch/_manifest.md": "An index of everything that was fetched and where each piece came from.",
-  ".twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md": "The cleaned Markdown text extracted from a PDF.",
-  ".twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md": "The cleaned Markdown text extracted from a Word or Google Doc.",
-  ".twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md": "An index of the Figma frames whose text was pulled.",
-  ".twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md": "The visible text from a single Figma frame, as Markdown.",
-  ".twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md": "A map of the pages discovered while crawling the site.",
-  ".twt-artifacts/pre-design/content-fetch/site/<domain>/index.md": "The cleaned Markdown for the site's main fetched page.",
-  ".twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md": "The cleaned Markdown for one fetched page of the site.",
+  ".twt-artifacts/pre-design/content/fetched/": "The folder of content pulled in from your sources, all as clean Markdown.",
+  ".twt-artifacts/pre-design/content/fetched/_manifest.md": "An index of everything that was fetched and where each piece came from.",
+  ".twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md": "The cleaned Markdown text extracted from a PDF or Word/Google Doc.",
+  ".twt-artifacts/pre-design/content/fetched/figma/<file-key>/_index.md": "An index of the Figma frames whose text was pulled.",
+  ".twt-artifacts/pre-design/content/fetched/figma/<file-key>/<frame-slug>/index.md": "The visible text from a single Figma frame, as Markdown.",
+  ".twt-artifacts/pre-design/content/fetched/site/<domain>/_sitemap.md": "A map of the pages discovered while crawling the site.",
+  ".twt-artifacts/pre-design/content/fetched/site/<domain>/index.md": "The cleaned Markdown for the site's main fetched page.",
+  ".twt-artifacts/pre-design/content/fetched/site/<domain>/<path>/index.md": "The cleaned Markdown for one fetched page of the site.",
 
   // Content optimize / validate / analysis
   ".twt-artifacts/content/content-config.md": "Settings for content work — which subjects to process and how.",

@@ -13,8 +13,8 @@ dependencies:
 reads:
   - <figma-url> (via the Figma MCP read tools)
 writes:
-  - .twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md
-  - .twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md
+  - .twt-artifacts/pre-design/content/fetched/figma/<file-key>/<frame-slug>/index.md
+  - .twt-artifacts/pre-design/content/fetched/figma/<file-key>/_index.md
 ---
 
 # /twt-content-fetch-figma
@@ -29,7 +29,7 @@ writes:
 - Doesn't write into Figma — read-only. (`use_figma` and its mandatory `figma-use` skill are not needed here.)
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/`, one Markdown file per top-level frame/page/screen.
+- Output appears under `.twt-artifacts/pre-design/content/fetched/figma/<file-key>/`, one Markdown file per top-level frame/page/screen.
 - Every file has frontmatter (source Figma URL, frame name, node-id, fetched-at).
 - Lorem ipsum / placeholder copy is preserved verbatim and flagged, not silently dropped.
 - An `_index.md` lists every frame written, so downstream skills (and `/twt-content-fetch`) can discover the set.
@@ -45,7 +45,7 @@ Arguments passed to this command: $ARGUMENTS
 
 Parse the URL: the path segment after `/design/` or `/file/` is the **file key**; a `node-id` query param (if present) scopes the fetch to that frame/section. Derive a kebab-case `<file-key>` folder name from the file key (and the human file name when available). The base output directory is:
 ```
-.twt-artifacts/pre-design/content-fetch/figma/<file-key>/
+.twt-artifacts/pre-design/content/fetched/figma/<file-key>/
 ```
 
 ## Step 2 — Read the structure from Figma
@@ -70,7 +70,7 @@ Strip purely decorative layers, spacers, and duplicated component chrome (repeat
 
 ## Step 4 — Write the files
 
-For each frame write `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md` (`<frame-slug>` = kebab-case frame name):
+For each frame write `.twt-artifacts/pre-design/content/fetched/figma/<file-key>/<frame-slug>/index.md` (`<frame-slug>` = kebab-case frame name):
 
 ```markdown
 ---
@@ -84,7 +84,7 @@ fetched_at: <YYYY-MM-DD>
 <clean markdown content>
 ```
 
-Then write `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md`:
+Then write `.twt-artifacts/pre-design/content/fetched/figma/<file-key>/_index.md`:
 
 ```markdown
 ---
@@ -103,4 +103,4 @@ total_frames: <count>
 
 ## Step 5 — Report
 
-Summarize: file key, how many frames were written, the output folder, how many frames contained placeholder/lorem copy (flag these), and that downstream define skills + `/twt-content-approval-checklist` will read from `.twt-artifacts/pre-design/content-fetch/figma/<file-key>/`.
+Summarize: file key, how many frames were written, the output folder, how many frames contained placeholder/lorem copy (flag these), and that downstream define skills + `/twt-content-approval-checklist` will read from `.twt-artifacts/pre-design/content/fetched/figma/<file-key>/`.

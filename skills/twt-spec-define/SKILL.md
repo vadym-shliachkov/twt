@@ -11,7 +11,7 @@ dependencies:
   soft:
     - figma-mcp
 reads:
-  - .twt-artifacts/pre-design/content-fetch/_manifest.md
+  - .twt-artifacts/pre-design/content/fetched/_manifest.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/spec/specification.md
   - .twt-artifacts/pre-design/spec/validation-report.md
@@ -53,7 +53,7 @@ The brainstorming interview (Steps 3b–4b) is **interactive-only**; in collect 
 
 ## Step 2 — Familiarize with provided information (before any question)
 Load context so the interview is grounded, never generic:
-- Read `.twt-artifacts/pre-design/content-fetch/_manifest.md` and skim the fetched content it points to (what the project is about, tone, offerings).
+- Read `.twt-artifacts/pre-design/content/fetched/_manifest.md` and skim the fetched content it points to (what the project is about, tone, offerings).
 - Read `.twt-artifacts/pre-design/brand/brand-brief.md` (palette, typography, voice, audience) — the spec extends this, never contradicts it.
 - If the user supplied a **Figma** URL (in `$ARGUMENTS` or when asked) and `mcp__plugin_figma_figma__*` tools are available, load the `figma:figma-use` skill, then pull `get_screenshot`, `get_metadata`, and `get_variable_defs` for visual/motion cues. If Figma MCP is unavailable, note it and continue.
 

@@ -14,9 +14,9 @@ dependencies:
     - WebFetch
 reads:
   - <brand source>
-  - .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
+  - .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
   - references/brand-book-checklist.md
-  - .twt-artifacts/pre-design/content-fetch/_manifest.md
+  - .twt-artifacts/pre-design/content/fetched/_manifest.md
   - .twt-artifacts/pre-design/positioning/positioning.md
   - .twt-artifacts/pre-design/spec/specification.md
 writes:
@@ -48,7 +48,7 @@ writes:
 Use `$ARGUMENTS` first. If a brand source is named (brand book PDF, Figma URL, screenshots, site URL), use it: for a PDF dispatch `/twt-content-fetch-pdf` (Agent tool) then read its output; for Figma use figma-mcp to read variables/styles; for a URL use WebFetch.
 
 **If no brand source is provided, do not stop — research adaptively (no automatic web search):**
-1. **Project folder.** Read `.twt-artifacts/pre-design/content-fetch/_manifest.md` and skim the fetched content it points to; read `.twt-artifacts/pre-design/positioning/positioning.md` and `.twt-artifacts/pre-design/spec/specification.md` if present; note any screenshots under the brand/pre-design dirs.
+1. **Project folder.** Read `.twt-artifacts/pre-design/content/fetched/_manifest.md` and skim the fetched content it points to; read `.twt-artifacts/pre-design/positioning/positioning.md` and `.twt-artifacts/pre-design/spec/specification.md` if present; note any screenshots under the brand/pre-design dirs.
 2. **Site (only if a URL is present).** If a site URL is given or discoverable in the artifacts above, WebFetch the site's home and about pages for palette / type / logo / voice cues.
 3. **Web search — opt-in only.** Do **not** run `WebSearch` automatically. Only if the user explicitly asks to research the brand online, run it, tag results lower-confidence, and confirm the entity is correct before using any signal.
 

@@ -404,9 +404,9 @@ flowchart TB
 
 **Reads:**
 - <brand source>
-- .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
 - references/brand-book-checklist.md
-- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/content/fetched/_manifest.md
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/spec/specification.md
 
@@ -590,7 +590,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/_manifest.md |  |
+| .twt-artifacts/pre-design/content/fetched/_manifest.md |  |
 
 ### /twt-content-fetch-doc
 
@@ -614,8 +614,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md |  |
-| .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md |  |
 
 ### /twt-content-fetch-figma
 
@@ -639,8 +639,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/figma/<file-key>/<frame-slug>/index.md |  |
-| .twt-artifacts/pre-design/content-fetch/figma/<file-key>/_index.md |  |
+| .twt-artifacts/pre-design/content/fetched/figma/<file-key>/<frame-slug>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/figma/<file-key>/_index.md |  |
 
 ### /twt-content-fetch-pdf
 
@@ -664,8 +664,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/index.md |  |
-| .twt-artifacts/pre-design/content-fetch/pdf/<filename>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md |  |
 
 ### /twt-content-fetch-site
 
@@ -689,9 +689,9 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/index.md |  |
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/<path>/index.md |  |
-| .twt-artifacts/pre-design/content-fetch/site/<domain>/_sitemap.md |  |
+| .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/site/<domain>/<path>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/site/<domain>/_sitemap.md |  |
 
 ### /twt-content-optimize
 
@@ -768,7 +768,7 @@ flowchart TB
 - Soft consumers: twt-pre-design
 
 **Reads:**
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
@@ -1333,7 +1333,7 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/ia/validation-report.md
@@ -1365,7 +1365,7 @@ flowchart TB
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 
 **Writes:**
 | Path | Notes |
@@ -1566,7 +1566,7 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/positioning/validation-report.md
 
@@ -1595,7 +1595,7 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
-- .twt-artifacts/pre-design/content-fetch/
+- .twt-artifacts/pre-design/content/fetched/
 
 **Writes:**
 | Path | Notes |
@@ -1994,7 +1994,7 @@ flowchart TB
 - Soft consumers: twt-spec
 
 **Reads:**
-- .twt-artifacts/pre-design/content-fetch/_manifest.md
+- .twt-artifacts/pre-design/content/fetched/_manifest.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/spec/validation-report.md

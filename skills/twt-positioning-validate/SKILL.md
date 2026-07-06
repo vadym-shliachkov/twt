@@ -13,7 +13,7 @@ dependencies:
 reads:
   - .twt-artifacts/pre-design/positioning/positioning.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
-  - .twt-artifacts/pre-design/content-fetch/
+  - .twt-artifacts/pre-design/content/fetched/
 writes:
   - .twt-artifacts/pre-design/positioning/validation-report.md
 ---

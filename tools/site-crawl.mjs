@@ -301,7 +301,7 @@ async function runFetch() {
   const scope = flag("--scope", "all");
   const max = scope === "homepage" ? 1 : Number(flag("--max", 50));
   const domain = new URL(startUrl).hostname;
-  const outDir = flag("--out-dir", join(".twt-artifacts", "pre-design", "content-fetch", "site", domain));
+  const outDir = flag("--out-dir", join(".twt-artifacts", "pre-design", "content", "fetched", "site", domain));
 
   const written = []; // { url, file, title }
   const { unreachable, capHit } = await crawl(startUrl, max, (url, html, n) => {

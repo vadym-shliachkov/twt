@@ -13,8 +13,8 @@ dependencies:
 reads:
   - <doc-path-or-url>
 writes:
-  - .twt-artifacts/pre-design/content-fetch/doc/<filename>/index.md
-  - .twt-artifacts/pre-design/content-fetch/doc/<filename>/_meta.md
+  - .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
+  - .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md
 ---
 
 # /twt-content-fetch-doc
@@ -29,7 +29,7 @@ writes:
 - For Google Docs, requires a publicly accessible or already-exported source — does not authenticate
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content-fetch/doc/<filename>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`
 - `index.md` has frontmatter (source, title, fetched-at)
 - Heading hierarchy and lists preserved
 
@@ -39,7 +39,7 @@ writes:
 Use `$ARGUMENTS` if it is a `.docx`/`.md`/`.txt` path or a Google Doc URL. Otherwise ask: "Provide the path to the document, or a Google Doc share/export URL:". Wait.
 
 ## Step 2 — Derive the output folder
-`<filename>` = doc base name (or URL slug), slugified. Base output: `.twt-artifacts/pre-design/content-fetch/doc/<filename>/`.
+`<filename>` = doc base name (or URL slug), slugified. Base output: `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`.
 
 ## Step 3 — Read and convert
 - `.docx`: read and convert structure → Markdown (headings, lists, tables, bold/italic).
