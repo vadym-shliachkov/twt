@@ -12,11 +12,17 @@
 dl.tx-kv{display:grid;grid-template-columns:minmax(140px,max-content) 1fr;gap:6px 18px;margin:1em 0;padding:14px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
 dl.tx-kv dt{font-family:var(--tx-font-heading);font-weight:600;font-size:.82rem;letter-spacing:.02em;color:var(--tx-ink);align-self:baseline}
 dl.tx-kv dd{margin:0;font-size:.95rem;align-self:baseline}
-/* Summary variant: leading metadata of a report — card row on print/wide */
-dl.tx-kv--summary{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;background:transparent;border:none;padding:0}
-dl.tx-kv--summary>div{background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius);padding:10px 14px}
+/* Summary variant: leading metadata of a report — card row on print/wide.
+   Wider min-column keeps it to two roomy cards per row (not three cramped ones);
+   long values (prose notes, file paths) span the whole row via --wide. */
+dl.tx-kv--summary{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;background:transparent;border:none;padding:0}
+dl.tx-kv--summary .tx-kv__cell{background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius);padding:11px 15px;min-width:0}
+dl.tx-kv--summary .tx-kv__cell--wide{grid-column:1/-1}
 dl.tx-kv--summary dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);font-weight:600}
-dl.tx-kv--summary dd{font-size:1.02rem;color:var(--tx-ink);margin-top:2px}
+dl.tx-kv--summary dd{font-size:1.02rem;color:var(--tx-ink);margin-top:3px;overflow-wrap:anywhere}
+dl.tx-kv--summary dd code{overflow-wrap:anywhere;word-break:break-word}
+.tx-score--na{color:var(--tx-muted);border-color:var(--tx-rule);background:var(--tx-panel)}
+.tx-chip--neutral{color:var(--tx-muted);background:var(--tx-panel)}
 
 /* Score chips (NN/100) */
 .tx-score{display:inline-block;font-family:var(--tx-font-mono);font-size:.82em;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);white-space:nowrap}
@@ -46,8 +52,62 @@ table.tx-table-wide tbody tr:nth-child(even) td{background:color-mix(in srgb,var
 .tx-finding dt{font-family:var(--tx-font-heading);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--tx-muted)}
 .tx-finding dd{margin:0;font-size:.95rem}
 
-/* Table of contents (long reports) */
+/* Table of contents (long reports) — unmarked index; heading text self-labels */
 nav.tx-toc{margin:1.2em 0 1.6em;padding:12px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
 nav.tx-toc .tx-toc-title{font-family:var(--tx-font-heading);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);margin:0 0 6px}
-nav.tx-toc ol{margin:0;padding-left:1.2em;columns:2;column-gap:32px;font-size:.92rem}
+nav.tx-toc ul{margin:0;padding:0;list-style:none;columns:2;column-gap:32px;font-size:.92rem}
+nav.tx-toc li{margin:0 0 3px;break-inside:avoid}
 nav.tx-toc a{text-decoration:none}
+
+/* ── Text-analysis per-block review cards (twt-text-analysis, report profile) ──
+   One card per "## Block N — Type" section: a header band (block no. + type +
+   score/finding chips), purpose lead, the original quote, metric bars, reason /
+   weakness notes, and — only when a validated rewrite exists — a suggestion box. */
+.tx-block{break-inside:avoid;margin:14px 0;padding:15px 18px 14px;border:1px solid var(--tx-rule);border-left:3px solid var(--tx-muted);border-radius:var(--tx-radius);background:var(--tx-surface)}
+.tx-block--ok{border-left-color:var(--tx-ok)}
+.tx-block--warn{border-left-color:var(--tx-warn)}
+.tx-block--danger{border-left-color:var(--tx-danger)}
+.tx-block--neutral{border-left-color:var(--tx-rule)}
+.tx-block__head{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;margin:0 0 9px}
+.tx-block__n{font-family:var(--tx-font-mono);font-size:.72rem;font-weight:500;color:var(--tx-muted);letter-spacing:.03em}
+.tx-block__type{font-family:var(--tx-font-heading);font-size:1rem;font-weight:700;color:var(--tx-ink);margin:0;line-height:1.2}
+.tx-block__chips{margin-left:auto;display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tx-block__decision{font-size:.74rem;color:var(--tx-muted);font-style:italic}
+.tx-block__purpose{margin:0 0 10px;color:var(--tx-text);font-size:.95rem}
+.tx-block__orig{display:flex;gap:10px;align-items:baseline;margin:0 0 11px}
+.tx-orig__body{flex:1;min-width:0}
+.tx-orig__body pre{margin:0}
+.tx-orig__body code,.tx-orig__body pre,.tx-suggest__body code,.tx-suggest__body pre{overflow-wrap:anywhere}
+/* Verbatim originals/rewrites can be long — wrap in the paged PDF instead of clipping */
+.tx-orig__body pre,.tx-suggest__body pre{white-space:pre-wrap;word-break:break-word}
+.tx-k{font-family:var(--tx-font-heading);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx-muted);white-space:nowrap;flex:none;padding-top:2px}
+.tx-k--accent{color:var(--tx-ok)}
+/* metric bars — two per row, proportional fill coloured by score tier */
+.tx-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:5px 24px;margin:0 0 11px}
+.tx-metric{display:grid;grid-template-columns:minmax(88px,auto) 1fr auto;align-items:center;gap:9px;font-size:.8rem}
+.tx-metric__name{color:var(--tx-text);line-height:1.2}
+.tx-metric__track{height:5px;border-radius:999px;background:var(--tx-panel);border:1px solid var(--tx-rule);overflow:hidden;min-width:36px}
+.tx-metric__fill{display:block;height:100%;border-radius:999px}
+.tx-metric__fill--good{background:var(--tx-ok)}
+.tx-metric__fill--mid{background:var(--tx-warn)}
+.tx-metric__fill--low{background:var(--tx-danger)}
+.tx-metric__val{font-family:var(--tx-font-mono);font-size:.74rem;color:var(--tx-ink);text-align:right;min-width:20px}
+.tx-metric__val--na{color:var(--tx-muted)}
+.tx-metric--note{grid-template-columns:1fr}
+.tx-metric--note .tx-metric__name{color:var(--tx-muted);font-style:italic}
+.tx-block__scaffold{margin:0 0 10px;color:var(--tx-muted);font-style:italic;font-size:.85rem}
+/* reason / weakness notes */
+.tx-block__notes{display:flex;flex-direction:column;gap:5px;margin:0 0 9px}
+.tx-note{display:flex;gap:10px;font-size:.9rem;color:var(--tx-text)}
+.tx-note--warn span:last-child{color:var(--tx-ink)}
+.tx-block__tags{display:flex;flex-wrap:wrap;gap:6px 8px}
+.tx-tag{font-size:.72rem;color:var(--tx-muted);background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:999px;padding:1px 9px}
+.tx-tag b{color:var(--tx-ink);font-weight:600}
+/* suggested rewrite — only rendered when a validated improvement exists */
+.tx-block__suggest{margin:11px 0 0;padding:11px 13px;border:1px solid color-mix(in srgb,var(--tx-ok) 30%,var(--tx-rule));border-radius:10px;background:color-mix(in srgb,var(--tx-ok) 5%,var(--tx-surface))}
+.tx-suggest__body{margin:4px 0 0;color:var(--tx-ink);font-size:.95rem}
+.tx-suggest__body code,.tx-suggest__body pre{overflow-wrap:anywhere}
+.tx-suggest__checks{display:flex;flex-wrap:wrap;gap:5px 8px;margin-top:8px}
+.tx-check{font-size:.7rem;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);color:var(--tx-text)}
+.tx-check--ok{color:var(--tx-ok);background:color-mix(in srgb,var(--tx-ok) 8%,white)}
+.tx-check--no{color:var(--tx-danger);background:color-mix(in srgb,var(--tx-danger) 8%,white)}

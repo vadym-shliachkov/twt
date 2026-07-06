@@ -75,9 +75,20 @@ function kvParse(item) {
   return { label, valueHtml: inlinesToHtml(rest).trim() };
 }
 
+// A bare NN/100 summary value renders as a score chip so the headline metric pops.
+function kvValueHtml(valueHtml) {
+  const m = /^(\d{1,3})\/100$/.exec(valueHtml.trim());
+  if (m && Number(m[1]) <= 100) return `<span class="tx-score tx-score--${scoreTier(Number(m[1]))}">${m[1]}/100</span>`;
+  return valueHtml;
+}
 function kvListHtml(pairs, summary) {
   if (summary) {
-    const cells = pairs.map((p) => `<div><dt>${esc(p.label)}</dt><dd>${p.valueHtml}</dd></div>`).join('');
+    // Long values (prose notes, file paths) span the full row instead of being
+    // crushed into a narrow card; short stats sit two-up.
+    const cells = pairs.map((p) => {
+      const wide = p.valueHtml.replace(/<[^>]+>/g, '').length > 64 ? ' tx-kv__cell--wide' : '';
+      return `<div class="tx-kv__cell${wide}"><dt>${esc(p.label)}</dt><dd>${kvValueHtml(p.valueHtml)}</dd></div>`;
+    }).join('');
     return `<dl class="tx-kv tx-kv--summary">${cells}</dl>`;
   }
   const rows = pairs.map((p) => `<dt>${esc(p.label)}</dt><dd>${p.valueHtml}</dd>`).join('');
@@ -129,6 +140,154 @@ function walkBlockInlines(blocks, fn) {
   }
 }
 
+// --- analysis-report per-block cards (twt-text-analysis) ---
+// The report writes each block as a `## Block N — Type` header followed by a fixed
+// run of `Label:` / value paragraphs (Purpose, Original, Applicable Metrics, Overall,
+// Finding Type, Decision, Weaknesses, Can Fix Safely, Reason, Suggested Version,
+// Rewrite Validation, Confidence). We fold each section into one styled card so the
+// PDF reads as a review, not a flat stack of "Label: value" lines.
+const ANALYSIS_LABELS = new Set([
+  'purpose', 'original', 'applicable metrics', 'overall', 'finding type', 'decision',
+  'weaknesses', 'can fix safely', 'reason', 'suggested version', 'rewrite validation',
+  'confidence', 'weakness-to-fix mapping',
+]);
+
+// A block whose leading inlines are "Label:" then a soft break then a value.
+function readLabeledField(block) {
+  if (!block || (block.t !== 'Para' && block.t !== 'Plain')) return null;
+  const inl = block.c || [];
+  const s = inl.findIndex((n) => n.t === 'SoftBreak' || n.t === 'LineBreak');
+  const labelInlines = s === -1 ? inl : inl.slice(0, s);
+  let label = inlinesToText(labelInlines).trim();
+  if (!label.endsWith(':')) return null;
+  label = label.slice(0, -1).trim();
+  const key = label.toLowerCase();
+  if (!ANALYSIS_LABELS.has(key)) return null;
+  let value = s === -1 ? [] : inl.slice(s + 1);
+  while (value[0] && (value[0].t === 'Space' || value[0].t === 'SoftBreak')) value = value.slice(1);
+  return { key, label, valueInlines: value };
+}
+
+const bulletItemInlines = (item) => (item[0] && (item[0].t === 'Plain' || item[0].t === 'Para')) ? item[0].c : [];
+const bulletItemHtml = (item) => inlinesToHtml(bulletItemInlines(item)).trim();
+const bulletItemText = (item) => inlinesToText(bulletItemInlines(item)).trim();
+
+// In pandoc markdown a list glued to a label line (no blank line) is NOT a list —
+// it becomes soft-break lines inside the value. Split them back into "- item" rows.
+function valueLines(valueInlines) {
+  const groups = [[]];
+  for (const n of valueInlines) {
+    if (n.t === 'SoftBreak' || n.t === 'LineBreak') groups.push([]);
+    else groups[groups.length - 1].push(n);
+  }
+  const strip = (s) => s.replace(/^\s*[-*•]\s+/, '').trim();
+  return groups
+    .map((g) => ({ text: strip(inlinesToText(g)), html: strip(inlinesToHtml(g)) }))
+    .filter((l) => l.text !== '');
+}
+
+const FINDING_TIER = new Map([['problem', 'danger'], ['opportunity', 'warn'], ['no issue', 'ok']]);
+
+function overallChip(raw) {
+  const m = /(\d{1,3})\/100/.exec(raw || '');
+  if (m && Number(m[1]) <= 100) return `<span class="tx-score tx-score--${scoreTier(Number(m[1]))}">${m[1]}/100</span>`;
+  if (/n\/a/i.test(raw || '')) return `<span class="tx-score tx-score--na">N/A</span>`;
+  return '';
+}
+
+// "Clarity: 88 — evidence" | "Discoverability: N/A" | "Not scored — …"
+function parseMetric(text) {
+  const m = /^\s*(.+?):\s*(N\/A|\d{1,3})\b\s*(?:[—–-]\s*([\s\S]*))?$/.exec(text);
+  if (!m) return { note: text.trim() };
+  return { name: m[1].trim(), value: m[2], evidence: (m[3] || '').trim() };
+}
+
+function metricsHtml(items) {
+  const parsed = items.map(parseMetric);
+  if (parsed.every((p) => p.note !== undefined)) {
+    return `<p class="tx-block__scaffold">${esc(parsed.map((p) => p.note).join(' '))}</p>`;
+  }
+  const rows = parsed.map((p) => {
+    if (p.note !== undefined) return `<div class="tx-metric tx-metric--note"><span class="tx-metric__name">${esc(p.note)}</span></div>`;
+    const na = p.value === 'N/A';
+    const n = na ? 0 : Number(p.value);
+    const tier = na ? 'na' : scoreTier(n);
+    const fill = na ? '' : `<span class="tx-metric__fill tx-metric__fill--${tier}" style="width:${n}%"></span>`;
+    const title = p.evidence ? ` title="${esc(p.evidence)}"` : '';
+    return `<div class="tx-metric"${title}><span class="tx-metric__name">${esc(p.name)}</span>`
+      + `<span class="tx-metric__track">${fill}</span>`
+      + `<span class="tx-metric__val tx-metric__val--${tier}">${na ? 'N/A' : p.value}</span></div>`;
+  }).join('');
+  return `<div class="tx-metrics">${rows}</div>`;
+}
+
+function renderAnalysisCard(headText, seg) {
+  const hm = /^Block\s+(\d+)\s*[—–-]\s*([\s\S]+)$/.exec(headText.trim());
+  const num = hm ? hm[1] : '';
+  const type = (hm ? hm[2] : headText).trim();
+  const f = {};
+  for (let k = 0; k < seg.length; k++) {
+    const field = readLabeledField(seg[k]);
+    if (!field) continue;
+    const { key, valueInlines } = field;
+    const next = seg[k + 1];
+    const valHtml = inlinesToHtml(valueInlines).trim();
+    const valText = inlinesToText(valueInlines).trim();
+    if (key === 'applicable metrics') {
+      if (!valText && next && next.t === 'BulletList') { f.metrics = next.c.map(bulletItemText); k++; }
+      else f.metrics = valueLines(valueInlines).map((l) => l.text);
+    } else if (key === 'original' || key === 'suggested version') {
+      let html = valHtml, text = valText;
+      if (!html && next && next.t === 'CodeBlock') { html = `<pre><code>${esc(next.c[1])}</code></pre>`; text = next.c[1].trim(); k++; }
+      if (key === 'original') f.original = html; else { f.suggested = html; f.suggestedText = text; }
+    } else if (key === 'weaknesses' || key === 'rewrite validation') {
+      if (next && next.t === 'BulletList') { f[key] = next.c.map(bulletItemHtml); k++; }
+      else f[key] = valueLines(valueInlines).map((l) => l.html);
+    } else if (key === 'weakness-to-fix mapping') {
+      if (next && next.t === 'BulletList') k++; // parsed away; detail lives in Reason
+    } else {
+      f[key] = valHtml;
+    }
+  }
+
+  const tier = FINDING_TIER.get(String(f['finding type'] || '').toLowerCase()) || 'neutral';
+  const chips = [overallChip(f.overall)];
+  if (f['finding type']) chips.push(`<span class="tx-chip tx-chip--${tier}">${esc(f['finding type'])}</span>`);
+  const decision = f.decision ? `<span class="tx-block__decision">${esc(f.decision)}</span>` : '';
+
+  const parts = [];
+  parts.push(`<header class="tx-block__head"><span class="tx-block__n">Block ${esc(num)}</span>`
+    + `<h3 class="tx-block__type">${esc(type)}</h3>`
+    + `<span class="tx-block__chips">${chips.filter(Boolean).join('')}${decision}</span></header>`);
+  if (f.purpose) parts.push(`<p class="tx-block__purpose">${f.purpose}</p>`);
+  if (f.original) parts.push(`<div class="tx-block__orig"><span class="tx-k">Original</span><div class="tx-orig__body">${f.original}</div></div>`);
+  if (f.metrics && f.metrics.length) parts.push(metricsHtml(f.metrics));
+
+  const notes = [];
+  const weakness = (f.weaknesses || []).filter((w) => w && !/^none$/i.test(w.replace(/<[^>]+>/g, '').trim()));
+  if (weakness.length) notes.push(`<div class="tx-note tx-note--warn"><span class="tx-k">Weaknesses</span><span>${weakness.join('; ')}</span></div>`);
+  if (f.reason) notes.push(`<div class="tx-note"><span class="tx-k">Reason</span><span>${f.reason}</span></div>`);
+  if (notes.length) parts.push(`<div class="tx-block__notes">${notes.join('')}</div>`);
+
+  const tags = [];
+  if (f['can fix safely']) tags.push(`<span class="tx-tag">Fix safely: <b>${esc(f['can fix safely'])}</b></span>`);
+  if (f.confidence && !/^[—-]$/.test(f.confidence.trim())) tags.push(`<span class="tx-tag">Confidence: <b>${esc(f.confidence)}</b></span>`);
+  if (tags.length) parts.push(`<div class="tx-block__tags">${tags.join('')}</div>`);
+
+  const hasRewrite = f.suggestedText && !/^no better wording found\.?$/i.test(f.suggestedText);
+  if (hasRewrite) {
+    const checks = (f['rewrite validation'] || []).map((c) => {
+      const ok = /:\s*yes\b/i.test(c) || /yes$/i.test(c.replace(/<[^>]+>/g, '').trim());
+      return `<span class="tx-check tx-check--${ok ? 'ok' : 'no'}">${c}</span>`;
+    }).join('');
+    parts.push(`<div class="tx-block__suggest"><span class="tx-k tx-k--accent">Suggested rewrite</span>`
+      + `<div class="tx-suggest__body">${f.suggested}</div>`
+      + (checks ? `<div class="tx-suggest__checks">${checks}</div>` : '') + `</div>`);
+  }
+
+  return `<section class="tx-block tx-block--${tier}">${parts.join('')}</section>`;
+}
+
 const TRANSFORMS = [
   {
     name: 'docHeader',
@@ -142,13 +301,40 @@ const TRANSFORMS = [
     },
   },
   {
+    name: 'analysisBlock',
+    profiles: ['report'],
+    apply(blocks) {
+      const isBlockHeader = (b) => b.t === 'Header' && b.c[0] === 2 && /^Block\s+\d+\b/i.test(inlinesToText(b.c[2]));
+      if (!blocks.some(isBlockHeader)) return false;
+      const out = [];
+      let hit = false;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (!isBlockHeader(b)) { out.push(b); continue; }
+        let j = i + 1;
+        const seg = [];
+        while (j < blocks.length && !(blocks[j].t === 'Header' && blocks[j].c[0] <= 2)) { seg.push(blocks[j]); j++; }
+        out.push(rawBlock(renderAnalysisCard(inlinesToText(b.c[2]), seg)));
+        hit = true;
+        i = j - 1;
+      }
+      if (hit) { blocks.length = 0; blocks.push(...out); }
+      return hit;
+    },
+  },
+  {
     name: 'toc',
     profiles: ['report'],
     apply(blocks) {
-      const h2s = blocks.filter((b) => b.t === 'Header' && b.c[0] === 2);
+      // Skip per-block headers ("Block 12 — Heading …"): they self-number and are
+      // already covered by the summary table, so a TOC of them is pure noise.
+      const isBlock = (h) => /^Block\s+\d+\b/i.test(inlinesToText(h.c[2]));
+      const h2s = blocks.filter((b) => b.t === 'Header' && b.c[0] === 2 && !isBlock(b));
       if (h2s.length < 6) return false;
+      // Unordered list — section labels carry their own meaning; ordered numbers
+      // collide with any "Block N"/step numbering already in the heading text.
       const items = h2s.map((h) => `<li><a href="#${esc(h.c[1][0])}">${inlinesToHtml(h.c[2])}</a></li>`).join('');
-      const nav = rawBlock(`<nav class="tx-toc"><p class="tx-toc-title">Contents</p><ol>${items}</ol></nav>`);
+      const nav = rawBlock(`<nav class="tx-toc"><p class="tx-toc-title">Contents</p><ul>${items}</ul></nav>`);
       const after = blocks.findIndex((b) => b.t === 'RawBlock' || (b.t === 'Header' && b.c[0] === 1));
       blocks.splice(after === -1 ? 0 : after + 1, 0, nav);
       return true;
@@ -292,7 +478,7 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(kvOut, /<dd>Xivic<\/dd>/);
   const sumOut = astToHtml(transformAst(pandocAst(kvMd), 'report').ast);
   assert.match(sumOut, /tx-kv--summary/);
-  assert.match(sumOut, /<div><dt>/, 'summary variant wraps pairs in divs');
+  assert.match(sumOut, /<div class="tx-kv__cell[^"]*"><dt>/, 'summary variant wraps pairs in divs');
 
   // doc header (all profiles)
   assert.match(kvOut, /<header class="tx-doc-header"><h1[^>]*>Brief<\/h1><span class="hs-accent-bar"><\/span><\/header>/);
@@ -328,6 +514,78 @@ if (_isMain && process.argv.includes('--self-test')) {
   const longOut = astToHtml(transformAst(pandocAst(longMd), 'report').ast);
   assert.match(longOut, /<nav class="tx-toc">/);
   assert.match(longOut, /href="#section-1"/);
+
+  // analysis-report per-block cards (report profile)
+  const anaMd = [
+    '# Text Analysis',
+    '',
+    '- **Document Overall:** 85/100',
+    '- **Blocks scored:** 45',
+    '- **Voice context:** A deliberately long note that exceeds the wide threshold so the summary card should span the full row instead of being crushed into a narrow column here.',
+    '',
+    '## Block 13 — Paragraph (list lead-in label)',
+    '',
+    'Purpose:',
+    'Introduces the four disciplines.',
+    '',
+    'Original:',
+    '`Disciplines (400+ experts):`',
+    '',
+    'Applicable Metrics:',
+    '- Clarity: 78 — awkward wording.',
+    '- Conciseness: 65 — repeats a word.',
+    '- Discoverability: N/A',
+    '',
+    'Overall:',
+    '70/100',
+    '',
+    'Finding Type:',
+    'Opportunity',
+    '',
+    'Decision:',
+    'Rewrite recommended',
+    '',
+    'Weaknesses:',
+    '- Redundancy in the lead-in.',
+    '',
+    'Can Fix Safely:',
+    'Yes',
+    '',
+    'Reason:',
+    'The redundancy can be removed without touching any fact.',
+    '',
+    'Suggested Version:',
+    '`400+ experts across four disciplines:`',
+    '',
+    'Rewrite Validation:',
+    '- Solves reported weakness: Yes',
+    '- Preserves meaning: Yes',
+    '',
+    'Confidence:',
+    '74%',
+  ].join('\n');
+  const anaOut = astToHtml(transformAst(pandocAst(anaMd), 'report').ast);
+  assert.match(anaOut, /<section class="tx-block tx-block--warn">/, 'block card carries finding-type tier');
+  assert.match(anaOut, /tx-block__n">Block 13</, 'card shows block number');
+  assert.match(anaOut, /tx-block__type">Paragraph \(list lead-in label\)</, 'card shows block type');
+  assert.match(anaOut, /tx-score tx-score--mid">70\/100/, 'overall becomes a score chip in the head');
+  assert.match(anaOut, /tx-metric__fill tx-metric__fill--low" style="width:65%"/, 'metric renders a proportional bar');
+  assert.match(anaOut, /tx-metric__val--na">N\/A/, 'N\\/A metric renders without a bar');
+  assert.match(anaOut, /tx-block__suggest/, 'validated rewrite renders a suggestion box');
+  assert.match(anaOut, /tx-check tx-check--ok/, 'rewrite validation renders pass checks');
+  assert.ok(!anaOut.includes('<nav class="tx-toc">'), 'per-block headers do not seed a TOC');
+  assert.match(anaOut, /tx-kv__cell--wide/, 'long summary values span the full row');
+  assert.match(anaOut, /tx-kv--summary[^]*tx-score tx-score--good">85\/100/, 'summary Overall renders a score chip');
+
+  // No-issue block stays compact: no suggestion box, no empty "none" weakness note
+  const keepMd = ['# T', '', '## Block 7 — Heading', '', 'Purpose:', 'Section heading.', '',
+    'Overall:', '92/100', '', 'Finding Type:', 'No issue', '', 'Decision:', 'Keep original', '',
+    'Weaknesses:', '- none', '', 'Reason:', 'Reads well.', '', 'Suggested Version:',
+    'No better wording found.', '', 'Confidence:', '—'].join('\n');
+  const keepOut = astToHtml(transformAst(pandocAst(keepMd), 'report').ast);
+  assert.match(keepOut, /tx-block tx-block--ok/, 'no-issue block gets the ok tier');
+  assert.ok(!keepOut.includes('tx-block__suggest'), 'kept block shows no suggestion box');
+  assert.ok(!/tx-note--warn/.test(keepOut), '"none" weakness is not shown as a warning note');
 
   // generic profile: header only, everything else untouched
   const gen = transformAst(pandocAst(kvMd), 'generic');
