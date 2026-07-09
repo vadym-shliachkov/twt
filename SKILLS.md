@@ -10,7 +10,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 |---------|----------|-------------|
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
+| [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
 | [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
@@ -22,8 +22,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-content-validate](#twt-content-validate) | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
-| [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice and IA; write validation-report.md |
+| [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines |
+| [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice, IA, and the facts ledger; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
@@ -42,8 +42,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| [/twt-mockup-define](#twt-mockup-define) | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
-| [/twt-mockup-validate](#twt-mockup-validate) | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
+| [/twt-mockup-define](#twt-mockup-define) | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger |
+| [/twt-mockup-validate](#twt-mockup-validate) | mockup | Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y) |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | [/twt-project-intake](#twt-project-intake) | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
@@ -55,11 +55,11 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
+| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with validated suggestions only; never applies changes |
+| [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 
 ---
 ## /twt-block-preview
@@ -138,7 +138,7 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
@@ -597,7 +597,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.0.2
+**Version:** 1.1.0
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -612,12 +612,15 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
 
 **Writes:**
 - .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/outlines/<page-slug>.md
 - .twt-artifacts/pre-design/curation/decisions.md
 
@@ -631,6 +634,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 - One `outlines/<page-slug>.md` exists for each page in `sitemap.md`
 - Every outline section carries drafted, on-brand transformed copy (or a `> GAP` marker) — never a raw source excerpt
 - Outlines contain final-intent **transformed copy**, not source excerpts; verbatim-mirrored copy is a curation defect (see `twt-curation-validate`'s 'Copy transformed not mirrored' criterion)
+- `facts.md` exists and reconciles every reusable fact across all sources: agreeing sources → RESOLVED, disagreeing sources → CONFLICT (canonical TBD, never a silent pick), generic-example-pinned-to-named-client → UNVERIFIED-ATTR, absent → TBD; plus a provided-assets table. Outlines never emit a reusable-fact value that contradicts `facts.md`
 - Re-run enters refinement mode
 
 ---
@@ -638,7 +642,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 ## /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.1.2
+**Version:** 1.2.0
 **Accepts arguments:** no
 
 Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
@@ -653,6 +657,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 **Reads:**
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/ia/sitemap.md
@@ -1470,7 +1475,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.3
+**Version:** 1.3.0
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1489,6 +1494,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 - .twt-artifacts/design/mockup/validation-report.md
@@ -1517,7 +1523,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 ## /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.1.2
+**Version:** 1.2.0
 **Accepts arguments:** no
 
 Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.
@@ -1536,6 +1542,7 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 
@@ -1548,7 +1555,7 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 - Doesn't re-render pages
 
 **Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
+- `validation-report.md` opens with a weighted **Scorecard** (7 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
 - A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
 - Every finding has Where / Problem / Recommendation, with Problem citing evidence
 - Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
@@ -1960,7 +1967,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.12.2
+**Version:** 1.12.3
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2128,7 +2135,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.8
+**Version:** 1.3.0
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.

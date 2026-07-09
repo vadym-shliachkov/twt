@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.2.8) Block-type-aware text-quality audit with validated suggestions only; never applies changes
-version: 1.2.8
+description: (v1.3.0) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
+version: 1.3.0
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint
@@ -211,7 +211,7 @@ Do not use `> NEEDS:` markers as a fake rewrite. Missing facts belong in `Weakne
 Write `.twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md`. Open with a header containing subject label, mode (`auto`, `manual`, `collect`, or default), document Overall, block count, how many Problems, how many Opportunities, and how many validated suggested versions. Add a one-row-per-block summary table:
 
 ```markdown
-| Block | Type | Overall | Finding Type | Decision | Confidence |
+| Block | Type | Overall | Finding Type | Decision | Class | Confidence |
 ```
 
 For each block, use exactly this structure:
@@ -236,6 +236,9 @@ Problem | Opportunity | No issue
 
 Decision:
 Rewrite recommended | Minor improvement suggested | Manual review only | Keep original
+
+Class:
+consistency | factual | style | none
 
 Weaknesses:
 - <weakness tied to a metric, or "none">
@@ -263,6 +266,14 @@ Confidence:
 If `Suggested Version` contains a new version, immediately follow it with the `Weakness-To-Fix Mapping` block from Step 5. If there is no validated rewrite, `Rewrite Validation` may use `N/A` for checks that were not attempted, but it must still explain the gate failure in `Reason`.
 
 For opportunities, use this wording in `Reason`: `Optional improvement. Original is acceptable.`
+
+**Class** tags what kind of fix a validated rewrite is, so downstream can decide whether to apply it automatically:
+- `consistency` — resolves an internal inconsistency: the same fact, term, or figure stated two different ways (e.g. "2,000+ clients" one place and "2,000+ engagements" another).
+- `factual` — corrects a claim that contradicts the source or the `facts.md` ledger, or an unsupported / fabricated number.
+- `style` — a clarity, brevity, or voice improvement that is a preference, not a defect.
+- `none` — Decision is Keep original (no rewrite).
+
+`consistency` and `factual` rewrites fix defects and are **apply-by-default** when an applying skill runs (`/twt-content-optimize`, `/twt-content-approval-implement`, or an orchestrator's post-Design pass); `style` rewrites stay opt-in. This skill still only *reports* — it never edits the subject — but the class tells the applier what to do.
 
 ## Step 7 - Write optimized.md (analysis only, never apply)
 

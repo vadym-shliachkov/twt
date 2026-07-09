@@ -173,7 +173,7 @@ flowchart TB
 
 - /twt-brand - Orchestrate the brand fetch/define/validate skills in a single define→validate pass
 - /twt-brand-define - Build or refine the canonical brand-brief.md through guided dialogue
-- /twt-brand-fetch - Extract brand attributes from a brand book, Figma, or screenshots into raw notes
+- /twt-brand-fetch - Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
 - /twt-brand-validate - Critique brand-brief.md and write a validation-report.md (read-only critic)
 
 ### component
@@ -192,12 +192,12 @@ flowchart TB
 - /twt-content-fetch-site - Fetch a website's content via the bundled crawler and save as clean Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
-- /twt-text-analysis - Block-type-aware text-quality audit with validated suggestions only; never applies changes
+- /twt-text-analysis - Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
 
 ### curation
 
-- /twt-curation-define - Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines
-- /twt-curation-validate - Critique curation against brand voice and IA; write validation-report.md
+- /twt-curation-define - Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
+- /twt-curation-validate - Critique curation against brand voice, IA, and the facts ledger; write validation-report.md
 
 ### design
 
@@ -254,8 +254,8 @@ flowchart TB
 
 ### mockup
 
-- /twt-mockup-define - Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
-- /twt-mockup-validate - Read-only critique of page mockups (token links, real content, responsiveness, a11y)
+- /twt-mockup-define - Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger
+- /twt-mockup-validate - Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y)
 
 ### positioning
 
@@ -282,7 +282,7 @@ flowchart TB
 
 ### site
 
-- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development)
+- /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development)
 
 ### site-dev
 
@@ -389,7 +389,7 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -754,7 +754,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.0.2
+**Version:** 1.1.0
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -770,21 +770,24 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/pre-design/curation/inventory.md |  |
+| .twt-artifacts/pre-design/curation/facts.md |  |
 | .twt-artifacts/pre-design/curation/outlines/<page-slug>.md |  |
 | .twt-artifacts/pre-design/curation/decisions.md |  |
 
 ### /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.1.2
+**Version:** 1.2.0
 
 **Inputs:**
 - (none — reads curation artifacts and upstream)
@@ -800,6 +803,7 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/positioning/positioning.md
 - .twt-artifacts/pre-design/ia/sitemap.md
@@ -1460,7 +1464,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.2.3
+**Version:** 1.3.0
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1480,6 +1484,7 @@ flowchart TB
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 - .twt-artifacts/design/mockup/validation-report.md
@@ -1496,7 +1501,7 @@ flowchart TB
 ### /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.1.2
+**Version:** 1.2.0
 
 **Inputs:**
 - none (reads the mockup artifacts)
@@ -1516,6 +1521,7 @@ flowchart TB
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 
@@ -1886,7 +1892,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.2
+**Version:** 1.12.3
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2058,7 +2064,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.2.8
+**Version:** 1.3.0
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

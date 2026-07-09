@@ -20,6 +20,7 @@ Single source of truth for marketplace-wide rules. Every skill in this repo foll
 - `<area>` matches the category or a logical sub-area (e.g. `fetch-content`, `designer`, `elementor-theme`)
 - Outputs may be **phase-scoped**: `.twt-artifacts/<phase>/<sub-area>/...`. For Phase 1, `<phase>` is `pre-design` (e.g. `.twt-artifacts/pre-design/brand/brand-brief.md`). For Phase 2, `<phase>` is `design` (e.g. `.twt-artifacts/design/design-system/tokens.md`)
 - `.twt-artifacts/design/design-system/` is the **cross-phase shared source of truth** for the design system — later phases (Development, QA) read it whether or not a full Design phase ran
+- `.twt-artifacts/pre-design/curation/facts.md` is the **reconciled source of truth for reusable facts** (firm tenure, counts, per-client metrics + attribution, self-descriptor noun, taglines) and **provided brand assets** (logo files + which variants are missing). `twt-curation-define` produces it by reconciling every source (brand book vs. site); when sources disagree it records the conflict rather than guessing. Authoring skills bind repeated facts to its canonical values, and validators check output against it. Absent it (e.g. a Figma express run that skips Pre-design), downstream skills fall back to binding facts to outlines/inventory as before
 
 ## 3. Skill file structure
 

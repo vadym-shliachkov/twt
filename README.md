@@ -44,7 +44,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 |---------|----------|-------------|
 | /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| /twt-brand-fetch | brand | Extract brand attributes from a brand book, Figma, or screenshots into raw notes |
+| /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
 | /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
 | /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
@@ -56,8 +56,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-content-fetch-site | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | /twt-content-validate | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| /twt-curation-define | curation | Decide keep/skip/elevate per content item; produce inventory.md and per-page outlines |
-| /twt-curation-validate | curation | Critique curation against brand voice and IA; write validation-report.md |
+| /twt-curation-define | curation | Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines |
+| /twt-curation-validate | curation | Critique curation against brand voice, IA, and the facts ledger; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
@@ -76,8 +76,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-layout-define | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | /twt-layout-validate | layout | Read-only critique of per-page layout specs into validation-report.md |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| /twt-mockup-define | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content |
-| /twt-mockup-validate | mockup | Read-only critique of page mockups (token links, real content, responsiveness, a11y) |
+| /twt-mockup-define | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger |
+| /twt-mockup-validate | mockup | Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y) |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | /twt-project-intake | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
@@ -89,11 +89,11 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-qa-links | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | /twt-search-site | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
 | /twt-setup | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
+| /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| /twt-text-analysis | content | Block-type-aware text-quality audit with validated suggestions only; never applies changes |
+| /twt-text-analysis | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 <!-- TWT_SKILLS_TABLE_END -->
 
 ---

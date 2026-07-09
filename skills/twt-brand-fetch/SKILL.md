@@ -1,8 +1,8 @@
 ---
 name: twt-brand-fetch
 category: brand
-description: (v1.1.2) Extract brand attributes from a brand book, Figma, or screenshots into raw notes
-version: 1.1.2
+description: (v1.1.3) Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -57,8 +57,10 @@ Tag every attribute with where it came from (`arg://`, `artifact://<file>`, `sit
 ## Step 2 — Extract attributes
 Pull: colors (name + hex + usage), typography (families, weights, scale), logo usage notes, voice/tone language, stated values/mission, audience cues. Tag each with its source.
 
+**Also enumerate the provided binary brand assets.** When the brand source is a directory (e.g. an `/assets` folder) or the fetch surfaced real logo/mark files, list each actual asset file present — path, and its variant/role (primary-ink / reversed-white / silver / X-mark / full-lockup) inferred from the filename and the brand book's logo section — plus the surface each variant serves (light header, Ink footer/dark surface, watermark, favicon). These are **files that already exist**, distinct from usage *notes*. Also record which standard variants the brand book names but no file was found for (mark those missing). Do not invent files. These records let `/twt-curation-define` build the `facts.md` provided-assets table so mockups use real logos before any placeholder.
+
 ## Step 3 — Write raw notes
-Write `.twt-artifacts/pre-design/brand/_fetched-brand.md` mirroring the brand-brief section order (Identity / Palette / Typography / Voice & Tone / Audience signals / Sources). For each section list what was found and a `> GAP:` line for anything absent.
+Write `.twt-artifacts/pre-design/brand/_fetched-brand.md` mirroring the brand-brief section order (Identity / Palette / Typography / Voice & Tone / Audience signals / Sources). For each section list what was found and a `> GAP:` line for anything absent. Add a **`## Provided assets`** subsection listing every real logo/mark file found (path · role/variant · surface · `source: provided`) and a `> GAP:` line per standard variant the brand book names but no file exists for.
 
 ## Step 3b — Write the coverage manifest
 Load `references/brand-book-checklist.md`. Write `.twt-artifacts/pre-design/brand/_coverage.md` with a row per checklist part recording what the sources yielded — never invent a value to fill a gap:

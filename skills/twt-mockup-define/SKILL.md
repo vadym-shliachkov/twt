@@ -1,8 +1,8 @@
 ---
 name: twt-mockup-define
 category: mockup
-description: (v1.2.3) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, and real content
-version: 1.2.3
+description: (v1.3.0) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger
+version: 1.3.0
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to (re)render; otherwise all layouts
@@ -16,6 +16,7 @@ reads:
   - .twt-artifacts/pre-design/spec/specification.md
   - .twt-artifacts/pre-design/curation/inventory.md
   - .twt-artifacts/pre-design/curation/outlines/
+  - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/design/design-read.md
   - references/external-design-skills.md
   - .twt-artifacts/design/mockup/validation-report.md
@@ -76,10 +77,13 @@ When the design wasn't driven by a Figma/exported source, apply the external des
 - **`design-taste-frontend` anti-slop** — carry §4.3–4.11 + §9 into the page agents (next step): real images via the asset manifest (never div-based fake screenshots), one locked accent + one radius scale, hero fits the viewport, **eyebrow restraint**, **zigzag cap**, **no em-dashes** anywhere, no decorative status dots / version stamps / locale strips / scroll cues.
 
 ## Step 4 — Render each page (in parallel)
-`styles.css` is now final and each page writes its own `pages/<page-slug>.html`, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to read `layouts/<page-slug>.md`, `components.md`, `tokens.css`, `styles.css`, and the page's `outlines/<page>.md` / `inventory.md`, then write `pages/<page-slug>.html`:
+`styles.css` is now final and each page writes its own `pages/<page-slug>.html`, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to read `layouts/<page-slug>.md`, `components.md`, `tokens.css`, `styles.css`, the page's `outlines/<page>.md` / `inventory.md`, and `facts.md` (the reusable-facts + provided-assets ledger, if present), then write `pages/<page-slug>.html`:
 - `<head>` links `../design-system/tokens.css` then `../styles.css`.
 - Build sections in the layout's order, composing the documented components.
 - Populate with **real content** pulled from `outlines/<page>.md` / `inventory.md` — never lorem where real content exists.
+- **Bind reusable facts to `facts.md`** (when present): use the exact `canonical` string for tenure, counts, the self-descriptor noun, per-client metrics, etc. — the same fact must read identically everywhere it appears **on this page and across pages**. Never emit a value that contradicts the ledger; a CONFLICT / TBD / UNVERIFIED-ATTR fact renders with a visible `TBD` flag, not a guessed number. (No `facts.md`, e.g. Figma express → fall back to binding facts to `outlines`/`inventory` as before.)
+- **Use provided assets before placeholders.** For logos/brand marks, reference the real file from `facts.md`'s provided-assets table whenever one covers the surface (e.g. the reversed-white logo on the Ink footer). Only synthesize a placeholder when **no** provided asset serves that surface, and then flag it `TBD`. Never hand-build a wordmark/logo (rects/paths spelling the name) when a provided file exists — that both violates brand logo rules and trips the design-taste "no hand-rolled decorative SVG" rule.
+- **Interactive-claim integrity.** If a section's copy promises that an interactive control changes the output ("pick who you are and see your tailored read"), the JS must actually make that control change the output. A required input that only gates but never alters the result is a defect — either wire it to differentiate the output or remove the promise from the copy. Keep every no-JS / reduced-motion fallback.
 - Ensure desktop/tablet/mobile all render correctly (responsive CSS in `styles.css`).
 - Basic a11y: `alt` on images, sensible heading order, landmark elements.
 - **Anti-slop (no-Figma):** follow the `design-taste-frontend` rules carried from Step 3′ — hero fits the viewport (headline ≤2 lines, CTA above the fold), ≤1 eyebrow per 3 sections, ≤4 distinct layout families reused across the page, real images from the asset manifest (no `<div>` fake screenshots, no hand-rolled decorative SVG), the locked single accent + one radius scale, full button contrast (WCAG AA), and **zero em-dashes** in any visible string.
@@ -88,7 +92,7 @@ When the design wasn't driven by a Figma/exported source, apply the external des
 Wait for all the page agents to finish before Step 5.
 
 ### Step 4′ — Pre-flight self-check (no-Figma)
-Before writing `index.html`, run `design-taste-frontend` **§14 Pre-flight** across the rendered pages as a self-check (highest-signal items: zero em-dashes; one theme + one accent + one radius scale page-wide; hero fits viewport; eyebrow count ≤ ceil(sections/3); no three-equal-card rows; no fake div screenshots; motion-claimed = motion-shown; reduced-motion present; AA button/contrast). Fix any failure in the offending page before proceeding. If a failure can't be fixed here (e.g. needs a missing layout rule in `styles.css`), add the shared rule, then re-dispatch that page. Record any judgment calls in `decisions.md`.
+Before writing `index.html`, run `design-taste-frontend` **§14 Pre-flight** across the rendered pages as a self-check (highest-signal items: zero em-dashes; one theme + one accent + one radius scale page-wide; hero fits viewport; eyebrow count ≤ ceil(sections/3); no three-equal-card rows; no fake div screenshots; motion-claimed = motion-shown; reduced-motion present; AA button/contrast). **Add three factual-integrity checks:** (1) **fact consistency** — every reusable fact matches its `facts.md` canonical and reads identically within each page *and* across all pages (no 20+/25+/"three-decades" split, no clients/engagements drift); (2) **provided assets** — real logos from the ledger are used wherever a variant covers the surface, with no hand-rolled wordmark placeholder standing in for an available file; (3) **interactive integrity** — every interactive control the copy references actually changes the output (no required-but-ignored input). Fix any failure in the offending page before proceeding. If a failure can't be fixed here (e.g. needs a missing layout rule in `styles.css`), add the shared rule, then re-dispatch that page. Record any judgment calls in `decisions.md`.
 
 ## Step 5 — Write `index.html`
 Write `index.html` (at the mockup root) linking every `pages/<page-slug>.html` with the page title, for review.
@@ -98,7 +102,7 @@ Run (Bash) to extract all asset references from the rendered mockups determinist
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/scan-manifest.mjs" "$CLAUDE_PROJECT_DIR/.twt-artifacts/design/mockup"
 ```
-This outputs JSON `[{file, src, type, resolved, exists}]` covering `<img>`, `<video>`, and CSS `background-image` references. Use this list to identify which assets are referenced. For each entry where `exists: false` (local asset missing) or `exists: null` (external URL), ensure a manifest row exists. Ensure each has a row in `.twt-artifacts/design/assets/manifest.md` (create in the asset-manifest format — frontmatter `generated`/`phase: design`/`area: assets`, a `# Asset manifest` heading, and a table with columns id | type (image|video) | filename (kebab-case, web format) | placement (page → section → slot) | spec (dimensions/aspect/treatment) | alt | source (generate|stock|provided) | generation_prompt if absent; append missing rows, dedupe by `filename`). Use the SAME `filename` in the mockup markup and the manifest row so develop and QA can reconcile them. Run this **serially in this parent** (not in the parallel Step-4 agents). Each row carries id/type/filename/placement/spec/alt/source/generation_prompt; plan only, mark client-supplied assets `source: provided`. Do not generate binaries.
+This outputs JSON `[{file, src, type, resolved, exists}]` covering `<img>`, `<video>`, and CSS `background-image` references. Use this list to identify which assets are referenced. For each entry where `exists: false` (local asset missing) or `exists: null` (external URL), ensure a manifest row exists. Ensure each has a row in `.twt-artifacts/design/assets/manifest.md` (create in the asset-manifest format — frontmatter `generated`/`phase: design`/`area: assets`, a `# Asset manifest` heading, and a table with columns id | type (image|video) | filename (kebab-case, web format) | placement (page → section → slot) | spec (dimensions/aspect/treatment) | alt | source (generate|stock|provided) | generation_prompt if absent; append missing rows, dedupe by `filename`). Use the SAME `filename` in the mockup markup and the manifest row so develop and QA can reconcile them. Run this **serially in this parent** (not in the parallel Step-4 agents). Each row carries id/type/filename/placement/spec/alt/source/generation_prompt; plan only, mark client-supplied assets `source: provided`. Do not generate binaries. **Cross-check logo/brand-mark references against `facts.md`'s provided-assets table:** if a mockup points at a synthesized placeholder for a surface the ledger lists as `provided`, that is a defect — fix the page to reference the real file. Only a surface with no provided variant keeps a placeholder, flagged `TBD`.
 
 ## Step 7 — Report
 List the pages rendered, the `index.html` path, the asset rows synced to the manifest, and what to run next (`/twt-mockup-validate` or `/twt-design`). Note these are throwaway visual references, not the production build.
