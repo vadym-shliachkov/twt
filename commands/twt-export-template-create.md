@@ -1,8 +1,8 @@
 ---
 name: twt-export-template-create
 category: export
-description: (v2.0.1) Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
-version: 2.0.1
+description: (v2.0.2) Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
+version: 2.0.2
 accepts_arguments: true
 inputs:
   - Optional theme name, type, brand path, style direction, and instructions

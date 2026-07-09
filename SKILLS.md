@@ -179,7 +179,7 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.7
+**Version:** 1.3.8
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -221,7 +221,7 @@ Document the component library the site needs — anatomy, variants, states, tok
 ## /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** no
 
 Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
@@ -1058,7 +1058,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1147,7 +1147,7 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 ## /twt-export-template-create
 
 **Category:** export
-**Version:** 2.0.1
+**Version:** 2.0.2
 **Accepts arguments:** yes
 
 Create a named, reusable export theme — css layers, bundled fonts, reference docs, and a preview — that later document and presentation export commands can offer in their theme menus. Themes may be based on an existing brand brief, user-provided style instructions, or both.

@@ -446,7 +446,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.7
+**Version:** 1.3.8
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -478,7 +478,7 @@ flowchart TB
 ### /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - none (reads the component artifacts)
@@ -919,7 +919,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.7
+**Version:** 1.8.8
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -955,7 +955,7 @@ flowchart TB
 ### /twt-design-system-validate
 
 **Category:** design-system
-**Version:** 1.4.1
+**Version:** 1.4.2
 
 **Inputs:**
 - none (reads the design-system artifacts)
@@ -1162,7 +1162,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Markdown file path
@@ -1223,7 +1223,7 @@ flowchart TB
 ### /twt-export-template-create
 
 **Category:** export
-**Version:** 2.0.1
+**Version:** 2.0.2
 
 **Inputs:**
 - Optional theme name, type, brand path, style direction, and instructions
