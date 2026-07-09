@@ -61,10 +61,31 @@ const msPlaywrightDir =
   : path.join(os.homedir(), '.cache', 'ms-playwright');
 const PLAYWRIGHT_READS = [`Read(${toReadGlob(msPlaywrightDir)}/**)`];
 
+// Installed-plugin cache (read-only). The plugin's own bundled scripts live at
+// ~/.claude/plugins/**, NOT in the target project — so any skill that reads one
+// (inspecting a `tools/*.py|*.mjs` generator, its templates, etc.) points at a
+// path the scope-guard correctly treats as "outside the project" and defers on.
+// Pre-authorize reading the plugin cache so those routine inspections stay
+// silent. Read-only; this is never a write target.
+const PLUGIN_READS = [`Read(${toReadGlob(path.join(os.homedir(), '.claude', 'plugins'))}/**)`];
+
+// Session scratchpad (read + write). Intermediate/throwaway files belong in the
+// harness-assigned scratchpad under the OS temp dir, kept OUT of the project so
+// they never pollute git or get committed (see CONVENTIONS §15). That directory
+// is outside the project, so the scope-guard defers on it — pre-authorize the
+// `claude/` scratch subtree here so writing/reading scratch files doesn't prompt.
+const scratchDir = path.join(os.tmpdir(), 'claude');
+const SCRATCH_ACCESS = [
+  `Read(${toReadGlob(scratchDir)}/**)`,
+  `Write(${toReadGlob(scratchDir)}/**)`,
+];
+
 const ALLOW = [
   ...BASH_UTILS.map((c) => `Bash(${c}:*)`),
   ...BASH_UTILS.map((c) => `Bash(${c} *)`),
   ...PLAYWRIGHT_READS,
+  ...PLUGIN_READS,
+  ...SCRATCH_ACCESS,
   'WebFetch(domain:*)',
   'mcp__plugin_figma_figma__get_design_context',
   'mcp__plugin_figma_figma__get_screenshot',
