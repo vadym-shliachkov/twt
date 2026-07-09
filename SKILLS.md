@@ -138,7 +138,7 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 ## /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
@@ -597,7 +597,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -642,7 +642,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 ## /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Accepts arguments:** no
 
 Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
@@ -1475,7 +1475,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.0
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1523,7 +1523,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 ## /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Accepts arguments:** no
 
 Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.
@@ -1967,7 +1967,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.12.3
+**Version:** 1.12.4
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2135,7 +2135,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.3.0
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.

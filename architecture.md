@@ -389,7 +389,7 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -754,7 +754,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -787,7 +787,7 @@ flowchart TB
 ### /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 **Inputs:**
 - (none — reads curation artifacts and upstream)
@@ -1464,7 +1464,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.0
+**Version:** 1.3.1
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1501,7 +1501,7 @@ flowchart TB
 ### /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.2.0
+**Version:** 1.2.1
 
 **Inputs:**
 - none (reads the mockup artifacts)
@@ -1892,7 +1892,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.3
+**Version:** 1.12.4
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2064,7 +2064,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.3.0
+**Version:** 1.3.1
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

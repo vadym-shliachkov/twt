@@ -1,8 +1,8 @@
 ---
 name: twt-mockup-validate
 category: mockup
-description: (v1.2.0) Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y)
-version: 1.2.0
+description: (v1.2.1) Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y)
+version: 1.2.1
 accepts_arguments: false
 inputs:
   - none (reads the mockup artifacts)

@@ -1,8 +1,8 @@
 ---
 name: twt-brand-fetch
 category: brand
-description: (v1.1.3) Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
-version: 1.1.3
+description: (v1.1.4) Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
+version: 1.1.4
 accepts_arguments: true
 inputs:
   - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
