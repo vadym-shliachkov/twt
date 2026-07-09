@@ -1934,7 +1934,7 @@ Find every occurrence of a specific string across a website's pages and produce 
 ## /twt-setup
 
 **Category:** meta
-**Version:** 1.0.0
+**Version:** 1.0.2
 **Accepts arguments:** no
 
 Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. Without a permission allowlist the user is prompted for each one. This command merges a curated, additive allowlist into the current project's `.claude/settings.json` so those routine calls are auto-approved and prompts appear only for genuinely novel or risky operations. The scope-guard hook continues to gate any file operation that would escape the project directory.

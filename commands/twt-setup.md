@@ -1,8 +1,8 @@
 ---
 name: twt-setup
 category: meta
-description: (v1.0.0) One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
-version: 1.0.0
+description: (v1.0.2) One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
+version: 1.0.2
 accepts_arguments: false
 inputs: []
 dependencies:
@@ -55,6 +55,6 @@ or
 
 Tell the user:
 - How many entries were added (or that they were already present)
-- That the allowlist covers routine Bash utilities, WebFetch, and the Figma read MCP tools
+- That the allowlist covers routine Bash utilities, WebFetch, the Figma read MCP tools, and read/write access to the two locations outside the project the pipeline legitimately touches: the installed **plugin cache** (`~/.claude/plugins`, read-only — where the plugin's own bundled scripts live) and the session **scratchpad** (`<os-temp>/claude`, read+write — where transient files go so they never land in the project)
 - That to undo this at any time, run the same command with `--remove` appended:
   `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude" --remove`
