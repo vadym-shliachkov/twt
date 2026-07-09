@@ -41,6 +41,13 @@ writes:
 ## Step 1 — Load artifacts (hard dependency)
 Read `.twt-artifacts/design/component/components.md`. If absent, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
 
+### Step 1a — Deterministic render checks on `gallery.html` (read-only)
+Two defect classes ship silently unless hunted explicitly; check both before scoring:
+- **Dark-surface text resolution.** For every specimen on a dark surface (`--color-surface-contrast`, hero gradient, inverted footer), list its descendant text elements and resolve each one's effective `color` through `tokens.css`. Any descendant whose color resolves to a dark value on the dark surface (e.g. a bare `.spec-body` whose class default is the light-surface body color) is a **BLOCKER** under A11y affordances — compute and cite the contrast ratio. A scope-class override (e.g. `.spec-on-ink :is(…){color:var(--color-text-on-ink)}`) covering *all* text classes used inside is the expected pattern.
+- **Image stretch.** Any `<img>` inside a **column** flex container without an explicit `align-self:flex-start` stretches to the column width while its height stays fixed — a distorted logo. Flag as **WARNING** with the offending element.
+
+Optionally confirm visually: `/twt-block-preview` can screenshot a single module by CSS selector.
+
 ## Step 2 — Score the rubric (evaluative, with evidence)
 Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weights are fixed and sum to 100:
 

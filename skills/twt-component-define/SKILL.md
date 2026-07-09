@@ -118,17 +118,39 @@ code{font-family:var(--gal-font-mono);font-size:.88em}
 .gal-sub{display:block;margin:56px 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:1.05rem;font-weight:800}
 .gal-legend{max-width:92ch;margin-bottom:20px;color:var(--gal-text);font-size:.92rem;line-height:1.6}
 .gal-legend code{color:var(--gal-ink);background:var(--gal-panel-soft);border:1px solid var(--gal-rule-soft);padding:2px 6px;border-radius:4px}
-/* component cells: rounded light panels with a subtle hover lift, like preview's .gp-cell/.gp-sw */
+/* component cells: name-first cards with a delimited specimen stage */
 .gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.gal-cell{padding:20px;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
+.gal-cell{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
 @media (hover:hover) and (pointer:fine){.gal-cell:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}}
-.gal-cap{display:block;margin-top:12px;color:var(--gal-muted);font-size:.78rem}
-.gal-cap b{color:var(--gal-ink)}
-/* per-state label above each specimen variant */
-.gal-state{display:block;margin-bottom:8px;color:var(--gal-muted);font-size:.7rem;font-weight:600;letter-spacing:0;text-transform:none}
+/* card header: WHAT it is, in ink — readable at first glance */
+.gal-cell-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.gal-name{font-family:var(--gal-font-heading);font-size:.92rem;font-weight:800;color:var(--gal-ink);line-height:1.2}
+.gal-meta{font-family:var(--gal-font-mono);font-size:.66rem;color:var(--gal-muted);text-align:right}
+/* specimen stage: dashed canvas that separates live specimens from chrome text */
+.gal-stage{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:14px;border:1px dashed var(--gal-rule);border-radius:6px}
+.gal-stage--bare{padding:0;border:none;display:block}
+/* one variant/state instance + its own micro-label (no positional guessing) */
+.gal-var{display:flex;flex-direction:column;gap:5px;align-items:flex-start;max-width:100%}
+.gal-var--row{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+.gal-var--fill{align-self:stretch}
+.gal-varlabel{font-family:var(--gal-font-mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--gal-muted)}
+/* footnote: token refs / behavior notes only — never repeats the card name */
+.gal-note{margin-top:auto;padding-top:10px;border-top:1px solid var(--gal-rule-soft);color:var(--gal-muted);font-size:.75rem;line-height:1.5}
+/* guard: an <img> specimen must never overflow or squash */
+.gal-cell img{max-width:100%;object-fit:contain}
 @media (max-width:760px){.gal-wrap{padding:36px 16px 72px}.gal-head h1{font-size:clamp(2.6rem,14vw,4.2rem)}.gal-tier{padding:48px 0}.gal-sub{margin:44px 0 16px}}
 ```
 Use a header that mirrors preview's (`<p class="gal-project">Project name: …</p><h1>Component Gallery</h1>`), a `gal-tier` section per level (Primitives / Components / Modules) introduced by a `gal-tag` pill + `gal-th` heading, and `gal-cell` panels for each component's variant × state matrix. Keep the specimen markup inside the cells token-only.
+
+**Cell anatomy — name first, one label per instance.** Every `gal-cell` reads top-to-bottom: *what it is → the thing itself → footnotes*, so a first glance answers "what am I looking at":
+1. `<header class="gal-cell-head"><span class="gal-name">Button · primary</span><span class="gal-meta">--color-primary</span></header>` — component (and variant) name in ink; optionally one key token, mono, right-aligned.
+2. `<div class="gal-stage">` — the dashed specimen canvas. **Each variant/state instance is its own** `<div class="gal-var">` (`gal-var--row` for chip-sized items sitting side by side, `gal-var--fill` for full-width fields) containing the specimen followed by `<span class="gal-varlabel">hover</span>` — a micro-label attached to the instance it names. Never describe states as a run-on list in one shared label ("default / hover / selected") that forces the reader to map labels to specimens positionally.
+3. Optional `<span class="gal-note">` — token references or behavior notes only; never repeat the name the head already shows, and skip the note entirely when it would add nothing.
+Full-bleed dark modules (hero, footer) use `<div class="gal-stage gal-stage--bare">` so the module surface replaces the canvas.
+
+**Dark-surface modules — on-ink override rule.** Any specimen on a dark surface (`--color-surface-contrast`, a hero gradient, an inverted footer) must explicitly override **every** text primitive that appears inside it — body, caption, heading, nav, link — to the design's on-dark text token. Never rely on a text class's default light-surface color cascading in: a bare `.spec-body` on an Ink hero renders dark-on-dark and disappears. Pattern — one scope class, one rule set: `.spec-on-ink :is(.spec-body,.spec-caption,.spec-h3,.spec-nav){color:var(--color-text-on-ink)}`, then `class="spec-hero spec-on-ink"` / `class="spec-ink spec-on-ink"`. After writing the file, re-scan every dark module's descendants for a text class the scope rule doesn't cover.
+
+**Logo / image specimens.** Give logos an explicit `height` and `width:auto` — and inside any **column** flex container ( `.spec-stack`-style ), also an explicit `align-self:flex-start`: the flex default `align-self:stretch` widens the image to the column while the height stays fixed, visibly distorting the wordmark. (Don't blanket-force `align-self` in CSS — that would break vertical centering of logos in flex *rows* like a site-header.)
 
 At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../preview.html` shows **breadth** — every token rendered live. Both sheets share the doc-hub light skin so they read as one system.
 
