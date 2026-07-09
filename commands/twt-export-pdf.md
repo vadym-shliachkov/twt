@@ -39,7 +39,7 @@ writes:
 - Produces `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.pdf`
 - Writes `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` with heading nesting warnings, conversion warnings, theme used, doc-type profile applied, and output path
 - Themed via the built-in `doc-hub-light` theme by default (css layers + bundled fonts), rendered via Chromium when the `playwright` npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)
-- Doc-type profile (report/brief/spec/generic) is detected and applied automatically
+- Doc-type profile (report/brief/spec/generic) is detected and applied automatically: structural transforms (labeled field cards, kv grids, score/severity chips, finding cards), a per-profile CSS layer (`css/profiles/<profile>.css`), an optional per-doc-type CSS layer (`css/doctypes/<docType>.css`), a doc-type + date meta line under the title, and a running page footer (doc label · page x / y) in the Chromium PDF
 - Intermediate HTML is always saved alongside the PDF at `.twt-artifacts/export/pdf/<source-slug>/<source-slug>.html`
 
 ---

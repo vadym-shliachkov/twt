@@ -24,6 +24,12 @@ dl.tx-kv--summary dd code{overflow-wrap:anywhere;word-break:break-word}
 .tx-score--na{color:var(--tx-muted);border-color:var(--tx-rule);background:var(--tx-panel)}
 .tx-chip--neutral{color:var(--tx-muted);background:var(--tx-panel)}
 
+/* Labeled field card ('**Label:** value' paragraphs in briefs/specs) */
+.tx-field{break-inside:avoid;margin:14px 0;padding:12px 16px 13px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-left:3px solid var(--tx-accent);border-radius:var(--tx-radius)}
+.tx-field__label{display:block;font-family:var(--tx-font-heading);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);margin:0 0 4px}
+.tx-field__body{font-size:.97rem;color:var(--tx-text);line-height:1.55}
+.tx-field__body code{overflow-wrap:anywhere}
+
 /* Score chips (NN/100) */
 .tx-score{display:inline-block;font-family:var(--tx-font-mono);font-size:.82em;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);white-space:nowrap}
 .tx-score--good{color:var(--tx-ok);border-color:color-mix(in srgb,var(--tx-ok) 35%,white);background:color-mix(in srgb,var(--tx-ok) 8%,white)}

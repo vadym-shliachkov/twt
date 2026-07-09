@@ -310,12 +310,43 @@ const TRANSFORMS = [
   {
     name: 'docHeader',
     profiles: ['report', 'brief', 'spec', 'generic'],
-    apply(blocks) {
+    apply(blocks, { meta } = {}) {
       const i = blocks.findIndex((b) => b.t === 'Header');
       if (i === -1 || blocks[i].c[0] !== 1) return false;
       const [, [id], inlines] = blocks[i].c;
-      blocks[i] = rawBlock(`<header class="tx-doc-header"><h1${id ? ` id="${esc(id)}"` : ''}>${inlinesToHtml(inlines)}</h1><span class="hs-accent-bar"></span></header>`);
+      const metaBits = [meta?.docLabel, meta?.date].filter(Boolean);
+      const metaLine = metaBits.length ? `<p class="tx-meta">${metaBits.map(esc).join(' · ')}</p>` : '';
+      blocks[i] = rawBlock(`<header class="tx-doc-header"><h1${id ? ` id="${esc(id)}"` : ''}>${inlinesToHtml(inlines)}</h1><span class="hs-accent-bar"></span>${metaLine}</header>`);
       return true;
+    },
+  },
+  {
+    // '**Label:** value…' paragraphs (Vision, Primary objective, Why redesign, …)
+    // are the backbone of briefs and specs; as plain bold-lead paragraphs they read
+    // as an undifferentiated text wall. Each becomes a labeled field card with the
+    // label as an uppercase kicker over the body.
+    name: 'labeledParas',
+    profiles: ['brief', 'spec'],
+    apply(blocks) {
+      let hit = false;
+      // top-level paragraphs only — bullet items belong to kvList/findingCards
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (b.t !== 'Para') continue;
+        const inl = b.c || [];
+        if (inl[0]?.t !== 'Strong') continue;
+        let label = inlinesToText(inl[0].c).trim();
+        let rest = inl.slice(1);
+        if (label.endsWith(':')) label = label.slice(0, -1);
+        else if (rest[0]?.t === 'Str' && rest[0].c.startsWith(':')) rest = [{ t: 'Str', c: rest[0].c.slice(1) }, ...rest.slice(1)];
+        else continue;
+        while (rest[0] && (rest[0].t === 'Space' || rest[0].t === 'SoftBreak')) rest = rest.slice(1);
+        // long bold lead-ins are emphasis, not labels; empty bodies stay as-is
+        if (label.length > 42 || !rest.length) continue;
+        blocks[i] = rawBlock(`<div class="tx-field"><span class="tx-field__label">${esc(label)}</span><div class="tx-field__body">${inlinesToHtml(rest)}</div></div>`);
+        hit = true;
+      }
+      return hit;
     },
   },
   {
@@ -379,7 +410,7 @@ const TRANSFORMS = [
   },
   {
     name: 'kvList',
-    profiles: ['report', 'brief'],
+    profiles: ['report', 'brief', 'spec'],
     apply(blocks, { profile }) {
       let firstList = true, hit = false;
       for (let i = 0; i < blocks.length; i++) {
@@ -491,11 +522,14 @@ const TRANSFORMS = [
   },
 ];
 
-export function transformAst(ast, profile = 'generic') {
+// extra: { docType, meta: { docLabel, date } } — docType lets a transform target a
+// specific registry entry (tr.docTypes allowlist); meta feeds the docHeader line.
+export function transformAst(ast, profile = 'generic', extra = {}) {
   const applied = [];
   for (const tr of TRANSFORMS) {
     if (!tr.profiles.includes(profile)) continue;
-    try { if (tr.apply(ast.blocks, { profile })) applied.push(tr.name); }
+    if (tr.docTypes && !tr.docTypes.includes(extra.docType)) continue;
+    try { if (tr.apply(ast.blocks, { profile, ...extra })) applied.push(tr.name); }
     catch (e) { throw new Error(`transform '${tr.name}' failed: ${e.message}`); }
   }
   return { ast, applied };
@@ -521,8 +555,21 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(sumOut, /tx-kv--summary/);
   assert.match(sumOut, /<div class="tx-kv__cell[^"]*"><dt>/, 'summary variant wraps pairs in divs');
 
-  // doc header (all profiles)
+  // doc header (all profiles) + optional meta line
   assert.match(kvOut, /<header class="tx-doc-header"><h1[^>]*>Brief<\/h1><span class="hs-accent-bar"><\/span><\/header>/);
+  const metaOut = astToHtml(transformAst(pandocAst('# T\n\ntext'), 'brief', { meta: { docLabel: 'Specification', date: '2026-07-09' } }).ast);
+  assert.match(metaOut, /<p class="tx-meta">Specification · 2026-07-09<\/p>/, 'docHeader renders the doc-type meta line');
+
+  // labeled paragraphs → field cards (brief/spec only, top level only)
+  const fieldMd = '# S\n\n**Vision (one line):** A light, minimal, premium studio site.\n\n**A very long bold lead-in sentence that is clearly emphasis, not a field label at all:** stays prose.\n';
+  const fieldOut = astToHtml(transformAst(pandocAst(fieldMd), 'brief').ast);
+  assert.match(fieldOut, /<div class="tx-field"><span class="tx-field__label">Vision \(one line\)<\/span>/, 'short bold label becomes a field card');
+  assert.match(fieldOut, /tx-field__body">A light, minimal, premium studio site\./, 'field body keeps the value');
+  assert.match(fieldOut, /<strong>A very long bold lead-in sentence[^<]*<\/strong>/, 'long bold lead-ins stay plain paragraphs');
+  assert.ok(!astToHtml(transformAst(pandocAst(fieldMd), 'report').ast).includes('tx-field'), 'field cards are brief/spec only');
+  // kv bullet runs still win over labeledParas (bullets untouched by it)
+  const kvSpecOut = astToHtml(transformAst(pandocAst(kvMd), 'spec').ast);
+  assert.match(kvSpecOut, /<dl class="tx-kv">/, 'kv-list also renders in spec profile');
 
   // score chips (report only)
   const scoreOut = astToHtml(transformAst(pandocAst('Overall 85/100 and 64/100 and 72/100.'), 'report').ast);

@@ -1,0 +1,27 @@
+/* doc-hub-light · profile layer: brief
+   Editorial treatment for narrative briefs (brand-brief, positioning,
+   specification, pre-design/design briefs, site-instruction): numbered section
+   kickers, a roomier lead paragraph, generous section rhythm. The
+   '**Label:** value' backbone renders as tx-field cards (components.css). */
+
+/* numbered section kicker over every H2 */
+.doc-wrap { counter-reset: tx-sec; }
+h2 { counter-increment: tx-sec; margin-top: 2.4em; padding-top: 1.1em; border-top: 1px solid var(--tx-rule); }
+h2::before {
+  content: counter(tx-sec, decimal-leading-zero);
+  display: block;
+  font-family: var(--tx-font-mono);
+  font-size: .7rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--tx-accent);
+  margin: 0 0 6px;
+}
+
+/* the first paragraph after the doc header is the lead — let it breathe */
+.tx-doc-header + p { font-size: 1.08rem; line-height: 1.65; color: var(--tx-ink); }
+.tx-doc-header + blockquote > p:first-child { font-size: 1.05rem; line-height: 1.6; }
+
+/* nested detail lists sit slightly tighter than prose */
+li > ul { margin-top: .25em; }
+li { margin-bottom: .3em; }

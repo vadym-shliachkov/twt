@@ -5,7 +5,21 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
-export async function htmlToPdf({ html, outPath, format, landscape = false, margin, width, height, readySignal }) {
+// footer: { left } — running page footer (left text + right 'page / total'),
+// rendered by Chromium into the page's bottom margin. Needs a bottom margin in
+// the pdf options to have somewhere to draw; the value stays smaller than the
+// theme's @page bottom margin so it lands inside existing whitespace.
+function footerTemplates(footer) {
+  const escHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const base = 'font-family:Segoe UI,Arial,sans-serif;font-size:7.5px;color:#7a82a8;width:100%;padding:0 24mm;display:flex;justify-content:space-between;align-items:baseline;';
+  return {
+    headerTemplate: '<span></span>',
+    footerTemplate: `<div style="${base}"><span>${escHtml(footer.left || '')}</span>` +
+      `<span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`,
+  };
+}
+
+export async function htmlToPdf({ html, outPath, format, landscape = false, margin, width, height, readySignal, footer }) {
   let pw;
   try { pw = await import('playwright'); }
   catch { return { ok: false, engine: 'none', reason: 'playwright npm package not installed' }; }
@@ -23,6 +37,10 @@ export async function htmlToPdf({ html, outPath, format, landscape = false, marg
     if (width && height) { opts.width = width; opts.height = height; }
     else { opts.preferCSSPageSize = true; if (format) opts.format = format; if (landscape) opts.landscape = true; }
     if (margin) opts.margin = margin;
+    if (footer) {
+      Object.assign(opts, { displayHeaderFooter: true }, footerTemplates(footer));
+      if (!opts.margin) opts.margin = { bottom: '12mm' };
+    }
     await page.pdf(opts);
     return { ok: true, engine: 'chromium' };
   } finally { await browser.close(); }

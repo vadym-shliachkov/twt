@@ -15,4 +15,9 @@ h4 { font-size: 1rem; margin: 1.1em 0 .25em; }
 pre { background: var(--tx-panel); border: 1px solid var(--tx-rule); border-radius: 8px; padding: 12px 14px; font-size: .85em; overflow-x: auto; }
 pre code { background: none; border: none; padding: 0; }
 h2, h3 { break-after: avoid-page; }
-table, .tx-finding, dl.tx-kv { break-inside: avoid; }
+/* Keep small units on one page — but never a whole summary grid: that block can be
+   taller than the space left on page 1, and an all-or-nothing avoid shoves it to
+   page 2 wholesale, leaving the title alone on a near-empty first page. The grid
+   may break between cells; each cell stays intact. */
+table, .tx-finding, dl.tx-kv:not(.tx-kv--summary) { break-inside: avoid; }
+dl.tx-kv--summary .tx-kv__cell { break-inside: avoid; }

@@ -128,6 +128,8 @@ Pass one `--token key=value` per chosen override; omit tokens you didn't change.
 
 The script creates the whole theme: substituted css layers (tokens/doc/slide/components), copied bundled fonts, themed reference.docx/pptx (python builder, falls back to house reference docs with a note), preview/preview.html, theme.json, preview-notes.md.
 
+Two optional css layers stack on top at export time and may be added to a theme by hand: `css/profiles/<report|brief|spec|generic>.css` (per doc-type *profile* — e.g. numbered section kickers for briefs) and `css/doctypes/<docType>.css` (one specific registry doc type — only when a more specific treatment than its profile is worth it). Missing files degrade silently; the built-in `doc-hub-light` ships `profiles/brief.css` and `profiles/spec.css` as reference implementations.
+
 If the script is missing, stop with: "Export theme helper missing — run this from the marketplace checkout or install/copy `tools/export-theme-create.mjs`."
 
 ## Step 5 — Report

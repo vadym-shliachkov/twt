@@ -58,6 +58,15 @@ export function readProfileCss(theme, profileId) {
   return existsSync(p) ? readFileSync(p, 'utf8') : '';
 }
 
+// Optional per-document-type layer (css/doctypes/<docType>.css) on top of the
+// profile layer — most doc types share their profile's look; a doc type gets its
+// own file only when a more specific treatment is worth it.
+export function readDoctypeCss(theme, docType) {
+  if (!docType) return '';
+  const p = join(theme.dir, 'css', 'doctypes', `${String(docType).replace(/[^a-z0-9-]/gi, '')}.css`);
+  return existsSync(p) ? readFileSync(p, 'utf8') : '';
+}
+
 export function fontFaceCss(theme) {
   const faces = theme?.meta?.fonts?.faces || [];
   const rules = [];
@@ -70,9 +79,10 @@ export function fontFaceCss(theme) {
   return rules.join('\n');
 }
 
-export function themeDocCss(theme, profileId = 'generic') {
+export function themeDocCss(theme, profileId = 'generic', docType = undefined) {
   return [fontFaceCss(theme), readThemeCss(theme, 'tokens'), readThemeCss(theme, 'doc'),
-    readThemeCss(theme, 'components'), readProfileCss(theme, profileId)].filter(Boolean).join('\n');
+    readThemeCss(theme, 'components'), readProfileCss(theme, profileId),
+    readDoctypeCss(theme, docType)].filter(Boolean).join('\n');
 }
 
 export function themeSlideCss(theme) {
@@ -92,6 +102,11 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(readThemeCss(t, 'slide'), /\.slide/);
   assert.equal(typeof readThemeCss(t, 'components'), 'string');
   assert.equal(readProfileCss(t, 'report'), '');
+  assert.match(readProfileCss(t, 'brief'), /tx-sec/, 'brief profile layer ships with the theme');
+  assert.match(readProfileCss(t, 'spec'), /table/, 'spec profile layer ships with the theme');
+  assert.equal(readDoctypeCss(t, 'no-such-doctype'), '', 'missing doctype layer degrades to empty');
+  assert.equal(readDoctypeCss(t, undefined), '', 'no doctype → empty layer');
+  assert.match(themeDocCss(t, 'brief'), /tx-sec/, 'doc css stacks the profile layer');
   const byPath = resolveTheme(t.dir);
   assert.equal(byPath.slug, 'doc-hub-light');
   assert.equal(byPath.source, 'path');

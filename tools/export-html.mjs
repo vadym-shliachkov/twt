@@ -87,13 +87,13 @@ export function shellSlides({ slidesHtml, title, aspect, css, script = '' }) {
 <body class="${cls}">${slidesHtml}${script}</body></html>`;
 }
 
-export function mdToHtmlDoc({ markdownPath, title, theme, profile = 'generic' }) {
+export function mdToHtmlDoc({ markdownPath, title, theme, profile = 'generic', docType, meta }) {
   const md = readFileSync(markdownPath, 'utf8');
   const t = title || md.match(/^#\s+(.+)$/m)?.[1] || 'Document';
   const resolved = theme || resolveTheme();
-  const css = themeDocCss(resolved, profile);
+  const css = themeDocCss(resolved, profile, docType);
   try {
-    const { ast, applied } = transformAst(mdToAst(md), profile);
+    const { ast, applied } = transformAst(mdToAst(md), profile, { docType, meta });
     // docHeader transform renders its own accent bar; only fall back to the shell bar without it
     const accentBar = !applied.includes('docHeader');
     return { html: shellDoc({ bodyHtml: astToHtml(ast), title: t, css, accentBar }), applied, transformError: undefined };

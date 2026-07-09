@@ -113,6 +113,14 @@ function auditHeadings(markdown) {
   };
 }
 
+// 'analysis-report' → 'Analysis report' — the human label under the H1 and in the
+// PDF page footer.
+function docTypeLabel(docType) {
+  if (!docType || docType === 'generic') return undefined;
+  const s = String(docType).replace(/^structural-/, '').replace(/-/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function commandExists(command) {
   const result = spawnSync(command, ["--version"], { encoding: "utf8" });
   return !result.error && result.status === 0;
@@ -192,11 +200,13 @@ async function convert(args) {
     conversionNotes.push(`Legacy --template ignored (prose templates never styled output): ${legacyTemplate}. Used theme '${theme.slug}'. Create a real theme with /twt-export-template-create.`);
   }
 
+  const docMeta = { docLabel: docTypeLabel(doc.docType), date: new Date().toISOString().slice(0, 10) };
+
   if (args.format === "html") {
     if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; HTML not produced."); }
     else {
       try {
-        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile });
+        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile, docType: doc.docType, meta: docMeta });
         writeFileSync(paths.output, r.html, "utf8");
         engine = "html+theme"; success = statSync(paths.output).size > 0;
         conversionNotes.push(`Built themed HTML (theme=${theme.slug}, profile=${doc.profile}, transforms=${r.applied.join(", ") || "none"}).`);
@@ -207,11 +217,13 @@ async function convert(args) {
     if (!commandExists("pandoc")) { conversionNotes.push("Pandoc not found on PATH; PDF not produced."); }
     else {
       try {
-        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile });
+        const r = mdToHtmlDoc({ markdownPath: inputForPandoc, title, theme, profile: doc.profile, docType: doc.docType, meta: docMeta });
         writeFileSync(paths.html, r.html, "utf8"); // always saved for debugging
         conversionNotes.push(`Intermediate HTML saved: ${paths.html}`);
         if (r.transformError) conversionNotes.push(`Transform fallback: ${r.transformError} (rendered generic HTML instead).`);
-        const pdfR = await htmlToPdf({ html: r.html, outPath: paths.output });
+        const footerLeft = docMeta.docLabel && !title.toLowerCase().includes(docMeta.docLabel.toLowerCase())
+          ? `${docMeta.docLabel} — ${title}` : title;
+        const pdfR = await htmlToPdf({ html: r.html, outPath: paths.output, footer: { left: footerLeft } });
         if (pdfR.ok) {
           engine = "chromium"; success = statSync(paths.output).size > 0;
           conversionNotes.push(`Rendered themed PDF via Chromium (theme=${theme.slug}, profile=${doc.profile}, transforms=${r.applied.join(", ") || "none"}).`);
