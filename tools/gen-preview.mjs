@@ -220,25 +220,80 @@ const semanticColors  = colorTokens.filter((t) =>  /^\s*var\s*\(/.test(t.raw));
 // Sort primitives lightest → darkest so the palette reads as a tonal ramp.
 primitiveColors.sort((a, b) => relLum(b.color) - relLum(a.color));
 
+// ---- alpha display context ----------------------------------------------------
+// An alpha primitive painted flat on a white card is meaningless — a white-alpha
+// hairline literally disappears and reads as a duplicate of --color-white. Every
+// alpha chip is therefore rendered composited over the surface it is used on:
+// light alpha tones → the darkest solid primitive (the Ink-like surface they sit
+// on), dark alpha tones (shadows, scrims) → white.
+const darkestSolid = [...primitiveColors]
+  .filter((t) => t.color.a >= 1)
+  .sort((a, b) => relLum(a.color) - relLum(b.color))[0] || null;
+function displayContext(t) {
+  if (t.color.a >= 1) return null;
+  const lightAlpha = relLum(t.color) > 0.5;
+  if (lightAlpha && darkestSolid) return { name: darkestSolid.name, color: darkestSolid.color };
+  return { name: 'white', color: { r: 255, g: 255, b: 255, a: 1 } };
+}
+const effColor = (t) => { const ctx = displayContext(t); return ctx ? composite(t.color, ctx.color) : t.color; };
+const cssRgb = (c) => `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
+
 // Near-duplicate detection within the primitive palette (Euclidean RGB distance).
 // Two colors within 22/255 (~8.6%) are visually near-identical and flag a
 // consolidation opportunity (e.g. --color-bg-section vs --color-accent-pale).
+// Distances use the EFFECTIVE color — alpha tones composited over their display
+// surface — and only same-surface pairs are compared (a white-alpha fill on Ink
+// never co-occurs with a solid on white). Tokens sharing a name stem
+// (--color-ink / --color-ink-mid, --color-shadow-weak/-soft/-strong) are an
+// intentional state/elevation ramp and are not flagged; the flag is reserved for
+// accidental duplicates across roles.
 function rgbDist(c1, c2) {
   return Math.sqrt((c1.r - c2.r) ** 2 + (c1.g - c2.g) ** 2 + (c1.b - c2.b) ** 2);
 }
 const NEAR_DUP_DIST = 22;
+const STATE_SUFFIX = /-(alpha|weak|soft|strong|mid|light|lighter|lightest|dark|darker|darkest|hover|active|subtle|muted|deep|faint|dim|low|high|xs|sm|md|lg|xl|\d+)$/;
+function stemOf(name) {
+  let s = name.toLowerCase();
+  while (STATE_SUFFIX.test(s)) s = s.replace(STATE_SUFFIX, '');
+  return s;
+}
 const primNearDups = new Map();
 for (let i = 0; i < primitiveColors.length; i++) {
   for (let j = i + 1; j < primitiveColors.length; j++) {
-    if (rgbDist(primitiveColors[i].color, primitiveColors[j].color) <= NEAR_DUP_DIST) {
-      const na = primitiveColors[i].name, nb = primitiveColors[j].name;
-      if (!primNearDups.has(na)) primNearDups.set(na, []);
-      if (!primNearDups.has(nb)) primNearDups.set(nb, []);
-      primNearDups.get(na).push(nb);
-      primNearDups.get(nb).push(na);
+    const A = primitiveColors[i], B = primitiveColors[j];
+    if (stemOf(A.name) === stemOf(B.name)) continue;
+    const ctxA = displayContext(A), ctxB = displayContext(B);
+    if ((ctxA ? ctxA.name : null) !== (ctxB ? ctxB.name : null)) continue;
+    if (rgbDist(effColor(A), effColor(B)) <= NEAR_DUP_DIST) {
+      if (!primNearDups.has(A.name)) primNearDups.set(A.name, []);
+      if (!primNearDups.has(B.name)) primNearDups.set(B.name, []);
+      primNearDups.get(A.name).push(B.name);
+      primNearDups.get(B.name).push(A.name);
     }
   }
 }
+const nearDupPairs = [];
+for (const [name, dups] of primNearDups) {
+  for (const d of dups) if (name < d) nearDupPairs.push([name, d]);
+}
+
+// A gradient whose resolved stops are all within near-dup distance of each other
+// reads as a flat fill — it costs a token but adds nothing visible.
+function gradientStopColors(t) {
+  const out = [];
+  for (const m of String(t.resolved).match(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi) || []) {
+    const c = parseColor(m);
+    if (c) out.push(c.a < 1 ? composite(c, { r: 255, g: 255, b: 255, a: 1 }) : c);
+  }
+  return out;
+}
+const flatGradients = gradientTokens.filter((t) => {
+  const stops = gradientStopColors(t);
+  if (stops.length < 2) return false;
+  let max = 0;
+  for (let i = 0; i < stops.length; i++) for (let j = i + 1; j < stops.length; j++) max = Math.max(max, rgbDist(stops[i], stops[j]));
+  return max <= NEAR_DUP_DIST;
+}).map((t) => t.name);
 
 // Semantic token grouping by purpose — ordered so the most common groups appear first.
 const SEM_GROUPS = [
@@ -259,9 +314,13 @@ function swatchPrimitive(t) {
   const dups = primNearDups.get(t.name);
   const dupTag = dups && dups.length
     ? `<span class="gp-dup">≈ near-dup: ${dups.map((n) => esc(n)).join(', ')}</span>` : '';
-  return `<div class="gp-sw">` +
-    `<div class="gp-chip" style="background:var(${t.name})"></div>` +
-    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>${dupTag}</div></div>`;
+  const ctx = displayContext(t);
+  const chip = ctx
+    ? `<div class="gp-chip" style="background:${cssRgb(ctx.color)}"><span class="gp-chip-alpha" style="background:var(${t.name})"></span></div>`
+    : `<div class="gp-chip" style="background:var(${t.name})"></div>`;
+  const ctxTag = ctx ? `<span class="gp-ctx">alpha tone · shown on ${esc(ctx.name)}</span>` : '';
+  return `<div class="gp-sw">${chip}` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>${ctxTag}${dupTag}</div></div>`;
 }
 function swatchSemantic(t) {
   const am = t.raw.match(/var\(\s*(--[\w-]+)\s*\)/);
@@ -274,7 +333,7 @@ function swatchSemantic(t) {
 function renderColorSection() {
   const primHtml = `
   <h4 class="gp-sub2">Basic palette <span class="gp-cnt">${primitiveColors.length} raw colors</span></h4>
-  <p class="gp-legend">All unique raw color values on this site, sorted lightest → darkest. Every semantic token below references one of these. Near-identical primitives are flagged — consider consolidating.</p>
+  <p class="gp-legend">All unique raw color values on this site, sorted lightest → darkest. Every semantic token below references one of these. Alpha tones are shown composited over the surface they are used on (noted per swatch). Near-identical primitives are flagged — merge them unless they are a documented state/elevation ramp.</p>
   <div class="gp-swatches">${primitiveColors.map(swatchPrimitive).join('')}${gradientTokens.map(gradientSwatch).join('')}</div>`;
   if (!semanticColors.length) return primHtml;
   const semHtml = [...SEM_GROUPS.map((g) => ({ label: g.label, items: semBuckets.get(g.key) })), { label: 'Other', items: semBuckets.get('other') }]
@@ -367,8 +426,10 @@ function swatch(t) {
     `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(val)}${t.raw !== val ? ' · ' + esc(t.raw) : ''}</span></div></div>`;
 }
 function gradientSwatch(t) {
-  return `<div class="gp-sw"><div class="gp-chip" style="background:var(${t.name})"></div>` +
-    `<div class="gp-meta"><b>${esc(t.name)}</b><span>gradient</span></div></div>`;
+  const flatTag = flatGradients.includes(t.name)
+    ? `<span class="gp-dup">≈ reads as a flat fill — the stops are visually identical; widen the span or drop the gradient</span>` : '';
+  return `<div class="gp-sw gp-sw-grad"><div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>gradient · ${esc(t.resolved)}</span>${flatTag}</div></div>`;
 }
 
 const tier1 = `
@@ -571,7 +632,10 @@ const html = `<!doctype html>
   .gp-complink a{display:inline-block;padding:9px 16px;border-radius:8px;background:#101214;color:#f7f3e8;text-decoration:none;font-size:.85rem;font-weight:600;white-space:nowrap}
   .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
   .gp-sw{border:1px solid rgba(16,18,20,.14);border-radius:8px;overflow:hidden}
-  .gp-chip{display:block;height:72px;width:100%}
+  .gp-chip{display:block;height:72px;width:100%;position:relative}
+  .gp-chip-alpha{position:absolute;inset:0;display:block}
+  .gp-ctx{display:block;font-size:.7rem;color:#363b42;font-style:italic;margin-top:2px}
+  .gp-sw-grad{grid-column:1/-1}
   .gp-meta{padding:8px 10px;font-size:.78rem;background:#fff}
   .gp-meta b{display:block;color:#101214}
   .gp-meta span{color:#363b42;word-break:break-all;display:block}
@@ -832,6 +896,9 @@ const html = `<!doctype html>
   .gp-meta b{margin-bottom:4px;color:var(--gp-ink);line-height:1.25;word-break:break-word}
   .gp-meta span,.gp-cnt,.gp-alias,.gp-bar-over,.gp-na{color:var(--gp-muted)}
   .gp-dup{margin-top:5px;color:var(--gp-warning);line-height:1.35}
+  .gp-ctx{color:var(--gp-muted);line-height:1.35}
+  .gp-sw-grad .gp-meta{min-height:0}
+  .gp-sw-grad .gp-chip{height:56px}
 
   .gp-ct{
     width:100%;
@@ -955,10 +1022,16 @@ const summary = {
     primitives: inv.primitives.length, components: inv.components.length, modules: inv.modules.length,
     contrast_pairs: contrastRows.filter((r) => r.intended).length,
     contrast_aa_failures: failures.length,
+    near_dup_pairs: nearDupPairs.length,
+    flat_gradients: flatGradients.length,
   },
   contrast_failures: failures,
+  // consolidation warnings (non-fatal): near-identical primitives across roles +
+  // gradients whose stops read as one flat fill. Validators surface these.
+  near_dup_pairs: nearDupPairs.map(([a, b]) => ({ a, b })),
+  flat_gradients: flatGradients,
 };
-console.log(`gen-preview${checkOnly ? ' (check)' : ': wrote preview.html'} — ${colorTokens.length} colors, ${inv.primitives.length}+${inv.components.length}+${inv.modules.length} components, ${failures.length} AA contrast failure(s).`);
+console.log(`gen-preview${checkOnly ? ' (check)' : ': wrote preview.html'} — ${colorTokens.length} colors, ${inv.primitives.length}+${inv.components.length}+${inv.modules.length} components, ${failures.length} AA contrast failure(s), ${nearDupPairs.length} near-dup pair(s), ${flatGradients.length} flat gradient(s).`);
 console.log('```json');
 console.log(JSON.stringify(summary, null, 2));
 console.log('```');

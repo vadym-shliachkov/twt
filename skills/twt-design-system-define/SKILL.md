@@ -579,6 +579,13 @@ Colors MUST be split into two layers — **every time, no exceptions**:
 
 This two-layer rule also applies to **Shadows**: shadow values must reference color primitive tokens via `var()` rather than hard-coding rgba literals. Add any alpha-tone primitives needed for shadows into Layer 1.
 
+**Distinctness rule (Layer 1).** Every primitive must earn its slot by being *visibly* different from every other primitive in the same use context. Concretely:
+- Never mint two alpha tones of the same base color whose alpha differs by ≤ 0.06 (e.g. `rgba(255,255,255,.12)` **and** `rgba(255,255,255,.16)`) — pick one primitive and point every Layer-2 purpose token at it. Distinct *purposes* stay distinct at Layer 2; the raw value merges at Layer 1.
+- Two solids within ~9% RGB distance are near-identical. That's fine **inside** a documented ramp (a `-mid` hover pair, a `-weak/-soft/-strong` elevation ladder — shared name stem), and a defect **across roles** (e.g. a `--color-mist` input fill vs a `--color-pale` hover fill nobody can tell apart). Merge cross-role near-dups or justify them explicitly in `tokens.md`.
+- A gradient whose stops are near-identical reads as a flat fill — widen its span until it's visible, or don't mint it.
+
+`gen-preview.mjs` measures all three (composited over the surface each alpha tone is actually used on) and reports them as `near_dup_pairs[]` / `flat_gradients[]` in its JSON summary, and flags them on the palette swatches. Treat every reported pair as a consolidation to make **before** finishing; keep one only when `tokens.md` names the reason.
+
 ## Step 10b — Generate `preview.html` (tokens-only, always)
 
 `preview.html` is **script-generated**, not hand-written, so its structure is byte-for-byte consistent across every project and the color-swatch CSS can never collide (the generator namespaces every class `gp-`). It is **tokens-only**: every design token rendered live from `tokens.css`, plus the WCAG contrast matrix, plus a prominent link to the component catalog. The full Primitives/Components/Modules catalog is built by `/twt-component-define` (`component/gallery.html`) — this skill no longer draws component specimens.

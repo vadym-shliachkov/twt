@@ -44,6 +44,8 @@ Read `.twt-artifacts/design/design-system/tokens.md`. If absent, abort: "No desi
 ### Step 1a — Deterministic contrast evidence (read-only)
 If `tokens.css` exists, run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR" --check`. The `--check` flag computes the WCAG contrast matrix and prints a ` ```json ` block **without writing any file** (stays within rule 11 read-only). Parse `contrast_failures[]` — each entry is an **intended** text/surface pairing below AA 4.5:1 for normal text. Use this as the authoritative contrast evidence for the rubric's accessibility criterion instead of estimating ratios by eye. If the script is unavailable (global install), fall back to computing ratios from the token hex values yourself.
 
+Also parse `near_dup_pairs[]` (cross-role primitives that are visually near-identical in the same use context) and `flat_gradients[]` (gradients whose stops read as one flat fill). Each entry **not justified in `tokens.md`** (as a documented ramp or named exception) is a **WARNING** finding under Naming / structure hygiene: Where = the two token names (or gradient name), Problem = indistinguishable values bloat the palette and make the preview unreadable, Recommendation = merge the primitives (Layer-2 purpose tokens both point at the survivor) or document why both exist.
+
 ## Step 2 — Score the rubric (evaluative, with evidence)
 Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weights are fixed and sum to 100:
 
