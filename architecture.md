@@ -832,7 +832,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -998,7 +998,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.4
+**Version:** 1.3.5
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -1627,7 +1627,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1693,7 +1693,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect

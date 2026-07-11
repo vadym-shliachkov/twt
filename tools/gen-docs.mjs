@@ -47,6 +47,7 @@ function loadBlock(file) {
 const BLOCKS = [
   { text: loadBlock("setup-gate.md"), heading: /^## Step 0[^\n]*permission allowlist[^\n]*\r?$/im },
   { text: loadBlock("wiki-append.md"), heading: /^## Wiki capture[^\n]*\r?$/im },
+  { text: loadBlock("wiki-harvest.md"), heading: /^## Wiki harvest[^\n]*$/im },
 ];
 
 // Fence-aware "next real heading" scan and per-block replace live in
