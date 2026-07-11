@@ -60,6 +60,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
+| [/twt-wiki-define](#twt-wiki-define) | wiki | Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages |
 | [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
 
 ---
@@ -2171,6 +2172,60 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 - A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
 - When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
 - Three derived artifacts are written and nothing else changes: `analysis-report.md` (the scored critique), `analysis-report.xlsx` (the same per-block findings as a sortable/filterable spreadsheet), and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
+
+---
+
+## /twt-wiki-define
+
+**Category:** wiki
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into curated, cited pages that a human or an agent can actually navigate.
+
+**Inputs:**
+- Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-wiki-fetch
+
+**Reads:**
+- .project-wiki/inbox.md
+- .project-wiki/index.md
+- .project-wiki/overview.md
+- .project-wiki/sources.md
+- .project-wiki/raw/
+- .project-wiki/decisions/
+- .project-wiki/entities/
+- .project-wiki/ideas/
+- .project-wiki/facts.md
+- .project-wiki/open-questions.md
+- .project-wiki/log.md
+
+**Writes:**
+- .project-wiki/decisions/
+- .project-wiki/entities/
+- .project-wiki/ideas/
+- .project-wiki/facts.md
+- .project-wiki/open-questions.md
+- .project-wiki/index.md
+- .project-wiki/overview.md
+- .project-wiki/inbox.md
+- .project-wiki/log.md
+
+**Non-goals:**
+- Does not ingest sources (that is `twt-wiki-fetch`).
+- Does not copy artifacts into the wiki. It **links** to `.twt-artifacts/` paths.
+- Does not delete a source file, a curated page, or an undrained inbox entry.
+- Does not silently resolve a contradiction.
+
+**Success criteria:**
+- Every `inbox.md` entry is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
+- Every claim on a curated page cites a source path, artifact path, URL, or `log.md` entry — never a path into `inbox.md`, which this skill empties.
+- `index.md` lists every page with a current one-line summary.
+- Contradictions are marked `status: needs-review`, never overwritten.
+- Re-running enters refinement mode (CONVENTIONS §10).
 
 ---
 

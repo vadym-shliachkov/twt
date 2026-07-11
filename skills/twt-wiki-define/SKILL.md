@@ -1,0 +1,160 @@
+---
+name: twt-wiki-define
+category: wiki
+description: (v1.0.0) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.0
+accepts_arguments: true
+inputs:
+  - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
+dependencies:
+  hard: []
+  soft:
+    - twt-wiki-fetch
+reads:
+  - .project-wiki/inbox.md
+  - .project-wiki/index.md
+  - .project-wiki/overview.md
+  - .project-wiki/sources.md
+  - .project-wiki/raw/
+  - .project-wiki/decisions/
+  - .project-wiki/entities/
+  - .project-wiki/ideas/
+  - .project-wiki/facts.md
+  - .project-wiki/open-questions.md
+  - .project-wiki/log.md
+writes:
+  - .project-wiki/decisions/
+  - .project-wiki/entities/
+  - .project-wiki/ideas/
+  - .project-wiki/facts.md
+  - .project-wiki/open-questions.md
+  - .project-wiki/index.md
+  - .project-wiki/overview.md
+  - .project-wiki/inbox.md
+  - .project-wiki/log.md
+---
+
+# /twt-wiki-define
+
+## Intent
+
+**Purpose:** Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into curated, cited pages that a human or an agent can actually navigate.
+
+**Non-goals:**
+- Does not ingest sources (that is `twt-wiki-fetch`).
+- Does not copy artifacts into the wiki. It **links** to `.twt-artifacts/` paths.
+- Does not delete a source file, a curated page, or an undrained inbox entry.
+- Does not silently resolve a contradiction.
+
+**Success criteria:**
+- Every `inbox.md` entry is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
+- Every claim on a curated page cites a source path, artifact path, URL, or `log.md` entry — never a path into `inbox.md`, which this skill empties.
+- `index.md` lists every page with a current one-line summary.
+- Contradictions are marked `status: needs-review`, never overwritten.
+- Re-running enters refinement mode (CONVENTIONS §10).
+
+---
+
+## Step 1 — Detect mode (CONVENTIONS §10)
+Read `.project-wiki/index.md`. If curated pages already exist, this is **refinement mode**: you are merging into an existing wiki, not building one. Never overwrite a `decisions/`, `entities/`, or `ideas/` page — or a `facts.md`/`open-questions.md` row — wholesale; merge into it and preserve its existing citations. These hold decisions a human made and cannot be re-asked for free.
+
+`index.md` and `overview.md` are different: they are synthesized catalogs, not hand-fed content, and Step 7 regenerates them fresh from the current page set on every run. Rewriting them is not "overwriting a page" in the sense this step forbids.
+
+If `.project-wiki/AGENTS.md` does not exist, stop: the wiki has not been initialized. Tell the user to run `/twt-wiki`.
+
+## Step 2 — Read the operating manual
+Read `.project-wiki/AGENTS.md`. It is the wiki's own schema and it wins over your assumptions — if it and this skill disagree, follow `AGENTS.md` and say so in your report.
+
+## Step 3 — Drain the inbox
+Read `.project-wiki/inbox.md`. It is append-only capture: each entry is a `## ` section whose heading is `<ISO-8601 UTC> · <kind> · <source>`, with `- **key:** value` fields. `kind` is `decision` (a human answered a question) or `reason` (a skill recorded its reasoning).
+
+Group related entries — a `decision` and the `reason` that explains it usually belong on one page. Then route each group:
+
+| Entry is about | Goes to |
+|---|---|
+| A choice that is now settled | `decisions/YYYY-MM-DD-<slug>.md` |
+| Something wanted but not yet scoped | `ideas/<slug>.md` |
+| A person, company, audience, competitor, product | `entities/<slug>.md` |
+| A reusable factual value (a date, a count, a claim) | a row in `facts.md` |
+| Something still unresolved | a row in `open-questions.md` |
+| Noise (a trivial or superseded choice) | dismiss it — but say which entries you dismissed, and why, in your report |
+
+`facts.md` and `open-questions.md` already exist with headers the scaffolder seeded — append rows that match them exactly rather than inventing a new layout:
+
+```
+facts.md:           | Fact | Canonical value | Status | Sources |
+open-questions.md:  | Question | Why it matters | Blocked | Raised |
+```
+
+For a fact row: `Status` is `RESOLVED` when there is one source or all sources agree (`Canonical value` = the settled value), `CONFLICT` when sources disagree (see Step 5), `UNVERIFIED-ATTR` when a generic example is pinned to a named entity without re-sourcing, or `TBD` when needed but absent everywhere. `Sources` lists each contributing value as `value@source`.
+
+**A decision page looks like this** — the `why` is the reason the page exists at all; a decision page without one is a failure:
+
+```
+---
+title: Primary CTA is orange, not brand navy
+type: decision
+status: current
+updated: 2026-07-11
+sources:
+  - .twt-artifacts/design/design-system/tokens.css
+tags: [design-system, color]
+---
+
+# Primary CTA is orange, not brand navy
+
+**Decided:** the primary CTA uses the orange accent.
+
+**Why:** brand navy failed WCAG AA against the dark hero (2.9:1). Orange clears it at 4.8:1.
+
+**Evidence:** [tokens.css](../../.twt-artifacts/design/design-system/tokens.css) — captured via AskUserQuestion, 2026-07-11T14:03:22Z.
+
+**Reversible:** yes — reverting means re-solving hero contrast.
+
+**Superseded by:** _none_
+```
+
+Note what the evidence line does *not* do: it does not cite `.project-wiki/inbox.md#<timestamp>` as a `sources:` path. Step 8 empties `inbox.md` in this same run, so a link into it would be dead before the page is even saved. `AGENTS.md` lists exactly four things a claim may cite — source path, artifact path, URL, or `log.md` entry — inbox.md is deliberately not one of them. Record the inbox timestamp as plain provenance text in the body instead, the way the example does.
+
+**An idea page** carries `type: idea` and `status: raw | shaped | scoped | shipped | dropped`, plus what it is, why it might matter, and what would have to be true to scope it.
+
+## Step 4 — Synthesize newly ingested sources
+For each source in `sources.md` not yet reflected on any page, read it from the location in that row's `Where` column. That location is not always under `raw/`: per `twt-wiki-fetch`, a binary or fetched extract is copied into `raw/...`, but a file already in the repo (or a very large file) is registered by its original project-relative path instead and was never copied. Read whichever path the row actually names, then fold what matters into existing entity/concept pages. **Update, never duplicate** — a second page about the same entity is a bug. Create a new page only when the knowledge is durable and has no home.
+
+## Step 5 — Handle contradictions honestly (do not resolve them silently)
+When a new source contradicts a current page, or two sources disagree:
+- Set the affected page to `status: needs-review`.
+- Record both values with their sources.
+- For a factual value, add or update its row in `facts.md`: `Status` = `CONFLICT`, `Canonical value` = `TBD`, `Sources` = each disagreeing value as `value@source` — **never silently pick a side.**
+- Add a row to `open-questions.md`.
+- Surface every one of these in your report.
+
+## Step 6 — Link artifacts, never copy them
+When a claim is evidenced by a twt artifact, cite it as a **relative path** into `.twt-artifacts/`. Never copy an artifact's content into a wiki page. Artifacts regenerate; a copy is stale the moment the skill re-runs.
+
+## Step 7 — Update the index and overview
+Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date. Refresh `overview.md` if the project's what/who/where-it-stands has changed.
+
+## Step 8 — Drain the inbox and log
+Remove from `inbox.md` only the entries you actually promoted to a page/row or explicitly dismissed this pass. Never remove one you left because you were unsure — see the rule below.
+
+- If **every** entry in the inbox was drained (promoted or dismissed), reset `inbox.md` to just its header comment (keep the comment; it documents the format for the hook).
+- If **any** entry remains undrained, rewrite `inbox.md` to keep the header comment plus exactly those remaining entries, verbatim and in their original order. Do not perform the full reset in this case.
+
+**Never discard an undrained entry.** If you are unsure about an entry, leave it in the inbox and say so in your report — this is the one rule that cannot bend, since losing a captured decision defeats the entire point of the inbox.
+
+Append to `log.md`:
+
+```
+## <YYYY-MM-DD> — curate
+Drained <n> inbox entries: <n> decisions, <n> ideas, <n> entities, <n> facts, <n> dismissed. <n> left undrained.
+Contradictions raised: <n>.
+```
+
+## Step 9 — Report
+Tell the user:
+- Pages created and updated, with paths
+- Every contradiction raised, and where it now lives
+- Every inbox entry dismissed, and why
+- Every inbox entry left undrained, and why
+- What still needs a human decision
