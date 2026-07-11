@@ -68,6 +68,7 @@ flowchart TB
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
     twt_text_analysis["/twt-text-analysis"]:::skill
+    twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -163,6 +164,7 @@ flowchart TB
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
+    twt_content_fetch -.-> twt_wiki_fetch
 
     classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
 ```
@@ -297,6 +299,10 @@ flowchart TB
 ### status
 
 - /twt-status - Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
+
+### wiki
+
+- /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
 
 ## Per-skill details
 
@@ -582,7 +588,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design
+- Soft consumers: twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-wiki-fetch
 
 **Reads:**
 - <provided sources>
@@ -2088,6 +2094,34 @@ flowchart TB
 | .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx |  |
 | .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/optimized.md |  |
 
+### /twt-wiki-fetch
+
+**Category:** wiki
+**Version:** 1.0.0
+
+**Inputs:**
+- One or more sources — a path, a URL, a pasted note, or a folder
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .project-wiki/sources.md
+- .project-wiki/raw/assets.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .project-wiki/raw/ |  |
+| .project-wiki/sources.md |  |
+| .project-wiki/raw/assets.md |  |
+| .project-wiki/log.md |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -2152,6 +2186,7 @@ flowchart TB
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
 | /twt-text-analysis | none | none |
+| /twt-wiki-fetch | none | twt-content-fetch |
 
 ## Artifact namespace summary
 

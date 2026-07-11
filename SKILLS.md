@@ -60,6 +60,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
+| [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
 
 ---
 ## /twt-block-preview
@@ -2170,3 +2171,41 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 - A rewrite appears only when it safely fixes at least one detected weakness, improves at least one relevant metric by 10+ points, does not worsen any relevant metric, preserves meaning, avoids invented facts, sounds natural, and is not merely a stylistic preference.
 - When no better wording is available, the report says exactly: `Suggested Version: No better wording found.` and `Decision: Keep original.` This is a valid successful outcome.
 - Three derived artifacts are written and nothing else changes: `analysis-report.md` (the scored critique), `analysis-report.xlsx` (the same per-block findings as a sortable/filterable spreadsheet), and `optimized.md` (validated proposed rewrites assembled into one document, clearly labelled as proposed, not applied). The subject file is left untouched in every mode.
+
+---
+
+## /twt-wiki-fetch
+
+**Category:** wiki
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it.
+
+**Inputs:**
+- One or more sources — a path, a URL, a pasted note, or a folder
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Reads:**
+- .project-wiki/sources.md
+- .project-wiki/raw/assets.md
+
+**Writes:**
+- .project-wiki/raw/
+- .project-wiki/sources.md
+- .project-wiki/raw/assets.md
+- .project-wiki/log.md
+
+**Non-goals:**
+- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`. That is the curator's job alone.
+- Does not interpret or synthesize. It registers evidence; it does not draw conclusions from it.
+- Does not delete or edit anything already in `raw/`. Raw evidence is immutable.
+
+**Success criteria:**
+- Every requested source is either copied into `raw/` or registered in `sources.md` by path/URL.
+- Every binary lands in `raw/assets/` and gets a row in `raw/assets.md`.
+- `log.md` gains one ingest entry.
+- No curated page changed.
