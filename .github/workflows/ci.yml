@@ -13,7 +13,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22, not 20: `node --test` only supports glob patterns from Node 21.
+          node-version: 22
 
       - name: Unit tests (node --test)
         run: node --test "tests/**/*.test.mjs"

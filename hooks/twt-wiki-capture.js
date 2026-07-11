@@ -32,11 +32,17 @@ function oneLine(v) {
  * back to recording the raw payload rather than dropping the decision.
  * Returns a { question: answer } map, possibly empty.
  */
-function extractAnswers(data) {
+function extractAnswers(data, questions) {
   const candidates = [data && data.tool_response, data && data.tool_input];
   for (let c of candidates) {
     if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { continue; } }
-    if (c && typeof c === 'object' && c.answers && typeof c.answers === 'object') return c.answers;
+    if (!c || typeof c !== 'object') continue;
+    if (c.answers && typeof c.answers === 'object') return c.answers;
+    // Tolerate a bare { question: answer } map with no `answers` wrapper - the
+    // sibling twt-debug-log hook hedges the same way (`r.answers || r`). Only
+    // accept it when it actually keys one of THIS call's questions, so an
+    // unrelated response object can never be mistaken for an answer map.
+    if (questions.some((q) => q && typeof c[q] === 'string')) return c;
   }
   return {};
 }
@@ -54,7 +60,7 @@ function main() {
     ? data.tool_input.questions : [];
   if (!questions.length) return;
 
-  const answers = extractAnswers(data);
+  const answers = extractAnswers(data, questions.map((q) => q && q.question));
   const stamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
   let out = '';
@@ -68,8 +74,14 @@ function main() {
     out += `\n## ${stamp} · decision · AskUserQuestion\n`;
     out += `- **question:** ${question}\n`;
     if (options) out += `- **options:** ${options}\n`;
+    // No parseable answer: never drop the decision - record the payload verbatim
+    // so a human can still recover what was chosen. JSON.stringify(undefined)
+    // yields the value `undefined`, not a string, so guard the absent case.
     if (chosen) out += `- **chosen:** ${chosen}\n`;
-    else out += `- **raw:** ${oneLine(JSON.stringify(data.tool_response))}\n`;
+    else {
+      const raw = oneLine(JSON.stringify(data.tool_response)) || '(no tool_response in payload)';
+      out += `- **raw:** ${raw}\n`;
+    }
   }
 
   if (!out) return;

@@ -69,6 +69,34 @@ test('appends rather than overwrites', () => {
   assert.match(text, /\*\*chosen:\*\* Orange/, 'new content added');
 });
 
+test('accepts a bare {question: answer} map with no `answers` wrapper', () => {
+  // The sibling twt-debug-log hook hedges with `r.answers || r`, so the real
+  // payload may arrive unwrapped. Either shape must yield a real `chosen:`.
+  const dir = newProject({ withWiki: true });
+  runHook({
+    ...ASK_PAYLOAD,
+    tool_response: { 'Which accent for the primary CTA?': 'Orange' },
+  }, dir);
+  const text = readFileSync(inbox(dir), 'utf8');
+  assert.match(text, /\*\*chosen:\*\* Orange/, 'unwrapped answer map must still be parsed');
+  assert.equal(/\*\*raw:\*\*/.test(text), false, 'must not fall back to raw when the answer is recoverable');
+});
+
+test('an unrelated response object is not mistaken for an answer map', () => {
+  const dir = newProject({ withWiki: true });
+  runHook({ ...ASK_PAYLOAD, tool_response: { unrelated: 'noise' } }, dir);
+  const text = readFileSync(inbox(dir), 'utf8');
+  assert.equal(/\*\*chosen:\*\*/.test(text), false, 'must not invent an answer');
+  assert.match(text, /\*\*raw:\*\*/, 'falls back to raw instead');
+});
+
+test('raw field is never empty when tool_response is absent entirely', () => {
+  const dir = newProject({ withWiki: true });
+  runHook({ tool_name: 'AskUserQuestion', tool_input: { questions: [{ question: 'Q?' }] } }, dir);
+  const text = readFileSync(inbox(dir), 'utf8');
+  assert.match(text, /\*\*raw:\*\* \(no tool_response in payload\)/, 'absent payload is stated, not blank');
+});
+
 test('ignores tools other than AskUserQuestion', () => {
   const dir = newProject({ withWiki: true });
   runHook({ tool_name: 'Bash', tool_input: { command: 'ls' } }, dir);
