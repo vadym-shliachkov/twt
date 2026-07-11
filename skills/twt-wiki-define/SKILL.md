@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-define
 category: wiki
-description: (v1.0.0) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-version: 1.0.0
+description: (v1.0.1) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -11,6 +11,7 @@ dependencies:
   soft:
     - twt-wiki-fetch
 reads:
+  - .project-wiki/AGENTS.md
   - .project-wiki/inbox.md
   - .project-wiki/index.md
   - .project-wiki/overview.md
@@ -47,7 +48,7 @@ writes:
 - Does not silently resolve a contradiction.
 
 **Success criteria:**
-- Every `inbox.md` entry is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
+- Every `inbox.md` entry inside this run's scope (all of it, unless a focus argument narrowed the pass — see Step 2b) is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
 - Every claim on a curated page cites a source path, artifact path, URL, or `log.md` entry — never a path into `inbox.md`, which this skill empties.
 - `index.md` lists every page with a current one-line summary.
 - Contradictions are marked `status: needs-review`, never overwritten.
@@ -58,12 +59,22 @@ writes:
 ## Step 1 — Detect mode (CONVENTIONS §10)
 Read `.project-wiki/index.md`. If curated pages already exist, this is **refinement mode**: you are merging into an existing wiki, not building one. Never overwrite a `decisions/`, `entities/`, or `ideas/` page — or a `facts.md`/`open-questions.md` row — wholesale; merge into it and preserve its existing citations. These hold decisions a human made and cannot be re-asked for free.
 
-`index.md` and `overview.md` are different: they are synthesized catalogs, not hand-fed content, and Step 7 regenerates them fresh from the current page set on every run. Rewriting them is not "overwriting a page" in the sense this step forbids.
+`index.md` is different: it is a synthesized catalog, not hand-fed content, and Step 7 rewrites it fresh from the current page set on every run — that is not "overwriting a page" in the sense this step forbids. `overview.md` is not purely synthesized, though — it can carry hand-added prose about the project that no page or artifact restates, so Step 7 **merges** into its existing text rather than regenerating it from scratch. Treat it like any other curated page: update, don't duplicate or discard.
 
 If `.project-wiki/AGENTS.md` does not exist, stop: the wiki has not been initialized. Tell the user to run `/twt-wiki`.
 
 ## Step 2 — Read the operating manual
 Read `.project-wiki/AGENTS.md`. It is the wiki's own schema and it wins over your assumptions — if it and this skill disagree, follow `AGENTS.md` and say so in your report.
+
+## Step 2b — Apply a focus argument (if given)
+Check `$ARGUMENTS` (see `skills/twt-curation-define/SKILL.md` Step 1b for the sibling pattern this follows). If it is empty, this is a full pass — curate everything pending and skip to Step 3 unchanged.
+
+If `$ARGUMENTS` names a focus, it narrows Steps 3–5 to that scope only:
+- **`inbox only`** — drain `inbox.md` as normal, but skip Step 4 entirely: do not synthesize any source from `sources.md` this run.
+- **A topic** (e.g. `pricing`, `design-system`) — in Step 3, group and promote only inbox entries whose content matches the topic; in Step 4, synthesize only sources relevant to it. Leave every non-matching inbox entry exactly as found.
+- **A page path** (e.g. `decisions/2026-07-11-cta-color.md` or `entities/acme-corp`) — narrow Steps 3–5 to inbox entries and sources that bear on that one page. Leave everything else untouched.
+
+A focus never excuses Step 5 (contradictions) or Step 8's undrained-entry rule for whatever it *does* touch. In the Step 9 report, say explicitly which entries were left because they were out of this run's focus (by design, not a failure) versus left because they were genuinely unclear (see Step 8).
 
 ## Step 3 — Drain the inbox
 Read `.project-wiki/inbox.md`. It is append-only capture: each entry is a `## ` section whose heading is `<ISO-8601 UTC> · <kind> · <source>`, with `- **key:** value` fields. `kind` is `decision` (a human answered a question) or `reason` (a skill recorded its reasoning).
@@ -88,7 +99,7 @@ open-questions.md:  | Question | Why it matters | Blocked | Raised |
 
 For a fact row: `Status` is `RESOLVED` when there is one source or all sources agree (`Canonical value` = the settled value), `CONFLICT` when sources disagree (see Step 5), `UNVERIFIED-ATTR` when a generic example is pinned to a named entity without re-sourcing, or `TBD` when needed but absent everywhere. `Sources` lists each contributing value as `value@source`.
 
-**A decision page looks like this** — the `why` is the reason the page exists at all; a decision page without one is a failure:
+**A decision page looks like this** — the `why` is the reason the page exists at all, and it must be a *real* reason, never a manufactured one:
 
 ```
 ---
@@ -114,6 +125,14 @@ tags: [design-system, color]
 **Superseded by:** _none_
 ```
 
+**When there is no paired reason, do not invent one.** The capture hook only ever emits `question` / `options` / `chosen` (or `raw`) — it never records *why* a choice was made; a `why` exists only when a separate `kind: reason` entry was also captured alongside the `decision` (a mechanism not every skill uses yet). If Step 3's grouping finds a `decision` with no matching `reason` entry, that page legitimately has no rationale on record. Fabricating a plausible-sounding one — even a cautious, "probably because..." guess — is never acceptable: it fabricates provenance in a system whose entire purpose is trustworthy provenance, which is worse than an honest gap. Write the `why` as explicitly unknown instead, and mark the page for human follow-up:
+
+```
+**Why:** _not captured — the choice was recorded, the reason was not._
+```
+
+...and set that page's `status: needs-review` (not `current`) until a human supplies the reason or confirms the page doesn't need one.
+
 Note what the evidence line does *not* do: it does not cite `.project-wiki/inbox.md#<timestamp>` as a `sources:` path. Step 8 empties `inbox.md` in this same run, so a link into it would be dead before the page is even saved. `AGENTS.md` lists exactly four things a claim may cite — source path, artifact path, URL, or `log.md` entry — inbox.md is deliberately not one of them. Record the inbox timestamp as plain provenance text in the body instead, the way the example does.
 
 **An idea page** carries `type: idea` and `status: raw | shaped | scoped | shipped | dropped`, plus what it is, why it might matter, and what would have to be true to scope it.
@@ -133,7 +152,7 @@ When a new source contradicts a current page, or two sources disagree:
 When a claim is evidenced by a twt artifact, cite it as a **relative path** into `.twt-artifacts/`. Never copy an artifact's content into a wiki page. Artifacts regenerate; a copy is stale the moment the skill re-runs.
 
 ## Step 7 — Update the index and overview
-Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date. Refresh `overview.md` if the project's what/who/where-it-stands has changed.
+Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date. For `overview.md`, do not regenerate it: read its current text and merge in only what changed in the project's what/who/where-it-stands, preserving any hand-added prose that this run's changes don't invalidate.
 
 ## Step 8 — Drain the inbox and log
 Remove from `inbox.md` only the entries you actually promoted to a page/row or explicitly dismissed this pass. Never remove one you left because you were unsure — see the rule below.

@@ -2178,7 +2178,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into curated, cited pages that a human or an agent can actually navigate.
@@ -2191,6 +2191,7 @@ Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into c
 - Soft: twt-wiki-fetch
 
 **Reads:**
+- .project-wiki/AGENTS.md
 - .project-wiki/inbox.md
 - .project-wiki/index.md
 - .project-wiki/overview.md
@@ -2221,7 +2222,7 @@ Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into c
 - Does not silently resolve a contradiction.
 
 **Success criteria:**
-- Every `inbox.md` entry is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
+- Every `inbox.md` entry inside this run's scope (all of it, unless a focus argument narrowed the pass — see Step 2b) is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
 - Every claim on a curated page cites a source path, artifact path, URL, or `log.md` entry — never a path into `inbox.md`, which this skill empties.
 - `index.md` lists every page with a current one-line summary.
 - Contradictions are marked `status: needs-review`, never overwritten.

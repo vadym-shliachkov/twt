@@ -2100,7 +2100,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2114,6 +2114,7 @@ flowchart TB
 - Soft consumers: none
 
 **Reads:**
+- .project-wiki/AGENTS.md
 - .project-wiki/inbox.md
 - .project-wiki/index.md
 - .project-wiki/overview.md
