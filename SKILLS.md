@@ -600,7 +600,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.

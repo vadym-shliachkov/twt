@@ -1,8 +1,8 @@
 ---
 name: twt-curation-define
 category: curation
-description: (v1.1.1) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
-version: 1.1.1
+description: (v1.1.2) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
+version: 1.1.2
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive
@@ -108,6 +108,29 @@ The inventory from Step 3 is now complete and written; each page's outline depen
 - Write **only** its own `outlines/<page-slug>.md` — touch no shared file (the inventory is already final).
 
 Wait for all the page agents to finish before reporting.
+
+## Wiki capture — record what you decided and why
+If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+
+Append one entry per judgment that a human would need to re-make if it were lost:
+- a decision you made autonomously (collect mode, or an unattended run)
+- a factual `CONFLICT` you resolved, or refused to resolve
+- a validator BLOCKER you overruled, and on what grounds
+- an idea you raised but did not scope
+
+Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+
+```
+## <ISO-8601 UTC timestamp> · reason · <this skill's name>
+- **decision:** <what you settled>
+- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **evidence:** <path, URL, or artifact this rests on>
+- **reversible:** <yes|no>
+```
+
+Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
+
+If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
 
 ## Step 5 — Report
 Inventory counts (kept/skipped/elevated), outline files written (one per page), gaps flagged, and the **facts ledger summary** (facts reconciled, and how many are RESOLVED vs. CONFLICT / UNVERIFIED-ATTR / TBD, plus provided vs. missing asset roles). Suggest `/twt-curation-validate`.

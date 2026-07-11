@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.8) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.8
+description: (v1.8.9) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.9
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -632,6 +632,29 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 `tokens.md` is always generated. The others are opt-in.
 
 ---
+
+## Wiki capture — record what you decided and why
+If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+
+Append one entry per judgment that a human would need to re-make if it were lost:
+- a decision you made autonomously (collect mode, or an unattended run)
+- a factual `CONFLICT` you resolved, or refused to resolve
+- a validator BLOCKER you overruled, and on what grounds
+- an idea you raised but did not scope
+
+Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+
+```
+## <ISO-8601 UTC timestamp> · reason · <this skill's name>
+- **decision:** <what you settled>
+- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **evidence:** <path, URL, or artifact this rests on>
+- **reversible:** <yes|no>
+```
+
+Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
+
+If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
 
 ## Step 12 — Completion
 

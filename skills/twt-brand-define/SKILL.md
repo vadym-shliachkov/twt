@@ -1,8 +1,8 @@
 ---
 name: twt-brand-define
 category: brand
-description: (v1.1.2) Build or refine the canonical brand-brief.md through guided dialogue
-version: 1.1.2
+description: (v1.1.3) Build or refine the canonical brand-brief.md through guided dialogue
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Optional starting notes or answers; otherwise interactive
@@ -79,6 +79,29 @@ In collect mode, apply the same coverage-aware rule without prompting: fill Core
 
 ## Step 3 — Write the brief
 Write/update `.twt-artifacts/pre-design/brand/brand-brief.md` with sections: `# Brand Brief`, `## Identity`, `## Palette` (table: name | hex | usage), `## Typography`, `## Voice & Tone` (attributes + do/don't), `## Audience signals`, `## Sources`. Mark unknowns `TBD` rather than guessing. Confirm before overwriting.
+
+## Wiki capture — record what you decided and why
+If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+
+Append one entry per judgment that a human would need to re-make if it were lost:
+- a decision you made autonomously (collect mode, or an unattended run)
+- a factual `CONFLICT` you resolved, or refused to resolve
+- a validator BLOCKER you overruled, and on what grounds
+- an idea you raised but did not scope
+
+Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+
+```
+## <ISO-8601 UTC timestamp> · reason · <this skill's name>
+- **decision:** <what you settled>
+- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **evidence:** <path, URL, or artifact this rests on>
+- **reversible:** <yes|no>
+```
+
+Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
+
+If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
 
 ## Step 4 — Report
 Sections written/changed, any remaining TBDs, and suggest `/twt-brand-validate` next.

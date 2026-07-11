@@ -374,7 +374,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -770,7 +770,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -935,7 +935,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.8
+**Version:** 1.8.9
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
