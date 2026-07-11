@@ -832,7 +832,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.2
+**Version:** 1.3.3
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -998,7 +998,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.5
+**Version:** 1.3.6
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -1627,7 +1627,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.3
+**Version:** 1.2.4
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1693,7 +1693,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -1947,7 +1947,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.5
+**Version:** 1.5.6
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2107,7 +2107,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2176,7 +2176,7 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
