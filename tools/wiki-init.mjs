@@ -90,10 +90,13 @@ put('inbox.md',
      (twt-wiki-define). Do not edit or reorder by hand; do not delete undrained entries.
      Entry format:
 
-     ## <ISO-8601 UTC> - decision|reason - <source>
+     ## <ISO-8601 UTC> · decision|reason · <source>
      - **question:** ...
      - **options:** a | b
      - **chosen:** a
+
+     The separator is a middle dot (U+00B7), not a hyphen - it is what the
+     capture hook emits and what the curator parses. Do not "correct" it.
 -->
 `);
 
@@ -102,7 +105,7 @@ put('log.md', fm('Log', 'report') +
 
 Append-only. One entry per ingest, curation, query, or lint.
 
-## ${today} - init
+## ${today} — init
 Wiki initialized.
 `);
 
