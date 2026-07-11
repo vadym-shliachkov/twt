@@ -1,8 +1,8 @@
 ---
 name: twt-wiki
 category: wiki
-description: (v1.0.0) Initialize, ingest into, and curate the project wiki — the project's durable memory
-version: 1.0.0
+description: (v1.0.1) Initialize, ingest into, and curate the project wiki — the project's durable memory
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -61,7 +61,10 @@ It is idempotent and never overwrites an existing file. Tell the user that decis
 **If it exists**, continue.
 
 ## Step 2 — Ingest sources, or note a curation focus
-`$ARGUMENTS` (or what the user offers unprompted) means one of two things — sources to ingest, or a focus that narrows Step 3's curation pass to a page, a topic, or `inbox only` — never both (see this command's `inputs`). Treat it as **source(s)** when it names files, URLs, pasted notes, or an explicit ask to ingest something; treat it as a **focus** when it is `inbox only`, a bare topic word (e.g. `pricing`), or a wiki page path (e.g. `decisions/2026-07-11-cta-color.md`). If it is genuinely ambiguous, ask the user which they mean via a plain-text prompt (free-form input, not AskUserQuestion — CONVENTIONS §4).
+`$ARGUMENTS` (or what the user offers unprompted) means one of two things — sources to ingest, or a focus that narrows Step 3's curation pass to a page, a topic, or `inbox only` — never both (see this command's `inputs`). Treat it as **source(s)** when it names files, URLs, pasted notes, or an explicit ask to ingest something; treat it as a **focus** when it is `inbox only`, a bare topic word (e.g. `pricing`), or a wiki page path (e.g. `decisions/2026-07-11-cta-color.md`). If it is genuinely ambiguous, this is a fixed, mutually-exclusive choice, so ask via **AskUserQuestion** (single-select, header "Ingest or focus") — not a plain-text prompt (CONVENTIONS §4):
+- **Treat as source(s) to ingest** (dispatch fetch on the given input)
+- **Treat as a curation focus** (carry it forward to Step 3 unchanged)
+- **You decide**
 
 - **Sources** — dispatch `twt-wiki-fetch` (Agent tool) with them. Do not reimplement ingestion inline (CONVENTIONS §5).
 - **A focus** — do not dispatch fetch for it; carry it forward unchanged to Step 3.

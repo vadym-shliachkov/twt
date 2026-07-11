@@ -2104,7 +2104,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
