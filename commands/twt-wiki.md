@@ -1,8 +1,8 @@
 ---
 name: twt-wiki
 category: wiki
-description: (v1.0.1) Initialize, ingest into, and curate the project wiki — the project's durable memory
-version: 1.0.1
+description: (v1.0.2) Initialize, ingest into, and curate the project wiki — the project's durable memory
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional sources to ingest, or a focus for curation; otherwise interactive

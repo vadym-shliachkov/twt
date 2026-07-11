@@ -600,7 +600,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -2179,7 +2179,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 The single entry point to the project wiki — `.project-wiki/`, the durable memory that holds what `.twt-artifacts/` cannot: why decisions were made, what was ruled out, what the client said, ideas not yet scoped, and the assets themselves.
@@ -2214,7 +2214,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 ## /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it.
@@ -2253,7 +2253,7 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 ## /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Answer a question about the project from its durable memory — including the questions no artifact can answer, like *why is the CTA orange* or *what did we rule out and why*.

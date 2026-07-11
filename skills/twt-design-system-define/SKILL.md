@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.9) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.9
+description: (v1.8.10) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.10
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL

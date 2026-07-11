@@ -374,7 +374,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -770,7 +770,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -935,7 +935,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.9
+**Version:** 1.8.10
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -2107,7 +2107,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2131,7 +2131,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2175,7 +2175,7 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - One or more sources — a path, a URL, a pasted note, or a folder
@@ -2204,7 +2204,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - The question to ask; otherwise interactive

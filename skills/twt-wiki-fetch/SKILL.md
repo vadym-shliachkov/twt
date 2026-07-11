@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-fetch
 category: wiki
-description: (v1.0.1) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
-version: 1.0.1
+description: (v1.0.2) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - One or more sources — a path, a URL, a pasted note, or a folder
