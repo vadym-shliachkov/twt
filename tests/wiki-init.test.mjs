@@ -51,9 +51,20 @@ test('is idempotent and never overwrites an existing file', () => {
   const dir = newProject();
   run(dir);
   writeFileSync(wiki(dir, 'overview.md'), 'HAND-EDITED, DO NOT CLOBBER');
+  writeFileSync(wiki(dir, 'AGENTS.md'), 'HAND-EDITED');
   const out = run(dir);
   assert.equal(readFileSync(wiki(dir, 'overview.md'), 'utf8'), 'HAND-EDITED, DO NOT CLOBBER');
   assert.match(out, /exists: .*overview\.md/);
+  // AGENTS.md is copied via a separate copyFileSync code path that does not
+  // share the put() guard - assert it independently so that path is proven safe.
+  assert.equal(readFileSync(wiki(dir, 'AGENTS.md'), 'utf8'), 'HAND-EDITED');
+  assert.match(out, /exists: .*AGENTS\.md/);
+});
+
+test('normalizes nested-folder log output to forward slashes', () => {
+  const dir = newProject();
+  const out = run(dir);
+  assert.match(out, /created: \.project-wiki\/decisions\/\.gitkeep/);
 });
 
 test('starter pages carry the required frontmatter fields', () => {

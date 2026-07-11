@@ -5,7 +5,7 @@
  * Idempotent: never overwrites an existing file. Safe to re-run.
  * Usage: node tools/wiki-init.mjs <projectDir> [--name "Project Name"]
  */
-import { mkdirSync, writeFileSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
