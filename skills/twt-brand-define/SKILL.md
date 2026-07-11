@@ -92,7 +92,7 @@ Append one entry per judgment that a human would need to re-make if it were lost
 Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
 
 ```
-## <ISO-8601 UTC timestamp> · reason · <this skill's name>
+## <UTC timestamp, e.g. 2026-07-11T14:03:22Z — no milliseconds, matching the capture hook> · reason · <this skill's name>
 - **decision:** <what you settled>
 - **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
 - **evidence:** <path, URL, or artifact this rests on>
