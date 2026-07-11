@@ -172,7 +172,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 - **The wiki links to artifacts; it never copies them.** A copied artifact is stale the moment its skill re-runs.
 - **Capture is append-only and has many writers.** The `twt-wiki-capture` hook records every `AskUserQuestion` answer; the `wiki-append` block lets a skill record its own reasoning. Both append to `.project-wiki/inbox.md` and touch nothing else. Appending cannot corrupt.
-- **Curation has exactly one writer.** Only `twt-wiki-define` writes a curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`).
+- **Curation has exactly one writer.** The scaffolder seeds each curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `index.md`, `overview.md`) with an empty stub once, at init, never overwriting a file that already exists; from then on, only `twt-wiki-define` writes into them.
 - **The wiki is opt-in.** Every wiki writer — hook and skill alike — is inert when `.project-wiki/` does not exist.
 - **Nothing auto-writes to a curated page.** Orchestrators may *offer* to curate; they never do it silently. Synthesized prose written unasked into a durable store is how a wiki fills with slop and gets abandoned.
 - **No skill deletes a source file or a wiki page** without explicit user approval.

@@ -40,8 +40,11 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 
 - **The capture hook and skills** append to `inbox.md` and **nothing else**. Appending
   cannot corrupt.
-- **The curator** (`twt-wiki-define`) is the only thing that writes a curated page:
-  `decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`.
+- **The scaffolder** seeds each curated page — `decisions/`, `entities/`, `ideas/`,
+  `facts.md`, `open-questions.md`, `index.md`, `overview.md` — with an empty stub once,
+  at init, never overwriting a file that already exists.
+- **The curator** (`twt-wiki-define`) is the only thing that writes *into* a curated
+  page after that — the same list, now with real content.
 - **Nothing** deletes a source file or a wiki page without explicit human approval.
 
 ## Page frontmatter
