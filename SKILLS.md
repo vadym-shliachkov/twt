@@ -2177,7 +2177,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it.
@@ -2190,6 +2190,7 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 - Soft: twt-content-fetch
 
 **Reads:**
+- .project-wiki/AGENTS.md
 - .project-wiki/sources.md
 - .project-wiki/raw/assets.md
 

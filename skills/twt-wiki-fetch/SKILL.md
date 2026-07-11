@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-fetch
 category: wiki
-description: (v1.0.0) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
-version: 1.0.0
+description: (v1.0.1) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - One or more sources — a path, a URL, a pasted note, or a folder
@@ -11,6 +11,7 @@ dependencies:
   soft:
     - twt-content-fetch
 reads:
+  - .project-wiki/AGENTS.md
   - .project-wiki/sources.md
   - .project-wiki/raw/assets.md
 writes:
@@ -47,7 +48,7 @@ For each source in `$ARGUMENTS` (or ask the user for sources if none were given)
 
 | Source | What to do |
 |---|---|
-| **Binary** (logo, image, PDF brand book, font) | Copy into `.project-wiki/raw/assets/`. Add a row to `raw/assets.md`: file · what it is · provenance · usage constraints. |
+| **Binary** (logo, image, PDF brand book, font) | Copy into `.project-wiki/raw/assets/` (Bash, single `cp` command — a binary isn't text, so the Read/Write file tools don't apply). Add a row to `raw/assets.md`: file · what it is · provenance · usage constraints. |
 | **Meeting note / transcript / email** | Save as Markdown under `.project-wiki/raw/meetings/YYYY-MM-DD-<slug>.md`. |
 | **URL, website, Google Doc, Figma file** | Dispatch `/twt-content-fetch` (Agent tool) to extract it — never reimplement extraction. Save its clean Markdown output under `.project-wiki/raw/<slug>.md`. |
 | **Pasted text** | Save verbatim under `.project-wiki/raw/<slug>.md`. |
@@ -63,7 +64,7 @@ Append one row per source to the table in `.project-wiki/sources.md`:
 | Brand book v3 | asset | `raw/assets/brand-book-v3.pdf` | 2026-07-11 |
 | acme.com | site | `raw/acme-com.md` | 2026-07-11 |
 
-Never remove or rewrite an existing row. If a source is superseded, add the new row and note the supersession in the old row's `Kind` cell (e.g. `site (superseded by acme-com-v2)`).
+Never remove or rewrite an existing row, for any reason — not even supersession. If a source supersedes an earlier one, express that only on the **new** row's `Kind` cell (e.g. `site (supersedes acme-com)`); the old row for `acme-com` is left exactly as first registered.
 
 ## Step 4 — Log
 Append to `.project-wiki/log.md`:

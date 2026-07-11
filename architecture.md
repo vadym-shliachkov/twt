@@ -2097,7 +2097,7 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - One or more sources — a path, a URL, a pasted note, or a folder
@@ -2111,6 +2111,7 @@ flowchart TB
 - Soft consumers: none
 
 **Reads:**
+- .project-wiki/AGENTS.md
 - .project-wiki/sources.md
 - .project-wiki/raw/assets.md
 
