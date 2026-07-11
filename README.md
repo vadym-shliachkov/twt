@@ -94,7 +94,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-spec | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | /twt-text-analysis | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
-| /twt-wiki-define | wiki | Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages |
+| /twt-wiki | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | /twt-wiki-fetch | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
 <!-- TWT_SKILLS_TABLE_END -->
 

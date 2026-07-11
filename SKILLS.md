@@ -60,7 +60,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
-| [/twt-wiki-define](#twt-wiki-define) | wiki | Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages |
+| [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
 
 ---
@@ -2175,58 +2175,38 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 
 ---
 
-## /twt-wiki-define
+## /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.0
 **Accepts arguments:** yes
 
-Turn raw capture into memory. Drain `inbox.md` and newly ingested sources into curated, cited pages that a human or an agent can actually navigate.
+The single entry point to the project wiki — `.project-wiki/`, the durable memory that holds what `.twt-artifacts/` cannot: why decisions were made, what was ruled out, what the client said, ideas not yet scoped, and the assets themselves.
 
 **Inputs:**
-- Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
+- Optional sources to ingest, or a focus for curation; otherwise interactive
 
 **Dependencies:**
-- Hard: none
+- Hard: twt-wiki-define
 - Soft: twt-wiki-fetch
 
 **Reads:**
-- .project-wiki/AGENTS.md
-- .project-wiki/inbox.md
-- .project-wiki/index.md
-- .project-wiki/overview.md
-- .project-wiki/sources.md
-- .project-wiki/raw/
-- .project-wiki/decisions/
-- .project-wiki/entities/
-- .project-wiki/ideas/
-- .project-wiki/facts.md
-- .project-wiki/open-questions.md
-- .project-wiki/log.md
+- .project-wiki/
 
 **Writes:**
-- .project-wiki/decisions/
-- .project-wiki/entities/
-- .project-wiki/ideas/
-- .project-wiki/facts.md
-- .project-wiki/open-questions.md
-- .project-wiki/index.md
-- .project-wiki/overview.md
-- .project-wiki/inbox.md
-- .project-wiki/log.md
+- .project-wiki/
 
 **Non-goals:**
-- Does not ingest sources (that is `twt-wiki-fetch`).
-- Does not copy artifacts into the wiki. It **links** to `.twt-artifacts/` paths.
-- Does not delete a source file, a curated page, or an undrained inbox entry.
-- Does not silently resolve a contradiction.
+- Does not answer questions about the project — that is `/twt-wiki-query`.
+- Does not lint the wiki (not yet built).
+- Does not sync `.twt-artifacts/` into the wiki (not yet built).
+- Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
 **Success criteria:**
-- Every `inbox.md` entry inside this run's scope (all of it, unless a focus argument narrowed the pass — see Step 2b) is either promoted to a page/row or explicitly dismissed with a reason; any entry left because it was genuinely unclear stays in the inbox, undrained, and is called out in the report.
-- Every claim on a curated page cites a source path, artifact path, URL, or `log.md` entry — never a path into `inbox.md`, which this skill empties.
-- `index.md` lists every page with a current one-line summary.
-- Contradictions are marked `status: needs-review`, never overwritten.
-- Re-running enters refinement mode (CONVENTIONS §10).
+- `.project-wiki/` exists and capture is armed (the hook only records once the folder exists).
+- Requested sources are ingested and registered.
+- The inbox is drained into cited pages.
+- The user is told what needs their decision.
 
 ---
 

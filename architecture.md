@@ -68,6 +68,7 @@ flowchart TB
     twt_spec_validate["/twt-spec-validate"]:::skill
     twt_status["/twt-status"]:::skill
     twt_text_analysis["/twt-text-analysis"]:::skill
+    twt_wiki["/twt-wiki"]:::skill
     twt_wiki_define["/twt-wiki-define"]:::skill
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_brand_fetch -.-> twt_brand
@@ -165,6 +166,8 @@ flowchart TB
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
+    twt_wiki_define --> twt_wiki
+    twt_wiki_fetch -.-> twt_wiki
     twt_wiki_fetch -.-> twt_wiki_define
     twt_content_fetch -.-> twt_wiki_fetch
 
@@ -304,6 +307,7 @@ flowchart TB
 
 ### wiki
 
+- /twt-wiki - Initialize, ingest into, and curate the project wiki — the project's durable memory
 - /twt-wiki-define - Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
 - /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
 
@@ -2097,6 +2101,30 @@ flowchart TB
 | .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx |  |
 | .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/optimized.md |  |
 
+### /twt-wiki
+
+**Category:** wiki
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional sources to ingest, or a focus for curation; otherwise interactive
+
+**Dependencies:**
+- Hard: twt-wiki-define
+- Soft: twt-wiki-fetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .project-wiki/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .project-wiki/ |  |
+
 ### /twt-wiki-define
 
 **Category:** wiki
@@ -2110,7 +2138,7 @@ flowchart TB
 - Soft: twt-wiki-fetch
 
 **Feeds into:**
-- Hard consumers: none
+- Hard consumers: twt-wiki
 - Soft consumers: none
 
 **Reads:**
@@ -2154,7 +2182,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-wiki-define
+- Soft consumers: twt-wiki, twt-wiki-define
 
 **Reads:**
 - .project-wiki/AGENTS.md
@@ -2233,6 +2261,7 @@ flowchart TB
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
 | /twt-text-analysis | none | none |
+| /twt-wiki | twt-wiki-define | twt-wiki-fetch |
 | /twt-wiki-define | none | twt-wiki-fetch |
 | /twt-wiki-fetch | none | twt-content-fetch |
 
