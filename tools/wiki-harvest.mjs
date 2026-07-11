@@ -172,7 +172,11 @@ function parseBlockers(text) {
     const title = m[1].trim();
     const block = [lines[i]];
     let j = i + 1;
-    while (j < lines.length && !/^##\s/.test(lines[j])) { block.push(lines[j]); j++; }
+    while (
+      j < lines.length
+      && !/^##\s/.test(lines[j])
+      && !/^###\s*\d+\.\s*\[/.test(lines[j])
+    ) { block.push(lines[j]); j++; }
     const blockText = block.join('\n').trim();
     const where = /\*\*Where:\*\*\s*(.+)/i.exec(blockText);
     const problem = /\*\*Problem:\*\*\s*(.+)/i.exec(blockText);
@@ -383,6 +387,19 @@ function harvest(projectDir, { dryRun = false } = {}) {
   for (const file of walk(artifactsDir)) {
     const relPath = toPosix(relative(projectDir, file));
     const bn = basename(file);
+
+    // Only the special basenames are ever decision-bearing; check the name
+    // FIRST so every other file (images, PDFs, DOCX/PPTX/XLSX exports, ...)
+    // gets a sources.md row from its path/extension alone, with no read.
+    if (!SPECIAL_BASENAMES.has(bn)) {
+      const id = `${relPath}#source#${sha1_12(relPath)}`;
+      if (record(id)) {
+        const kind = extToKind(extname(file));
+        sourceRows.push(`| ${bn} | ${kind} | ${relPath} | ${today()} |`);
+      }
+      continue;
+    }
+
     let content;
     try { content = readFileSync(file, 'utf8'); } catch (e) { continue; }
 
@@ -416,13 +433,6 @@ function harvest(projectDir, { dryRun = false } = {}) {
         if (record(id)) inboxChunks.push(buildSiteLogEntry(relPath, qa, id));
       }
       continue;
-    }
-
-    // Everything else: a sources.md row only. No summary, no copy.
-    const id = `${relPath}#source#${sha1_12(relPath)}`;
-    if (record(id)) {
-      const kind = extToKind(extname(file));
-      sourceRows.push(`| ${bn} | ${kind} | ${relPath} | ${today()} |`);
     }
   }
 

@@ -101,6 +101,84 @@ Generated: 2026-07-11  ·  Validator: /twt-design-system-validate
 Contrast blocks release; everything else is on track.
 `;
 
+// A validation-report.md with a BLOCKER followed by a WARNING and a
+// SUGGESTION under the same "## Findings" heading - the standard shape per
+// CONVENTIONS.md §12 (every real validator emits all three tiers together).
+// Regression fixture for the block-boundary bug: parseBlockers' scan for the
+// end of the BLOCKER's block used to stop only at the next "## " heading, so
+// it swallowed the WARNING and SUGGESTION findings below it into the
+// BLOCKER's own captured text (and therefore its stable-ID hash).
+const VALIDATION_REPORT_MULTI_MD = `# Validation report — design-system
+Generated: 2026-07-11  ·  Validator: /twt-design-system-validate
+
+## Scorecard
+| Criterion | Weight | Score (0-5) | Weighted | Evidence |
+|-----------|-------:|------------:|---------:|----------|
+| Contrast  |     25 |           2 |     10.0 | primary accent fails AA |
+| **Total** |  **100** |           |   **62** | |
+
+**Health: 62 — Band: Revise**
+
+## Decisions to confirm
+- none
+
+## Findings
+### 1. [BLOCKER] Primary CTA fails contrast
+- **Where:** tokens.css --color-accent
+- **Problem:** #1DB89C on #FFFFFF measures 2.1:1, fails AA 4.5:1 for body text
+- **Recommendation:** darken the accent or restrict it to large text
+
+### 2. [WARNING] Spacing scale drifts on mobile
+- **Where:** tokens.css --space-4
+- **Problem:** mobile gutter uses a value not in the spacing scale
+- **Recommendation:** snap to the nearest scale step
+
+### 3. [SUGGESTION] Consider a warmer neutral
+- **Where:** tokens.css --color-neutral-100
+- **Problem:** current neutral reads slightly cold against the brand palette
+- **Recommendation:** nudge hue +2 toward warm
+
+## Summary
+Contrast blocks release; spacing and neutral tone are polish items.
+`;
+
+// Same report, but with ONLY the WARNING's wording reworded (its Problem
+// line). The BLOCKER finding's own text is byte-identical to the fixture
+// above - a stable BLOCKER id must not change when this file is re-harvested.
+const VALIDATION_REPORT_MULTI_REWORDED_MD = `# Validation report — design-system
+Generated: 2026-07-11  ·  Validator: /twt-design-system-validate
+
+## Scorecard
+| Criterion | Weight | Score (0-5) | Weighted | Evidence |
+|-----------|-------:|------------:|---------:|----------|
+| Contrast  |     25 |           2 |     10.0 | primary accent fails AA |
+| **Total** |  **100** |           |   **62** | |
+
+**Health: 62 — Band: Revise**
+
+## Decisions to confirm
+- none
+
+## Findings
+### 1. [BLOCKER] Primary CTA fails contrast
+- **Where:** tokens.css --color-accent
+- **Problem:** #1DB89C on #FFFFFF measures 2.1:1, fails AA 4.5:1 for body text
+- **Recommendation:** darken the accent or restrict it to large text
+
+### 2. [WARNING] Spacing scale drifts on mobile
+- **Where:** tokens.css --space-4
+- **Problem:** mobile gutter measures 18px, which is not one of the 4/8/12/16/24 scale steps
+- **Recommendation:** snap to the nearest scale step
+
+### 3. [SUGGESTION] Consider a warmer neutral
+- **Where:** tokens.css --color-neutral-100
+- **Problem:** current neutral reads slightly cold against the brand palette
+- **Recommendation:** nudge hue +2 toward warm
+
+## Summary
+Contrast blocks release; spacing and neutral tone are polish items.
+`;
+
 const SITE_LOG_MD = `# Session log
 
 ## Run 2026-07-11T10:00:00Z
@@ -230,6 +308,41 @@ test('idempotency after drain: draining inbox.md by hand and re-running still ad
   const after = readFileSync(inboxPath(dir), 'utf8');
   assert.equal(after, scaffoldInbox, 'nothing should be re-added after a drain - the state file remembers what was already harvested');
   assert.equal(/harvested:/.test(out2), false);
+});
+
+test('a BLOCKER entry captures only its own finding, not the following WARNING/SUGGESTION text', () => {
+  const dir = newProject();
+  initWiki(dir);
+  writeArtifact(dir, 'design/design-system/validation-report.md', VALIDATION_REPORT_MULTI_MD);
+  run(dir);
+  const text = readFileSync(inboxPath(dir), 'utf8');
+  assert.match(text, /Primary CTA fails contrast/);
+  assert.match(text, /#1DB89C on #FFFFFF measures 2\.1:1/);
+  // The WARNING and SUGGESTION are lower tiers - never harvested as their own
+  // entries, and their text must not have leaked into the BLOCKER's entry.
+  assert.equal(/Spacing scale drifts/.test(text), false, 'the WARNING title must not appear in the BLOCKER entry');
+  assert.equal(/mobile gutter/.test(text), false, "the WARNING's Problem text must not leak into the BLOCKER entry");
+  assert.equal(/warmer neutral/.test(text), false, 'the SUGGESTION title must not appear in the BLOCKER entry');
+});
+
+test('stable-ID regression: rewording a LATER finding must not re-harvest an earlier BLOCKER', () => {
+  const dir = newProject();
+  initWiki(dir);
+  writeArtifact(dir, 'design/design-system/validation-report.md', VALIDATION_REPORT_MULTI_MD);
+  run(dir); // first harvest: BLOCKER captured, id recorded in .harvest-state.json
+  const after1 = readFileSync(inboxPath(dir), 'utf8');
+
+  // Reword ONLY the WARNING (a later finding) - the BLOCKER's own text is
+  // byte-identical. Before the fix, parseBlockers' block scan swallowed the
+  // WARNING into the BLOCKER's captured text, so this reword silently changed
+  // the BLOCKER's stable-ID hash too, and it would look "new" again.
+  writeArtifact(dir, 'design/design-system/validation-report.md', VALIDATION_REPORT_MULTI_REWORDED_MD);
+  const out2 = run(dir);
+  const after2 = readFileSync(inboxPath(dir), 'utf8');
+
+  assert.equal(after2, after1, 'inbox.md must not gain a duplicate/new BLOCKER entry after a later finding is reworded');
+  assert.equal(/harvested:/.test(out2), false, 'the BLOCKER must be reported as already-harvested, not harvested again');
+  assert.match(out2, /already:/);
 });
 
 test('--dry-run reports what it would harvest but writes nothing', () => {
