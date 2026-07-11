@@ -2131,7 +2131,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2156,6 +2156,7 @@ flowchart TB
 - .project-wiki/ideas/
 - .project-wiki/facts.md
 - .project-wiki/open-questions.md
+- .project-wiki/analyses/
 - .project-wiki/log.md
 
 **Writes:**
@@ -2203,7 +2204,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - The question to ask; otherwise interactive

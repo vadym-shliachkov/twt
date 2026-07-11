@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-define
 category: wiki
-description: (v1.0.1) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-version: 1.0.1
+description: (v1.0.2) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -22,6 +22,7 @@ reads:
   - .project-wiki/ideas/
   - .project-wiki/facts.md
   - .project-wiki/open-questions.md
+  - .project-wiki/analyses/
   - .project-wiki/log.md
 writes:
   - .project-wiki/decisions/
@@ -152,7 +153,7 @@ When a new source contradicts a current page, or two sources disagree:
 When a claim is evidenced by a twt artifact, cite it as a **relative path** into `.twt-artifacts/`. Never copy an artifact's content into a wiki page. Artifacts regenerate; a copy is stale the moment the skill re-runs.
 
 ## Step 7 — Update the index and overview
-Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date. For `overview.md`, do not regenerate it: read its current text and merge in only what changed in the project's what/who/where-it-stands, preserving any hand-added prose that this run's changes don't invalidate.
+Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date — including `analyses/` pages saved by `/twt-wiki-query` alongside `decisions/`, `entities/`, and `ideas/`; you index those pages but never author or edit them. For `overview.md`, do not regenerate it: read its current text and merge in only what changed in the project's what/who/where-it-stands, preserving any hand-added prose that this run's changes don't invalidate.
 
 ## Step 8 — Drain the inbox and log
 Remove from `inbox.md` only the entries you actually promoted to a page/row or explicitly dismissed this pass. Never remove one you left because you were unsure — see the rule below.
