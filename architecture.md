@@ -311,7 +311,7 @@ flowchart TB
 
 - /twt-wiki - Initialize, ingest into, and curate the project wiki — the project's durable memory
 - /twt-wiki-define - Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-- /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
+- /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox
 - /twt-wiki-query - Ask the project a question and get an answer cited to the wiki and its sources
 
 ## Per-skill details
@@ -2107,7 +2107,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2122,6 +2122,7 @@ flowchart TB
 
 **Reads:**
 - .project-wiki/
+- .twt-artifacts/
 
 **Writes:**
 | Path | Notes |
@@ -2175,10 +2176,10 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
-- One or more sources — a path, a URL, a pasted note, or a folder
+- One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
 
 **Dependencies:**
 - Hard: none
@@ -2192,6 +2193,7 @@ flowchart TB
 - .project-wiki/AGENTS.md
 - .project-wiki/sources.md
 - .project-wiki/raw/assets.md
+- .twt-artifacts/
 
 **Writes:**
 | Path | Notes |
@@ -2200,6 +2202,8 @@ flowchart TB
 | .project-wiki/sources.md |  |
 | .project-wiki/raw/assets.md |  |
 | .project-wiki/log.md |  |
+| .project-wiki/inbox.md |  |
+| .project-wiki/.harvest-state.json |  |
 
 ### /twt-wiki-query
 

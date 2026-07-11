@@ -1,8 +1,8 @@
 ---
 name: twt-wiki
 category: wiki
-description: (v1.0.2) Initialize, ingest into, and curate the project wiki — the project's durable memory
-version: 1.0.2
+description: (v1.0.3) Initialize, ingest into, and curate the project wiki — the project's durable memory
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -13,6 +13,7 @@ dependencies:
     - twt-wiki-fetch
 reads:
   - .project-wiki/
+  - .twt-artifacts/
 writes:
   - .project-wiki/
 ---
@@ -26,7 +27,7 @@ writes:
 **Non-goals:**
 - Does not answer questions about the project — that is `/twt-wiki-query`.
 - Does not lint the wiki (not yet built).
-- Does not sync `.twt-artifacts/` into the wiki (not yet built).
+- Does not harvest `.twt-artifacts/` itself — it only *offers* the sync and, on accept, dispatches `twt-wiki-fetch` (which runs the bundled harvester); it never reimplements that scan inline.
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
 **Success criteria:**
@@ -58,6 +59,15 @@ On **Create the wiki**, ask the user for the project's name in a plain-text prom
 
 It is idempotent and never overwrites an existing file. Tell the user that decision capture is now armed: from here on, every question they answer in any twt skill is recorded to `.project-wiki/inbox.md` automatically.
 
+Then, using **Glob** (never a shell command), check whether `.twt-artifacts/` exists at the project root. If it does, this project already has decisions sitting on disk that the fresh wiki knows nothing about — offer via **AskUserQuestion** (single-select, header "Sync"):
+- **Harvest existing artifacts** (recommended — pulls decisions already on disk into the inbox)
+- **Skip**
+- **You decide**
+
+On **Harvest existing artifacts** (or **You decide** resolving to it), dispatch `twt-wiki-fetch` (Agent tool) with `.twt-artifacts/` as the source — never run the harvester or scan artifacts inline (CONVENTIONS §5). It appends decision-bearing items to `inbox.md` and registers everything else in `sources.md`; it does **not** curate. Report back what it harvested. On **Skip**, note that artifacts can be harvested later by giving `.twt-artifacts/` as a source to `/twt-wiki-fetch`. If `.twt-artifacts/` does not exist, skip this offer entirely — there is nothing to sync yet.
+
+Either way, do not auto-curate what was just harvested — that is still Step 3, and only on the user's say-so.
+
 **If it exists**, continue.
 
 ## Step 2 — Ingest sources, or note a curation focus
@@ -76,6 +86,7 @@ Dispatch `twt-wiki-define` (Agent tool), forwarding any focus captured in Step 2
 ## Step 4 — Report
 Tell the user:
 - Whether the wiki was created, and that capture is armed
+- Whether an artifact sync was offered, and its outcome (harvested — with counts — skipped, or not offered because there was no `.twt-artifacts/` yet)
 - Sources ingested
 - Pages created or updated
 - **Contradictions raised, and open questions that need a human** — lead with these; they are the reason the wiki exists

@@ -61,7 +61,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 | [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
-| [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
+| [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox |
 | [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 
 ---
@@ -2179,7 +2179,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 The single entry point to the project wiki — `.project-wiki/`, the durable memory that holds what `.twt-artifacts/` cannot: why decisions were made, what was ruled out, what the client said, ideas not yet scoped, and the assets themselves.
@@ -2193,6 +2193,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 
 **Reads:**
 - .project-wiki/
+- .twt-artifacts/
 
 **Writes:**
 - .project-wiki/
@@ -2200,7 +2201,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 **Non-goals:**
 - Does not answer questions about the project — that is `/twt-wiki-query`.
 - Does not lint the wiki (not yet built).
-- Does not sync `.twt-artifacts/` into the wiki (not yet built).
+- Does not harvest `.twt-artifacts/` itself — it only *offers* the sync and, on accept, dispatches `twt-wiki-fetch` (which runs the bundled harvester); it never reimplements that scan inline.
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
 **Success criteria:**
@@ -2214,13 +2215,13 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 ## /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
-Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it.
+Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, facts.md CONFLICTs, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.
 
 **Inputs:**
-- One or more sources — a path, a URL, a pasted note, or a folder
+- One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
 
 **Dependencies:**
 - Hard: none
@@ -2230,22 +2231,27 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 - .project-wiki/AGENTS.md
 - .project-wiki/sources.md
 - .project-wiki/raw/assets.md
+- .twt-artifacts/
 
 **Writes:**
 - .project-wiki/raw/
 - .project-wiki/sources.md
 - .project-wiki/raw/assets.md
 - .project-wiki/log.md
+- .project-wiki/inbox.md
+- .project-wiki/.harvest-state.json
 
 **Non-goals:**
-- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`. That is the curator's job alone.
+- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`. That is the curator's job alone, run separately via `/twt-wiki` → `twt-wiki-define`.
 - Does not interpret or synthesize. It registers evidence; it does not draw conclusions from it.
 - Does not delete or edit anything already in `raw/`. Raw evidence is immutable.
+- The `.twt-artifacts/` sync path is **capture, not curation**: it appends to `inbox.md` and adds rows to `sources.md` only. It never summarizes a generated file (tokens.css, a mockup, a report) into the wiki — those get a source link, nothing more.
 
 **Success criteria:**
 - Every requested source is either copied into `raw/` or registered in `sources.md` by path/URL.
 - Every binary lands in `raw/assets/` and gets a row in `raw/assets.md`.
-- `log.md` gains one ingest entry.
+- `log.md` gains one ingest (or sync) entry.
+- A `.twt-artifacts/` sync leaves `inbox.md` with new decision-bearing entries and `sources.md` with a row for everything else — and no curated page changed.
 - No curated page changed.
 
 ---
