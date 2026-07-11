@@ -71,6 +71,7 @@ flowchart TB
     twt_wiki["/twt-wiki"]:::skill
     twt_wiki_define["/twt-wiki-define"]:::skill
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
+    twt_wiki_query["/twt-wiki-query"]:::skill
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -170,6 +171,7 @@ flowchart TB
     twt_wiki_fetch -.-> twt_wiki
     twt_wiki_fetch -.-> twt_wiki_define
     twt_content_fetch -.-> twt_wiki_fetch
+    twt_wiki -.-> twt_wiki_query
 
     classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
 ```
@@ -310,6 +312,7 @@ flowchart TB
 - /twt-wiki - Initialize, ingest into, and curate the project wiki — the project's durable memory
 - /twt-wiki-define - Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
 - /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer
+- /twt-wiki-query - Ask the project a question and get an answer cited to the wiki and its sources
 
 ## Per-skill details
 
@@ -2115,7 +2118,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-wiki-query
 
 **Reads:**
 - .project-wiki/
@@ -2197,6 +2200,32 @@ flowchart TB
 | .project-wiki/raw/assets.md |  |
 | .project-wiki/log.md |  |
 
+### /twt-wiki-query
+
+**Category:** wiki
+**Version:** 1.0.0
+
+**Inputs:**
+- The question to ask; otherwise interactive
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-wiki
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .project-wiki/
+- .twt-artifacts/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .project-wiki/analyses/ |  |
+| .project-wiki/log.md |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -2264,6 +2293,7 @@ flowchart TB
 | /twt-wiki | twt-wiki-define | twt-wiki-fetch |
 | /twt-wiki-define | none | twt-wiki-fetch |
 | /twt-wiki-fetch | none | twt-content-fetch |
+| /twt-wiki-query | none | twt-wiki |
 
 ## Artifact namespace summary
 

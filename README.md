@@ -96,6 +96,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-text-analysis | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 | /twt-wiki | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | /twt-wiki-fetch | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
+| /twt-wiki-query | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 <!-- TWT_SKILLS_TABLE_END -->
 
 ---

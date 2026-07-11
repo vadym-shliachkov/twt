@@ -62,6 +62,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 | [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer |
+| [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 
 ---
 ## /twt-block-preview
@@ -2246,3 +2247,38 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 - Every binary lands in `raw/assets/` and gets a row in `raw/assets.md`.
 - `log.md` gains one ingest entry.
 - No curated page changed.
+
+---
+
+## /twt-wiki-query
+
+**Category:** wiki
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Answer a question about the project from its durable memory — including the questions no artifact can answer, like *why is the CTA orange* or *what did we rule out and why*.
+
+**Inputs:**
+- The question to ask; otherwise interactive
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-wiki
+
+**Reads:**
+- .project-wiki/
+- .twt-artifacts/
+
+**Writes:**
+- .project-wiki/analyses/
+- .project-wiki/log.md
+
+**Non-goals:**
+- Does not curate or repair the wiki (that is `/twt-wiki`).
+- Does not answer from the model's own assumptions. If the wiki does not know, it says so.
+- Does not write a curated page. It may write an `analyses/` page, and only with consent.
+
+**Success criteria:**
+- Every claim in the answer carries a citation to a wiki page, source, or artifact path.
+- Gaps are stated plainly as gaps, not filled with plausible invention.
+- Stale or contested pages are flagged when they were used.
