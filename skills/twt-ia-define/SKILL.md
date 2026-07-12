@@ -1,8 +1,8 @@
 ---
 name: twt-ia-define
 category: ia
-description: (v1.0.1) Build or refine sitemap.md and functional-scope.md
-version: 1.0.1
+description: (v1.0.2) Build or refine sitemap.md and functional-scope.md
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive

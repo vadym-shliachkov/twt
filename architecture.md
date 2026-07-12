@@ -462,7 +462,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.8
+**Version:** 1.3.9
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -1338,7 +1338,7 @@ flowchart TB
 ### /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -1395,7 +1395,7 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -1480,7 +1480,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1573,7 +1573,7 @@ flowchart TB
 ### /twt-positioning-define
 
 **Category:** positioning
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -2002,7 +2002,7 @@ flowchart TB
 ### /twt-spec-define
 
 **Category:** spec
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional starting notes, a Figma URL, or answers; otherwise fully interactive
@@ -2132,7 +2132,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2178,7 +2178,7 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
@@ -2210,7 +2210,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - The question to ask; otherwise interactive

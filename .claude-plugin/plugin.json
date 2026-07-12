@@ -1,6 +1,6 @@
 {
   "name": "twt",
-  "version": "1.0.54",
+  "version": "1.0.55",
   "description": "Personal web-design skills marketplace: a four-phase pre-design -> design -> develop -> QA pipeline of /twt-* orchestrators plus their dispatched sub-skills.",
   "author": {
     "name": "Vadym Shliachkov",

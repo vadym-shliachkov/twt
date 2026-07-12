@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-query
 category: wiki
-description: (v1.0.2) Ask the project a question and get an answer cited to the wiki and its sources
-version: 1.0.2
+description: (v1.0.3) Ask the project a question and get an answer cited to the wiki and its sources
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - The question to ask; otherwise interactive

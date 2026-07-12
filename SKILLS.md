@@ -182,7 +182,7 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.8
+**Version:** 1.3.9
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -1283,7 +1283,7 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 ## /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Produce the canonical site structure — `sitemap.md` (page hierarchy with purpose + CTA) and `functional-scope.md` (global/per-page features and integrations) — from scratch or refined.
@@ -1360,7 +1360,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1478,7 +1478,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.1
+**Version:** 1.3.2
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -2215,7 +2215,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 ## /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** yes
 
 Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, every facts.md ledger row, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.
@@ -2259,7 +2259,7 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 ## /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Answer a question about the project from its durable memory — including the questions no artifact can answer, like *why is the CTA orange* or *what did we rule out and why*.
