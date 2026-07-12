@@ -1,0 +1,28 @@
+/* doc-hub-light · profile layer: report
+   Audit treatment for findings documents (validation-report, qa-report,
+   analysis-report, gaps, phase-review). No section counters — report sections
+   self-label ("Findings", "Summary") and findings self-number ("### 1.
+   [BLOCKER] …"). The transform set (kv summary cards, finding cards,
+   severity/score chips, TOC, wide tables) carries the structure; this layer
+   sets the rhythm around it. */
+
+h2 { margin-top: 2.2em; padding-top: .9em; border-top: 1px solid var(--tx-rule); }
+h3 { margin-top: 1.5em; }
+
+/* the leading kv summary is the verdict strip — give it presence */
+dl.tx-kv--summary { margin: 1.4em 0 1.8em; }
+dl.tx-kv--summary dd { font-weight: 600; }
+
+/* a finding's numbering heading hugs its card; cards stack with air between */
+h3 + .tx-finding, h4 + .tx-finding { margin-top: .4em; }
+.tx-finding + h3, .tx-finding + h4 { margin-top: 1.6em; }
+
+/* dense audit tables: slightly smaller, heading-font headers */
+table { font-size: .9em; }
+th { font-family: var(--tx-font-heading); }
+
+/* blockquoted evidence sits tight to the finding it supports */
+blockquote { margin: .6em 0; font-size: .95em; }
+
+li { margin-bottom: .3em; }
+li > ul { margin-top: .25em; }

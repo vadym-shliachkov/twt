@@ -97,6 +97,14 @@ export function createTheme(opts, cwd = process.cwd()) {
   for (const layer of ['doc', 'slide', 'components']) {
     writeFileSync(join(dir, 'css', `${layer}.css`), readFileSync(join(base.dir, 'css', `${layer}.css`), 'utf8'), 'utf8');
   }
+  // profile + doctype layers copy verbatim too — they express document shape,
+  // not brand, and all their color/type comes through the substituted tokens.
+  // Themes specialize a document by editing css/profiles/<profile>.css or
+  // adding css/doctypes/<docType>.css after creation.
+  for (const sub of ['profiles', 'doctypes']) {
+    const from = join(base.dir, 'css', sub);
+    if (existsSync(from)) cpSync(from, join(dir, 'css', sub), { recursive: true });
+  }
 
   // fonts: copy bundled woff2 for any requested family we bundle; default to base families
   const wanted = new Set([opts.fontHeading || 'Montserrat', opts.fontBody || 'Inter', opts.fontMono || 'IBM Plex Mono']
@@ -169,6 +177,10 @@ if (_isMain && process.argv.includes('--self-test')) {
   const dir = join(cwd, '.twt-artifacts', 'export', 'themes', 'acme-executive-report');
   assert.ok(existsSync(join(dir, 'theme.json')));
   for (const layer of ['tokens', 'doc', 'slide', 'components']) assert.ok(existsSync(join(dir, 'css', `${layer}.css`)), layer);
+  for (const p of ['report', 'brief', 'spec', 'generic']) {
+    assert.ok(existsSync(join(dir, 'css', 'profiles', `${p}.css`)), `profile layer '${p}' travels with the theme`);
+  }
+  assert.ok(existsSync(join(dir, 'css', 'doctypes', 'sitemap.css')), 'doctype layers travel with the theme');
   const tokens = readFileSync(join(dir, 'css', 'tokens.css'), 'utf8');
   assert.match(tokens, /--hs-ink:\s*#0A1A2F/i, 'ink substituted');
   assert.match(tokens, /--hs-accent-blue:\s*#C8102E/i, 'accent substituted');

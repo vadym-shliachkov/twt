@@ -1,0 +1,6 @@
+/* doc-hub-light · doctype layer: qa-report (twt-qa)
+   The verdict is the point — the leading summary cards carry the accent frame,
+   and per-audit sections separate hard so a long QA run scans by audit. */
+
+dl.tx-kv--summary .tx-kv__cell { border-left: 3px solid var(--tx-accent); }
+h2 { border-top-width: 2px; }

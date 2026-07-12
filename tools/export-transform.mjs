@@ -58,6 +58,16 @@ export function inlinesToText(inlines = []) {
 }
 
 const rawBlock = (html) => ({ t: 'RawBlock', c: ['html', html] });
+
+// Pandoc parses YAML frontmatter into AST meta values; flatten one to text.
+export function metaToText(v) {
+  if (!v || !v.t) return '';
+  if (v.t === 'MetaString') return String(v.c);
+  if (v.t === 'MetaInlines') return inlinesToText(v.c);
+  if (v.t === 'MetaBool') return String(v.c);
+  if (v.t === 'MetaList') return v.c.map(metaToText).filter(Boolean).join(', ');
+  return ''; // MetaMap / MetaBlocks have no one-line text form
+}
 const rawInline = (html) => ({ t: 'RawInline', c: ['html', html] });
 
 // --- kv parsing: bullet item '**Label:** value' → {label, valueHtml} | null ---
@@ -321,6 +331,41 @@ const TRANSFORMS = [
     },
   },
   {
+    // Wiki pages carry YAML frontmatter (status/updated/summary/tags/sources).
+    // Pandoc parses it into AST meta — invisible in the rendered body — so this
+    // renders it back as a meta card under the doc header: status chip, page
+    // type, updated date, tags, the one-line summary, and cited sources.
+    name: 'wikiMetaHeader',
+    profiles: ['brief', 'spec', 'report', 'generic'],
+    docTypes: ['wiki-decision', 'wiki-entity', 'wiki-idea', 'wiki-analysis', 'wiki-page'],
+    apply(blocks, { astMeta } = {}) {
+      if (!astMeta) return false;
+      const get = (k) => metaToText(astMeta[k]).trim();
+      const status = get('status'); const updated = get('updated');
+      const summary = get('summary'); const tags = get('tags'); const type = get('type');
+      const sources = astMeta.sources?.t === 'MetaList'
+        ? astMeta.sources.c.map(metaToText).filter(Boolean) : [];
+      if (!status && !updated && !summary) return false;
+      const chipKind = {
+        current: 'ok', resolved: 'ok', shipped: 'ok', scoped: 'ok',
+        'needs-review': 'warn', draft: 'warn',
+        superseded: 'danger', dropped: 'danger',
+      }[status] || 'info';
+      const bits = [];
+      if (status) bits.push(chip(status, chipKind));
+      if (type) bits.push(`<span class="tx-wiki-type">${esc(type)}</span>`);
+      if (updated) bits.push(`<span class="tx-wiki-updated">updated ${esc(updated)}</span>`);
+      if (tags) bits.push(`<span class="tx-wiki-tags">${esc(tags)}</span>`);
+      const sum = summary ? `<p class="tx-wiki-summary">${esc(summary)}</p>` : '';
+      const src = sources.length
+        ? `<div class="tx-wiki-sources">Sources: ${sources.map((s) => `<code>${esc(s)}</code>`).join(' · ')}</div>` : '';
+      const card = rawBlock(`<div class="tx-wiki-meta"><div class="tx-wiki-meta__row">${bits.join('')}</div>${sum}${src}</div>`);
+      const after = blocks.findIndex((b) => b.t === 'RawBlock' || (b.t === 'Header' && b.c[0] === 1));
+      blocks.splice(after === -1 ? 0 : after + 1, 0, card);
+      return true;
+    },
+  },
+  {
     // '**Label:** value…' paragraphs (Vision, Primary objective, Why redesign, …)
     // are the backbone of briefs and specs; as plain bold-lead paragraphs they read
     // as an undifferentiated text wall. Each becomes a labeled field card with the
@@ -410,7 +455,7 @@ const TRANSFORMS = [
   },
   {
     name: 'kvList',
-    profiles: ['report', 'brief', 'spec'],
+    profiles: ['report', 'brief', 'spec', 'generic'],
     apply(blocks, { profile }) {
       let firstList = true, hit = false;
       for (let i = 0; i < blocks.length; i++) {
@@ -509,7 +554,7 @@ const TRANSFORMS = [
   },
   {
     name: 'wideTables',
-    profiles: ['report', 'spec'],
+    profiles: ['report', 'spec', 'generic'],
     apply(blocks) {
       let hit = false;
       for (const b of blocks) {
@@ -520,16 +565,38 @@ const TRANSFORMS = [
       return hit;
     },
   },
+  {
+    // sitemap.md is one deep nested list — wrap each nested list in a .tx-tree
+    // div so the sitemap doctype layer can draw indent guides without touching
+    // any other spec document's lists.
+    name: 'sitemapTree',
+    profiles: ['spec'],
+    docTypes: ['sitemap'],
+    apply(blocks) {
+      let hit = false;
+      for (let i = 0; i < blocks.length; i++) {
+        const b = blocks[i];
+        if (b.t !== 'BulletList') continue;
+        const nested = b.c.some((item) => item.some((blk) => blk.t === 'BulletList'));
+        if (!nested) continue;
+        blocks[i] = { t: 'Div', c: [['', ['tx-tree'], []], [b]] };
+        hit = true;
+      }
+      return hit;
+    },
+  },
 ];
 
 // extra: { docType, meta: { docLabel, date } } — docType lets a transform target a
 // specific registry entry (tr.docTypes allowlist); meta feeds the docHeader line.
+// ast.meta (pandoc-parsed YAML frontmatter) is passed through as astMeta so
+// frontmatter-aware transforms (wikiMetaHeader) can render it.
 export function transformAst(ast, profile = 'generic', extra = {}) {
   const applied = [];
   for (const tr of TRANSFORMS) {
     if (!tr.profiles.includes(profile)) continue;
     if (tr.docTypes && !tr.docTypes.includes(extra.docType)) continue;
-    try { if (tr.apply(ast.blocks, { profile, ...extra })) applied.push(tr.name); }
+    try { if (tr.apply(ast.blocks, { profile, astMeta: ast.meta, ...extra })) applied.push(tr.name); }
     catch (e) { throw new Error(`transform '${tr.name}' failed: ${e.message}`); }
   }
   return { ast, applied };
@@ -686,9 +753,39 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.ok(!keepOut.includes('tx-block__suggest'), 'kept block shows no suggestion box');
   assert.ok(!/tx-note--warn/.test(keepOut), '"none" weakness is not shown as a warning note');
 
-  // generic profile: header only, everything else untouched
+  // generic profile: header + the shape-triggered transforms (kv runs, wide
+  // tables) — foreign markdown that has the shape gets the treatment; plain
+  // prose is untouched. Report/brief-only transforms never fire on generic.
   const gen = transformAst(pandocAst(kvMd), 'generic');
-  assert.deepEqual(gen.applied, ['docHeader']);
+  assert.deepEqual(gen.applied, ['docHeader', 'kvList']);
+  const genWide = transformAst(pandocAst('| a | b | c | d | e |\n|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | 5 |\n'), 'generic');
+  assert.ok(genWide.applied.includes('wideTables'), 'wide tables also wrap in generic');
+  const genPlain = transformAst(pandocAst('# T\n\nJust prose.'), 'generic');
+  assert.deepEqual(genPlain.applied, ['docHeader'], 'plain prose stays plain in generic');
+  assert.ok(!astToHtml(transformAst(pandocAst('Overall 85/100.'), 'generic').ast).includes('tx-score'), 'score chips stay report-only');
+
+  // wikiMetaHeader: YAML frontmatter renders as a meta card, only for wiki doc types
+  const wikiMd = ['---', 'title: Primary CTA is orange', 'type: decision', 'status: needs-review',
+    'updated: 2026-07-11', 'summary: navy failed hero contrast', 'sources:',
+    '  - .twt-artifacts/design/tokens.css', 'tags: [design-system, color]', '---', '',
+    '# Primary CTA is orange', '', '**Decided:** orange accent.', ''].join('\n');
+  const wikiOut = astToHtml(transformAst(pandocAst(wikiMd), 'brief', { docType: 'wiki-decision' }).ast);
+  assert.match(wikiOut, /tx-wiki-meta/, 'wiki page gets a frontmatter meta card');
+  assert.match(wikiOut, /tx-chip tx-chip--warn">needs-review/, 'status renders as a tier chip');
+  assert.match(wikiOut, /tx-wiki-updated">updated 2026-07-11/, 'updated date shown');
+  assert.match(wikiOut, /tx-wiki-summary">navy failed hero contrast/, 'summary line shown');
+  assert.match(wikiOut, /tx-wiki-sources">Sources: <code>\.twt-artifacts\/design\/tokens\.css<\/code>/, 'sources cited');
+  assert.match(wikiOut, /tx-wiki-tags">design-system, color/, 'tags shown');
+  const nonWiki = astToHtml(transformAst(pandocAst(wikiMd), 'brief', { docType: 'brand-brief' }).ast);
+  assert.ok(!nonWiki.includes('tx-wiki-meta'), 'frontmatter card is wiki-doctype-only');
+
+  // sitemapTree: nested lists wrap in .tx-tree only for the sitemap doc type
+  const treeMd = '# Sitemap\n\n- Home\n  - About\n  - Work\n    - Case study\n- Contact\n';
+  const treeOut = astToHtml(transformAst(pandocAst(treeMd), 'spec', { docType: 'sitemap' }).ast);
+  assert.match(treeOut, /<div class="tx-tree">/, 'sitemap nested list wraps as a tree');
+  assert.match(treeOut, /<li>Case study<\/li>/, 'nested content survives the wrap');
+  const otherSpec = astToHtml(transformAst(pandocAst(treeMd), 'spec', { docType: 'functional-scope' }).ast);
+  assert.ok(!otherSpec.includes('tx-tree'), 'other spec documents keep plain lists');
 
   // fall-through: unmatched structures survive
   const surv = astToHtml(transformAst(pandocAst('Just a paragraph.\n\n- plain\n- list\n'), 'report').ast);

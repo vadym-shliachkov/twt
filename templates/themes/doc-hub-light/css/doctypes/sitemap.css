@@ -1,0 +1,11 @@
+/* doc-hub-light · doctype layer: sitemap (twt-ia-define)
+   The page tree (wrapped in .tx-tree by the sitemapTree transform) gets indent
+   guides so hierarchy reads at a glance. Top-level pages read as headings;
+   deeper levels step down. */
+
+.tx-tree > ul { list-style: none; padding-left: 0; margin: 1em 0; }
+.tx-tree ul ul { list-style: none; border-left: 2px solid var(--tx-rule); margin: .35em 0 .5em; padding-left: 18px; }
+.tx-tree li { margin: .4em 0; break-inside: avoid; }
+.tx-tree > ul > li { font-family: var(--tx-font-heading); font-weight: 600; color: var(--tx-ink); }
+.tx-tree > ul > li li { font-family: var(--tx-font-body); font-weight: 400; color: var(--tx-text); }
+.tx-tree code { white-space: nowrap; }

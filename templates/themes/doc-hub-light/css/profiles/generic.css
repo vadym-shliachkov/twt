@@ -1,0 +1,13 @@
+/* doc-hub-light · profile layer: generic
+   The default for markdown that is not a twt artifact and does not fingerprint
+   as a report or brief (export-doctype.mjs upgrades anything that does).
+   Deliberately light: section rules and reading rhythm only — nothing that
+   assumes a structure the document may not have. */
+
+h2 { margin-top: 2em; padding-top: .8em; border-top: 1px solid var(--tx-rule); }
+
+/* the first paragraph after the title reads as the lead */
+.tx-doc-header + p { font-size: 1.05rem; line-height: 1.6; color: var(--tx-ink); }
+
+li { margin-bottom: .3em; }
+li > ul { margin-top: .25em; }

@@ -101,11 +101,14 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.match(readThemeCss(t, 'doc'), /@page/);
   assert.match(readThemeCss(t, 'slide'), /\.slide/);
   assert.equal(typeof readThemeCss(t, 'components'), 'string');
-  assert.equal(readProfileCss(t, 'report'), '');
+  assert.match(readProfileCss(t, 'report'), /tx-kv--summary/, 'report profile layer ships with the theme');
+  assert.match(readProfileCss(t, 'generic'), /tx-doc-header/, 'generic profile layer ships with the theme');
   assert.match(readProfileCss(t, 'brief'), /tx-sec/, 'brief profile layer ships with the theme');
   assert.match(readProfileCss(t, 'spec'), /table/, 'spec profile layer ships with the theme');
   assert.equal(readDoctypeCss(t, 'no-such-doctype'), '', 'missing doctype layer degrades to empty');
   assert.equal(readDoctypeCss(t, undefined), '', 'no doctype → empty layer');
+  assert.match(readDoctypeCss(t, 'sitemap'), /tx-tree/, 'sitemap doctype layer ships with the theme');
+  assert.match(themeDocCss(t, 'spec', 'sitemap'), /tx-tree/, 'doc css stacks the doctype layer');
   assert.match(themeDocCss(t, 'brief'), /tx-sec/, 'doc css stacks the profile layer');
   const byPath = resolveTheme(t.dir);
   assert.equal(byPath.slug, 'doc-hub-light');

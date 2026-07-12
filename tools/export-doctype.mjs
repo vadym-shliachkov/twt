@@ -23,10 +23,18 @@
 // | layout-*.md / layouts (twt-layout-define)        | layout                | spec    |
 // | design-read.md (external design skills)          | design-read           | spec    |
 // | decisions.md / asset-manifest.md                 | decisions             | spec    |
+// | facts.md (curation ledger / wiki ledger)         | facts                 | spec    |
+// | phase-review.md (twt-site per-phase reviews)     | phase-review          | report  |
+// | site-log.md / site-dev-log.md (orchestrators)    | site-log              | spec    |
+// | .project-wiki/decisions|entities|ideas|analyses/ | wiki-decision/-entity/-idea/-analysis | brief |
+// | .project-wiki/ anything else (overview, glossary)| wiki-page             | brief   |
 // | any other *-report.md (fallback)                 | generic-report        | report  |
-// | content-fetch output, curation outlines, logs    | (unregistered)        | generic |
-// Unregistered files fall to structural fingerprints, then to 'generic'. New
-// artifact → add one REGISTRY row, or accept generic rendering.
+// | content-fetch output, curation outlines          | (unregistered)        | generic |
+// Wiki pages are matched by PATH (their basenames are arbitrary slugs), after
+// the basename registry so validation-report.md / facts.md inside the wiki
+// keep their own treatment. Unregistered files fall to structural
+// fingerprints, then to 'generic'. New artifact → add one REGISTRY row, or
+// accept generic rendering.
 import { basename } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -57,8 +65,34 @@ export const REGISTRY = [
   { id: 'layout',            profile: 'spec',   file: /^layout[a-z0-9-]*\.md$/ },
   { id: 'design-read',       profile: 'spec',   file: /^design-read\.md$/ },
   { id: 'decisions',         profile: 'spec',   file: /^(decisions|asset-manifest)\.md$/ },
+  { id: 'facts',             profile: 'spec',   file: /^facts\.md$/ },
+  { id: 'phase-review',      profile: 'report', file: /^phase-review\.md$/ },
+  { id: 'site-log',          profile: 'spec',   file: /^site(-dev)?-log\.md$/ },
   { id: 'generic-report',    profile: 'report', file: /^[a-z0-9-]+-report\.md$/ },
 ];
+
+// .project-wiki/ pages are identified by path — their basenames are arbitrary
+// slugs. Checked after the basename registry (a wiki validation-report.md or
+// facts.md keeps its own docType) and before structural fingerprints.
+const WIKI_FAMILY = [
+  ['decisions/', 'wiki-decision'],
+  ['entities/', 'wiki-entity'],
+  ['ideas/', 'wiki-idea'],
+  ['analyses/', 'wiki-analysis'],
+];
+
+function classifyWikiPath(filePath) {
+  const posix = String(filePath).replace(/\\/g, '/').toLowerCase();
+  const at = posix.indexOf('.project-wiki/');
+  if (at === -1) return null;
+  const sub = posix.slice(at + '.project-wiki/'.length);
+  for (const [prefix, id] of WIKI_FAMILY) {
+    if (sub.startsWith(prefix)) {
+      return { docType: id, profile: 'brief', evidence: [`.project-wiki/${prefix} page`] };
+    }
+  }
+  return { docType: 'wiki-page', profile: 'brief', evidence: ['.project-wiki/ page'] };
+}
 
 function stripFences(md) {
   return md.replace(/^(```+|~~~+)[\s\S]*?^\1/gm, '');
@@ -89,6 +123,8 @@ export function classifyDoc({ markdown, filePath = '' }) {
       return { docType: entry.id, profile: entry.profile, evidence: [`filename matches registry entry '${entry.id}'`] };
     }
   }
+  const wiki = classifyWikiPath(filePath);
+  if (wiki) return wiki;
   const md = stripFences(markdown || '');
   const reportEvidence = REPORT_SIGNS.map((f) => f(md)).filter(Boolean);
   if (reportEvidence.length >= 2) {
@@ -128,6 +164,20 @@ if (_isMain && process.argv.includes('--self-test')) {
   const g = classifyDoc({ markdown: '# Hello\n\nJust prose.', filePath: 'random.md' });
   assert.equal(g.docType, 'generic');
   assert.equal(g.profile, 'generic');
+  // newer artifacts
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'pre-design/phase-review.md' }).profile, 'report');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.twt-artifacts/site-log.md' }).docType, 'site-log');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.twt-artifacts/site-dev-log.md' }).docType, 'site-log');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/facts.md' }).docType, 'facts');
+  // wiki pages match by path; basenames are arbitrary slugs
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'C:\\p\\.project-wiki\\decisions\\2026-07-11-cta.md' }).docType, 'wiki-decision');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/entities/acme-corp.md' }).docType, 'wiki-entity');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/ideas/dark-mode.md' }).docType, 'wiki-idea');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/analyses/why-orange.md' }).docType, 'wiki-analysis');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/overview.md' }).docType, 'wiki-page');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/overview.md' }).profile, 'brief');
+  // basename registry outranks the wiki path rule
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/validation-report.md' }).docType, 'validation-report');
   // regressions: specific registry rule wins over the *-report catch-all
   assert.equal(classifyDoc({ markdown: '# x', filePath: 'layout-report.md' }).profile, 'spec');
   // regressions: hex in prose + unrelated table must not read as brief
