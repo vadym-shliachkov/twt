@@ -1917,7 +1917,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.4
+**Version:** 1.12.5
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2116,7 +2116,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2141,7 +2141,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2245,7 +2245,7 @@ flowchart TB
 ### /twt-wiki-validate
 
 **Category:** wiki
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - (none — reads the whole .project-wiki/)
