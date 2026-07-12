@@ -22,7 +22,8 @@
  * only on usage errors / no wiki.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname, relative, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function fail(msg) {
   console.error(`wiki-lint: ${msg}`);
@@ -106,6 +107,24 @@ function main() {
     }
   }
 
+  // --- stale operating manual -------------------------------------------------
+  // The curator obeys the wiki's own AGENTS.md over current skill rules, so a
+  // manual older than the plugin's template silently pins the wiki to old rules.
+  const agentsPath = join(wiki, 'AGENTS.md');
+  if (existsSync(agentsPath)) {
+    const verOf = (t) => { const m = /<!--\s*manual-version:\s*(\d+)/.exec(t); return m ? Number(m[1]) : 1; };
+    const wikiVer = verOf(readFileSync(agentsPath, 'utf8'));
+    let templateVer = 0; // unreadable template (global install) -> skip the check
+    try {
+      templateVer = verOf(readFileSync(fileURLToPath(new URL('../templates/wiki/AGENTS.md', import.meta.url)), 'utf8'));
+    } catch (e) { /* not running from a plugin checkout - nothing to compare */ }
+    if (templateVer > wikiVer) {
+      add('WARNING', 'AGENTS.md',
+        `operating manual is v${wikiVer} but the plugin ships v${templateVer} - the curator obeys the stale manual over current rules`,
+        'run /twt-wiki and accept the manual upgrade (or: node tools/wiki-init.mjs <projectDir> --upgrade-manual); hand edits are recoverable from git history');
+    }
+  }
+
   // --- collection pages: frontmatter, citations, summaries, supersession ----
   const collections = ['decisions', 'ideas', 'entities', 'analyses'];
   const collectionPages = [];
@@ -117,6 +136,10 @@ function main() {
 
   const rootPages = ['overview.md', 'facts.md', 'open-questions.md', 'sources.md', 'glossary.md']
     .filter((f) => existsSync(join(wiki, f)));
+
+  // Inbound page-to-page links (the wiki is a graph, not a set of drawers):
+  // filled while walking each collection page's body links below.
+  const inbound = new Set();
 
   for (const rel of [...rootPages, ...collectionPages]) {
     const abs = join(wiki, rel);
@@ -183,6 +206,39 @@ function main() {
       if (fm.status === 'needs-review' && /_not captured/.test(text)) {
         add('WARNING', rel, 'the decision is on record but its why was never captured, and no human has resolved it',
           'ask the decision-maker for the reason, or confirm the page needs none; then set status accordingly');
+      }
+
+      // body links: cross-references must resolve, and they feed the inbound graph
+      for (const m of text.matchAll(/\]\(([^)#\s]+)(?:#[^)]*)?\)/g)) {
+        const target = m[1].trim();
+        if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) continue;
+        const cands = [normalize(join(wiki, dirname(rel), target)), normalize(join(wiki, target))];
+        const hit = cands.find((c) => existsSync(c));
+        if (!hit) {
+          // Artifact evidence pointers may legitimately regenerate away - the
+          // frontmatter citation check covers the strict provenance case.
+          if (!/\.twt-artifacts/.test(target)) {
+            add('WARNING', rel, `body link \`${target}\` resolves to nothing`,
+              'fix the link - a dead cross-reference breaks the trail the wiki exists to keep');
+          }
+          continue;
+        }
+        const rp = toPosix(relative(wiki, hit));
+        if (!rp.startsWith('..') && rp !== rel && collectionPages.includes(rp)) inbound.add(rp);
+      }
+    }
+  }
+
+  // --- orphans by inbound links: no other page trails here -------------------
+  // analyses/ pages are saved query answers - they cite, nothing cites them -
+  // so only decisions/, ideas/, and entities/ are expected to be woven in, and
+  // only once the wiki has at least two such pages to weave.
+  const weavable = collectionPages.filter((p) => !p.startsWith('analyses/'));
+  if (weavable.length >= 2) {
+    for (const rel of weavable) {
+      if (!inbound.has(rel)) {
+        add('SUGGESTION', rel, 'no other page links here - knowledge nothing trails to',
+          'add the natural cross-link (a decision names its entity, the entity lists its decisions), or note why the page stands alone');
       }
     }
   }

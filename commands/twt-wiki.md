@@ -69,7 +69,20 @@ On **Harvest existing artifacts** (or **You decide** resolving to it), dispatch 
 
 Either way, do not auto-curate what was just harvested — that is still Step 3, and only on the user's say-so.
 
-**If it exists**, continue.
+**If it exists**, check the operating manual's age before continuing: run the scaffolder once — it is idempotent and never overwrites —
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-init.mjs" "$CLAUDE_PROJECT_DIR"`
+
+and read its printed line for `AGENTS.md`. `exists:` means the manual is current — continue. `outdated: ... (manual vN < vM)` means the curator would be obeying stale rules, so ask via **AskUserQuestion** (single-select, header "Manual"):
+- **Upgrade the manual** (recommended — re-stamps AGENTS.md from the plugin template; the wiki is committed to git, so hand edits are recoverable from history)
+- **Keep the current manual** (the wiki keeps running under its old rules)
+- **You decide**
+
+On **Upgrade the manual** (or **You decide** resolving to it), run:
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-init.mjs" "$CLAUDE_PROJECT_DIR" --upgrade-manual`
+
+Running unattended (auto mode / dispatched as a subagent): do **not** upgrade silently — note the outdated manual in the report and continue. Then continue.
 
 ## Step 2 — Ingest sources, or note a curation focus
 `$ARGUMENTS` (or what the user offers unprompted) means one of two things — sources to ingest, or a focus that narrows Step 3's curation pass to a page, a topic, or `inbox only` — never both (see this command's `inputs`). Treat it as **source(s)** when it names files, URLs, pasted notes, or an explicit ask to ingest something; treat it as a **focus** when it is `inbox only`, a bare topic word (e.g. `pricing`), or a wiki page path (e.g. `decisions/2026-07-11-cta-color.md`). If it is genuinely ambiguous, this is a fixed, mutually-exclusive choice, so ask via **AskUserQuestion** (single-select, header "Ingest or focus") — not a plain-text prompt (CONVENTIONS §4):

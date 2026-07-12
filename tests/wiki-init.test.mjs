@@ -57,8 +57,23 @@ test('is idempotent and never overwrites an existing file', () => {
   assert.match(out, /exists: .*overview\.md/);
   // AGENTS.md is copied via a separate copyFileSync code path that does not
   // share the put() guard - assert it independently so that path is proven safe.
+  // A hand-written manual has no version stamp (counts as v1), so a plain
+  // re-run reports it outdated - but still never overwrites it.
   assert.equal(readFileSync(wiki(dir, 'AGENTS.md'), 'utf8'), 'HAND-EDITED');
-  assert.match(out, /exists: .*AGENTS\.md/);
+  assert.match(out, /outdated: .*AGENTS\.md/);
+});
+
+test('--upgrade-manual re-stamps an outdated AGENTS.md and touches nothing else', () => {
+  const dir = newProject();
+  run(dir);
+  writeFileSync(wiki(dir, 'AGENTS.md'), 'HAND-EDITED OLD MANUAL');
+  writeFileSync(wiki(dir, 'overview.md'), 'HAND-EDITED, DO NOT CLOBBER');
+  const out = run(dir, ['--upgrade-manual']);
+  assert.match(out, /upgraded: .*AGENTS\.md \(manual v1 -> v\d+\)/);
+  assert.match(readFileSync(wiki(dir, 'AGENTS.md'), 'utf8'), /manual-version:/, 'manual re-stamped from the template');
+  assert.equal(readFileSync(wiki(dir, 'overview.md'), 'utf8'), 'HAND-EDITED, DO NOT CLOBBER', 'only the manual is touched');
+  // Re-running with the flag when already current is a no-op.
+  assert.match(run(dir, ['--upgrade-manual']), /exists: .*AGENTS\.md/);
 });
 
 test('normalizes nested-folder log output to forward slashes', () => {

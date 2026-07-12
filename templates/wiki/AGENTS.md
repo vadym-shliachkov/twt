@@ -1,3 +1,7 @@
+<!-- manual-version: 2 — stamped from the twt plugin's templates/wiki/AGENTS.md.
+     When the plugin ships a newer manual, /twt-wiki offers an upgrade (a plain
+     re-stamp; hand edits are recoverable from git history). Do not remove this line. -->
+
 # Wiki operating manual
 
 This is the project's durable memory. It is read and maintained by both humans and
@@ -70,6 +74,12 @@ Exception: `type: idea` pages use their own lifecycle vocabulary in `status` —
 ## Rules for maintaining pages
 
 - Every claim cites a source path, artifact path, URL, or `log.md` entry.
+- **Pages link to each other — the wiki is a graph, not a set of drawers.** When a
+  decision names an entity, the decision page links the entity page *and* the entity
+  page links back under a "Decisions" list. Related decisions link each other;
+  supersession always links both ways. Use relative Markdown links
+  (`[Acme Corp](../entities/acme-corp.md)`) so they work in Obsidian, GitHub, and a
+  plain filesystem. A page no other page links to is knowledge nothing trails to.
 - **Update, never duplicate.** Merge new information into the existing page.
 - A contradiction is marked `status: needs-review` and surfaced — never silently resolved.
 - Keep the wiki smaller than its source set by merging repeated knowledge into durable pages.

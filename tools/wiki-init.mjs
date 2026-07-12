@@ -5,7 +5,7 @@
  * Idempotent: never overwrites an existing file. Safe to re-run.
  * Usage: node tools/wiki-init.mjs <projectDir> [--name "Project Name"]
  */
-import { mkdirSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,18 +37,36 @@ function put(relPath, content) {
   console.log(`created: .project-wiki/${logPath}`);
 }
 
-// AGENTS.md is copied verbatim from the canonical manual.
+// AGENTS.md is copied verbatim from the canonical manual. It carries a
+// `<!-- manual-version: N -->` stamp; an existing wiki keeps its manual
+// (which may carry hand edits) unless --upgrade-manual explicitly re-stamps
+// it - the wiki is committed to git, so an overwritten manual is recoverable.
+const upgradeManual = args.includes('--upgrade-manual');
+const manualVersion = (t) => {
+  const m = /<!--\s*manual-version:\s*(\d+)/.exec(t);
+  return m ? Number(m[1]) : 1; // unstamped manuals predate versioning
+};
 const agentsSrc = join(ROOT, 'templates', 'wiki', 'AGENTS.md');
 const agentsDst = join(WIKI, 'AGENTS.md');
 mkdirSync(WIKI, { recursive: true });
-if (existsSync(agentsDst)) {
-  console.log('exists: .project-wiki/AGENTS.md');
-} else if (existsSync(agentsSrc)) {
-  copyFileSync(agentsSrc, agentsDst);
-  console.log('created: .project-wiki/AGENTS.md');
-} else {
+if (!existsSync(agentsSrc)) {
   console.error(`FATAL: canonical manual not found at ${agentsSrc}`);
   process.exit(1);
+}
+const srcVer = manualVersion(readFileSync(agentsSrc, 'utf8'));
+if (!existsSync(agentsDst)) {
+  copyFileSync(agentsSrc, agentsDst);
+  console.log(`created: .project-wiki/AGENTS.md (manual v${srcVer})`);
+} else {
+  const dstVer = manualVersion(readFileSync(agentsDst, 'utf8'));
+  if (upgradeManual && srcVer > dstVer) {
+    copyFileSync(agentsSrc, agentsDst);
+    console.log(`upgraded: .project-wiki/AGENTS.md (manual v${dstVer} -> v${srcVer})`);
+  } else if (srcVer > dstVer) {
+    console.log(`outdated: .project-wiki/AGENTS.md (manual v${dstVer} < v${srcVer}) - re-run with --upgrade-manual to re-stamp; hand edits are recoverable from git`);
+  } else {
+    console.log('exists: .project-wiki/AGENTS.md');
+  }
 }
 
 put('index.md', fm('Index', 'overview') +

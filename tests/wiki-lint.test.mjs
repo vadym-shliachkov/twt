@@ -193,6 +193,50 @@ test('old undrained inbox entries warn; fresh ones only suggest', () => {
   assert.equal(r2.findings.some((f) => f.tier === 'WARNING' && /pending curation/.test(f.problem)), false);
 });
 
+test('a dead body cross-link warns; artifact evidence links and URLs are exempt', () => {
+  const dir = newWiki();
+  putPage(dir, 'decisions/2026-07-11-cta.md', DECISION_FM,
+    '# CTA\n\nSee [Acme](../entities/acme.md) and [tokens](../../.twt-artifacts/design/tokens.css) and [docs](https://example.com).');
+  reindex(dir);
+  const r = lintJson(dir);
+  const dead = r.findings.filter((f) => /body link/.test(f.problem));
+  assert.equal(dead.length, 1, JSON.stringify(dead));
+  assert.match(dead[0].problem, /entities\/acme\.md/);
+});
+
+test('a collection page nothing links to is an orphan SUGGESTION once the wiki has two weavable pages', () => {
+  const dir = newWiki();
+  putPage(dir, 'entities/acme.md',
+    ['title: Acme', 'type: entity', 'status: current', 'updated: 2026-07-12', 'summary: the client', 'sources: []', 'tags: []'],
+    '# Acme');
+  putPage(dir, 'decisions/2026-07-11-cta.md', DECISION_FM,
+    '# CTA\n\nFor [Acme](../entities/acme.md).');
+  reindex(dir);
+  const r = lintJson(dir);
+  const orphans = r.findings.filter((f) => /nothing trails to/.test(f.problem));
+  // The entity has an inbound link from the decision; the decision has none.
+  assert.equal(orphans.length, 1, JSON.stringify(orphans));
+  assert.match(orphans[0].where, /decisions\//);
+});
+
+test('a single collection page is never flagged as an orphan (nothing to weave yet)', () => {
+  const dir = newWiki();
+  putPage(dir, 'decisions/2026-07-11-cta.md', DECISION_FM, '# CTA');
+  reindex(dir);
+  const r = lintJson(dir);
+  assert.equal(r.findings.some((f) => /nothing trails to/.test(f.problem)), false);
+});
+
+test('an operating manual older than the plugin template warns', () => {
+  const dir = newWiki();
+  // Fresh wiki carries the current manual version - no warning.
+  assert.equal(lintJson(dir).findings.some((f) => /stale manual/.test(f.problem)), false);
+  // An unstamped (pre-versioning) manual counts as v1 and warns.
+  writeFileSync(join(dir, '.project-wiki', 'AGENTS.md'), '# Wiki operating manual\n\nold, unstamped\n', 'utf8');
+  const r = lintJson(dir);
+  assert.ok(r.findings.some((f) => f.tier === 'WARNING' && /obeys the stale manual/.test(f.problem)));
+});
+
 test('a live legacy facts ledger alongside the wiki ledger warns; the moved stub does not', () => {
   const dir = newWiki();
   const legacy = join(dir, '.twt-artifacts', 'pre-design', 'curation');

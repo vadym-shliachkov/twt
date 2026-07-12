@@ -146,8 +146,34 @@ Note what the evidence line does *not* do: it does not cite `.project-wiki/inbox
 
 **An idea page** carries `type: idea` and `status: raw | shaped | scoped | shipped | dropped`, plus what it is, why it might matter, and what would have to be true to scope it.
 
+**An entity page looks like this** — entities are also where `type: concept` pages live (there is no `concepts/` folder). Note the `## Decisions` list: it is the back-link half of the cross-linking rule below.
+
+```
+---
+title: Acme Corp
+type: entity
+status: current
+updated: 2026-07-12
+summary: the client — B2B logistics, 200 staff, rebranding from "Acme Shipping"
+sources:
+  - raw/meetings/2026-07-10-kickoff.md
+tags: [client]
+---
+
+# Acme Corp
+
+**What:** the client. B2B logistics, ~200 staff, three product lines.
+
+**Voice constraint:** never "agency" for themselves; "firm" ([glossary](../glossary.md)).
+
+## Decisions
+- [Primary CTA is orange, not brand navy](../decisions/2026-07-11-cta-color.md) — their brand navy failed hero contrast
+```
+
+**Cross-link every page you touch (both directions).** The wiki is a graph, not a set of drawers — a page no other page links to is knowledge nothing trails to. When a decision names an entity, link the entity from the decision **and** add the decision to the entity's `## Decisions` list; when two decisions relate (one constrains, supersedes, or motivated the other), link them both ways; an idea that came out of a decision links it. Use relative Markdown links, as in the examples. Before finishing, check each page you created or updated: does at least one *other* collection page link to it? If nothing does, either add the missing link where it naturally belongs or say in your report why the page legitimately stands alone.
+
 ## Step 4 — Synthesize newly ingested sources
-For each source in `sources.md` not yet reflected on any page, read it from the location in that row's `Where` column. That location is not always under `raw/`: per `twt-wiki-fetch`, a binary or fetched extract is copied into `raw/...`, but a file already in the repo (or a very large file) is registered by its original project-relative path instead and was never copied. Read whichever path the row actually names, then fold what matters into existing entity/concept pages. **Update, never duplicate** — a second page about the same entity is a bug. Create a new page only when the knowledge is durable and has no home.
+For each source in `sources.md` not yet reflected on any page, read it from the location in that row's `Where` column. That location is not always under `raw/`: per `twt-wiki-fetch`, a binary or fetched extract is copied into `raw/...`, but a file already in the repo (or a very large file) is registered by its original project-relative path instead and was never copied. Read whichever path the row actually names, then fold what matters into existing entity/concept pages. **One source usually touches several pages** — the client entity, a competitor entity, a fact row, a glossary term — not just one; walk the source's claims and route each to its home, cross-linking as you go (see Step 3's rule). **Update, never duplicate** — a second page about the same entity is a bug. Create a new page only when the knowledge is durable and has no home.
 
 ## Step 5 — Handle contradictions honestly (do not resolve them silently)
 When a new source contradicts a current page, or two sources disagree:
