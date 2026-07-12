@@ -2111,7 +2111,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2240,7 +2240,7 @@ flowchart TB
 ### /twt-wiki-validate
 
 **Category:** wiki
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - (none — reads the whole .project-wiki/)

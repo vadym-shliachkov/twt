@@ -2179,7 +2179,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** yes
 
 The single entry point to the project wiki — `.project-wiki/`, the durable memory that holds what `.twt-artifacts/` cannot: why decisions were made, what was ruled out, what the client said, ideas not yet scoped, and the assets themselves.
