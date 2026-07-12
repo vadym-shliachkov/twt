@@ -16,6 +16,7 @@ reads:
   - .twt-artifacts/pre-design/spec/specification.md
   - .twt-artifacts/pre-design/curation/inventory.md
   - .twt-artifacts/pre-design/curation/outlines/
+  - .project-wiki/facts.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/design/design-read.md
   - references/external-design-skills.md
@@ -77,7 +78,7 @@ When the design wasn't driven by a Figma/exported source, apply the external des
 - **`design-taste-frontend` anti-slop** — carry §4.3–4.11 + §9 into the page agents (next step): real images via the asset manifest (never div-based fake screenshots), one locked accent + one radius scale, hero fits the viewport, **eyebrow restraint**, **zigzag cap**, **no em-dashes** anywhere, no decorative status dots / version stamps / locale strips / scroll cues.
 
 ## Step 4 — Render each page (in parallel)
-`styles.css` is now final and each page writes its own `pages/<page-slug>.html`, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to read `layouts/<page-slug>.md`, `components.md`, `tokens.css`, `styles.css`, the page's `outlines/<page>.md` / `inventory.md`, and `facts.md` (the reusable-facts + provided-assets ledger, if present), then write `pages/<page-slug>.html`:
+`styles.css` is now final and each page writes its own `pages/<page-slug>.html`, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to read `layouts/<page-slug>.md`, `components.md`, `tokens.css`, `styles.css`, the page's `outlines/<page>.md` / `inventory.md`, and the facts ledger (the reusable-facts + provided-assets ledger, if present — resolve its path **once, here in the parent**: `.project-wiki/facts.md` when `.project-wiki/` exists, else the legacy `.twt-artifacts/pre-design/curation/facts.md`; pass the resolved path into every agent prompt), then write `pages/<page-slug>.html`:
 - `<head>` links `../design-system/tokens.css` then `../styles.css`.
 - Build sections in the layout's order, composing the documented components.
 - Populate with **real content** pulled from `outlines/<page>.md` / `inventory.md` — never lorem where real content exists.

@@ -25,7 +25,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `overview.md` | The project in one page: what, for whom, where it stands. |
 | `inbox.md` | **Append-only raw capture.** Written by the capture hook and by skills. Only the curator drains it. |
 | `log.md` | Append-only history: every ingest, sync, query, lint. |
-| `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD`. |
+| `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD` — plus the provided-assets table. The pipeline's fact reconciliation writes here directly. |
 | `decisions/` | One page per durable decision: what, why, evidence, reversible, superseded-by. |
 | `open-questions.md` | Unresolved: live conflicts, un-overruled blockers, unanswered asks. |
 | `ideas/` | Functionality and content ideas — `raw` / `shaped` / `scoped` / `shipped` / `dropped`. |
@@ -44,7 +44,9 @@ This wiki must survive `rm -rf .twt-artifacts/`.
   `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md` — with an
   empty stub once, at init, never overwriting a file that already exists.
 - **The curator** (`twt-wiki-define`) is the only thing that writes *into* a curated
-  page after that — the same list, now with real content.
+  page after that — the same list, now with real content. One exception: `facts.md`
+  also accepts the pipeline's fact reconciliation (`twt-curation-define`), which merges
+  by fact key and never silently flips a value — a disagreement becomes a `CONFLICT` row.
 - **Nothing** deletes a source file or a wiki page without explicit human approval.
 
 ## Page frontmatter

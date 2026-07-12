@@ -18,10 +18,12 @@ reads:
   - .twt-artifacts/pre-design/brand/_fetched-brand.md
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/curation/inventory.md
+  - .project-wiki/facts.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/pre-design/curation/validation-report.md
 writes:
   - .twt-artifacts/pre-design/curation/inventory.md
+  - .project-wiki/facts.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/pre-design/curation/outlines/<page-slug>.md
   - .twt-artifacts/pre-design/curation/decisions.md
@@ -63,7 +65,7 @@ Read content-fetch outputs (the items to curate), `sitemap.md` (the target pages
 **(Skipped in collect mode — see Step 1b.)** Enumerate every fetched content item. For each, decide KEEP / SKIP / ELEVATE with the user and assign a target page slug from the sitemap (or none). Write `inventory.md` as the flat decision table with rationale.
 
 ## Step 3.5 — Reconcile reusable facts (facts.md — the source of truth)
-Build `.twt-artifacts/pre-design/curation/facts.md`, the reconciled ledger every downstream skill binds to. This runs after the inventory and **before** the outlines, so the outline agents can cite it. It runs in every mode (collect and interactive).
+**Resolve the ledger path first** (Glob/Read — never a shell command): the ledger lives at **`.project-wiki/facts.md`** when `.project-wiki/` exists — the wiki is its canonical home, because reconciled facts are human-sourced knowledge that must survive `rm -rf .twt-artifacts/` (CONVENTIONS §17 sanctions this skill as the ledger's pipeline writer there). Only when there is no wiki does it live at the legacy `.twt-artifacts/pre-design/curation/facts.md`. Build the ledger at the resolved path — it is the reconciled ledger every downstream skill binds to. This runs after the inventory and **before** the outlines, so the outline agents can cite it. It runs in every mode (collect and interactive).
 
 Scan **every** source — `brand-brief.md` / `_fetched-brand.md` and the fetched site/doc content — for **reusable facts**: any value that appears on more than one page or headlines a claim (firm tenure, founding year, headcount, vertical/industry count, client/engagement count, the self-descriptor noun, taglines, and every per-client metric together with its named attribution). For each, compare what each source says and assign a status:
 - **RESOLVED** — one source, or sources agree, or a stated reconciliation rule applies. `canonical` is the exact string authors must reuse.
@@ -73,16 +75,9 @@ Scan **every** source — `brand-brief.md` / `_fetched-brand.md` and the fetched
 
 Also build the **provided-assets** table from brand-fetch's `## Provided assets` records in `_fetched-brand.md` (or a direct scan of the brand-source dir if brand-fetch didn't run): one row per real logo/mark file (role · file · surface · `provided`), plus a row per standard variant with no file (`missing`).
 
-Write `facts.md` in **exactly** this format (this skill carries the schema inline — never load it from an external template file):
+Write the ledger **body** in **exactly** this format (this skill carries the schema inline — never load it from an external template file):
 
 ```markdown
----
-generated: <ISO timestamp>
-area: curation
-producer: twt-curation-define
-status: open | resolved
----
-
 # Facts ledger
 
 ## Canonical facts
@@ -99,11 +94,31 @@ status: open | resolved
 | primary-ink | — | light surfaces (header) | missing |
 ```
 
-Set frontmatter `status: open` while any fact is CONFLICT / UNVERIFIED-ATTR / TBD (or a named asset role is `missing` with no accepted fallback); `resolved` only when every fact is RESOLVED. In refinement mode, apply the user's resolved answers — flip each CONFLICT to RESOLVED with the chosen canonical — and re-set the frontmatter status.
+The **frontmatter depends on which path was resolved** — the two homes carry different schemas:
+
+- **Legacy path** (no wiki): artifact frontmatter — `generated: <ISO timestamp>` / `area: curation` / `producer: twt-curation-define` / `status: open | resolved`. Set `status: open` while any fact is CONFLICT / UNVERIFIED-ATTR / TBD (or a named asset role is `missing` with no accepted fallback); `resolved` only when every fact is RESOLVED.
+- **Wiki path**: the file already exists with wiki page frontmatter (`title`/`type`/`status`/`updated`/`summary`/`sources`/`tags` — the scaffold seeded it, and `AGENTS.md` is its schema). **Keep that frontmatter shape**; never stamp the artifact frontmatter over it. Map the pipeline state onto the wiki status vocabulary: `status: needs-review` while any fact is CONFLICT / UNVERIFIED-ATTR / TBD (or a named asset role is `missing`), else `status: current`. Bump `updated:` and keep a one-line `summary:` (e.g. "12 facts: 10 resolved, 2 in conflict"). **Merge, never overwrite**: the wiki curator (`twt-wiki-define`) also promotes fact rows into this file — reconcile by fact key, keep rows you didn't produce, and never silently flip someone else's RESOLVED value (a disagreement is a CONFLICT, per the rules above).
+
+**One-time legacy migration (wiki path only):** if the legacy `.twt-artifacts/pre-design/curation/facts.md` also exists and still carries ledger tables, its rows are prior reconciliation output — merge them into the wiki ledger by fact key (a disagreement between the two is a CONFLICT, never a silent pick). Then replace the legacy file's entire content with this pointer stub, so two live ledgers can never drift apart (the harvester has already captured its rows in `.harvest-state.json`, so nothing is lost):
+
+```markdown
+---
+generated: <ISO timestamp>
+area: curation
+producer: twt-curation-define
+status: moved
+---
+
+# Facts ledger
+
+Moved to `.project-wiki/facts.md` — the wiki is the canonical ledger. This file is retained as a pointer only; do not add rows here.
+```
+
+In refinement mode, apply the user's resolved answers — flip each CONFLICT to RESOLVED with the chosen canonical — and re-set the frontmatter status per the resolved path's schema above.
 
 ## Step 4 — Build per-page outlines (in parallel)
 The inventory from Step 3 is now complete and written; each page's outline depends only on it plus read-only inputs, and each writes its own `outlines/<page-slug>.md`. So the pages are independent — **dispatch one Agent per page slug in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to:
-- Read `inventory.md` (the now-complete decision table), `sitemap.md` (its page's entry), `brand-brief.md` (voice), and `facts.md` (the reconciled reusable facts + provided assets).
+- Read `inventory.md` (the now-complete decision table), `sitemap.md` (its page's entry), `brand-brief.md` (voice), and the facts ledger (the reconciled reusable facts + provided assets) — pass the **path resolved in Step 3.5** into each agent's prompt; the agents must not re-derive it.
 - Write `outlines/<page-slug>.md`: ordered sections, each carrying **drafted, on-brand copy** — restructured and **rewritten in the brand voice** (from `brand-brief.md`), fitted to this page's purpose in the new IA. Pull facts from the KEEP/ELEVATE items mapped to the page, but **rewrite the wording** (headlines, subheads, body, CTAs) — do NOT paste source copy verbatim. **Never invent** facts, claims, numbers, names, or testimonials not present in the source; where the page needs content the source lacks, mark the section `> GAP` (do not fabricate). **Bind every reusable fact to `facts.md`:** use the exact `canonical` string for tenure, counts, the self-descriptor noun, per-client metrics, etc., and never emit a value that contradicts the ledger. A fact whose status is CONFLICT / TBD / UNVERIFIED-ATTR renders as `> GAP` or a visible TBD, never a guessed number. Keep the slug identical to `sitemap.md`.
 - Write **only** its own `outlines/<page-slug>.md` — touch no shared file (the inventory is already final).
 

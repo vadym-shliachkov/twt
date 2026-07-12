@@ -97,11 +97,13 @@ Group related entries — a `decision` and the `reason` that explains it usually
 `facts.md`, `open-questions.md`, and `glossary.md` already exist with headers the scaffolder seeded — append rows that match them exactly rather than inventing a new layout:
 
 ```
-facts.md:           | Fact | Canonical value | Status | Sources |
+facts.md:           | fact | canonical | status | sources (value@source) |   (## Canonical facts)
 open-questions.md:  | Question | Why it matters | Blocked | Raised |
 glossary.md:        | Term | Means |            (## Terms)
                     | Never say | Say instead | Why |   (## Banned words)
 ```
+
+`facts.md` is the one curated file with a **second sanctioned writer**: `twt-curation-define` reconciles pipeline facts directly into it (CONVENTIONS §17). Merge by fact key and never silently flip a value another writer resolved — a disagreement is a `CONFLICT` row. Leave its `## Provided assets` table to the pipeline; you never write that section.
 
 For a fact row: `Status` is `RESOLVED` when there is one source or all sources agree (`Canonical value` = the settled value), `CONFLICT` when sources disagree (see Step 5), `UNVERIFIED-ATTR` when a generic example is pinned to a named entity without re-sourcing, or `TBD` when needed but absent everywhere. `Sources` lists each contributing value as `value@source`.
 

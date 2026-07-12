@@ -48,7 +48,7 @@ Run (Bash, single command):
 node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-lint.mjs" "$CLAUDE_PROJECT_DIR" --json
 ```
 
-It checks: required files present; frontmatter valid (including the idea-lifecycle status vocabulary); index links resolve and every page is indexed; citations exist; cited sources not newer than the page's `updated` date; superseded pages link a living successor; `needs-review` pages whose why was never captured; `facts.md` CONFLICT/TBD/UNVERIFIED-ATTR rows; open questions; inbox entries pending past the age threshold.
+It checks: required files present; frontmatter valid (including the idea-lifecycle status vocabulary); index links resolve and every page is indexed; citations exist; cited sources not newer than the page's `updated` date; superseded pages link a living successor; `needs-review` pages whose why was never captured; `facts.md` CONFLICT/TBD/UNVERIFIED-ATTR rows; a live legacy facts ledger still sitting beside the canonical `.project-wiki/facts.md`; open questions; inbox entries pending past the age threshold.
 
 Carry every finding into the report **verbatim**. Do not re-check what it already decided, and never soften a tier.
 

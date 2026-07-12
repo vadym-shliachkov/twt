@@ -114,12 +114,21 @@ Wiki initialized.
 `);
 
 put('facts.md', fm('Facts', 'concept') +
-`# Facts
+`# Facts ledger
 
-The canonical ledger. Every reusable fact, its canonical value, its sources, and its status.
+The canonical ledger. Every reusable fact, its canonical value, its sources, and its
+status. Two sanctioned writers: the wiki curator (twt-wiki-define, promoting inbox
+entries) and the pipeline's fact reconciliation (twt-curation-define, which writes
+here directly once this wiki exists).
 
-| Fact | Canonical value | Status | Sources |
-|---|---|---|---|
+## Canonical facts
+| fact | canonical | status | sources (value@source) |
+|------|-----------|--------|------------------------|
+| _none yet_ | | | |
+
+## Provided assets
+| role | file | usable-on | status |
+|------|------|-----------|--------|
 | _none yet_ | | | |
 
 **Statuses:** \`RESOLVED\` (sources agree, or only one source) - \`CONFLICT\` (sources

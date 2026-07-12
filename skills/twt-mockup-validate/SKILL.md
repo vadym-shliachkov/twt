@@ -16,6 +16,7 @@ reads:
   - .twt-artifacts/design/layout/layouts/
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/pre-design/curation/outlines/
+  - .project-wiki/facts.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/design/design-read.md
   - references/external-design-skills.md
@@ -44,7 +45,7 @@ writes:
 ---
 
 ## Step 1 — Load artifacts (hard dependency)
-Read every `pages/<page>.html`, plus `index.html`, `styles.css`, `layouts/`, `tokens.css`, `outlines/`, and `facts.md` (the reusable-facts + provided-assets ledger, if present). If `pages/` is empty or missing, abort: "No mockups — run /twt-mockup-define first." Do not create any file.
+Read every `pages/<page>.html`, plus `index.html`, `styles.css`, `layouts/`, `tokens.css`, `outlines/`, and the facts ledger (the reusable-facts + provided-assets ledger, if present — at `.project-wiki/facts.md` when `.project-wiki/` exists, else the legacy `.twt-artifacts/pre-design/curation/facts.md`). If `pages/` is empty or missing, abort: "No mockups — run /twt-mockup-define first." Do not create any file.
 
 ## Step 2 — Score the rubric (evaluative, with evidence)
 Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weights are fixed and sum to 100:

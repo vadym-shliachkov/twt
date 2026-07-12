@@ -14,6 +14,7 @@ dependencies:
 reads:
   - .twt-artifacts/pre-design/curation/inventory.md
   - .twt-artifacts/pre-design/curation/outlines/
+  - .project-wiki/facts.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/positioning/positioning.md
@@ -43,7 +44,7 @@ writes:
 ---
 
 ## Step 1 — Load the artifacts (hard dependency)
-Read `.twt-artifacts/pre-design/curation/inventory.md`, `facts.md`, and all `outlines/*.md`. If `inventory.md` is absent, abort: "No curation artifacts found — run /twt-curation-define first." Do not create them. Also read `brand-brief.md`, `positioning.md`, and `sitemap.md` if present (for voice, priority, and coverage checks).
+Read `.twt-artifacts/pre-design/curation/inventory.md`, the facts ledger (at `.project-wiki/facts.md` when `.project-wiki/` exists, else the legacy `.twt-artifacts/pre-design/curation/facts.md`), and all `outlines/*.md`. If `inventory.md` is absent, abort: "No curation artifacts found — run /twt-curation-define first." Do not create them. Also read `brand-brief.md`, `positioning.md`, and `sitemap.md` if present (for voice, priority, and coverage checks).
 
 ## Step 2 — Score the rubric (evaluative, with evidence)
 Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weights are fixed and sum to 100:
