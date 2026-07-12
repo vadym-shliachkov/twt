@@ -255,8 +255,26 @@ test('a facts.md CONFLICT row reports both values and never silently picks a can
   assert.match(text, /20\+ years@brandbook/);
   assert.match(text, /25\+ years@site/);
   assert.match(text, /\*\*canonical:\*\* TBD/);
-  // The RESOLVED row must never be harvested - only CONFLICT rows are decisions.
-  assert.equal(/self-descriptor-noun/.test(text), false, 'a RESOLVED fact row is not a decision');
+});
+
+test('a facts.md RESOLVED row is harvested with its canonical value and status, so it survives artifact deletion', () => {
+  const dir = newProject();
+  initWiki(dir);
+  writeArtifact(dir, 'pre-design/curation/facts.md', FACTS_MD);
+  run(dir);
+  const text = readFileSync(inboxPath(dir), 'utf8');
+  // facts.md is a special basename: it gets no sources.md row, so the inbox
+  // is a resolved fact's ONLY path into the wiki. Losing it would violate
+  // the survival guarantee (the wiki must outlive rm -rf .twt-artifacts/).
+  assert.match(text, /\*\*fact:\*\* self-descriptor-noun/);
+  assert.match(text, /\*\*canonical:\*\* firm/);
+  assert.match(text, /\*\*status:\*\* RESOLVED/);
+  // A settled fact has no rationale to fabricate - no why line at all.
+  const resolvedEntry = text.split('\n## ').find((e) => /self-descriptor-noun/.test(e));
+  assert.equal(/\*\*why:\*\*/.test(resolvedEntry), false, 'a RESOLVED fact entry must not carry a why line');
+  // The Provided-assets table (no "canonical" column) must never be mistaken
+  // for the fact ledger.
+  assert.equal(/logo-white\.png/.test(text), false, 'a provided-assets row is not a fact');
 });
 
 test('a non-decision artifact (tokens.css) gets a sources.md row and no inbox entry', () => {

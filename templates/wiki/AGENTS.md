@@ -29,7 +29,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `decisions/` | One page per durable decision: what, why, evidence, reversible, superseded-by. |
 | `open-questions.md` | Unresolved: live conflicts, un-overruled blockers, unanswered asks. |
 | `ideas/` | Functionality and content ideas — `raw` / `shaped` / `scoped` / `shipped` / `dropped`. |
-| `entities/` | Client, audience segments, competitors, people, products. |
+| `entities/` | Client, audience segments, competitors, people, products — and durable concepts (`type: concept` pages live here too; there is no separate `concepts/` folder). |
 | `analyses/` | Saved answers from queries that were worth keeping. |
 | `glossary.md` | Terms, and banned words. |
 | `sources.md` | Registry of all evidence: `raw/` files, `.twt-artifacts/` paths, URLs. |
@@ -41,8 +41,8 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 - **The capture hook and skills** append to `inbox.md` and **nothing else**. Appending
   cannot corrupt.
 - **The scaffolder** seeds each curated page — `decisions/`, `entities/`, `ideas/`,
-  `facts.md`, `open-questions.md`, `index.md`, `overview.md` — with an empty stub once,
-  at init, never overwriting a file that already exists.
+  `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md` — with an
+  empty stub once, at init, never overwriting a file that already exists.
 - **The curator** (`twt-wiki-define`) is the only thing that writes *into* a curated
   page after that — the same list, now with real content.
 - **Nothing** deletes a source file or a wiki page without explicit human approval.
@@ -60,6 +60,9 @@ sources:
 tags: []
 ---
 ```
+
+Exception: `type: idea` pages use their own lifecycle vocabulary in `status` —
+`raw | shaped | scoped | shipped | dropped` — instead of the list above.
 
 ## Rules for maintaining pages
 

@@ -172,7 +172,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 - **The wiki links to artifacts; it never copies them.** A copied artifact is stale the moment its skill re-runs.
 - **Capture is append-only and has many writers.** The `twt-wiki-capture` hook records every `AskUserQuestion` answer; the `wiki-append` block lets a skill record its own reasoning. Both append to `.project-wiki/inbox.md` and touch nothing else. Appending cannot corrupt.
-- **Curation has exactly one writer.** The scaffolder seeds each curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `index.md`, `overview.md`) with an empty stub once, at init, never overwriting a file that already exists; from then on, only `twt-wiki-define` writes into them.
+- **Curation has exactly one writer.** The scaffolder seeds each curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md`) with an empty stub once, at init, never overwriting a file that already exists; from then on, only `twt-wiki-define` writes into them.
 - **The wiki is opt-in.** Every wiki writer — hook and skill alike — is inert when `.project-wiki/` does not exist.
 - **Nothing auto-writes to a curated page.** Orchestrators may *offer* to curate; they never do it silently. Synthesized prose written unasked into a durable store is how a wiki fills with slop and gets abandoned.
 - **No skill deletes a source file or a wiki page** without explicit user approval.
@@ -180,7 +180,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 **Harvest is capture; curation is synthesis.** The two are automated differently, and the split is the whole reason a phase may write to the wiki at all.
 
 - **Every phase auto-harvests.** The `wiki-harvest` block runs `tools/wiki-harvest.mjs` at the end of each phase orchestrator (and `/twt-site-dev`; `/twt-site` inherits it by dispatching the phases). It appends to `inbox.md` — append-only, so it cannot corrupt. A decision a phase made that nobody harvests is a decision lost.
-- **Harvest never mirrors an artifact.** It pulls only decision-bearing content — `decisions.md` items, `site-log.md` Q&A, `facts.md` CONFLICT rows, validator BLOCKERs. Every other artifact gets a `sources.md` row pointing at its path, and nothing else. Summarizing a regenerable file into the wiki recreates the stale mirror this whole design exists to avoid.
+- **Harvest never mirrors an artifact.** It pulls only decision-bearing content — `decisions.md` items, `site-log.md` Q&A, every `facts.md` ledger row (reconciled facts are human-sourced knowledge, and the inbox is the ledger's only path into the wiki — resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs. Every other artifact gets a `sources.md` row pointing at its path, and nothing else. Summarizing a regenerable file into the wiki recreates the stale mirror this whole design exists to avoid.
 - **Harvest is deterministic and idempotent.** It is a script, not a prompt: it cannot invent a reason (an unrecorded rationale is written as `_not recorded_`) and cannot silently resolve a `CONFLICT`. Harvested item IDs persist in `.project-wiki/.harvest-state.json`, so an item is never re-harvested — including after the curator has drained it from the inbox.
 
 ---

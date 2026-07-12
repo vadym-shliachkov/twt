@@ -115,6 +115,54 @@ test('records raw payload when the answer cannot be parsed, losing nothing', () 
   assert.match(text, /\*\*raw:\*\*/, 'unparseable response is preserved verbatim');
 });
 
+test('captures the header chip, the chosen option description, and the user note', () => {
+  const dir = newProject({ withWiki: true });
+  runHook({
+    ...ASK_PAYLOAD,
+    tool_response: {
+      answers: { 'Which accent for the primary CTA?': 'Orange' },
+      annotations: { 'Which accent for the primary CTA?': { notes: 'Client explicitly vetoed navy' } },
+    },
+  }, dir);
+  const text = readFileSync(inbox(dir), 'utf8');
+  assert.match(text, /\*\*header:\*\* Accent/, 'the header chip is the best topical routing signal');
+  assert.match(text, /\*\*detail:\*\* High contrast on the dark hero/, 'the chosen option description is the closest thing to a rationale');
+  assert.match(text, /\*\*notes:\*\* Client explicitly vetoed navy/, 'a user note is the user explaining their own choice - never drop it');
+});
+
+test('skips operational plumbing headers (Setup, Wiki, Sync, Save, Ingest or focus)', () => {
+  const dir = newProject({ withWiki: true });
+  runHook({
+    tool_name: 'AskUserQuestion',
+    tool_input: {
+      questions: [{
+        question: 'Run /twt-setup now?',
+        header: 'Setup',
+        options: [{ label: 'Run /twt-setup now' }, { label: 'Skip' }],
+      }],
+    },
+    tool_response: { answers: { 'Run /twt-setup now?': 'Skip' } },
+  }, dir);
+  assert.equal(existsSync(inbox(dir)), false, 'run mechanics are not project knowledge - nothing should be written');
+});
+
+test('a skipped plumbing question does not suppress a real question in the same call', () => {
+  const dir = newProject({ withWiki: true });
+  runHook({
+    tool_name: 'AskUserQuestion',
+    tool_input: {
+      questions: [
+        { question: 'Run /twt-setup now?', header: 'Setup', options: [{ label: 'Skip' }] },
+        { question: 'Which accent?', header: 'Accent', options: [{ label: 'Orange' }] },
+      ],
+    },
+    tool_response: { answers: { 'Run /twt-setup now?': 'Skip', 'Which accent?': 'Orange' } },
+  }, dir);
+  const text = readFileSync(inbox(dir), 'utf8');
+  assert.match(text, /\*\*question:\*\* Which accent\?/, 'the real question is captured');
+  assert.equal(/Run \/twt-setup now/.test(text), false, 'the plumbing question is not');
+});
+
 test('never throws and always exits 0 on malformed input', () => {
   const dir = newProject({ withWiki: true });
   assert.doesNotThrow(() => execFileSync(process.execPath, [HOOK], {

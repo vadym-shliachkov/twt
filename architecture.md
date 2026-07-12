@@ -2157,6 +2157,7 @@ flowchart TB
 - .project-wiki/ideas/
 - .project-wiki/facts.md
 - .project-wiki/open-questions.md
+- .project-wiki/glossary.md
 - .project-wiki/analyses/
 - .project-wiki/log.md
 
@@ -2168,6 +2169,7 @@ flowchart TB
 | .project-wiki/ideas/ |  |
 | .project-wiki/facts.md |  |
 | .project-wiki/open-questions.md |  |
+| .project-wiki/glossary.md |  |
 | .project-wiki/index.md |  |
 | .project-wiki/overview.md |  |
 | .project-wiki/inbox.md |  |

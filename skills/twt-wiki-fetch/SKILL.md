@@ -28,10 +28,10 @@ writes:
 
 ## Intent
 
-**Purpose:** Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, facts.md CONFLICTs, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.
+**Purpose:** Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, every facts.md ledger row, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.
 
 **Non-goals:**
-- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `index.md`, `overview.md`. That is the curator's job alone, run separately via `/twt-wiki` → `twt-wiki-define`.
+- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md`. That is the curator's job alone, run separately via `/twt-wiki` → `twt-wiki-define`.
 - Does not interpret or synthesize. It registers evidence; it does not draw conclusions from it.
 - Does not delete or edit anything already in `raw/`. Raw evidence is immutable.
 - The `.twt-artifacts/` sync path is **capture, not curation**: it appends to `inbox.md` and adds rows to `sources.md` only. It never summarizes a generated file (tokens.css, a mockup, a report) into the wiki — those get a source link, nothing more.

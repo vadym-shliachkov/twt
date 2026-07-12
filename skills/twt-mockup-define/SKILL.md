@@ -104,5 +104,29 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/scan-manifest.mjs" "$CLAUDE_PROJECT_DIR/.twt-a
 ```
 This outputs JSON `[{file, src, type, resolved, exists}]` covering `<img>`, `<video>`, and CSS `background-image` references. Use this list to identify which assets are referenced. For each entry where `exists: false` (local asset missing) or `exists: null` (external URL), ensure a manifest row exists. Ensure each has a row in `.twt-artifacts/design/assets/manifest.md` (create in the asset-manifest format — frontmatter `generated`/`phase: design`/`area: assets`, a `# Asset manifest` heading, and a table with columns id | type (image|video) | filename (kebab-case, web format) | placement (page → section → slot) | spec (dimensions/aspect/treatment) | alt | source (generate|stock|provided) | generation_prompt if absent; append missing rows, dedupe by `filename`). Use the SAME `filename` in the mockup markup and the manifest row so develop and QA can reconcile them. Run this **serially in this parent** (not in the parallel Step-4 agents). Each row carries id/type/filename/placement/spec/alt/source/generation_prompt; plan only, mark client-supplied assets `source: provided`. Do not generate binaries. **Cross-check logo/brand-mark references against `facts.md`'s provided-assets table:** if a mockup points at a synthesized placeholder for a surface the ledger lists as `provided`, that is a defect — fix the page to reference the real file. Only a surface with no provided variant keeps a placeholder, flagged `TBD`.
 
+## Wiki capture — record what you decided and why
+If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+
+Append one entry per judgment that a human would need to re-make if it were lost:
+- a decision you made autonomously (collect mode, or an unattended run)
+- a factual `CONFLICT` you resolved, or refused to resolve
+- a validator BLOCKER you overruled, and on what grounds
+- an idea you raised but did not scope
+- a free-form answer the user typed at a plain-text prompt (a direction, a constraint, pasted guidance) that shaped what you produced — the capture hook sees only AskUserQuestion menus, so this is the one place a typed answer gets recorded; put their words in **decision:** verbatim, not paraphrased
+
+Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+
+```
+## <UTC timestamp, e.g. 2026-07-11T14:03:22Z — no milliseconds, matching the capture hook> · reason · <this skill's name>
+- **decision:** <what you settled>
+- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **evidence:** <path, URL, or artifact this rests on>
+- **reversible:** <yes|no>
+```
+
+Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
+
+If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
+
 ## Step 7 — Report
 List the pages rendered, the `index.html` path, the asset rows synced to the manifest, and what to run next (`/twt-mockup-validate` or `/twt-design`). Note these are throwaway visual references, not the production build.

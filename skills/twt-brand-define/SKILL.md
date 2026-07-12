@@ -88,6 +88,7 @@ Append one entry per judgment that a human would need to re-make if it were lost
 - a factual `CONFLICT` you resolved, or refused to resolve
 - a validator BLOCKER you overruled, and on what grounds
 - an idea you raised but did not scope
+- a free-form answer the user typed at a plain-text prompt (a direction, a constraint, pasted guidance) that shaped what you produced — the capture hook sees only AskUserQuestion menus, so this is the one place a typed answer gets recorded; put their words in **decision:** verbatim, not paraphrased
 
 Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
 

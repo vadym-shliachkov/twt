@@ -12,7 +12,9 @@
  * failure this system exists to avoid. tokens.css, mockups, and reports are
  * regenerable - they get a one-line sources.md row pointing at their path
  * and nothing else. Only genuinely decision-bearing content (a choice, a
- * reason, a conflict, an open question) becomes an inbox entry.
+ * reason, a conflict, an open question) becomes an inbox entry - plus every
+ * facts-ledger row, because reconciled facts are human-sourced knowledge the
+ * wiki must keep even after the artifacts folder is deleted.
  *
  * INERT BY DEFAULT: no .project-wiki/ -> writes nothing, exits 0.
  * No .twt-artifacts/ -> writes nothing, exits 0. This runs at the end of
@@ -131,11 +133,16 @@ function parseDecisions(text) {
 }
 
 // facts.md (skills/twt-curation-define/SKILL.md Step 3.5): a pipe table
-// whose header includes "canonical"; only CONFLICT-status rows are
-// decision-bearing (RESOLVED/TBD/UNVERIFIED-ATTR rows are not disagreements
-// needing a human, so they are left for the curator's Step 4 source read,
-// not harvested as inbox items).
-function parseFactsConflicts(text) {
+// whose header includes "canonical". EVERY status row is harvested, not just
+// CONFLICT: the ledger lives under .twt-artifacts/ and facts.md is a special
+// basename (no sources.md row, so the curator never reads it as a source) -
+// if resolved facts aren't pulled into the inbox they have no path into the
+// wiki at all and die with `rm -rf .twt-artifacts/`, violating the wiki's
+// core survival guarantee. CONFLICT rows stay the same shape as before (both
+// values, canonical TBD, never silently picked); the other statuses carry
+// their canonical value and status so the curator can route them (RESOLVED /
+// UNVERIFIED-ATTR -> a facts.md row, TBD -> open-questions.md).
+function parseFactRows(text) {
   const lines = text.split('\n');
   const isPipeRow = (l) => /^\s*\|.*\|\s*$/.test(l);
   const isSeparator = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
@@ -154,9 +161,13 @@ function parseFactsConflicts(text) {
     if (!header) continue;
     const row = {};
     header.forEach((h, idx) => { row[h] = cells[idx]; });
-    if (header.includes('canonical') && row.status && /conflict/i.test(row.status)) {
-      out.push({ raw: line.trim(), fact: row.fact, canonical: row.canonical, sources: row.sources });
-    }
+    if (!header.includes('canonical') || !row.status) continue;
+    if (!/^(RESOLVED|CONFLICT|UNVERIFIED-ATTR|TBD)$/i.test(row.status.trim())) continue;
+    if (!row.fact || /^_/.test(row.fact)) continue; // "_none yet_" scaffold placeholder
+    out.push({
+      raw: line.trim(), fact: row.fact, canonical: row.canonical,
+      sources: row.sources, status: row.status.trim().toUpperCase(),
+    });
   }
   return out;
 }
@@ -273,9 +284,19 @@ function buildDecisionEntry(relPath, section, raw, id) {
 function buildFactsEntry(relPath, row, id) {
   let out = entryHeader('reason', relPath);
   out += `- **fact:** ${row.fact}\n`;
-  out += `- **canonical:** TBD\n`;
-  out += `- **values:** ${row.sources}\n`;
-  out += `- **why:** _not recorded_\n`;
+  if (row.status === 'CONFLICT') {
+    // Both values, canonical TBD - a conflict is never silently resolved.
+    out += `- **canonical:** TBD\n`;
+    out += `- **values:** ${row.sources}\n`;
+    out += `- **why:** _not recorded_\n`;
+  } else {
+    // A settled (or pending) fact row: no rationale to record - its
+    // provenance IS its sources column. The status line tells the curator
+    // where it goes (RESOLVED/UNVERIFIED-ATTR -> facts.md, TBD -> open-questions.md).
+    out += `- **canonical:** ${row.canonical || 'TBD'}\n`;
+    if (row.sources) out += `- **sources:** ${row.sources}\n`;
+  }
+  out += `- **status:** ${row.status}\n`;
   out += `- **harvested-id:** ${id}\n`;
   return out;
 }
@@ -412,8 +433,11 @@ function harvest(projectDir, { dryRun = false } = {}) {
     }
 
     if (bn === 'facts.md') {
-      for (const row of parseFactsConflicts(content)) {
-        const id = `${relPath}#CONFLICT#${sha1_12(row.raw)}`;
+      for (const row of parseFactRows(content)) {
+        // CONFLICT keeps its historical tag so existing .harvest-state.json
+        // files stay valid; the other statuses are new and get their own.
+        const tag = row.status === 'CONFLICT' ? 'CONFLICT' : 'FACT';
+        const id = `${relPath}#${tag}#${sha1_12(row.raw)}`;
         if (record(id)) inboxChunks.push(buildFactsEntry(relPath, row, id));
       }
       continue;
@@ -442,7 +466,17 @@ function harvest(projectDir, { dryRun = false } = {}) {
     if (newIds.length) saveState(statePath, [...state.harvested, ...newIds]);
   }
 
-  return { lines, harvestedCount, alreadyCount };
+  // How many inbox entries now await curation - the nudge the phase report
+  // carries so a growing inbox never goes unnoticed. Entries start with "## "
+  // at column 0; the scaffold's format comment is indented, so it never counts.
+  let pendingCount = 0;
+  try {
+    const inboxText = readFileSync(join(wikiDir, 'inbox.md'), 'utf8');
+    pendingCount = (inboxText.match(/^## /gm) || []).length;
+    if (dryRun) pendingCount += inboxChunks.length; // what a real run would have appended
+  } catch (e) { /* no inbox.md - leave 0 */ }
+
+  return { lines, harvestedCount, alreadyCount, pendingCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -466,7 +500,8 @@ function main() {
   }
   for (const l of result.lines) console.log(l);
   const prefix = dryRun ? '(dry-run) ' : '';
-  console.log(`${prefix}${result.harvestedCount} harvested, ${result.alreadyCount} already present.`);
+  const pending = result.pendingCount === 1 ? '1 inbox entry' : `${result.pendingCount} inbox entries`;
+  console.log(`${prefix}${result.harvestedCount} harvested, ${result.alreadyCount} already present. ${pending} pending curation.`);
 }
 
 try { main(); } catch (e) { try { console.error(String((e && e.stack) || e)); } catch (_) { /* never block */ } }

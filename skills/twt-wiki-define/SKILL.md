@@ -22,6 +22,7 @@ reads:
   - .project-wiki/ideas/
   - .project-wiki/facts.md
   - .project-wiki/open-questions.md
+  - .project-wiki/glossary.md
   - .project-wiki/analyses/
   - .project-wiki/log.md
 writes:
@@ -30,6 +31,7 @@ writes:
   - .project-wiki/ideas/
   - .project-wiki/facts.md
   - .project-wiki/open-questions.md
+  - .project-wiki/glossary.md
   - .project-wiki/index.md
   - .project-wiki/overview.md
   - .project-wiki/inbox.md
@@ -58,7 +60,7 @@ writes:
 ---
 
 ## Step 1 — Detect mode (CONVENTIONS §10)
-Read `.project-wiki/index.md`. If curated pages already exist, this is **refinement mode**: you are merging into an existing wiki, not building one. Never overwrite a `decisions/`, `entities/`, or `ideas/` page — or a `facts.md`/`open-questions.md` row — wholesale; merge into it and preserve its existing citations. These hold decisions a human made and cannot be re-asked for free.
+Read `.project-wiki/index.md`. If curated pages already exist, this is **refinement mode**: you are merging into an existing wiki, not building one. Never overwrite a `decisions/`, `entities/`, or `ideas/` page — or a `facts.md`/`open-questions.md`/`glossary.md` row — wholesale; merge into it and preserve its existing citations. These hold decisions a human made and cannot be re-asked for free.
 
 `index.md` is different: it is a synthesized catalog, not hand-fed content, and Step 7 rewrites it fresh from the current page set on every run — that is not "overwriting a page" in the sense this step forbids. `overview.md` is not purely synthesized, though — it can carry hand-added prose about the project that no page or artifact restates, so Step 7 **merges** into its existing text rather than regenerating it from scratch. Treat it like any other curated page: update, don't duplicate or discard.
 
@@ -88,14 +90,17 @@ Group related entries — a `decision` and the `reason` that explains it usually
 | Something wanted but not yet scoped | `ideas/<slug>.md` |
 | A person, company, audience, competitor, product | `entities/<slug>.md` |
 | A reusable factual value (a date, a count, a claim) | a row in `facts.md` |
+| A term of art, a naming rule, or a banned word ("never say agency") | a row in `glossary.md` — Terms or Banned words table |
 | Something still unresolved | a row in `open-questions.md` |
 | Noise (a trivial or superseded choice) | dismiss it — but say which entries you dismissed, and why, in your report |
 
-`facts.md` and `open-questions.md` already exist with headers the scaffolder seeded — append rows that match them exactly rather than inventing a new layout:
+`facts.md`, `open-questions.md`, and `glossary.md` already exist with headers the scaffolder seeded — append rows that match them exactly rather than inventing a new layout:
 
 ```
 facts.md:           | Fact | Canonical value | Status | Sources |
 open-questions.md:  | Question | Why it matters | Blocked | Raised |
+glossary.md:        | Term | Means |            (## Terms)
+                    | Never say | Say instead | Why |   (## Banned words)
 ```
 
 For a fact row: `Status` is `RESOLVED` when there is one source or all sources agree (`Canonical value` = the settled value), `CONFLICT` when sources disagree (see Step 5), `UNVERIFIED-ATTR` when a generic example is pinned to a named entity without re-sourcing, or `TBD` when needed but absent everywhere. `Sources` lists each contributing value as `value@source`.

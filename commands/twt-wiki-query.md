@@ -52,7 +52,8 @@ Take it from `$ARGUMENTS`. If none, ask in a plain-text prompt (a free-form ques
 ## Step 3 — Read outward from the index
 1. Read `index.md` — it is the catalog and tells you which pages could possibly bear on the question.
 2. Read the relevant curated pages, including `facts.md` and `open-questions.md` when the question is factual or touches something unresolved.
-3. Follow their citations into `raw/` and `.twt-artifacts/` **only if** the curated pages are not enough.
+3. Read `inbox.md` — capture that has not been curated yet. A decision answered an hour ago lives here, not on any page; skipping it makes the wiki wrongly say "I don't know" about the freshest knowledge. An inbox entry that bears on the question is usable evidence, but report it as **captured, not yet curated** (and suggest `/twt-wiki` to curate) — never treat it as settled, and never curate it yourself from this skill.
+4. Follow their citations into `raw/` and `.twt-artifacts/` **only if** the curated pages are not enough.
 
 Read artifacts with the file tools, never shell (CONVENTIONS §15).
 
