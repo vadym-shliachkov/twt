@@ -62,7 +62,7 @@ writes:
 ## Step 1 — Detect mode (CONVENTIONS §10)
 Read `.project-wiki/index.md`. If curated pages already exist, this is **refinement mode**: you are merging into an existing wiki, not building one. Never overwrite a `decisions/`, `entities/`, or `ideas/` page — or a `facts.md`/`open-questions.md`/`glossary.md` row — wholesale; merge into it and preserve its existing citations. These hold decisions a human made and cannot be re-asked for free.
 
-`index.md` is different: it is a synthesized catalog, not hand-fed content, and Step 7 rewrites it fresh from the current page set on every run — that is not "overwriting a page" in the sense this step forbids. `overview.md` is not purely synthesized, though — it can carry hand-added prose about the project that no page or artifact restates, so Step 7 **merges** into its existing text rather than regenerating it from scratch. Treat it like any other curated page: update, don't duplicate or discard.
+`index.md` is different: it is a synthesized catalog, not hand-fed content, and Step 7 regenerates it fresh from the current page set on every run (via `tools/wiki-index.mjs`) — that is not "overwriting a page" in the sense this step forbids. `overview.md` is not purely synthesized, though — it can carry hand-added prose about the project that no page or artifact restates, so Step 7 **merges** into its existing text rather than regenerating it from scratch. Treat it like any other curated page: update, don't duplicate or discard.
 
 If `.project-wiki/AGENTS.md` does not exist, stop: the wiki has not been initialized. Tell the user to run `/twt-wiki`.
 
@@ -113,6 +113,7 @@ title: Primary CTA is orange, not brand navy
 type: decision
 status: current
 updated: 2026-07-11
+summary: navy failed hero contrast; orange clears AA
 sources:
   - .twt-artifacts/design/design-system/tokens.css
 tags: [design-system, color]
@@ -158,15 +159,22 @@ When a new source contradicts a current page, or two sources disagree:
 When a claim is evidenced by a twt artifact, cite it as a **relative path** into `.twt-artifacts/`. Never copy an artifact's content into a wiki page. Artifacts regenerate; a copy is stale the moment the skill re-runs.
 
 ## Step 7 — Update the index and overview
-Rewrite `index.md` so it lists every page by collection with a current one-line summary, its `status`, and its `updated` date — including `analyses/` pages saved by `/twt-wiki-query` alongside `decisions/`, `entities/`, and `ideas/`; you index those pages but never author or edit them. For `overview.md`, do not regenerate it: read its current text and merge in only what changed in the project's what/who/where-it-stands, preserving any hand-added prose that this run's changes don't invalidate.
+Give every curated page you created or touched this run a one-line `summary:` field in its frontmatter — the index is compiled from it (a page without one is cataloged by title alone). Then regenerate `index.md` (Bash, single command) — never rewrite it by hand; a freehand rewrite is how a page gets silently orphaned:
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-index.mjs" "$CLAUDE_PROJECT_DIR"`
+
+It catalogs every page by collection with its title, `summary`, `status`, and `updated` date — including `analyses/` pages saved by `/twt-wiki-query`, which you index but never author or edit.
+
+For `overview.md`, do not regenerate it: read its current text and merge in only what changed in the project's what/who/where-it-stands, preserving any hand-added prose that this run's changes don't invalidate.
 
 ## Step 8 — Drain the inbox and log
-Remove from `inbox.md` only the entries you actually promoted to a page/row or explicitly dismissed this pass. Never remove one you left because you were unsure — see the rule below.
+Never rewrite `inbox.md` by hand — a freehand rewrite is how a captured decision gets lost. Drain with the tool instead (Bash):
 
-- If **every** entry in the inbox was drained (promoted or dismissed), reset `inbox.md` to just its header comment (keep the comment; it documents the format for the hook).
-- If **any** entry remains undrained, rewrite `inbox.md` to keep the header comment plus exactly those remaining entries, verbatim and in their original order. Do not perform the full reset in this case.
+1. `node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-drain.mjs" "$CLAUDE_PROJECT_DIR" --list` — prints every entry, numbered in file order (do this at the start of Step 3 if you prefer; capture only ever appends, so the numbers stay stable for the whole pass).
+2. Collect the numbers of exactly the entries you promoted to a page/row or explicitly dismissed this pass — and no others.
+3. `node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-drain.mjs" "$CLAUDE_PROJECT_DIR" --drain <n,m,...>` — or `--drain all` when every entry was handled. The tool removes only the named entries and preserves everything else byte-for-byte — the header comment, the order, and each undrained entry verbatim. An invalid number aborts the whole drain without writing anything.
 
-**Never discard an undrained entry.** If you are unsure about an entry, leave it in the inbox and say so in your report — this is the one rule that cannot bend, since losing a captured decision defeats the entire point of the inbox.
+**Never drain an entry you left because you were unsure.** Leave it in the inbox and say so in your report — this is the one rule that cannot bend, since losing a captured decision defeats the entire point of the inbox.
 
 Append to `log.md`:
 

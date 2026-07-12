@@ -55,6 +55,7 @@ title: Page Title
 type: overview|source|decision|question|entity|concept|idea|asset|analysis|report
 status: draft|current|needs-review|resolved|superseded
 updated: YYYY-MM-DD
+summary: one line for the index (optional - the catalog is compiled from it)
 sources:
   - path-or-url
 tags: []
