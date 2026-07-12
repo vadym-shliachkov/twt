@@ -2189,7 +2189,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 
 **Dependencies:**
 - Hard: twt-wiki-define
-- Soft: twt-wiki-fetch
+- Soft: twt-wiki-fetch, twt-wiki-validate
 
 **Reads:**
 - .project-wiki/
@@ -2200,7 +2200,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 
 **Non-goals:**
 - Does not answer questions about the project — that is `/twt-wiki-query`.
-- Does not lint the wiki (not yet built).
+- Does not lint the wiki inline — it dispatches `twt-wiki-validate` (Step 3b), which is the only thing that writes `validation-report.md`.
 - Does not harvest `.twt-artifacts/` itself — it only *offers* the sync and, on accept, dispatches `twt-wiki-fetch` (which runs the bundled harvester); it never reimplements that scan inline.
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 

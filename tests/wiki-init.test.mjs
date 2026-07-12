@@ -22,7 +22,7 @@ const REQUIRED = [
   'facts.md', 'open-questions.md', 'glossary.md', 'sources.md',
   'decisions/.gitkeep', 'ideas/.gitkeep', 'entities/.gitkeep',
   'analyses/.gitkeep', 'raw/assets/.gitkeep', 'raw/assets.md',
-  'raw/meetings/.gitkeep', 'reports/lint/.gitkeep',
+  'raw/meetings/.gitkeep',
 ];
 
 test('creates every required file and folder', () => {

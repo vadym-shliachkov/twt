@@ -34,7 +34,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `glossary.md` | Terms, and banned words. |
 | `sources.md` | Registry of all evidence: `raw/` files, `.twt-artifacts/` paths, URLs. |
 | `raw/` | Immutable ingested sources. Assets, meeting notes. Never edit; never delete. |
-| `reports/lint/` | Dated wiki health reports. |
+| `validation-report.md` | Wiki health report, written only by the validator; its git history is the dated trail. |
 
 ## Who may write what
 

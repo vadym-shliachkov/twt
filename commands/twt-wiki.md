@@ -11,6 +11,7 @@ dependencies:
     - twt-wiki-define
   soft:
     - twt-wiki-fetch
+    - twt-wiki-validate
 reads:
   - .project-wiki/
   - .twt-artifacts/
@@ -26,7 +27,7 @@ writes:
 
 **Non-goals:**
 - Does not answer questions about the project — that is `/twt-wiki-query`.
-- Does not lint the wiki (not yet built).
+- Does not lint the wiki inline — it dispatches `twt-wiki-validate` (Step 3b), which is the only thing that writes `validation-report.md`.
 - Does not harvest `.twt-artifacts/` itself — it only *offers* the sync and, on accept, dispatches `twt-wiki-fetch` (which runs the bundled harvester); it never reimplements that scan inline.
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
@@ -83,11 +84,17 @@ Either way, do not auto-curate what was just harvested — that is still Step 3,
 ## Step 3 — Curate
 Dispatch `twt-wiki-define` (Agent tool), forwarding any focus captured in Step 2 as its `$ARGUMENTS` (a page, a topic, or `inbox only`); pass nothing to curate everything pending. It drains the inbox and writes the curated pages. This is a single define pass, per the orchestrator pattern (CONVENTIONS §9) — do not loop.
 
+## Step 3b — Validate
+Dispatch `twt-wiki-validate` (Agent tool). It runs the deterministic lint (`tools/wiki-lint.mjs`) plus its judgment checks and writes `validation-report.md` — read-only otherwise.
+
+If the report has **BLOCKERs the curator can fix mechanically** (a stale index, a page the index misses — anything whose Recommendation names the curator or its tools), re-dispatch `twt-wiki-define` once with those findings as its focus, then re-dispatch `twt-wiki-validate` once. **At most one such re-run** (CONVENTIONS §9) — no score-chasing loop. BLOCKERs that need a human (an unresolved CONFLICT, a superseded page with no successor, an uncaptured why) are never "fixed" by re-running; they go in the Step 4 report for the user.
+
 ## Step 4 — Report
 Tell the user:
 - Whether the wiki was created, and that capture is armed
 - Whether an artifact sync was offered, and its outcome (harvested — with counts — skipped, or not offered because there was no `.twt-artifacts/` yet)
 - Sources ingested
 - Pages created or updated
+- Validation health/band and the BLOCKER/WARNING/SUGGESTION counts, with the `validation-report.md` path
 - **Contradictions raised, and open questions that need a human** — lead with these; they are the reason the wiki exists
 - Suggest `/twt-wiki-query` to ask the project a question

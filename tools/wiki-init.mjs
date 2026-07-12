@@ -173,7 +173,7 @@ Binaries held in \`raw/assets/\`: logos, photography, brand books.
 | _none yet_ | | | |
 `);
 
-for (const d of ['decisions', 'ideas', 'entities', 'analyses', 'raw/assets', 'raw/meetings', 'reports/lint']) {
+for (const d of ['decisions', 'ideas', 'entities', 'analyses', 'raw/assets', 'raw/meetings']) {
   put(join(d, '.gitkeep'), '');
 }
 

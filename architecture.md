@@ -72,6 +72,7 @@ flowchart TB
     twt_wiki_define["/twt-wiki-define"]:::skill
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_wiki_query["/twt-wiki-query"]:::skill
+    twt_wiki_validate["/twt-wiki-validate"]:::skill
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -169,9 +170,11 @@ flowchart TB
     twt_spec_define --> twt_spec_validate
     twt_wiki_define --> twt_wiki
     twt_wiki_fetch -.-> twt_wiki
+    twt_wiki_validate -.-> twt_wiki
     twt_wiki_fetch -.-> twt_wiki_define
     twt_content_fetch -.-> twt_wiki_fetch
     twt_wiki -.-> twt_wiki_query
+    twt_wiki_define -.-> twt_wiki_validate
 
     classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
 ```
@@ -313,6 +316,7 @@ flowchart TB
 - /twt-wiki-define - Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
 - /twt-wiki-fetch - Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox
 - /twt-wiki-query - Ask the project a question and get an answer cited to the wiki and its sources
+- /twt-wiki-validate - Lint the project wiki's health — structure, links, provenance, freshness — and write a validation-report.md (read-only critic)
 
 ## Per-skill details
 
@@ -2114,7 +2118,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: twt-wiki-define
-- Soft: twt-wiki-fetch
+- Soft: twt-wiki-fetch, twt-wiki-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -2143,7 +2147,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-wiki
-- Soft consumers: none
+- Soft consumers: twt-wiki-validate
 
 **Reads:**
 - .project-wiki/AGENTS.md
@@ -2233,6 +2237,31 @@ flowchart TB
 | .project-wiki/analyses/ |  |
 | .project-wiki/log.md |  |
 
+### /twt-wiki-validate
+
+**Category:** wiki
+**Version:** 1.0.0
+
+**Inputs:**
+- (none — reads the whole .project-wiki/)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-wiki-define
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-wiki
+
+**Reads:**
+- .project-wiki/
+- .twt-artifacts/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .project-wiki/validation-report.md |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -2297,10 +2326,11 @@ flowchart TB
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
 | /twt-text-analysis | none | none |
-| /twt-wiki | twt-wiki-define | twt-wiki-fetch |
+| /twt-wiki | twt-wiki-define | twt-wiki-fetch, twt-wiki-validate |
 | /twt-wiki-define | none | twt-wiki-fetch |
 | /twt-wiki-fetch | none | twt-content-fetch |
 | /twt-wiki-query | none | twt-wiki |
+| /twt-wiki-validate | none | twt-wiki-define |
 
 ## Artifact namespace summary
 
