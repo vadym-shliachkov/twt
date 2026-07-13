@@ -14,7 +14,7 @@ reads:
   - site/
   - .twt-artifacts/design/mockup/styles.css
   - .twt-artifacts/design/design-system/tokens.css
-  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/layout/layouts/
 writes:
   - .twt-artifacts/qa/design-report.md

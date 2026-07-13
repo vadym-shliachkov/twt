@@ -12,7 +12,7 @@ dependencies:
 reads:
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/curation/outlines/
-  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/design-read.md
   - references/external-design-skills.md
   - .twt-artifacts/design/layout/validation-report.md

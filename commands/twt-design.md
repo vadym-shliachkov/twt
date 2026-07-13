@@ -17,11 +17,11 @@ dependencies:
     - twt-mockup-validate
 reads:
   - .twt-artifacts/design/design-system/tokens.md
-  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/layout/layouts/
   - .twt-artifacts/design/mockup/index.html
   - .twt-artifacts/design/design-system/validation-report.md
-  - .twt-artifacts/design/component/validation-report.md
+  - .twt-artifacts/design/design-system/component/validation-report.md
   - .twt-artifacts/design/layout/validation-report.md
   - .twt-artifacts/design/mockup/validation-report.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -92,7 +92,7 @@ Dispatch `/twt-design-system` (Agent tool) **with `subagent-collect`**, forwardi
 
 ## Step 3 — Components (validate)
 `/twt-design-system` (Step 2) already built the component catalog (`components.md` + `gallery.html`) via `/twt-component-define`. Run only the validate pass here (CONVENTIONS §9 — one define + one validate, no double-define):
-1. Dispatch `/twt-component-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/component/validation-report.md` (Step 6 reads this).
+1. Dispatch `/twt-component-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/design-system/component/validation-report.md` (Step 6 reads this).
 2. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run — no score-chasing loop.
 
 ## Step 4 — Layouts

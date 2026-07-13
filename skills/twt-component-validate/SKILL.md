@@ -10,12 +10,12 @@ dependencies:
   hard: []
   soft: []
 reads:
-  - .twt-artifacts/design/component/components.md
-  - .twt-artifacts/design/component/gallery.html
+  - .twt-artifacts/design/design-system/component/components.md
+  - .twt-artifacts/design/design-system/component/gallery.html
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/pre-design/ia/sitemap.md
 writes:
-  - .twt-artifacts/design/component/validation-report.md
+  - .twt-artifacts/design/design-system/component/validation-report.md
 ---
 
 # /twt-component-validate
@@ -39,7 +39,7 @@ writes:
 ---
 
 ## Step 1 — Load artifacts (hard dependency)
-Read `.twt-artifacts/design/component/components.md`. If absent, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
+Read `.twt-artifacts/design/design-system/component/components.md`. If absent, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
 
 ### Step 1a — Deterministic render checks on `gallery.html` (read-only)
 Two defect classes ship silently unless hunted explicitly; check both before scoring:
@@ -70,7 +70,7 @@ For any criterion scoring ≤3, write a **Finding** (BLOCKER if it breaks downst
 Collect into **Decisions to confirm** any judgment the validator is inferring as a rule (e.g. "treating all interactive components as requiring keyboard focus styles", "assuming no dark-mode variant is required") so the user approves before it binds.
 
 ## Step 3 — Write the report
-Write `.twt-artifacts/design/component/validation-report.md`:
+Write `.twt-artifacts/design/design-system/component/validation-report.md`:
 ```markdown
 # Validation report — component
 Generated: <ISO timestamp>  ·  Validator: /twt-component-validate

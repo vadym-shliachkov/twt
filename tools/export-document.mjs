@@ -50,8 +50,22 @@ function slugify(value) {
     .replace(/^-|-$/g, "") || "document";
 }
 
+// The pipeline reuses these basenames across many areas (eleven files are
+// named validation-report.md); a slug from the basename alone would map them
+// all to ONE export folder, silently overwriting each other. For these, the
+// parent directory joins the slug: brand/validation-report.md → brand-validation-report.
+const SHARED_BASENAMES = new Set([
+  "validation-report", "decisions", "phase-review", "facts", "conventions",
+  "index", "analysis-report", "optimized", "gaps",
+]);
+
 function outputPaths(inputPath, format, cwd = process.cwd()) {
-  const slug = slugify(inputPath.split(/[\\/]/).pop() || "document");
+  const parts = String(inputPath).split(/[\\/]/).filter(Boolean);
+  let slug = slugify(parts.pop() || "document");
+  if (SHARED_BASENAMES.has(slug) && parts.length) {
+    const parent = slugify(parts.pop());
+    if (parent) slug = `${parent}-${slug}`;
+  }
   const dir = join(cwd, ".twt-artifacts", "export", format, slug);
   return {
     slug,
@@ -283,6 +297,16 @@ function selfTest() {
   const paths = outputPaths("C:/tmp/My File.md", "pdf", "C:/work/project");
   assert.match(paths.output.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/pdf\/my-file\/my-file\.pdf$/);
   assert.match(paths.html.replace(/\\/g, "/"), /\/\.twt-artifacts\/export\/pdf\/my-file\/my-file\.html$/);
+  // shared basenames disambiguate by parent area — two validation reports must
+  // never map to the same export folder
+  const brandVr = outputPaths("C:/p/.twt-artifacts/pre-design/brand/validation-report.md", "pdf", "C:/p");
+  const dsVr = outputPaths("C:/p/.twt-artifacts/design/design-system/validation-report.md", "pdf", "C:/p");
+  assert.equal(brandVr.slug, "brand-validation-report");
+  assert.equal(dsVr.slug, "design-system-validation-report");
+  assert.notEqual(brandVr.dir, dsVr.dir);
+  assert.equal(outputPaths("C:/p/.twt-artifacts/qa/gaps.md", "pdf", "C:/p").slug, "qa-gaps");
+  // unique basenames keep their plain slug
+  assert.equal(outputPaths("C:/p/.twt-artifacts/pre-design/brand/brand-brief.md", "pdf", "C:/p").slug, "brand-brief");
   console.log("export-document self-test: OK");
 }
 

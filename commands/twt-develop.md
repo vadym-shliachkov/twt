@@ -21,7 +21,7 @@ reads:
   - .twt-artifacts/design/mockup/*.html
   - .twt-artifacts/design/layout/layouts/
   - .twt-artifacts/design/layout/*.md
-  - .twt-artifacts/design/component/components.md
+  - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/assets/manifest.md
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx

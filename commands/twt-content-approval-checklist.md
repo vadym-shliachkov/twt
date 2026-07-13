@@ -18,7 +18,7 @@ reads:
   - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
   - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
   - .twt-artifacts/design/design-system/tokens.md
-  - .twt-artifacts/design/design-system/components.md
+  - .twt-artifacts/design/design-system/observed-components.md
   - .twt-artifacts/design/layout/layouts/
   - .twt-artifacts/design/layout/*.md
   - .twt-artifacts/design/mockup/pages/

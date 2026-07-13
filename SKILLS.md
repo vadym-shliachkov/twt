@@ -237,13 +237,13 @@ Read-only critique of the component library — token-only styling, reuse/compos
 - Soft: none
 
 **Reads:**
-- .twt-artifacts/design/component/components.md
-- .twt-artifacts/design/component/gallery.html
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/design-system/component/gallery.html
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/ia/sitemap.md
 
 **Writes:**
-- .twt-artifacts/design/component/validation-report.md
+- .twt-artifacts/design/design-system/component/validation-report.md
 
 **Non-goals:**
 - Doesn't modify `components.md` or `gallery.html` (read-only; rule 11)
@@ -279,7 +279,7 @@ Create the content approval workbook that proves every page, shared header/foote
 - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
 - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
 - .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/design/design-system/components.md
+- .twt-artifacts/design/design-system/observed-components.md
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/mockup/pages/
@@ -536,28 +536,28 @@ Improve a text using the `/twt-content-validate` rubric as the rating engine —
 
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-- .twt-artifacts/content/content-config.md
-- .twt-artifacts/content/validation/<subject-slug>/validation-report.md
+- .twt-artifacts/content-quality/content-config.md
+- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
-- .twt-artifacts/content/subject/<subject-slug>.md
-- .twt-artifacts/content/optimized/<subject-slug>.md
-- .twt-artifacts/content/validation/<subject-slug>/validation-report-before.md
-- .twt-artifacts/content/validation/<subject-slug>/validation-report-after.md
-- .twt-artifacts/content/optimization-report.md
-- .twt-artifacts/content/content-config.md
+- .twt-artifacts/content-quality/subject/<subject-slug>.md
+- .twt-artifacts/content-quality/optimized/<subject-slug>.md
+- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report-before.md
+- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report-after.md
+- .twt-artifacts/content-quality/optimization-report.md
+- .twt-artifacts/content-quality/content-config.md
 - the subject file in place (only with explicit user consent)
 
 **Non-goals:**
 - Doesn't invent facts, change business logic, or alter numbers/dates/prices/legal wording without explicit instruction
-- Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content/optimized/` first
+- Doesn't replace the source file silently — in-place writes require explicit consent; the optimized copy always lands in `.twt-artifacts/content-quality/optimized/` first
 - Doesn't re-implement the rubric — scoring is dispatched to `/twt-content-validate` (rule 5)
 
 **Success criteria:**
 - `optimization-report.md` shows a before/after Scorecard delta (per criterion and total Health) plus a change log explaining each edit and the criterion it serves
 - In manual mode, nothing is applied before the user decides (keep / apply all / apply selected / apply + switch to auto), via `AskUserQuestion`
-- "Switch to auto" persists `content_review_mode: auto` to `.twt-artifacts/content/content-config.md` and later runs honor it
+- "Switch to auto" persists `content_review_mode: auto` to `.twt-artifacts/content-quality/content-config.md` and later runs honor it
 - Guardrails hold: meaning, facts, and legal/compliance wording survive verbatim unless the user explicitly allowed changes
 
 ---
@@ -582,7 +582,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
-- .twt-artifacts/content/validation/<subject-slug>/validation-report.md
+- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md
 
 **Non-goals:**
 - Never edits the subject text or any upstream artifact (rule 11 — writes only its own report)
@@ -590,7 +590,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 - Doesn't audit IA/sitemap coverage or lorem placeholders on built pages (that's `/twt-qa-content`)
 
 **Success criteria:**
-- `.twt-artifacts/content/validation/<subject-slug>/validation-report.md` opens with the fixed 8-criterion weighted **Scorecard** (weights sum to 100) yielding **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50) — per-subject path, so reports for different texts never overwrite each other
+- `.twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md` opens with the fixed 8-criterion weighted **Scorecard** (weights sum to 100) yielding **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50) — per-subject path, so reports for different texts never overwrite each other
 - A `## Rating reasoning` section gives, per criterion: the score rationale, ≥1 verbatim quote from the subject as evidence, and improvement opportunities — no score without a quote
 - Every criterion scoring ≤3 yields at least one Finding (Where / Problem / Recommendation / Suggested rewrite / Expected impact)
 - The report names the subject (path or "pasted text") so a future run can compare
@@ -702,11 +702,11 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/mockup/index.html
 - .twt-artifacts/design/design-system/validation-report.md
-- .twt-artifacts/design/component/validation-report.md
+- .twt-artifacts/design/design-system/component/validation-report.md
 - .twt-artifacts/design/layout/validation-report.md
 - .twt-artifacts/design/mockup/validation-report.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -751,8 +751,8 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 - .twt-artifacts/design/design-system/validation-report.md
 
 **Writes:**
-- .twt-artifacts/design/component/components.md  # via /twt-component-define (always)
-- .twt-artifacts/design/component/gallery.html   # via /twt-component-define (always)
+- .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always)
+- .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always)
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -841,7 +841,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/layout/*.md
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
@@ -1213,7 +1213,7 @@ Build a static HTML page or a single section into the scaffolded `site/`, inlini
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/mockup/pages/
 - .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - site/partials/
 - site/assets/css/
 
@@ -1378,7 +1378,7 @@ For every page in the sitemap, define a layout spec — section order, the compo
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 - .twt-artifacts/design/layout/validation-report.md
@@ -1420,7 +1420,7 @@ Read-only critique of the page layouts — section order & hierarchy, component-
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 
 **Writes:**
 - .twt-artifacts/design/layout/validation-report.md
@@ -1495,7 +1495,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
@@ -1819,7 +1819,7 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 - site/
 - .twt-artifacts/design/mockup/styles.css
 - .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
 
 **Writes:**
@@ -2050,8 +2050,8 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Writes:**
 - .twt-artifacts/site-dev-log.md
-- .twt-artifacts/design/component/components.md
-- .twt-artifacts/design/component/gallery.html
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/design-system/component/gallery.html
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 
 **Non-goals:**

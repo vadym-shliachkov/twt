@@ -25,8 +25,8 @@ reads:
   - .twt-artifacts/html-site/conventions.md
 writes:
   - .twt-artifacts/site-dev-log.md
-  - .twt-artifacts/design/component/components.md
-  - .twt-artifacts/design/component/gallery.html
+  - .twt-artifacts/design/design-system/component/components.md
+  - .twt-artifacts/design/design-system/component/gallery.html
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 ---
 

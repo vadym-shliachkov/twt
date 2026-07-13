@@ -16,8 +16,8 @@ reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/validation-report.md
 writes:
-  - .twt-artifacts/design/component/components.md  # via /twt-component-define (always)
-  - .twt-artifacts/design/component/gallery.html   # via /twt-component-define (always)
+  - .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always)
+  - .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always)
 ---
 
 # /twt-design-system

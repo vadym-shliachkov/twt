@@ -14,7 +14,7 @@ reads:
   - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
   - .twt-artifacts/pre-design/brand/brand-brief.md
 writes:
-  - .twt-artifacts/content/validation/<subject-slug>/validation-report.md
+  - .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md
 ---
 
 # /twt-content-validate
@@ -29,7 +29,7 @@ writes:
 - Doesn't audit IA/sitemap coverage or lorem placeholders on built pages (that's `/twt-qa-content`)
 
 **Success criteria:**
-- `.twt-artifacts/content/validation/<subject-slug>/validation-report.md` opens with the fixed 8-criterion weighted **Scorecard** (weights sum to 100) yielding **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50) — per-subject path, so reports for different texts never overwrite each other
+- `.twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md` opens with the fixed 8-criterion weighted **Scorecard** (weights sum to 100) yielding **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50) — per-subject path, so reports for different texts never overwrite each other
 - A `## Rating reasoning` section gives, per criterion: the score rationale, ≥1 verbatim quote from the subject as evidence, and improvement opportunities — no score without a quote
 - Every criterion scoring ≤3 yields at least one Finding (Where / Problem / Recommendation / Suggested rewrite / Expected impact)
 - The report names the subject (path or "pasted text") so a future run can compare
@@ -77,7 +77,7 @@ Rating rules (binding):
 For every criterion scoring ≤3, write at least one Finding. Severity: **BLOCKER** = the reader can't understand or act (wrong/ambiguous instruction, impenetrable passage); **WARNING** = quality loss (filler, passive pile-ups, vague claims); **SUGGESTION** = polish. Each finding carries a one-line **Suggested rewrite** and an **Expected impact** — phrased as a contribution ("contributes toward Clarity 3→4"), since several findings usually share one criterion's uplift and must not each claim the full point. Collect into **Decisions to confirm** any judgment inferred as a rule (e.g. "treated industry term X as known to this audience").
 
 ## Step 5 — Write the report
-Write `.twt-artifacts/content/validation/<subject-slug>/validation-report.md`:
+Write `.twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md`:
 ```markdown
 # Validation report — content
 Generated: <ISO>  ·  Validator: /twt-content-validate  ·  Subject: <label>

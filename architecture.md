@@ -512,15 +512,15 @@ flowchart TB
 - Soft consumers: twt-design
 
 **Reads:**
-- .twt-artifacts/design/component/components.md
-- .twt-artifacts/design/component/gallery.html
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/design-system/component/gallery.html
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/ia/sitemap.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/component/validation-report.md |  |
+| .twt-artifacts/design/design-system/component/validation-report.md |  |
 
 ### /twt-content-approval-checklist
 
@@ -543,7 +543,7 @@ flowchart TB
 - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
 - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
 - .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/design/design-system/components.md
+- .twt-artifacts/design/design-system/observed-components.md
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/layout/*.md
 - .twt-artifacts/design/mockup/pages/
@@ -731,19 +731,19 @@ flowchart TB
 
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-- .twt-artifacts/content/content-config.md
-- .twt-artifacts/content/validation/<subject-slug>/validation-report.md
+- .twt-artifacts/content-quality/content-config.md
+- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/content/subject/<subject-slug>.md |  |
-| .twt-artifacts/content/optimized/<subject-slug>.md |  |
-| .twt-artifacts/content/validation/<subject-slug>/validation-report-before.md |  |
-| .twt-artifacts/content/validation/<subject-slug>/validation-report-after.md |  |
-| .twt-artifacts/content/optimization-report.md |  |
-| .twt-artifacts/content/content-config.md |  |
+| .twt-artifacts/content-quality/subject/<subject-slug>.md |  |
+| .twt-artifacts/content-quality/optimized/<subject-slug>.md |  |
+| .twt-artifacts/content-quality/validation/<subject-slug>/validation-report-before.md |  |
+| .twt-artifacts/content-quality/validation/<subject-slug>/validation-report-after.md |  |
+| .twt-artifacts/content-quality/optimization-report.md |  |
+| .twt-artifacts/content-quality/content-config.md |  |
 | the subject file in place (only with explicit user consent) |  |
 
 ### /twt-content-validate
@@ -769,7 +769,7 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/content/validation/<subject-slug>/validation-report.md |  |
+| .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md |  |
 
 ### /twt-curation-define
 
@@ -854,11 +854,11 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/mockup/index.html
 - .twt-artifacts/design/design-system/validation-report.md
-- .twt-artifacts/design/component/validation-report.md
+- .twt-artifacts/design/design-system/component/validation-report.md
 - .twt-artifacts/design/layout/validation-report.md
 - .twt-artifacts/design/mockup/validation-report.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -896,8 +896,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/design/component/components.md  # via /twt-component-define (always) |  |
-| .twt-artifacts/design/component/gallery.html   # via /twt-component-define (always) |  |
+| .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always) |  |
+| .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always) |  |
 
 ### /twt-design-system-audit
 
@@ -967,10 +967,10 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/design/design-system/tokens.md |  |
-| .twt-artifacts/design/design-system/tokens.md.bak-<timestamp> |  |
+| .twt-artifacts/design/design-system/tokens.md.bak |  |
 | .twt-artifacts/design/design-system/tokens.css |  |
 | .twt-artifacts/design/design-system/preview.html |  |
-| .twt-artifacts/design/design-system/components.md |  |
+| .twt-artifacts/design/design-system/observed-components.md |  |
 | .twt-artifacts/design/design-system/tokens.json |  |
 | .twt-artifacts/design/design-system/tailwind.config.js |  |
 | .twt-artifacts/design/design-system/decisions.md |  |
@@ -1025,7 +1025,7 @@ flowchart TB
 - .twt-artifacts/design/mockup/*.html
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/layout/*.md
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
@@ -1295,7 +1295,7 @@ flowchart TB
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/mockup/pages/
 - .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - site/partials/
 - site/assets/css/
 
@@ -1418,7 +1418,7 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
 - .twt-artifacts/design/layout/validation-report.md
@@ -1450,7 +1450,7 @@ flowchart TB
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 
 **Writes:**
 | Path | Notes |
@@ -1502,7 +1502,7 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
@@ -1804,7 +1804,7 @@ flowchart TB
 - site/
 - .twt-artifacts/design/mockup/styles.css
 - .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/design/component/components.md
+- .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
 
 **Writes:**
@@ -1980,8 +1980,8 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/site-dev-log.md |  |
-| .twt-artifacts/design/component/components.md |  |
-| .twt-artifacts/design/component/gallery.html |  |
+| .twt-artifacts/design/design-system/component/components.md |  |
+| .twt-artifacts/design/design-system/component/gallery.html |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
 ### /twt-spec
@@ -2342,8 +2342,8 @@ flowchart TB
 ```
 .twt-artifacts/
   <html-site|elementor-theme>/
-  content/
   content-approval/
+  content-quality/
   design/
   elementor-theme/
   export/

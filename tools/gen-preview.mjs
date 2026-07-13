@@ -18,7 +18,7 @@
 //
 // Reads:
 //   .twt-artifacts/design/design-system/tokens.css   (authoritative custom props)
-//   .twt-artifacts/design/design-system/components.md (preferred component inventory)
+//   .twt-artifacts/design/design-system/observed-components.md (preferred component inventory — analysis-mode observations)
 //   .twt-artifacts/design/design-system/tokens.md     (fallback inventory — §3.2/3.3/3.4)
 //
 // Writes:
@@ -57,7 +57,7 @@ if (!projectDir) {
 }
 const DS = join(projectDir, '.twt-artifacts', 'design', 'design-system');
 const CSS = join(DS, 'tokens.css');
-const COMPONENTS_MD = join(DS, 'components.md');
+const COMPONENTS_MD = join(DS, 'observed-components.md');
 const TOKENS_MD = join(DS, 'tokens.md');
 const OUT = join(DS, 'preview.html');
 
@@ -348,7 +348,7 @@ function renderColorSection() {
 
 // ---- component inventory (Tiers 2–4) ----------------------------------------
 // Parse the first-column bold names + composition note from the §3.2/3.3/3.4
-// tables of components.md (preferred) or tokens.md (fallback). Section numbers
+// tables of observed-components.md (preferred) or tokens.md (fallback). Section numbers
 // are stable across the Tokens→Primitives→Components→Modules relabelling.
 function parseInventory() {
   const file = existsSync(COMPONENTS_MD) ? COMPONENTS_MD : existsSync(TOKENS_MD) ? TOKENS_MD : null;

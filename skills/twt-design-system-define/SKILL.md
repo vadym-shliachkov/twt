@@ -19,10 +19,10 @@ reads:
   - .twt-artifacts/design/design-system/validation-report.md
 writes:
   - .twt-artifacts/design/design-system/tokens.md
-  - .twt-artifacts/design/design-system/tokens.md.bak-<timestamp>
+  - .twt-artifacts/design/design-system/tokens.md.bak
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/design-system/preview.html
-  - .twt-artifacts/design/design-system/components.md
+  - .twt-artifacts/design/design-system/observed-components.md
   - .twt-artifacts/design/design-system/tokens.json
   - .twt-artifacts/design/design-system/tailwind.config.js
   - .twt-artifacts/design/design-system/decisions.md
@@ -40,7 +40,7 @@ writes:
 
 **Non-goals:**
 - Doesn't generate page designs (Templates/Pages = the layout/mockup phases)
-- `preview.html` is a **tokens-only** specimen sheet — every design token rendered live from `tokens.css`, plus the WCAG contrast matrix. It does **not** render the component catalog: the full Primitives/Components/Modules catalog (breadth + variant × state depth) is produced by `/twt-component-define` as `component/gallery.html`, which preview links to. This skill still **documents** the component hierarchy in `tokens.md §3` (and `components.md` if requested) so the component skill and the audit reuse the same names — it just doesn't draw specimens in the preview anymore.
+- `preview.html` is a **tokens-only** specimen sheet — every design token rendered live from `tokens.css`, plus the WCAG contrast matrix. It does **not** render the component catalog: the full Primitives/Components/Modules catalog (breadth + variant × state depth) is produced by `/twt-component-define` as `component/gallery.html`, which preview links to. This skill still **documents** the component hierarchy in `tokens.md §3` (and `observed-components.md` if requested — named to never collide with the component catalog at `component/components.md`) so the component skill and the audit reuse the same names — it just doesn't draw specimens in the preview anymore.
 - The preview is **script-generated** (`gen-preview.mjs`) so its structure is identical across projects. It is a **styleguide / token sheet**, NOT a marketing landing page or a mockup of the actual site — no real headlines/value-props/copy, no working homepage, no scripts.
 - Doesn't write to a WordPress theme (that's Phase 3)
 - Doesn't apply changes to the source design — read-only on Figma
@@ -204,7 +204,7 @@ Record the choice and continue. Record the choice as `<system_update_mode>`. App
 |--------|-----------------|--------------------------|
 | **1 — Update** | Extract Figma tokens, drop any whose name+role already exists in `<existing_system>`. Keep only the missing ones. | Merge: existing sections preserved verbatim; new tokens appended into matching sections with `(added from <figma source>)` note. |
 | **2 — Adjust** | Build a conflict list (same name, different value) and an additions list. Walk through each conflict with the user: `keep existing / replace with Figma / skip`. | Apply per-token decisions. Log every change in the new Section 10 (Migration Recommendations) entry titled "Adjustments applied on <date>". |
-| **3 — Regenerate** | Ignore `<existing_system>`. Use Figma + other sources as the only basis. **Before writing**, ask once more: `Type REGENERATE to confirm destructive rewrite.` If anything else is typed, fall back to Update. | Back up the old file to `tokens.md.bak-<YYYYMMDD-HHMM>` first, then write fresh. |
+| **3 — Regenerate** | Ignore `<existing_system>`. Use Figma + other sources as the only basis. **Before writing**, ask once more: `Type REGENERATE to confirm destructive rewrite.` If anything else is typed, fall back to Update. | Back up the old file to `tokens.md.bak` first (overwriting any previous backup — one rolling backup, not an accumulating series; git history covers the rest), then write fresh. |
 | **4 — No change** | Skip token extraction merge entirely. Use `<existing_system>` as-is for downstream work (component hierarchy, exports). | Do not modify `tokens.md`. Completion summary notes `Output file: unchanged`. |
 
 In **Adjust** mode, render the conflict walkthrough as a compact table the user can answer with a single line of letters, e.g.:
@@ -623,7 +623,7 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 
 | File | When |
 |------|------|
-| `.twt-artifacts/design/design-system/components.md` | mode 2, 6 — full component documentation lifted from Section 3 |
+| `.twt-artifacts/design/design-system/observed-components.md` | mode 2, 6 — full component documentation lifted from Section 3 |
 | `.twt-artifacts/design/design-system/patterns.md` | mode 6, 7 — patterns and recurring arrangements |
 | `.twt-artifacts/design/design-system/migration-plan.md` | mode 7, or when Section 10 has high-severity findings |
 | `.twt-artifacts/design/design-system/tailwind.config.js` | mode 8, or on request |
