@@ -57,7 +57,11 @@ if (!projectDir) {
 }
 const DS = join(projectDir, '.twt-artifacts', 'design', 'design-system');
 const CSS = join(DS, 'tokens.css');
-const COMPONENTS_MD = join(DS, 'observed-components.md');
+// observed-components.md is the current name; components.md at the DS root is
+// the pre-rename analysis inventory older projects still carry (renamed to
+// stop colliding with the catalog at component/components.md).
+const OBSERVED_MD = join(DS, 'observed-components.md');
+const COMPONENTS_MD = existsSync(OBSERVED_MD) ? OBSERVED_MD : join(DS, 'components.md');
 const TOKENS_MD = join(DS, 'tokens.md');
 const OUT = join(DS, 'preview.html');
 

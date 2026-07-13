@@ -39,7 +39,7 @@ writes:
 ---
 
 ## Step 1 — Load artifacts (hard dependency)
-Read `.twt-artifacts/design/design-system/component/components.md`. If absent, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
+Read `.twt-artifacts/design/design-system/component/components.md`. If absent, check the pre-move legacy path `.twt-artifacts/design/component/components.md` (read-only — projects built before the catalog moved into the design-system spine; the next `/twt-component-define` run writes to the canonical path). Only if neither exists, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
 
 ### Step 1a — Deterministic render checks on `gallery.html` (read-only)
 Two defect classes ship silently unless hunted explicitly; check both before scoring:
