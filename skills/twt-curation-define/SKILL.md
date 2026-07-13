@@ -1,8 +1,8 @@
 ---
 name: twt-curation-define
 category: curation
-description: (v1.1.4) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
-version: 1.1.4
+description: (v1.1.5) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
+version: 1.1.5
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive

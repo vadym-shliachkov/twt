@@ -774,7 +774,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -1917,7 +1917,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.5
+**Version:** 1.12.6
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -1956,7 +1956,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.6
+**Version:** 1.5.7
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2141,7 +2141,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2245,7 +2245,7 @@ flowchart TB
 ### /twt-wiki-validate
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - (none — reads the whole .project-wiki/)

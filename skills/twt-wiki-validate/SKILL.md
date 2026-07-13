@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-validate
 category: wiki
-description: (v1.0.3) Lint the project wiki's health — structure, links, provenance, freshness — and write a validation-report.md (read-only critic)
-version: 1.0.3
+description: (v1.0.4) Lint the project wiki's health — structure, links, provenance, freshness — and write a validation-report.md (read-only critic)
+version: 1.0.4
 accepts_arguments: false
 inputs:
   - (none — reads the whole .project-wiki/)
