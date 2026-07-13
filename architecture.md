@@ -1122,7 +1122,7 @@ flowchart TB
 ### /twt-eval-smoke
 
 **Category:** meta
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional scope — ia | wiki | all (default all)
@@ -1956,7 +1956,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.6
+**Version:** 1.12.7
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits

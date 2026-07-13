@@ -966,7 +966,7 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 ## /twt-eval-smoke
 
 **Category:** meta
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 The standing behavioral eval. Unit tests and structural checkers guard the *tools* and *formats*; nothing else exercises the *prompts* — a broken dependency check or a dead contract path in a skill only surfaces in a real user run. This command seeds a deterministic fixture, dispatches a real skill against it in collect mode, and asserts the postconditions mechanically via `tools/eval-smoke.mjs`. Run it after any change to the skills it covers, or on a schedule.
@@ -2013,7 +2013,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.12.6
+**Version:** 1.12.7
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
