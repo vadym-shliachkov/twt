@@ -5,11 +5,13 @@ description: (v1.0.1) Behavioral smoke eval — run scoped skills against a seed
 version: 1.0.1
 accepts_arguments: true
 inputs:
-  - Optional scope — ia | wiki | all (default all)
+  - Optional scope — ia | curation | design-system | wiki | all (default all)
 dependencies:
   hard: []
   soft:
     - twt-ia-define
+    - twt-curation-define
+    - twt-design-system-define
     - twt-wiki-define
 reads:
   - .twt-artifacts/pre-design/positioning/positioning.md
@@ -43,7 +45,7 @@ writes:
 Use Glob to confirm `tools/eval-smoke.mjs` and `tools/gen-docs.mjs` exist at the project root. If not, stop: "This is a marketplace-dev eval — run it inside the twt repo."
 
 ## Step 2 — Scope
-`$ARGUMENTS`: `ia`, `wiki`, or `all` (default `all`). Run each selected scope's cycle **sequentially** (they share no state, but sequential keeps the report readable).
+`$ARGUMENTS`: `ia`, `curation`, `design-system`, `wiki`, or `all` (default `all`). Run each selected scope's cycle **sequentially** — the artifact scopes share the `pre-design` fixture tree, so a scope must be cleaned before the next seeds.
 
 ## Step 3 — Cycle per scope
 For each scope, run the four beats. If **seed** refuses (a real tree exists), report that and skip the scope — never force it.
@@ -53,6 +55,16 @@ For each scope, run the four beats. If **seed** refuses (a real tree exists), re
 2. Dispatch `twt-ia-define` (Agent tool) with exactly: `subagent-collect — project brief: "Acme Bakery, weekly sourdough subscriptions for Springfield families; site goal: grow subscriptions."` — nothing more; the eval measures what the skill does with its contract inputs.
 3. Check (Bash): `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" check "$CLAUDE_PROJECT_DIR" --scope ia`
 4. On PASS → clean (Bash): `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" clean "$CLAUDE_PROJECT_DIR" --scope ia`. On FAIL → **leave the fixture in place**, relay every FAIL line, and name the paths to inspect.
+
+**curation:**
+1. Seed: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" seed "$CLAUDE_PROJECT_DIR" --scope curation`
+2. Dispatch `twt-curation-define` (Agent tool) with exactly: `subagent-collect — project brief: "Acme Bakery, weekly sourdough subscriptions; grow subscriptions."`
+3. Check / PASS-FAIL handling as above (`--scope curation`). The check asserts the inventory, per-page outlines, the facts ledger at its resolved path, and a parseable `decisions.md`.
+
+**design-system:**
+1. Seed: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" seed "$CLAUDE_PROJECT_DIR" --scope design-system`
+2. Dispatch `twt-design-system-define` (Agent tool) with exactly: `subagent-collect — greenfield from brand-brief; no external design sources.`
+3. Check / PASS-FAIL handling as above (`--scope design-system`). The check asserts `tokens.md` + `tokens.css` and runs `gen-preview.mjs --check` — the skill's own WCAG gate must report zero AA failures.
 
 **wiki:**
 1. Seed: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" seed "$CLAUDE_PROJECT_DIR" --scope wiki`

@@ -60,6 +60,45 @@ test('wiki: seed → check fails → simulated curation passes', () => {
   assert.equal(existsSync(join(dir, '.project-wiki')), false);
 });
 
+test('curation: seed → check fails → simulated outputs (incl. facts ledger) pass', () => {
+  const dir = newProject();
+  run(['seed', dir, '--scope', 'curation']);
+  assert.ok(existsSync(join(dir, '.twt-artifacts', 'pre-design', 'ia', 'sitemap.md')), 'curation seed includes the sitemap');
+  assert.throws(() => run(['check', dir, '--scope', 'curation']), /missing inventory\.md/);
+
+  const cur = join(dir, '.twt-artifacts', 'pre-design', 'curation');
+  mkdirSync(join(cur, 'outlines'), { recursive: true });
+  writeFileSync(join(cur, 'inventory.md'), '# Inventory\n\n| item | decision | page |\n|---|---|---|\n| hero copy | KEEP | home |\n');
+  writeFileSync(join(cur, 'outlines', 'home.md'), '# Home outline\n\n## Hero\nBaked this morning — weekly sourdough boxes.\n');
+  // without the ledger the check still fails
+  assert.throws(() => run(['check', dir, '--scope', 'curation']), /facts\.md/);
+  writeFileSync(join(cur, 'facts.md'), '# Facts ledger\n\n## Canonical facts\n| fact | canonical | status | sources (value@source) |\n|---|---|---|---|\n| founding-year | 2015 | RESOLVED | 2015@site |\n');
+  assert.match(run(['check', dir, '--scope', 'curation']), /PASS/);
+  run(['clean', dir, '--scope', 'curation']);
+  assert.equal(existsSync(join(dir, '.twt-artifacts', 'pre-design')), false);
+});
+
+test('design-system: seed → check fails → simulated tokens pass the WCAG oracle', () => {
+  const dir = newProject();
+  run(['seed', dir, '--scope', 'design-system']);
+  assert.throws(() => run(['check', dir, '--scope', 'design-system']), /missing tokens\.md/);
+
+  const ds = join(dir, '.twt-artifacts', 'design', 'design-system');
+  mkdirSync(ds, { recursive: true });
+  writeFileSync(join(ds, 'tokens.md'), '# Design system\n\n## 2. Tokens\n\n### 2.1 Colors\n\n| name | HEX | role |\n|---|---|---|\n| ink | #1A1108 | text |\n| surface | #FBF6EE | background |\n| accent | #8A3A0F | CTA |\n\n' + 'filler '.repeat(40));
+  writeFileSync(join(ds, 'tokens.css'), [':root {',
+    '  --color-ink: #1A1108;', '  --color-text: #2A1D10;', '  --color-surface: #FBF6EE;',
+    '  --color-accent: #8A3A0F;', '  --color-surface-raised: #FFFFFF;',
+    '  --space-2: 8px;', '  --space-4: 16px;', '  --space-8: 32px;',
+    '  --radius-card: 12px;', '  --shadow-card: 0 1px 3px rgba(26,17,8,.08);',
+    '  --font-heading: Georgia, serif;', '  --font-body: system-ui, sans-serif;',
+    '  --motion-duration-fast: 120ms;', '}'].join('\n'));
+  assert.match(run(['check', dir, '--scope', 'design-system']), /PASS/);
+  run(['clean', dir, '--scope', 'design-system']);
+  assert.equal(existsSync(join(dir, '.twt-artifacts', 'design')), false);
+  assert.equal(existsSync(join(dir, '.twt-artifacts', 'pre-design')), false);
+});
+
 test('safety: seed refuses an existing unmarked tree; clean refuses without the marker', () => {
   const dir = newProject();
   mkdirSync(join(dir, '.twt-artifacts', 'pre-design', 'brand'), { recursive: true });

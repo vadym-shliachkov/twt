@@ -47,6 +47,33 @@ subscriptions with free delivery. Three loaves: classic, seeded, rye.
 Contact: hello@acme-bakery.test.
 `;
 
+const FIXTURE_BRAND_BRIEF = `# Brand Brief — Acme Bakery
+
+## Identity
+Warm neighborhood bakery, subscription-first, est. 2015.
+
+## Palette
+| name | hex | usage |
+|------|-----|-------|
+| Rye Brown | #4A2F1B | headings, primary text |
+| Cream | #FBF6EE | surfaces |
+| Crust Orange | #C4551A | accent, CTA |
+
+## Typography
+Headings: a warm serif. Body: a humanist sans. Generous line-height.
+
+## Voice & Tone
+Warm, plainspoken, craft-proud. Do: "baked this morning". Don't: "artisanal solutions".
+`;
+
+const FIXTURE_SITEMAP = `# Sitemap
+
+- Home
+  - Subscriptions
+  - About
+- Contact
+`;
+
 const FIXTURE_INBOX_ENTRIES = `
 ## 2026-07-10T09:00:00Z · decision · AskUserQuestion
 - **header:** Fonts
@@ -61,7 +88,7 @@ const FIXTURE_INBOX_ENTRIES = `
 - **reversible:** yes
 `;
 
-function seedIa(projectDir) {
+function seedIaFiles(projectDir) {
   const pre = join(projectDir, '.twt-artifacts', 'pre-design');
   // Never adopt a real project's tree: planting the marker there would let a
   // later clean destroy genuine artifacts. Only an absent or already-marked
@@ -72,8 +99,37 @@ function seedIa(projectDir) {
   put(join(pre, MARKER), 'seeded by eval-smoke — safe for clean to remove\n');
   put(join(pre, 'positioning', 'positioning.md'), FIXTURE_POSITIONING);
   put(join(pre, 'content', 'fetched', 'site', 'acme-bakery.test', 'index.md'), FIXTURE_CONTENT);
+}
+
+function seedIa(projectDir) {
+  seedIaFiles(projectDir);
   console.log('seeded: ia fixture (positioning.md + fetched content). Dispatch:');
   console.log('  twt-ia-define with: subagent-collect — project brief: "Acme Bakery, weekly sourdough subscriptions for Springfield families; site goal: grow subscriptions."');
+}
+
+function seedDesignSystem(projectDir) {
+  const pre = join(projectDir, '.twt-artifacts', 'pre-design');
+  const design = join(projectDir, '.twt-artifacts', 'design');
+  for (const tree of [pre, design]) {
+    if (existsSync(tree) && !existsSync(join(tree, MARKER))) {
+      fail(`REFUSING to seed: ${tree} already exists and is not an eval fixture`);
+    }
+  }
+  put(join(pre, MARKER), 'seeded by eval-smoke — safe for clean to remove\n');
+  mkdirSync(design, { recursive: true });
+  put(join(design, MARKER), 'seeded by eval-smoke — safe for clean to remove\n');
+  put(join(pre, 'brand', 'brand-brief.md'), FIXTURE_BRAND_BRIEF);
+  console.log('seeded: design-system fixture (brand-brief.md). Dispatch:');
+  console.log('  twt-design-system-define with: subagent-collect — greenfield from brand-brief; no external design sources.');
+}
+
+function seedCuration(projectDir) {
+  seedIaFiles(projectDir); // positioning + fetched content, same ownership marker
+  const pre = join(projectDir, '.twt-artifacts', 'pre-design');
+  put(join(pre, 'brand', 'brand-brief.md'), FIXTURE_BRAND_BRIEF);
+  put(join(pre, 'ia', 'sitemap.md'), FIXTURE_SITEMAP);
+  console.log('seeded: curation fixture (adds brand-brief + sitemap). Dispatch:');
+  console.log('  twt-curation-define with: subagent-collect — project brief: "Acme Bakery, weekly sourdough subscriptions; grow subscriptions."');
 }
 
 function seedWiki(projectDir) {
@@ -108,6 +164,47 @@ function checkIa(projectDir) {
   if (existsSync(dec)) {
     for (const p of checkDecisions(readFileSync(dec, 'utf8'))) problems.push(`decisions.md: ${p}`);
   }
+  return problems;
+}
+
+function checkDesignSystem(projectDir) {
+  const problems = [];
+  const ds = join(projectDir, '.twt-artifacts', 'design', 'design-system');
+  for (const f of ['tokens.md', 'tokens.css']) {
+    const p = join(ds, f);
+    if (!existsSync(p)) { problems.push(`missing ${f} at the contract path design/design-system/`); continue; }
+    if (readFileSync(p, 'utf8').trim().length < 200) problems.push(`${f} is implausibly small`);
+  }
+  const css = existsSync(join(ds, 'tokens.css')) ? readFileSync(join(ds, 'tokens.css'), 'utf8') : '';
+  if (css) {
+    if (!/:root\s*\{/.test(css)) problems.push('tokens.css has no :root block');
+    if ((css.match(/--[\w-]+\s*:/g) || []).length < 6) problems.push('tokens.css declares fewer than 6 custom properties');
+  }
+  if (!problems.length) {
+    // the define contract includes the WCAG gate — gen-preview --check is its oracle
+    const r = spawnSync(process.execPath, [join(HERE, 'gen-preview.mjs'), projectDir, '--check'], { encoding: 'utf8' });
+    const m = /(\d+) AA contrast failure/.exec(r.stdout || '');
+    if (!m) problems.push('gen-preview --check produced no contrast summary: ' + (r.stderr || r.stdout).slice(0, 200));
+    else if (Number(m[1]) > 0) problems.push(`gen-preview --check reports ${m[1]} AA contrast failure(s) — the define skill's WCAG gate did not hold`);
+  }
+  const dec = join(ds, 'decisions.md');
+  if (existsSync(dec)) for (const p of checkDecisions(readFileSync(dec, 'utf8'))) problems.push(`decisions.md: ${p}`);
+  return problems;
+}
+
+function checkCuration(projectDir) {
+  const problems = [];
+  const cur = join(projectDir, '.twt-artifacts', 'pre-design', 'curation');
+  if (!existsSync(join(cur, 'inventory.md'))) problems.push('missing inventory.md at pre-design/curation/');
+  const outlines = join(cur, 'outlines');
+  const pages = existsSync(outlines) ? readdirSync(outlines).filter((f) => f.endsWith('.md')) : [];
+  if (!pages.length) problems.push('no outlines/<page>.md written');
+  // no wiki in this fixture → the ledger's resolved path is the legacy one
+  const ledger = join(cur, 'facts.md');
+  if (!existsSync(ledger)) problems.push('missing facts.md — Step 3.5 did not build the ledger at its resolved (legacy, no-wiki) path');
+  else if (!/\|[^\n]*canonical[^\n]*\|/i.test(readFileSync(ledger, 'utf8'))) problems.push('facts.md has no canonical-facts table');
+  const dec = join(cur, 'decisions.md');
+  if (existsSync(dec)) for (const p of checkDecisions(readFileSync(dec, 'utf8'))) problems.push(`decisions.md: ${p}`);
   return problems;
 }
 
@@ -146,21 +243,33 @@ if (_isMain) {
   const [cmd, projectDir] = process.argv.slice(2);
   const scopeAt = process.argv.indexOf('--scope');
   const scope = scopeAt !== -1 ? process.argv[scopeAt + 1] : '';
-  if (!cmd || !projectDir || !['ia', 'wiki'].includes(scope)) {
-    fail('usage: node tools/eval-smoke.mjs seed|check|clean <projectDir> --scope ia|wiki');
+  const SCOPES = {
+    ia: { seed: seedIa, check: checkIa },
+    curation: { seed: seedCuration, check: checkCuration },
+    'design-system': { seed: seedDesignSystem, check: checkDesignSystem },
+    wiki: { seed: seedWiki, check: checkWiki },
+  };
+  if (!cmd || !projectDir || !SCOPES[scope]) {
+    fail('usage: node tools/eval-smoke.mjs seed|check|clean <projectDir> --scope ia|curation|design-system|wiki');
   }
   if (cmd === 'seed') {
-    if (scope === 'ia') seedIa(projectDir); else seedWiki(projectDir);
+    SCOPES[scope].seed(projectDir);
   } else if (cmd === 'check') {
-    const problems = scope === 'ia' ? checkIa(projectDir) : checkWiki(projectDir);
+    const problems = SCOPES[scope].check(projectDir);
     if (problems.length) {
       for (const p of problems) console.error('FAIL: ' + p);
       process.exit(1);
     }
     console.log(`eval-smoke check (${scope}): PASS`);
   } else if (cmd === 'clean') {
-    if (scope === 'ia') cleanTree(join(projectDir, '.twt-artifacts', 'pre-design'), '.twt-artifacts/pre-design (ia fixture)');
-    else cleanTree(join(projectDir, '.project-wiki'), '.project-wiki (wiki fixture)');
-    // ia runs also generate ia/ under pre-design — covered by the tree above.
+    if (scope === 'wiki') {
+      cleanTree(join(projectDir, '.project-wiki'), '.project-wiki (wiki fixture)');
+    } else {
+      // ia/curation generate under pre-design; design-system also under design/.
+      cleanTree(join(projectDir, '.twt-artifacts', 'pre-design'), '.twt-artifacts/pre-design (fixture)');
+      const design = join(projectDir, '.twt-artifacts', 'design');
+      // only when eval-owned — an unrelated real design/ tree must not even be attempted
+      if (existsSync(join(design, MARKER))) cleanTree(design, '.twt-artifacts/design (fixture)');
+    }
   } else fail(`unknown command: ${cmd}`);
 }

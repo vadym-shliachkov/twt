@@ -125,6 +125,8 @@ flowchart TB
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
     twt_ia_define -.-> twt_eval_smoke
+    twt_curation_define -.-> twt_eval_smoke
+    twt_design_system_define -.-> twt_eval_smoke
     twt_wiki_define -.-> twt_eval_smoke
     twt_export_pdf -.-> twt_export
     twt_export_docx -.-> twt_export
@@ -794,7 +796,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-curation-validate
-- Soft consumers: twt-pre-design
+- Soft consumers: twt-eval-smoke, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/
@@ -962,7 +964,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design, twt-design-system, twt-design-system-audit, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
+- Soft consumers: twt-content-approval-checklist, twt-design, twt-design-system, twt-design-system-audit, twt-elementor-block-creator, twt-eval-smoke, twt-html-block-creator, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1125,11 +1127,11 @@ flowchart TB
 **Version:** 1.0.1
 
 **Inputs:**
-- Optional scope — ia | wiki | all (default all)
+- Optional scope — ia | curation | design-system | wiki | all (default all)
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-ia-define, twt-wiki-define
+- Soft: twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define
 
 **Feeds into:**
 - Hard consumers: none
@@ -2336,7 +2338,7 @@ flowchart TB
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
-| /twt-eval-smoke | none | twt-ia-define, twt-wiki-define |
+| /twt-eval-smoke | none | twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define |
 | /twt-export | none | twt-export-pdf, twt-export-docx, twt-export-presentation, twt-export-template-create |
 | /twt-export-docx | none | none |
 | /twt-export-pdf | none | none |
