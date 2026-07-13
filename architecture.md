@@ -503,7 +503,7 @@ flowchart TB
 ### /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - none (reads the component artifacts)
@@ -1407,7 +1407,7 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.3
+**Version:** 1.2.4
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -1492,7 +1492,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.3
+**Version:** 1.3.4
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts

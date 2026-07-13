@@ -1,8 +1,8 @@
 ---
 name: twt-component-validate
 category: component
-description: (v1.0.3) Read-only critique of components.md and gallery.html into validation-report.md
-version: 1.0.3
+description: (v1.0.4) Read-only critique of components.md and gallery.html into validation-report.md
+version: 1.0.4
 accepts_arguments: false
 inputs:
   - none (reads the component artifacts)

@@ -224,7 +224,7 @@ Document the component library the site needs — anatomy, variants, states, tok
 ## /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** no
 
 Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
@@ -1363,7 +1363,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.3
+**Version:** 1.2.4
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1481,7 +1481,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.3
+**Version:** 1.3.4
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
