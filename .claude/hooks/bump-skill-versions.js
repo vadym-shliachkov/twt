@@ -77,6 +77,22 @@ if (bumped.length) {
 if (bumped.length) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
+  // Append one line per bump to CHANGELOG.md so ~60 auto-bumped plugin
+  // versions stop being an opaque number to updaters. Newest entries right
+  // under the header; feature context lives in the git log this line points at.
+  try {
+    const clPath = path.join(root, 'CHANGELOG.md');
+    const header = '# Changelog\n\nAuto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.\n\n';
+    const pv = pluginBumped.length ? pluginBumped[0].split('→')[1].trim() : '';
+    const line = `- ${new Date().toISOString().slice(0, 10)}${pv ? ` **v${pv}**` : ''} — ${bumped.join(', ')}\n`;
+    let existing = '';
+    try { existing = fs.readFileSync(clPath, 'utf8'); } catch {}
+    // keep every prior entry (lines from the first "- " on), whatever the header was
+    const firstEntry = existing.indexOf('\n- ');
+    const body = firstEntry === -1 ? '' : existing.slice(firstEntry + 1);
+    fs.writeFileSync(clPath, header + line + body);
+  } catch {}
+
   // Auto-regenerate derived docs (SKILLS.md, architecture.md, README table).
   const genDocs = path.join(root, 'tools', 'gen-docs.mjs');
   let docsResult = '';
@@ -98,6 +114,7 @@ if (bumped.length) {
       path.join(root, 'SKILLS.md'),
       path.join(root, 'architecture.md'),
       path.join(root, 'README.md'),
+      path.join(root, 'CHANGELOG.md'),
     ].filter(fp => { try { return require('fs').existsSync(fp); } catch { return false; } });
     const ra = spawnSync('git', ['add', '--', ...addTargets], { cwd: root, encoding: 'utf8' });
     if (ra.status === 0) {

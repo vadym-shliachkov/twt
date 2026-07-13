@@ -98,7 +98,7 @@ function Get-YamlList {
 # parent. Sub-skills in skills/ never carry the gate. The gate BODY is synced
 # by gen-docs.mjs from templates/blocks/setup-gate.md; this only checks presence.
 $isCommand = (Split-Path $resolvedPath -Leaf) -ine 'SKILL.md'
-$gateExempt = @('twt-setup','twt-marketplace-docs','twt-status')
+$gateExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke')
 $gateExemptPrefix = @('twt-content-fetch-','twt-export-')
 if ($isCommand) {
     $exempt = ($gateExempt -contains $expectedName) -or

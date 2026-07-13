@@ -34,6 +34,7 @@ flowchart TB
     twt_develop["/twt-develop"]:::skill
     twt_elementor_block_creator["/twt-elementor-block-creator"]:::skill
     twt_elementor_theme_creator["/twt-elementor-theme-creator"]:::skill
+    twt_eval_smoke["/twt-eval-smoke"]:::skill
     twt_export["/twt-export"]:::skill
     twt_export_docx["/twt-export-docx"]:::skill
     twt_export_pdf["/twt-export-pdf"]:::skill
@@ -123,6 +124,8 @@ flowchart TB
     twt_content_approval_checklist -.-> twt_develop
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
+    twt_ia_define -.-> twt_eval_smoke
+    twt_wiki_define -.-> twt_eval_smoke
     twt_export_pdf -.-> twt_export
     twt_export_docx -.-> twt_export
     twt_export_presentation -.-> twt_export
@@ -266,6 +269,7 @@ flowchart TB
 
 ### meta
 
+- /twt-eval-smoke - Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
 - /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
 - /twt-setup - One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
 
@@ -1115,6 +1119,36 @@ flowchart TB
 | wp-content/themes/hello-elementor-<slug>/wpml-config.xml |  |
 | .twt-artifacts/elementor-theme/conventions.md |  |
 
+### /twt-eval-smoke
+
+**Category:** meta
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional scope — ia | wiki | all (default all)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-ia-define, twt-wiki-define
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/ia/functional-scope.md
+- .project-wiki/inbox.md
+- .project-wiki/decisions/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/positioning/positioning.md |  |
+| .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md |  |
+| .project-wiki/inbox.md |  |
+
 ### /twt-export
 
 **Category:** export
@@ -1361,7 +1395,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-ia-validate
-- Soft consumers: twt-curation-define, twt-pre-design
+- Soft consumers: twt-curation-define, twt-eval-smoke, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -2157,7 +2191,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-wiki
-- Soft consumers: twt-wiki-validate
+- Soft consumers: twt-eval-smoke, twt-wiki-validate
 
 **Reads:**
 - .project-wiki/AGENTS.md
@@ -2302,6 +2336,7 @@ flowchart TB
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
+| /twt-eval-smoke | none | twt-ia-define, twt-wiki-define |
 | /twt-export | none | twt-export-pdf, twt-export-docx, twt-export-presentation, twt-export-template-create |
 | /twt-export-docx | none | none |
 | /twt-export-pdf | none | none |

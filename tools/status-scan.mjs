@@ -17,7 +17,7 @@
 // Exits 0 always (a freshness report is not a failure); exits 2 only on bad usage.
 'use strict';
 
-import { statSync, readdirSync, existsSync } from 'node:fs';
+import { statSync, readdirSync, existsSync, readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 // ---- the canonical DAG (mirrors the table in commands/twt-status.md) ---------
@@ -177,9 +177,45 @@ for (const node of NODES) {
   }
 }
 
+// ---- legacy-layout detection ---------------------------------------------------
+// Artifact layouts evolve; readers carry read-only fallbacks for pre-move
+// projects (CONVENTIONS §2's path-move checklist). This is the registry of
+// those fallbacks — /twt-status is where a user learns their project predates
+// a move, and each warning names the run that migrates it forward.
+const LEGACY_CHECKS = [
+  {
+    when: () => existsSync(join(ART, 'design', 'component', 'components.md'))
+      && !existsSync(join(ART, 'design', 'design-system', 'component', 'components.md')),
+    warn: 'component catalog at pre-move design/component/ (now design-system/component/) — skills fall back read-only; re-run /twt-component-define (or /twt-design) to migrate',
+  },
+  {
+    when: () => {
+      const legacy = join(ART, 'pre-design', 'curation', 'facts.md');
+      if (!existsSync(legacy) || !existsSync(join(projectDir, '.project-wiki'))) return false;
+      try {
+        const t = readFileSync(legacy, 'utf8');
+        return /\|[^\n]*canonical[^\n]*\|/i.test(t) && !/^status:\s*moved$/m.test(t);
+      } catch { return false; }
+    },
+    warn: 'live legacy facts ledger beside the canonical .project-wiki/facts.md — two ledgers WILL drift; re-run /twt-curation-define (it merges + stubs the legacy file)',
+  },
+  {
+    when: () => existsSync(join(ART, 'content')) && !existsSync(join(ART, 'content-quality')),
+    warn: 'content-quality outputs at pre-rename .twt-artifacts/content/ (now content-quality/) — old runs stay readable; new /twt-content-optimize runs write to the new root',
+  },
+];
+const legacyWarnings = LEGACY_CHECKS.filter((c) => { try { return c.when(); } catch { return false; } })
+  .map((c) => c.warn);
+
 // ---- render ------------------------------------------------------------------
-if (rows.length === 0) {
+if (rows.length === 0 && legacyWarnings.length === 0) {
   console.log(`No twt artifacts found under ${ART}${scope ? ` for scope "${scope}"` : ''}.`);
+  process.exit(0);
+}
+for (const w of legacyWarnings) console.log(`LEGACY LAYOUT: ${w}`);
+if (legacyWarnings.length) console.log('');
+if (rows.length === 0) {
+  console.log(`No pipeline artifacts to freshness-check under ${ART}.`);
   process.exit(0);
 }
 

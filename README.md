@@ -64,6 +64,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
+| /twt-eval-smoke | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
 | /twt-export | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
 | /twt-export-docx | export | Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling |
 | /twt-export-pdf | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |

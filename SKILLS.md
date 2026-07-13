@@ -30,6 +30,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
+| [/twt-eval-smoke](#twt-eval-smoke) | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
 | [/twt-export](#twt-export) | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
 | [/twt-export-docx](#twt-export-docx) | export | Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
@@ -959,6 +960,43 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 - `.twt-artifacts/elementor-theme/conventions.md` exists and is readable by other skills
 - `design-system.css` contains the CSS custom-property scaffold
 - Theme is activatable in WordPress without errors
+
+---
+
+## /twt-eval-smoke
+
+**Category:** meta
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+The standing behavioral eval. Unit tests and structural checkers guard the *tools* and *formats*; nothing else exercises the *prompts* — a broken dependency check or a dead contract path in a skill only surfaces in a real user run. This command seeds a deterministic fixture, dispatches a real skill against it in collect mode, and asserts the postconditions mechanically via `tools/eval-smoke.mjs`. Run it after any change to the skills it covers, or on a schedule.
+
+**Inputs:**
+- Optional scope — ia | wiki | all (default all)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-ia-define, twt-wiki-define
+
+**Reads:**
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/ia/functional-scope.md
+- .project-wiki/inbox.md
+- .project-wiki/decisions/
+
+**Writes:**
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md
+- .project-wiki/inbox.md
+
+**Non-goals:**
+- Not a quality eval — it asserts contracts (files at contract paths, parseable decisions.md, drained inbox, lint-clean wiki), never design taste.
+- Never runs against a real project: the seeder refuses any tree that exists without its ownership marker, and clean refuses any tree without it.
+
+**Success criteria:**
+- Each requested scope reports PASS from `eval-smoke.mjs check`, or the run ends with the FAIL lines and the fixture left in place for debugging.
+- A passing scope's fixture is cleaned; the repo tree is untouched (`.twt-artifacts/` and `.project-wiki/` fixtures only).
 
 ---
 
