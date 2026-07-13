@@ -966,7 +966,7 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 ## /twt-eval-smoke
 
 **Category:** meta
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 The standing behavioral eval. Unit tests and structural checkers guard the *tools* and *formats*; nothing else exercises the *prompts* — a broken dependency check or a dead contract path in a skill only surfaces in a real user run. This command seeds a deterministic fixture, dispatches a real skill against it in collect mode, and asserts the postconditions mechanically via `tools/eval-smoke.mjs`. Run it after any change to the skills it covers, or on a schedule.

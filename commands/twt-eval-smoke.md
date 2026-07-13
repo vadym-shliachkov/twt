@@ -1,8 +1,8 @@
 ---
 name: twt-eval-smoke
 category: meta
-description: (v1.0.1) Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
-version: 1.0.1
+description: (v1.0.2) Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional scope — ia | curation | design-system | wiki | all (default all)
