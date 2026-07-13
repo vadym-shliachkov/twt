@@ -844,7 +844,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.3
+**Version:** 1.3.4
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -947,7 +947,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.10
+**Version:** 1.8.11
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -1641,7 +1641,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.4
+**Version:** 1.2.5
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags

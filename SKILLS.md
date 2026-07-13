@@ -688,7 +688,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.3.3
+**Version:** 1.3.4
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -1607,7 +1607,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.4
+**Version:** 1.2.5
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).

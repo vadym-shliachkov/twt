@@ -1,8 +1,8 @@
 ---
 name: twt-design
 category: design
-description: (v1.3.3) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.3.3
+description: (v1.3.4) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+version: 1.3.4
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
