@@ -270,12 +270,46 @@ function summarize() {
   process.stdout.write('twt-run-trace: trace + cost folded into ' + path.basename(LOG) + '; disarmed.\n');
 }
 
+// ---- Timeline appender -----------------------------------------------------
+// `--timeline "<Header>: <question> → <answer>"` appends one numbered
+// `[question]` entry to the CURRENT run's `### Timeline` in the session log.
+// wiki-harvest.mjs parses these lines with a regex bound to exactly this shape
+// (`N. [question] Header: text → answer`) — before this appender existed the
+// format was only prose-described and the model freehand-wrote it, so every
+// run re-risked drifting out of what the harvester can see. Numbering is
+// derived from the entries already under the LAST Timeline heading. Silently
+// a no-op when the log or its Timeline heading doesn't exist yet — never
+// break a run over its own bookkeeping.
+function timeline(text) {
+  const line = String(text || '').replace(/\r?\n/g, ' ').trim();
+  if (!line) return;
+  const LOG = logMd();
+  let md;
+  try { md = fs.readFileSync(LOG, 'utf8'); } catch { return; }
+  const at = md.lastIndexOf('### Timeline');
+  if (at === -1) return;
+  const headEnd = md.indexOf('\n', at) + 1;
+  const rest = md.slice(headEnd);
+  const sectionEnd = rest.search(/^#{2,3} /m);
+  const body = sectionEnd === -1 ? rest : rest.slice(0, sectionEnd);
+  const nums = [...body.matchAll(/^(\d+)\.\s/gm)].map((m) => Number(m[1]));
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  // insert after the last existing entry (or right after the heading)
+  let insertAt = headEnd;
+  const lastEntry = [...body.matchAll(/^\d+\.\s[^\n]*\n?/gm)].pop();
+  if (lastEntry) insertAt = headEnd + lastEntry.index + lastEntry[0].length;
+  const entry = `${next}. [question] ${line}\n`;
+  try { fs.writeFileSync(LOG, md.slice(0, insertAt) + entry + md.slice(insertAt)); } catch {}
+  process.stdout.write(`timeline: appended entry ${next} to ${path.basename(LOG)}\n`);
+}
+
 // ---- dispatch ------------------------------------------------------------
 
 try {
   const arg = process.argv[2];
   if (arg === '--arm') arm(process.argv.slice(3).join(' '));
   else if (arg === '--event') event(process.argv.slice(3).join(' '));
+  else if (arg === '--timeline') timeline(process.argv.slice(3).join(' '));
   else if (arg === '--summarize') summarize();
   else handleHook();
 } catch {

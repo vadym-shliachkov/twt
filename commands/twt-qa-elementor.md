@@ -96,4 +96,4 @@ BLOCKER: <n> · WARNING: <n> · SUGGESTION: <n>
 Sort BLOCKER → WARNING → SUGGESTION. If clean, write "No findings — Elementor hygiene passes."
 
 ## Step 4 — Report
-State counts, whether `php -l` ran, and the report path. Modify no other file.
+State counts, whether `php -l` ran, and the report path. Modify no other file. Before reporting, verify the report's structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file .twt-artifacts/qa/elementor-report.md --no-decisions` — fix the report until it passes (structural only: scorecard arithmetic, band consistency, summary).

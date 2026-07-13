@@ -116,4 +116,4 @@ BLOCKER: <n> · WARNING: <n> · SUGGESTION: <n>
 Sort BLOCKER → WARNING → SUGGESTION. If clean, write "No findings — content passes" and an empty Gaps list.
 
 ## Step 6 — Report
-State mode, pages audited, the counts, and the report path. Modify no other file.
+State mode, pages audited, the counts, and the report path. Modify no other file. Before reporting, verify the report's structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file .twt-artifacts/qa/content-report.md --no-decisions` — fix the report until it passes (structural only: scorecard arithmetic, band consistency, summary).

@@ -103,7 +103,11 @@ glossary.md:        | Term | Means |            (## Terms)
                     | Never say | Say instead | Why |   (## Banned words)
 ```
 
-`facts.md` is the one curated file with a **second sanctioned writer**: `twt-curation-define` reconciles pipeline facts directly into it (CONVENTIONS §17). Merge by fact key and never silently flip a value another writer resolved — a disagreement is a `CONFLICT` row. Leave its `## Provided assets` table to the pipeline; you never write that section.
+`facts.md` is the one curated file with a **second sanctioned writer**: `twt-curation-define` reconciles pipeline facts directly into it (CONVENTIONS §17). **Never hand-edit its fact rows** — merge each through the bundled merger (Bash; one call may carry several `--row` flags):
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-facts-merge.mjs" "$CLAUDE_PROJECT_DIR" --row "fact|canonical|STATUS|value@source"`
+
+It appends or merges by fact key and enforces never-silently-flip mechanically: two disagreeing RESOLVED values become a `CONFLICT` row carrying both sources; a weaker claim never degrades a settled row; pass `RESOLVED` over an existing `CONFLICT` only when a human ruled. Leave its `## Provided assets` table to the pipeline; you never write that section.
 
 For a fact row: `Status` is `RESOLVED` when there is one source or all sources agree (`Canonical value` = the settled value), `CONFLICT` when sources disagree (see Step 5), `UNVERIFIED-ATTR` when a generic example is pinned to a named entity without re-sourcing, or `TBD` when needed but absent everywhere. `Sources` lists each contributing value as `value@source`.
 

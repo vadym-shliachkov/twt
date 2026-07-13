@@ -101,4 +101,4 @@ BLOCKER: <n> · WARNING: <n> · SUGGESTION: <n>
 Sort BLOCKER → WARNING → SUGGESTION. If clean, write "No findings — links pass" and an empty Gaps list. In live mode, note responsive-CSS checks were skipped (source-only).
 
 ## Step 4 — Report
-State mode, pages, counts, and the report path. Modify no other file.
+State mode, pages, counts, and the report path. Modify no other file. Before reporting, verify the report's structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file .twt-artifacts/qa/links-report.md --no-decisions` — fix the report until it passes (structural only: scorecard arithmetic, band consistency, summary).

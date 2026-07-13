@@ -111,5 +111,7 @@ Generated: <ISO timestamp>  ·  Validator: /twt-wiki-validate
 
 Number lint findings first (they are already tier-sorted), then judgment findings. This file is the only write this skill ever makes — the wiki is committed to git by default, so the report's own git history serves as the dated trail of past lints.
 
+Then verify its structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file .project-wiki/validation-report.md` — if it fails, fix the report until it passes. The check is structural (scorecard arithmetic, band consistency, finding format, required sections); passing it never replaces this rubric's judgment.
+
 ## Step 6 — Report
 Print BLOCKER/WARNING/SUGGESTION counts, Health and Band, and both report paths. End with: "Wiki validation never blocks work by itself. BLOCKERs mean the wiki misleads — fix them via /twt-wiki (curation) or by answering what it flags; findings needing a human are listed under Decisions to confirm."

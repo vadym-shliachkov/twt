@@ -94,5 +94,7 @@ Generated: <ISO timestamp>  ·  Validator: /twt-layout-validate
 ```
 Write ONLY this file.
 
+Then verify its structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file <the report path written above>` — if it fails, fix the report until it passes. The check is structural (scorecard arithmetic, band consistency, finding format, required sections); passing it never replaces this rubric's judgment.
+
 ## Step 4 — Report
 State BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-layout-define (or re-run /twt-design, which folds the layout define→validate pass)."

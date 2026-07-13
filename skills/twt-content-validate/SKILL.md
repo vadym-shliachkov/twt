@@ -120,5 +120,7 @@ Generated: <ISO>  ·  Validator: /twt-content-validate  ·  Subject: <label>
 ```
 Write ONLY this file.
 
+Then verify its structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file <the report path written above>` — if it fails, fix the report until it passes. The check is structural (scorecard arithmetic, band consistency, finding format, required sections); passing it never replaces this rubric's judgment.
+
 ## Step 6 — Report
 Print Health, Band, and BLOCKER/WARNING/SUGGESTION counts, then the fix hint: "To improve the text, run /twt-content-optimize (auto or per-suggestion review)."

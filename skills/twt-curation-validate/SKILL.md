@@ -103,5 +103,7 @@ Generated: <ISO timestamp>  ·  Validator: /twt-curation-validate
 ```
 Write ONLY this file.
 
+Then verify its structure (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-validation-report.mjs" --file <the report path written above>` — if it fails, fix the report until it passes. The check is structural (scorecard arithmetic, band consistency, finding format, required sections); passing it never replaces this rubric's judgment.
+
 ## Step 4 — Report
 Print BLOCKER/WARNING/SUGGESTION counts and end with the fix hint: "To address these, run /twt-curation-define (or re-run /twt-pre-design, which folds the curation define→validate pass)."

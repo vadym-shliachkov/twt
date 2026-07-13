@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * seed-permissions.js — installer helper (shared by install.ps1 and install.sh).
+ * seed-permissions.js — one-time project setup helper (invoked by /twt-setup
+ * and by every skill's unattended Step-0 gate).
  *
  * Idempotently merges a curated runtime permission allowlist into a project's
  * (or ~/.claude's) settings.json, so a twt pipeline run stops prompting for the

@@ -16,8 +16,16 @@ jobs:
           # 22, not 20: `node --test` only supports glob patterns from Node 21.
           node-version: 22
 
-      - name: Unit tests (node --test)
+      # pandoc so the export-chain self-tests (run via tests/self-tests.test.mjs)
+      # actually exercise instead of self-SKIPping.
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
+
+      - name: Unit tests + tool self-tests (node --test)
         run: node --test "tests/**/*.test.mjs"
+
+      - name: Skill I/O graph is consistent (check-io)
+        run: node tools/check-io.mjs
 
       - name: Derived docs are current (gen-docs --check)
         run: node tools/gen-docs.mjs --check
