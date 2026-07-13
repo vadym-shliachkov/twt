@@ -48,7 +48,7 @@ If `brand-brief.md` exists → **refinement mode**: read it and any sibling `val
 Also read `.twt-artifacts/pre-design/brand/_coverage.md` if present: it tells you which brand-book parts the fetch found, which were `Silent`, and which were `Not-extracted`. Use it to steer the interview toward thin **Core** parts and to decide what to mark `TBD` (see Step 2/Step 3).
 
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
-If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the brand-brief from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/pre-design/brand/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. After writing `decisions.md`, verify it (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file <its path>` — fix until it passes; three consumers (the orchestrator's surface-up flow, gen-report, wiki-harvest) parse this exact format, and a drifted section title is silently invisible to them.
+If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the brand-brief from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/pre-design/brand/decisions.md` (decisions.md format — frontmatter `generated`/`area`/`producer`/`status: open`; sections `## Open questions` (question — options [a,b,c] — model-leaning, plus an indented `- why it matters:` line), `## Model-decided assumptions (review)` (field = value — basis — reversible), `## Proposed rules (confirm before binding)`). Set `status: open`. After writing `decisions.md`, verify it (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file <its path>` — fix until it passes; three consumers (the orchestrator's surface-up flow, gen-report, wiki-harvest) parse this exact format, and a drifted section title is silently invisible to them.
 
 Then write the draft brand-brief and perform the **folded validation exception** required by the orchestrator: write `.twt-artifacts/pre-design/brand/validation-report.md` as if `/twt-brand-validate` had run, using the full validation skeleton and rubric from `skills/twt-brand-validate/SKILL.md`. Do not replace it with a compact pass/fail, green/yellow/red, or checklist-only report.
 
@@ -81,28 +81,26 @@ In collect mode, apply the same coverage-aware rule without prompting: fill Core
 Write/update `.twt-artifacts/pre-design/brand/brand-brief.md` with sections: `# Brand Brief`, `## Identity`, `## Palette` (table: name | hex | usage), `## Typography`, `## Voice & Tone` (attributes + do/don't), `## Audience signals`, `## Sources`. Mark unknowns `TBD` rather than guessing. Confirm before overwriting.
 
 ## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
 
-Append one entry per judgment that a human would need to re-make if it were lost:
-- a decision you made autonomously (collect mode, or an unattended run)
+One entry per judgment a human would otherwise have to re-make:
+- a decision made autonomously (collect mode, or an unattended run)
 - a factual `CONFLICT` you resolved, or refused to resolve
 - a validator BLOCKER you overruled, and on what grounds
 - an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (a direction, a constraint, pasted guidance) that shaped what you produced — the capture hook sees only AskUserQuestion menus, so this is the one place a typed answer gets recorded; put their words in **decision:** verbatim, not paraphrased
+- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
 
-Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+Append only — never rewrite; the curator drains it:
 
 ```
-## <UTC timestamp, e.g. 2026-07-11T14:03:22Z — no milliseconds, matching the capture hook> · reason · <this skill's name>
+## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
 - **decision:** <what you settled>
-- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **why:** <the evidence, tradeoff, or constraint that forced it>
 - **evidence:** <path, URL, or artifact this rests on>
 - **reversible:** <yes|no>
 ```
 
-Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
-
-If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
+Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).
 
 ## Step 4 — Report
 Sections written/changed, any remaining TBDs, and suggest `/twt-brand-validate` next.

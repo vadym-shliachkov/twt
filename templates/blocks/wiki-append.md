@@ -1,23 +1,21 @@
 ## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
 
-Append one entry per judgment that a human would need to re-make if it were lost:
-- a decision you made autonomously (collect mode, or an unattended run)
+One entry per judgment a human would otherwise have to re-make:
+- a decision made autonomously (collect mode, or an unattended run)
 - a factual `CONFLICT` you resolved, or refused to resolve
 - a validator BLOCKER you overruled, and on what grounds
 - an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (a direction, a constraint, pasted guidance) that shaped what you produced — the capture hook sees only AskUserQuestion menus, so this is the one place a typed answer gets recorded; put their words in **decision:** verbatim, not paraphrased
+- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
 
-Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+Append only — never rewrite; the curator drains it:
 
 ```
-## <UTC timestamp, e.g. 2026-07-11T14:03:22Z — no milliseconds, matching the capture hook> · reason · <this skill's name>
+## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
 - **decision:** <what you settled>
-- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **why:** <the evidence, tradeoff, or constraint that forced it>
 - **evidence:** <path, URL, or artifact this rests on>
 - **reversible:** <yes|no>
 ```
 
-Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
-
-If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
+Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).

@@ -698,7 +698,7 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
+- Soft: twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -721,7 +721,7 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Non-goals:**
 - Doesn't do development or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches the design-system orchestrator, or (for component, layout, mockup, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
+- Doesn't reproduce sub-area logic — dispatches every sub-area's `*-define` / `*-validate` sub-skills directly (rule 5); the standalone `/twt-design-system` wrapper is for direct use, not for routing through (an orchestrator-to-orchestrator hop only relays)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -1617,7 +1617,7 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
+- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1638,7 +1638,7 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 **Non-goals:**
 - Doesn't do design, development, or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area's orchestrator, or (for IA + curation, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
+- Doesn't reproduce sub-area logic — dispatches every sub-area's `*-fetch` / `*-define` / `*-validate` sub-skills directly (rule 5); the standalone category wrappers (`/twt-brand`, `/twt-spec`, `/twt-positioning`) are for direct use, not for routing through (an orchestrator-to-orchestrator hop only relays)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**

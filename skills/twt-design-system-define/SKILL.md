@@ -98,7 +98,7 @@ When `<entry_mode>` is **greenfield** (no Figma/exported design), apply the exte
 - A real brand-brief/spec decision always wins over these defaults — they fill gaps and prevent slop, never override a provided choice. Note in `decisions.md` any direction taken from the skills (not the brief) so the user can confirm.
 
 ## Step 1b — Collect mode (CONVENTIONS rule 13)
-If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the design system (`tokens.md`, `tokens.css`, `preview.html`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/design-system/decisions.md` (write it in the decisions.md format — frontmatter with `generated`/`area`/`producer`/`status: open`, then the sections `## Open questions` (each: question — options [a,b,c] — model-leaning — why it matters), `## Model-decided assumptions (review)` (field = value — basis — reversible), and `## Proposed rules (confirm before binding)`): the open question with 2–3 option candidates and your leaning, model-decided assumptions, and any proposed rule. Set `status: open`. After writing `decisions.md`, verify it (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file <its path>` — fix until it passes; three consumers (the orchestrator's surface-up flow, gen-report, wiki-harvest) parse this exact format, and a drifted section title is silently invisible to them. Then write the drafts and return the decisions block in your report. Do not loop on the user. **Stay in-project:** work only inside this project — never read files outside it (no sibling project folders, no home directory) to find templates, conventions, or format examples; every format you need is specified in this skill.
+If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: do NOT call `AskUserQuestion`. Draft the design system (`tokens.md`, `tokens.css`, `preview.html`) from the loaded context using best practice, and for every choice you would otherwise have asked about, add an entry to `.twt-artifacts/design/design-system/decisions.md` (decisions.md format — frontmatter `generated`/`area`/`producer`/`status: open`; sections `## Open questions` (question — options [a,b,c] — model-leaning, plus an indented `- why it matters:` line), `## Model-decided assumptions (review)` (field = value — basis — reversible), `## Proposed rules (confirm before binding)`). Set `status: open`. After writing `decisions.md`, verify it (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file <its path>` — fix until it passes; three consumers (the orchestrator's surface-up flow, gen-report, wiki-harvest) parse this exact format, and a drifted section title is silently invisible to them. Then write the drafts and return the decisions block in your report. Do not loop on the user. **Stay in-project:** work only inside this project — never read files outside it (no sibling project folders, no home directory) to find templates, conventions, or format examples; every format you need is specified in this skill.
 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
 
@@ -173,68 +173,15 @@ For each source:
 
 Hold every source in memory tagged with origin (`figma://<file>`, `screenshot://<path>`, `url://<href>`). Tags are used later to attribute every token and to mark confidence.
 
+**Analyse-existing detail (progressive disclosure):** when any Figma/site/existing-system source is in play, an existing `tokens.md` was detected, or mode ∈ 3 / 7 — Read `${CLAUDE_PLUGIN_ROOT}/skills/twt-design-system-define/references/analysis-existing.md` **now**. It carries the full procedures for Step 3b (Figma × existing system, `<system_update_mode>` semantics), Step 4 (existing-system reconciliation), Step 7 (pattern & inconsistency report), and Step 8 (multi-file merge). Pure-greenfield runs never need it — the stubs below say what each step decides so the flow stays legible.
+
 ### Step 3b — Figma + Existing System Branch
-
-Run this only when **both** conditions are true:
-- `<existing_system_present> = true` (from Step 1b)
-- at least one Figma source was added in Step 3
-
-Otherwise skip to Step 4.
-
-Print a diff summary first — read variables / styles from the Figma source(s) and compare against `<existing_system>`:
-
-```
-Compared Figma to existing tokens.md:
-  • Tokens matching                : <n>
-  • Tokens new in Figma (missing)  : <n>
-  • Tokens with different values   : <n>
-  • Tokens only in existing system : <n>
-```
-
-Then ask via the **AskUserQuestion** tool (single-select, header "Apply Figma?") how the Figma file should be applied to the existing design system:
-- **Update** — add only the tokens missing in tokens.md (recommended; safest, preserves consistency)
-- **Adjust** — review each conflict and decide per-token (add / replace / skip)
-- **Regenerate** — discard the existing system and rebuild from Figma (destructive — confirms twice)
-- **No change** — keep tokens.md as-is, just use it as context for the current task
-- **You decide** — I apply the safest fit (defaults to Update; never Regenerate without explicit confirmation)
-
-Record the choice and continue. Record the choice as `<system_update_mode>`. Apply it in Step 5 and Step 10:
-
-| Choice | Step 5 behavior | Step 10 (write) behavior |
-|--------|-----------------|--------------------------|
-| **1 — Update** | Extract Figma tokens, drop any whose name+role already exists in `<existing_system>`. Keep only the missing ones. | Merge: existing sections preserved verbatim; new tokens appended into matching sections with `(added from <figma source>)` note. |
-| **2 — Adjust** | Build a conflict list (same name, different value) and an additions list. Walk through each conflict with the user: `keep existing / replace with Figma / skip`. | Apply per-token decisions. Log every change in the new Section 10 (Migration Recommendations) entry titled "Adjustments applied on <date>". |
-| **3 — Regenerate** | Ignore `<existing_system>`. Use Figma + other sources as the only basis. **Before writing**, ask once more: `Type REGENERATE to confirm destructive rewrite.` If anything else is typed, fall back to Update. | Back up the old file to `tokens.md.bak` first (overwriting any previous backup — one rolling backup, not an accumulating series; git history covers the rest), then write fresh. |
-| **4 — No change** | Skip token extraction merge entirely. Use `<existing_system>` as-is for downstream work (component hierarchy, exports). | Do not modify `tokens.md`. Completion summary notes `Output file: unchanged`. |
-
-In **Adjust** mode, render the conflict walkthrough as a compact table the user can answer with a single line of letters, e.g.:
-
-```
-# Conflicts (existing vs Figma):
-1. color-primary       #0057FF → #1A5CFF    [k]eep / [r]eplace / [s]kip
-2. radius-card         12px    → 16px       [k]eep / [r]eplace / [s]kip
-3. space-4             16px    → 12px       [k]eep / [r]eplace / [s]kip
-
-Answer with one letter per line (e.g. "k r k") or "k all" / "r all".
-```
+Only when `<existing_system_present> = true` **and** a Figma source was added — diff Figma against the existing system, ask **Apply Figma?** (Update / Adjust / Regenerate / No change / You decide), record `<system_update_mode>` for Steps 5 and 10. Full procedure: `references/analysis-existing.md`. Otherwise skip to Step 4.
 
 ---
 
 ## Step 4 — Existing System Reconciliation
-
-**Skip this step entirely if `<existing_system_present> = true`** (Step 1b already loaded it and Step 3b already decided how to apply Figma to it).
-
-Otherwise, ask via the **AskUserQuestion** tool (single-select, header "Existing DS?") whether there is an existing design system to extend:
-- **Yes** — point to an existing system (tokens file, CSS, Storybook, or Figma) to use as the priority baseline
-- **No** — generate from the sources collected above
-- **You decide** — I detect whether an existing system is present and proceed accordingly (defaults to No when none is found)
-
-Record the choice and continue. If **Yes**, ask the user to provide the path/URL to the existing system, read it in full and treat it as the **priority baseline**:
-- Existing token names and values are preserved verbatim.
-- New tokens are added only where the analyzed designs introduce values with no equivalent.
-- Conflicts are logged in the Pattern Report (Step 7), never silently overwritten.
-
-If **No**, derive everything from the collected sources.
+Skip when `<existing_system_present> = true` (Step 3b handled it). Otherwise ask whether an existing design system exists to extend (it becomes the priority baseline — names/values preserved verbatim, conflicts logged in Step 7, never silently overwritten); **No** → derive everything from the collected sources. Full procedure: `references/analysis-existing.md`.
 
 ---
 
@@ -329,42 +276,12 @@ State each item's composition (which lower-level parts it's made of) so the **ev
 ---
 
 ## Step 7 — Pattern & Inconsistency Report
-
-Scan extracted tokens and components for:
-
-- inconsistent spacing
-- typography drift (same role, different size/weight)
-- duplicate button variants
-- mismatched radii
-- color misuse (semantic role conflicts with token meaning)
-- layout fragmentation
-- naming drift
-
-For each finding, record:
-- **What** (the inconsistency)
-- **Where** (source tag, screen, or component)
-- **Recommendation** (normalize to X, retire Y)
-- **Severity** (high / medium / low)
-
-In **mode 3** (multi-file merge) also produce:
-- conflict report (token name same, value different)
-- normalization recommendations
-- migration notes (which file's value wins and why)
-
-In **mode 7** (inconsistency compare) this section is the primary output.
+Analyse-existing runs: scan tokens/components for drift (spacing, typography, duplicate variants, radii, color misuse, layout fragmentation, naming) — each finding with What / Where / Recommendation / Severity; feeds tokens.md §4. Primary output in mode 7; mode 3 adds the conflict report. Full checklist: `references/analysis-existing.md`. Greenfield runs: nothing to scan — note "greenfield, no inconsistencies to report" in §4.
 
 ---
 
 ## Step 8 — Multi-File Merge Logic
-
-Only run if more than one Figma source was provided, or **mode 3** was selected.
-
-Steps:
-1. Build a per-file token map.
-2. Group tokens by semantic role across files.
-3. Resolve conflicts using this order: existing-system value > most-frequent value > most-recent file > flagged for human review.
-4. Output a merged token set + a conflict table that shows every value that was *not* chosen and the file it came from.
-5. Preserve the scalable architecture — never collapse two distinct semantic roles into one even if the value matches.
+Only with >1 Figma source or mode 3 — per-file token maps merged by semantic role, conflict order existing > most-frequent > most-recent > human review. Full procedure: `references/analysis-existing.md`. Otherwise skip.
 
 ---
 
@@ -634,28 +551,26 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 ---
 
 ## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (use Glob/Read to check — never a shell command), append your reasoning to `.project-wiki/inbox.md` before you finish. The wiki's capture hook already records what the **user** chose; this records what **you** decided and, crucially, **why** — which nothing else in the pipeline preserves.
+If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
 
-Append one entry per judgment that a human would need to re-make if it were lost:
-- a decision you made autonomously (collect mode, or an unattended run)
+One entry per judgment a human would otherwise have to re-make:
+- a decision made autonomously (collect mode, or an unattended run)
 - a factual `CONFLICT` you resolved, or refused to resolve
 - a validator BLOCKER you overruled, and on what grounds
 - an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (a direction, a constraint, pasted guidance) that shaped what you produced — the capture hook sees only AskUserQuestion menus, so this is the one place a typed answer gets recorded; put their words in **decision:** verbatim, not paraphrased
+- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
 
-Append (never rewrite — `inbox.md` is append-only, and the curator drains it):
+Append only — never rewrite; the curator drains it:
 
 ```
-## <UTC timestamp, e.g. 2026-07-11T14:03:22Z — no milliseconds, matching the capture hook> · reason · <this skill's name>
+## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
 - **decision:** <what you settled>
-- **why:** <the reason — the evidence, the tradeoff, the constraint that forced it>
+- **why:** <the evidence, tradeoff, or constraint that forced it>
 - **evidence:** <path, URL, or artifact this rests on>
 - **reversible:** <yes|no>
 ```
 
-Write nothing else in `.project-wiki/`. Curated pages have exactly one writer, and it is not you.
-
-If `.project-wiki/` does not exist, skip this step silently — the wiki is opt-in.
+Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).
 
 ## Step 12 — Completion
 

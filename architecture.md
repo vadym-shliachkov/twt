@@ -101,7 +101,8 @@ flowchart TB
     twt_ia_define -.-> twt_curation_define
     twt_curation_define --> twt_curation_validate
     twt_content_validate -.-> twt_curation_validate
-    twt_design_system -.-> twt_design
+    twt_design_system_define -.-> twt_design
+    twt_component_define -.-> twt_design
     twt_component_validate -.-> twt_design
     twt_layout_define -.-> twt_design
     twt_layout_validate -.-> twt_design
@@ -138,9 +139,13 @@ flowchart TB
     twt_content_fetch -.-> twt_positioning_define
     twt_positioning_define --> twt_positioning_validate
     twt_content_fetch -.-> twt_pre_design
-    twt_brand -.-> twt_pre_design
-    twt_spec -.-> twt_pre_design
-    twt_positioning -.-> twt_pre_design
+    twt_brand_fetch -.-> twt_pre_design
+    twt_brand_define -.-> twt_pre_design
+    twt_brand_validate -.-> twt_pre_design
+    twt_spec_define -.-> twt_pre_design
+    twt_spec_validate -.-> twt_pre_design
+    twt_positioning_define -.-> twt_pre_design
+    twt_positioning_validate -.-> twt_pre_design
     twt_ia_define -.-> twt_pre_design
     twt_ia_validate -.-> twt_pre_design
     twt_curation_define -.-> twt_pre_design
@@ -364,7 +369,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design-system-audit, twt-pre-design
+- Soft consumers: twt-design-system-audit
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -389,7 +394,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-brand-validate
-- Soft consumers: twt-brand, twt-curation-define, twt-export-template-create, twt-positioning-define
+- Soft consumers: twt-brand, twt-curation-define, twt-export-template-create, twt-positioning-define, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
@@ -420,7 +425,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-brand, twt-brand-define
+- Soft consumers: twt-brand, twt-brand-define, twt-pre-design
 
 **Reads:**
 - <brand source>
@@ -450,7 +455,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-brand
+- Soft consumers: twt-brand, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -477,7 +482,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design-system, twt-site-dev
+- Soft consumers: twt-design, twt-design-system, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -846,7 +851,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
+- Soft: twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -887,7 +892,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: none
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
@@ -953,7 +958,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design-system, twt-design-system-audit, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
+- Soft consumers: twt-content-approval-checklist, twt-design, twt-design-system, twt-design-system-audit, twt-elementor-block-creator, twt-html-block-creator, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1569,7 +1574,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-pre-design
+- Soft consumers: none
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -1593,7 +1598,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-positioning-validate
-- Soft consumers: twt-ia-define, twt-positioning
+- Soft consumers: twt-ia-define, twt-positioning, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1621,7 +1626,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-positioning
+- Soft consumers: twt-positioning, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -1643,7 +1648,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
+- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -1998,7 +2003,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-pre-design
+- Soft consumers: none
 
 **Reads:**
 - .twt-artifacts/pre-design/spec/specification.md
@@ -2022,7 +2027,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-spec-validate
-- Soft consumers: twt-spec
+- Soft consumers: twt-pre-design, twt-spec
 
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/_manifest.md
@@ -2050,7 +2055,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-spec
+- Soft consumers: twt-pre-design, twt-spec
 
 **Reads:**
 - .twt-artifacts/pre-design/spec/specification.md
@@ -2289,7 +2294,7 @@ flowchart TB
 | /twt-content-validate | none | twt-content-fetch-site |
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
-| /twt-design | none | twt-design-system, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
+| /twt-design | none | twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define |
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
@@ -2314,7 +2319,7 @@ flowchart TB
 | /twt-positioning | none | twt-positioning-define, twt-positioning-validate |
 | /twt-positioning-define | none | twt-brand-define, twt-content-fetch |
 | /twt-positioning-validate | twt-positioning-define | none |
-| /twt-pre-design | none | twt-content-fetch, twt-brand, twt-spec, twt-positioning, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate |
+| /twt-pre-design | none | twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate |
 | /twt-project-intake | none | none |
 | /twt-qa | none | twt-qa-content, twt-qa-design, twt-qa-a11y, twt-qa-links, twt-qa-elementor |
 | /twt-qa-a11y | none | none |

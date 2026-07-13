@@ -10,9 +10,13 @@ dependencies:
   hard: []
   soft:
     - twt-content-fetch
-    - twt-brand
-    - twt-spec
-    - twt-positioning
+    - twt-brand-fetch
+    - twt-brand-define
+    - twt-brand-validate
+    - twt-spec-define
+    - twt-spec-validate
+    - twt-positioning-define
+    - twt-positioning-validate
     - twt-ia-define
     - twt-ia-validate
     - twt-curation-define
@@ -46,7 +50,7 @@ writes:
 
 **Non-goals:**
 - Doesn't do design, development, or QA (later phases)
-- Doesn't reproduce sub-area logic — dispatches each sub-area's orchestrator, or (for IA + curation, which have no standalone command) their `*-define` / `*-validate` sub-skills directly (rule 5)
+- Doesn't reproduce sub-area logic — dispatches every sub-area's `*-fetch` / `*-define` / `*-validate` sub-skills directly (rule 5); the standalone category wrappers (`/twt-brand`, `/twt-spec`, `/twt-positioning`) are for direct use, not for routing through (an orchestrator-to-orchestrator hop only relays)
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
@@ -57,11 +61,11 @@ writes:
 ---
 
 ## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
-- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
-- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
-- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
-- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
+Check (Glob/Read — never a shell command) that `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing, interactive (main thread):** ask via **AskUserQuestion** (single-select, header "Setup"): **Run /twt-setup now** (recommended — merges the curated allowlist so routine calls stop prompting) · **Skip** (expect per-call prompts) · **You decide**. On run: dispatch `/twt-setup` (Agent tool), wait, continue.
+- **Missing, unattended** (auto mode, or dispatched as a subagent): seed silently — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, continue.
+- **Present:** continue without asking (the seeder is idempotent).
+- Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
 
 ## Step 1 — Discovery
 Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/brand/spec/positioning/ia/curation).
@@ -76,19 +80,32 @@ Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/bran
 Carry the answers forward as the project brief for the steps below.
 
 ## Step 2 — Content ingest (A)
-If sources were provided (and not skipped by flags), dispatch `/twt-content-fetch` with them (Agent tool). If none, note it and continue.
+If sources were provided (and not skipped by flags), dispatch `/twt-content-fetch` with them (Agent tool). If none, note it and continue. _Script-driven extraction, no design judgment — if your Agent tool supports a `model` parameter, dispatch on a fast/economical model (e.g. `haiku`)._
 
 ## Step 3 — Brand (B) ∥ Spec (S) — in parallel
-Brand reads the brand source; Spec reads the starting notes / Figma URL. Neither reads the other's output and they write to disjoint folders (`brand/` and `spec/`), so dispatch **both in a single batch of parallel Agent calls** (one message, two Agent tool uses), each working from the sources gathered in Step 1:
-- **Brand (B)** → `/twt-brand`, forwarding any brand source. Dispatch with `subagent-collect`. Require the returned brand `validation-report.md` to use the full `/twt-brand-validate` structure, not a shortened collect-mode summary. After it returns, read `.twt-artifacts/pre-design/brand/decisions.md`; if `status: open`, surface its open questions / proposed rules via the **AskUserQuestion** tool here in the main thread, then re-dispatch `/twt-brand-define subagent-collect <answers>` to finalize and refresh the full folded validation report. (The same protocol will apply to Spec in a later phase.)
-- **Spec (S)** → `/twt-spec`, forwarding any starting notes / Figma URL. This is the north-star intent — vision, functional must-haves, and the weighted **visual style + motion/animation** direction — that positioning, IA, and the design phase build on.
+Run both areas' single define→validate passes inline, per the IA/curation pattern below (the standalone `/twt-brand` and `/twt-spec` wrappers remain for direct use — routing through them here would add two agent hops that only relay). Brand reads the brand source; Spec reads the starting notes / Figma URL; they write to disjoint folders (`brand/` and `spec/`), so batch each wave's independent dispatches as **parallel Agent calls in one message**:
 
-Wait for both to finish before Step 4 (Positioning depends on both). Surface any questions or BLOCKERs either raised after the batch. (Respect flags: skip whichever is excluded; if only one remains, run it alone.)
+**Wave 1 (parallel):**
+- `/twt-brand-fetch` (Agent tool) with the brand source → `_fetched-brand.md` + `_coverage.md`. *Only when a brand source was provided* — otherwise skip it; define works from fetched-content signals.
+- `/twt-spec-define` (Agent tool) with `subagent-collect`, forwarding starting notes / Figma URL → `specification.md` + `decisions.md`. This is the north-star intent — vision, functional must-haves, and the weighted **visual style + motion/animation** direction — that positioning, IA, and the design phase build on.
+
+**Wave 2 (parallel):**
+- `/twt-brand-define` (Agent tool) with `subagent-collect` → `brand-brief.md` + `decisions.md`.
+- `/twt-spec-validate` (Agent tool) → `spec/validation-report.md`.
+
+**Wave 3:** `/twt-brand-validate` (Agent tool) → the **full** `/twt-brand-validate` report structure, never a shortened collect-mode summary.
+
+After the waves, read `.twt-artifacts/pre-design/brand/decisions.md`; if `status: open`, surface its open questions / proposed rules via the **AskUserQuestion** tool here in the main thread, then re-dispatch `/twt-brand-define subagent-collect <answers>` to finalize and re-dispatch `/twt-brand-validate` once to refresh the report. (Spec's `decisions.md` — notably the art-direction open question — is deliberately left for the later visual-direction gate; do not surface it here.)
+
+Wait for the waves to finish before Step 4 (Positioning depends on both). Surface any BLOCKERs raised. (Respect flags: skip whichever area is excluded; if only one remains, run its dispatches alone.)
 
 > Surfacing follows CONVENTIONS rule 13 — if `/twt-pre-design` was itself dispatched with `subagent-collect` (e.g. by `/twt-site`), bubble the merged decisions upward instead of asking.
 
 ## Step 4 — Positioning (D)
-Dispatch `/twt-positioning`.
+Run positioning's single define→validate pass inline (same pattern; `/twt-positioning` remains for standalone use):
+1. Dispatch `/twt-positioning-define` (Agent tool) with `subagent-collect`, forwarding the project brief → `positioning.md` + `decisions.md`.
+2. Dispatch `/twt-positioning-validate` (Agent tool) → `.twt-artifacts/pre-design/positioning/validation-report.md`.
+Surface open positioning decisions per the rule-13 protocol above (ask here, or bubble upward when this command itself runs in collect mode); at most one BLOCKER-driven re-run.
 
 ## Step 5 — IA (E)
 IA and curation have **no standalone command** — run their single define→validate pass inline here (the same one-pass policy the former `twt-ia` / `twt-curation` wrappers applied, CONVENTIONS §9):
@@ -134,14 +151,14 @@ Thin index — canonical detail lives in the linked artifacts; this file is link
 Keep it short: the value is the link table + the aggregated BLOCKERs, never prose restating the artifacts. Never mask a sub-area's BLOCKERs.
 
 ## Wiki harvest — capture this phase's decisions (skip if no wiki)
-Use Glob to check whether `.project-wiki/` exists at the project root (`$CLAUDE_PROJECT_DIR/.project-wiki/`) — never a shell command. If it does not exist, skip this step silently: the wiki is opt-in, and this must not change behavior for a project that hasn't adopted it.
+Check with Glob (never a shell command) that `.project-wiki/` exists at the project root; if not, skip this step silently — the wiki is opt-in and this must not change behavior for a project without one.
 
-If it exists, run the harvester (Bash, single command) to pull this phase's decision-bearing content into the inbox:
+If it exists, run (Bash, single command):
 `node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-harvest.mjs" "$CLAUDE_PROJECT_DIR"`
 
-It scans `.twt-artifacts/` for open items in every `decisions.md`, every status row in `facts.md` (the ledger's only path into the wiki — resolved facts must survive artifact deletion, not just CONFLICTs), BLOCKER findings in each `validation-report.md`, and session-log Q&A, then appends decision-bearing entries to `.project-wiki/inbox.md` and adds a `sources.md` row for everything else. It is idempotent (tracked in `.project-wiki/.harvest-state.json`, so a re-run never re-adds what's already there) and always exits 0, printing a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors for any reason, note it and continue to the Report step regardless.
+It pulls this phase's decision-bearing content — `decisions.md` items, every `facts.md` ledger row (resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs, session-log Q&A — into `.project-wiki/inbox.md`, and registers every other artifact in `sources.md`. Idempotent (`.harvest-state.json`), always exits 0 with a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors, note it and continue.
 
-Carry the harvester's summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md`) is written here, and none should be. Turning inbox entries into a cited page is a separate, user-invoked step — point to `/twt-wiki` — never do it as part of this run.
+Carry the summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page is written here. Turning inbox entries into cited pages is `/twt-wiki`, user-invoked — never part of this run.
 
 ## Step 8 — Report
 Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should review before Phase 2. If brand validation produced a `## Before design proceeds` notice, quote it directly: Phase 2 may continue with explicit caveats, but the user must be informed before brand choices are bound into design tokens, components, layouts, or copy.

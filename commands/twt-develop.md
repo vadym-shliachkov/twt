@@ -59,11 +59,11 @@ writes:
 ---
 
 ## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
-- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
-- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
-- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
-- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
+Check (Glob/Read — never a shell command) that `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing, interactive (main thread):** ask via **AskUserQuestion** (single-select, header "Setup"): **Run /twt-setup now** (recommended — merges the curated allowlist so routine calls stop prompting) · **Skip** (expect per-call prompts) · **You decide**. On run: dispatch `/twt-setup` (Agent tool), wait, continue.
+- **Missing, unattended** (auto mode, or dispatched as a subagent): seed silently — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, continue.
+- **Present:** continue without asking (the seeder is idempotent).
+- Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
 
 ## Step 1 — Target
 
@@ -129,14 +129,14 @@ Each page file is disjoint, so there is no write conflict. Wait for the whole ba
 Apply the returned deltas to the shared files yourself, one at a time, **de-duplicating**: if two pages returned the same new section (same purpose/selector), add it once and point both pages at it. Then, if any page needed a partial change, re-inline the partial into every page; re-mirror `tokens.css` if a token was added. Finally run the builder's own inline build checks across all pages (every page links the CSS / registers its widgets; no literals; links resolve; chrome identical; no lorem where real content exists).
 
 ## Wiki harvest — capture this phase's decisions (skip if no wiki)
-Use Glob to check whether `.project-wiki/` exists at the project root (`$CLAUDE_PROJECT_DIR/.project-wiki/`) — never a shell command. If it does not exist, skip this step silently: the wiki is opt-in, and this must not change behavior for a project that hasn't adopted it.
+Check with Glob (never a shell command) that `.project-wiki/` exists at the project root; if not, skip this step silently — the wiki is opt-in and this must not change behavior for a project without one.
 
-If it exists, run the harvester (Bash, single command) to pull this phase's decision-bearing content into the inbox:
+If it exists, run (Bash, single command):
 `node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-harvest.mjs" "$CLAUDE_PROJECT_DIR"`
 
-It scans `.twt-artifacts/` for open items in every `decisions.md`, every status row in `facts.md` (the ledger's only path into the wiki — resolved facts must survive artifact deletion, not just CONFLICTs), BLOCKER findings in each `validation-report.md`, and session-log Q&A, then appends decision-bearing entries to `.project-wiki/inbox.md` and adds a `sources.md` row for everything else. It is idempotent (tracked in `.project-wiki/.harvest-state.json`, so a re-run never re-adds what's already there) and always exits 0, printing a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors for any reason, note it and continue to the Report step regardless.
+It pulls this phase's decision-bearing content — `decisions.md` items, every `facts.md` ledger row (resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs, session-log Q&A — into `.project-wiki/inbox.md`, and registers every other artifact in `sources.md`. Idempotent (`.harvest-state.json`), always exits 0 with a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors, note it and continue.
 
-Carry the harvester's summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page (`decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md`) is written here, and none should be. Turning inbox entries into a cited page is a separate, user-invoked step — point to `/twt-wiki` — never do it as part of this run.
+Carry the summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page is written here. Turning inbox entries into cited pages is `/twt-wiki`, user-invoked — never part of this run.
 
 ## Step 5 — Report
 
