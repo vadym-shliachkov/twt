@@ -1,8 +1,8 @@
 ---
 name: twt-design-system
 category: design-system
-description: (v1.3.1) Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
-version: 1.3.1
+description: (v1.3.2) Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
+version: 1.3.2
 accepts_arguments: true
 inputs:
   - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)

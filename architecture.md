@@ -478,7 +478,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.9
+**Version:** 1.3.10
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -510,7 +510,7 @@ flowchart TB
 ### /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - none (reads the component artifacts)
@@ -889,7 +889,7 @@ flowchart TB
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -921,7 +921,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.5.1
+**Version:** 1.5.2
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -961,7 +961,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.11
+**Version:** 1.8.12
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -997,7 +997,7 @@ flowchart TB
 ### /twt-design-system-validate
 
 **Category:** design-system
-**Version:** 1.4.2
+**Version:** 1.4.3
 
 **Inputs:**
 - none (reads the design-system artifacts)
