@@ -41,7 +41,7 @@ writes:
 
 **Success criteria:**
 - `components.md` documents each component with anatomy · variants · states · tokens · responsive behavior
-- `gallery.html` renders every component/variant/state and links `../design-system/tokens.css`
+- `gallery.html` is scaffolded by `gen-gallery.mjs` (chrome + cell shells), links `../tokens.css`, and every `gal:fill` slot is filled with the component's variants/states (`--check` reports zero unfilled slots and zero inventory mismatches)
 - Idempotent: refines an existing `components.md` (reading `validation-report.md`) instead of overwriting (rule 10)
 
 ---
@@ -67,7 +67,9 @@ Record the choice and continue.
 Derive the needed components from `sitemap.md` section types and the `outlines/`, and **bucket each by component-hierarchy level**: **Primitives** (button, input, label, badge, icon, divider, chip), **Components** (nav-item, form-row, search-bar, card-header), **Modules** (header, footer, hero, card, CTA strip, accordion). If `.twt-artifacts/design/design-system/tokens.md` Section 3 already lists the hierarchy (§3.2 Primitives / §3.3 Components / §3.4 Modules), reuse those names so the catalog and the design-system preview agree. Use `$ARGUMENTS` to scope to specific components when given. List the set and confirm with the user.
 
 ## Step 4 — Specify each component
-For each component, write to `components.md`:
+Structure `components.md` with one `## Primitives` / `## Components` / `## Modules` section per tier and one `### <Component name>` heading per component — `gen-gallery.mjs` parses exactly these headings to scaffold the gallery cells, so keep them literal (no numbering, no extra words in the tier headings).
+
+For each component, write under its `###` heading:
 - **Anatomy** — parts / sub-elements
 - **Variants** — e.g. primary / secondary / ghost
 - **States** — default / hover / focus / active / disabled (as applicable)
@@ -77,82 +79,32 @@ Mark anything inferred. Never use a value that isn't a token.
 
 **No-Figma anti-slop polish.** When the design wasn't driven by a Figma/exported source, apply the external design skills (per `references/external-design-skills.md`; read `design-read.md` for the dials, and project-local auto-install the skills if missing). From `design-taste-frontend`: **§4.4** use cards only where elevation conveys real hierarchy and lock to one corner-radius scale; **§4.5** specify the **full** interactive-state cycle (loading/empty/error, not just the happy path) and verify button text meets WCAG AA against its background; **§3.C** keep icons from one family. From `emil-design-eng`: specify the **hover / focus / `:active`** micro-interaction per interactive component as motion tokens (custom easing, short durations, `scale(0.97)`-style press feedback, reduced-motion fallback) — recorded as the component's documented motion, not invented foundation values.
 
-## Step 5 — Render `gallery.html` (exhaustive catalog)
-Write `gallery.html` at `.twt-artifacts/design/design-system/component/gallery.html` — it lives **inside** the design-system folder so that the `preview.html` link (`component/gallery.html`) resolves correctly. The file links `../tokens.css` (one level up, into `design-system/`), then renders each component with **all variants and all states**, grouped under **Primitives / Components / Modules** headings.
+## Step 5 — Render `gallery.html` (scaffold, fill, check)
+`gallery.html` lives at `.twt-artifacts/design/design-system/component/gallery.html` — **inside** the design-system folder so that the `preview.html` link (`component/gallery.html`) resolves. It renders each component with **all variants and all states**, grouped under Primitives / Components / Modules.
 
-**Chrome vs. specimens — two separate style layers:**
-- **Page chrome** (layout, labels, section headings, legends, captions, navigation) must use the **doc-hub light skin** — the exact same canonical look `gen-preview.mjs` renders into `preview.html`, so the two sheets are visually indistinguishable. Hard-code these values in the `<style>` block — **never** use project `var(--…)` tokens for chrome. Copy the skin block below verbatim. **Component specimens** (the rendered previews of buttons, cards, inputs, etc.) must use only `var(--…)` references from `tokens.css` — no hardcoded colours or spacing. The tokens drive what the specimens look like; that's the whole point of the catalog.
-
-**Load the chrome fonts** in `<head>` (Montserrat display + Inter body + IBM Plex Mono — the same three `preview.html` uses), then `../tokens.css`:
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
-<link rel="stylesheet" href="../tokens.css">
+### 5a — Scaffold (script)
+Run (Bash):
 ```
-
-**Doc-hub light skin — paste this chrome `<style>` block verbatim** (all classes namespaced `gal-` so they never collide with specimen markup or `tokens.css`):
-```css
-:root{
-  --gal-page:#ffffff; --gal-panel:#ffffff; --gal-panel-soft:#f8f9fc;
-  --gal-ink:#090e22; --gal-text:#3a3f5c; --gal-muted:#7a82a8;
-  --gal-rule:#dde0ee; --gal-rule-soft:rgba(122,130,168,.18);
-  --gal-red:#ca221f; --gal-blue:#0b68b7; --gal-yellow:#f6c22b;
-  --gal-action:#090e22; --gal-action-hover:#0e1630;
-  --gal-font-heading:Montserrat,Avenir Next,ui-sans-serif,system-ui,sans-serif;
-  --gal-font-body:Inter,Segoe UI,ui-sans-serif,system-ui,sans-serif;
-  --gal-font-mono:"IBM Plex Mono",SFMono-Regular,Menlo,Consolas,monospace;
-}
-html{background:var(--gal-page)}
-body{margin:0;min-width:320px;color:var(--gal-text);background:var(--gal-page);font-family:var(--gal-font-body);line-height:1.55;text-rendering:optimizeLegibility}
-code{font-family:var(--gal-font-mono);font-size:.88em}
-.gal-wrap{max-width:1120px;margin:0 auto;padding:64px 24px 96px}
-.gal-head{padding:24px 0 52px;border-bottom:1px solid var(--gal-rule)}
-.gal-project{display:block;margin:0 0 26px;color:var(--gal-blue);font-family:var(--gal-font-heading);font-size:clamp(1.45rem,3vw,2.15rem);font-weight:800;line-height:1.12}
-.gal-project::after{content:"";display:block;width:72px;height:4px;margin:22px 0 0;background:linear-gradient(90deg,var(--gal-red) 0 33%,var(--gal-blue) 33% 66%,var(--gal-yellow) 66% 100%)}
-.gal-head h1{max-width:760px;margin:0 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:clamp(3rem,6.8vw,5.75rem);font-weight:800;line-height:.98}
-.gal-head .gal-legend{max-width:760px;margin:0;color:var(--gal-text);font-size:1.05rem}
-.gal-tier{margin:0;padding:64px 0;border-top:1px solid var(--gal-rule)}
-.gal-tag{display:inline-flex;align-items:center;gap:10px;margin:0 0 8px;color:var(--gal-blue);font-family:var(--gal-font-heading);font-size:.82rem;font-weight:700}
-.gal-tag::before{content:"";width:30px;height:6px;border-radius:999px;background:linear-gradient(90deg,var(--gal-yellow) 0 33%,var(--gal-red) 33% 66%,var(--gal-blue) 66% 100%)}
-.gal-th{margin:0 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:clamp(1.8rem,3.4vw,3rem);font-weight:800;line-height:1.05;text-wrap:balance}
-.gal-sub{display:block;margin:56px 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:1.05rem;font-weight:800}
-.gal-legend{max-width:92ch;margin-bottom:20px;color:var(--gal-text);font-size:.92rem;line-height:1.6}
-.gal-legend code{color:var(--gal-ink);background:var(--gal-panel-soft);border:1px solid var(--gal-rule-soft);padding:2px 6px;border-radius:4px}
-/* component cells: name-first cards with a delimited specimen stage */
-.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.gal-cell{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
-@media (hover:hover) and (pointer:fine){.gal-cell:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}}
-/* card header: WHAT it is, in ink — readable at first glance */
-.gal-cell-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.gal-name{font-family:var(--gal-font-heading);font-size:.92rem;font-weight:800;color:var(--gal-ink);line-height:1.2}
-.gal-meta{font-family:var(--gal-font-mono);font-size:.66rem;color:var(--gal-muted);text-align:right}
-/* specimen stage: dashed canvas that separates live specimens from chrome text */
-.gal-stage{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:14px;border:1px dashed var(--gal-rule);border-radius:6px}
-.gal-stage--bare{padding:0;border:none;display:block}
-/* one variant/state instance + its own micro-label (no positional guessing) */
-.gal-var{display:flex;flex-direction:column;gap:5px;align-items:flex-start;max-width:100%}
-.gal-var--row{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
-.gal-var--fill{align-self:stretch}
-.gal-varlabel{font-family:var(--gal-font-mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--gal-muted)}
-/* footnote: token refs / behavior notes only — never repeats the card name */
-.gal-note{margin-top:auto;padding-top:10px;border-top:1px solid var(--gal-rule-soft);color:var(--gal-muted);font-size:.75rem;line-height:1.5}
-/* guard: an <img> specimen must never overflow or squash */
-.gal-cell img{max-width:100%;object-fit:contain}
-@media (max-width:760px){.gal-wrap{padding:36px 16px 72px}.gal-head h1{font-size:clamp(2.6rem,14vw,4.2rem)}.gal-tier{padding:48px 0}.gal-sub{margin:44px 0 16px}}
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --scaffold
 ```
-Use a header that mirrors preview's (`<p class="gal-project">Project name: …</p><h1>Component Gallery</h1>`), a `gal-tier` section per level (Primitives / Components / Modules) introduced by a `gal-tag` pill + `gal-th` heading, and `gal-cell` panels for each component's variant × state matrix. Keep the specimen markup inside the cells token-only.
+**Run this command directly — do not hunt for the tool** (`${CLAUDE_PLUGIN_ROOT}` is always set; its only flags are `--scaffold` and `--check`). It writes the full page chrome — the doc-hub light skin (same canonical look `gen-preview.mjs` gives `preview.html`), the font links, the `../tokens.css` link, one `gal-tier` section per level, and one `gal-cell` shell per component from `components.md` / `tokens.md §3` — each cell holding a `<!-- gal:fill <Name> … -->` slot. **Never edit the `data-gal-chrome` style block or hand-write your own chrome** — the skin is script-owned now, exactly like preview's. If the existing `gallery.html` predates the scaffolder and must be preserved, skip the scaffold and only fill/fix in place.
 
-**Cell anatomy — name first, one label per instance.** Every `gal-cell` reads top-to-bottom: *what it is → the thing itself → footnotes*, so a first glance answers "what am I looking at":
-1. `<header class="gal-cell-head"><span class="gal-name">Button · primary</span><span class="gal-meta">--color-primary</span></header>` — component (and variant) name in ink; optionally one key token, mono, right-aligned.
-2. `<div class="gal-stage">` — the dashed specimen canvas. **Each variant/state instance is its own** `<div class="gal-var">` (`gal-var--row` for chip-sized items sitting side by side, `gal-var--fill` for full-width fields) containing the specimen followed by `<span class="gal-varlabel">hover</span>` — a micro-label attached to the instance it names. Never describe states as a run-on list in one shared label ("default / hover / selected") that forces the reader to map labels to specimens positionally.
-3. Optional `<span class="gal-note">` — token references or behavior notes only; never repeat the name the head already shows, and skip the note entirely when it would add nothing.
-Full-bleed dark modules (hero, footer) use `<div class="gal-stage gal-stage--bare">` so the module surface replaces the canvas.
+⚠️ Scaffolding **overwrites** `gallery.html`. In refinement mode (Step 2 = Refine), only re-scaffold when the component set changed; otherwise edit the existing file's slots in place.
 
-**Dark-surface modules — on-ink override rule.** Any specimen on a dark surface (`--color-surface-contrast`, a hero gradient, an inverted footer) must explicitly override **every** text primitive that appears inside it — body, caption, heading, nav, link — to the design's on-dark text token. Never rely on a text class's default light-surface color cascading in: a bare `.spec-body` on an Ink hero renders dark-on-dark and disappears. Pattern — one scope class, one rule set: `.spec-on-ink :is(.spec-body,.spec-caption,.spec-h3,.spec-nav){color:var(--color-text-on-ink)}`, then `class="spec-hero spec-on-ink"` / `class="spec-ink spec-on-ink"`. After writing the file, re-scan every dark module's descendants for a text class the scope rule doesn't cover.
+### 5b — Fill every slot (model)
+Replace each `gal:fill` comment with that component's variant × state matrix, and put specimen CSS **only** in the `data-gal-specimens` style block. Rules:
 
-**Logo / image specimens.** Give logos an explicit `height` and `width:auto` — and inside any **column** flex container ( `.spec-stack`-style ), also an explicit `align-self:flex-start`: the flex default `align-self:stretch` widens the image to the column while the height stays fixed, visibly distorting the wordmark. (Don't blanket-force `align-self` in CSS — that would break vertical centering of logos in flex *rows* like a site-header.)
+- **Token-only specimens.** Every specimen value is `var(--…)` from `tokens.css` — no raw hex/rgba/px/font literals. (Chrome may hardcode; specimens never.)
+- **Cell anatomy — one label per instance.** Each variant/state instance is its own `<div class="gal-var">` (`gal-var--row` for chip-sized items side by side, `gal-var--fill` for full-width fields): the specimen, then `<span class="gal-varlabel">hover</span>`. Never one run-on label ("default / hover / selected") that maps to specimens positionally. Optionally set the cell's `gal-meta` to one key token, and add a `gal-note` for token refs / behavior notes only (skip it when it adds nothing).
+- **Dark-surface modules — on-ink override rule.** Any specimen on a dark surface (`--color-surface-contrast`, a hero gradient, an inverted footer) must explicitly override **every** text primitive inside it — body, caption, heading, nav, link — to the on-dark text token, via one scope class + one rule set: `.spec-on-ink :is(.spec-body,.spec-caption,.spec-h3,.spec-nav){color:var(--color-text-on-ink)}`, then `class="spec-hero spec-on-ink"`. Never rely on a text class's light-surface default cascading in — a bare `.spec-body` on an Ink hero disappears. Full-bleed dark modules use `<div class="gal-stage gal-stage--bare">` so the module surface replaces the dashed canvas.
+- **Logo / image specimens.** Give logos an explicit `height` and `width:auto` — and inside any **column** flex container, an explicit `align-self:flex-start` (the flex default `stretch` distorts the wordmark). Don't blanket-force `align-self` in CSS — that breaks vertical centering in flex rows.
 
-At the top, note the relationship: this is the exhaustive **depth** catalog (all variants × states); `../preview.html` shows **breadth** — every token rendered live. Both sheets share the doc-hub light skin so they read as one system.
+### 5c — Check (script) and fix
+Run (Bash):
+```
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --check
+```
+It prints a ` ```json ` block: `unfilled_slots[]` (must end empty), `inventory_missing[]`/`inventory_extras[]` (gallery vs `components.md` + `tokens.md §3` — resolve every mismatch), `raw_values[]` (hardcoded literals in specimen CSS — replace with tokens), `imgs_missing_height[]`, and `dark_surface_suspects[]` (static-cascade heuristic — confirm each, then fix real ones with the on-ink scope pattern). Fix and re-run until `unfilled_slots`, `inventory_missing`, and `dark_surface_suspects` are empty; justify anything you deliberately keep in `components.md`. Don't write your own checker script — this is the only Bash this step needs.
 
 ## Wiki capture — record what you decided and why
 If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.

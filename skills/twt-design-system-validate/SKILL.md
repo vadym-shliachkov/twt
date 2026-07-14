@@ -13,6 +13,8 @@ reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/design-system/preview.html
+  - .twt-artifacts/design/design-system/decisions.md
+  - .twt-artifacts/design/design-read.md
   - .twt-artifacts/pre-design/brand/brand-brief.md
 writes:
   - .twt-artifacts/design/design-system/validation-report.md
@@ -41,6 +43,10 @@ writes:
 ## Step 1 — Load artifacts (hard dependency)
 Read `.twt-artifacts/design/design-system/tokens.md`. If absent, abort: "No design system found — run /twt-design-system-define first." Do not create it. Also read `tokens.css` and `preview.html` if present, and `brand-brief.md` if present (for brand fidelity checks).
 
+Also read, if present:
+- `.twt-artifacts/design/design-system/decisions.md` — decisions the user (or define, in collect mode) already recorded. A defect the user **explicitly accepted** there (e.g. a contrast pair marked "accept the risk") is not a fresh BLOCKER: report it as a **WARNING** noting "user-accepted in decisions.md" so it stays visible without re-triggering the orchestrator's BLOCKER re-run. An `## Open questions` entry that is still `status: open` is different — it's undecided, so score it on the merits.
+- `.twt-artifacts/design/design-read.md` — the visual-direction read (dials + direction notes). When its `status:` is `confirmed`, judge **Brand fidelity** and the Critical Assessment against the brief *as steered by the confirmed direction* — a distinctive type pairing or density chosen through the Design Read gate is a decision to honor, not a deviation to flag.
+
 ### Step 1a — Deterministic contrast evidence (read-only)
 If `tokens.css` exists, run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-preview.mjs" "$CLAUDE_PROJECT_DIR" --check`. The `--check` flag computes the WCAG contrast matrix and prints a ` ```json ` block **without writing any file** (stays within rule 11 read-only). Parse `contrast_failures[]` — each entry is an **intended** text/surface pairing below AA 4.5:1 for normal text. Use this as the authoritative contrast evidence for the rubric's accessibility criterion instead of estimating ratios by eye. If the script is unavailable (global install), fall back to computing ratios from the token hex values yourself.
 
@@ -51,10 +57,10 @@ Score each criterion 0–5 (5 = excellent) with a one-line evidence note. Weight
 
 | Criterion | Weight | What "good" means |
 |-----------|-------:|-------------------|
-| Token contrast / accessibility | 25 | Intended text/surface token pairings meet WCAG AA (use the `gen-preview --check` `contrast_failures[]` from Step 1a). **BLOCKER** if any intended text-on-surface pair fails AA 4.5:1 for normal text — this is the gate that must stop a low-contrast system reaching QA. Score ≤2 when failures exist. |
+| Token contrast / accessibility | 25 | Intended text/surface token pairings meet WCAG AA (use the `gen-preview --check` `contrast_failures[]` from Step 1a). **BLOCKER** if any intended text-on-surface pair fails AA 4.5:1 for normal text — this is the gate that must stop a low-contrast system reaching QA. Score ≤2 when failures exist. Two downgrades: a failure the user **accepted in `decisions.md`** is a WARNING (noted as user-accepted, per Step 1); a failure whose token is documented in `tokens.md §2.1`/§5 as **large-text/structure only** is a WARNING *only if* its `aa_large` flag is true (ratio ≥ 3.0:1 — AA for large text) — a documented restriction below even 3.0:1 stays a BLOCKER. |
 | Scale coherence (type & space) | 20 | Type scale and spacing scale are consistent, rhythmic, not ad-hoc. |
 | Brand fidelity | 20 | Tokens reflect `brand-brief.md` palette/type, not generic defaults. |
-| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion), **and** `preview.html` renders the evolution — Tokens → Primitives → Components → Modules — with **every** Primitive, Component, and Module documented in `tokens.md` Section 3 present (not just one example per level), each built only from `var(--…)` and the level below. The preview is `gen-preview.mjs`-generated, so check that **no `<!-- gp:fill … -->` slots remain unfilled** (any left = incomplete) and specimen counts match §3.2/§3.3/§3.4. BLOCKER if preview is token-only with no Primitives/Components/Modules tiers, or if any `gp:fill` slot is still empty; WARNING if a tier omits documented components. **Also a BLOCKER if the preview is a marketing landing page / homepage mockup instead of a neutral specimen sheet** — i.e. it uses real project copy (real hero headline, value props, case-study/stat numbers, testimonials, CTA messaging), assembles a running homepage rather than an inventory of captioned specimens, wires a real nav, or includes `<script>`/GSAP/auto-advancing/scroll-triggered demos of "the site." The fix is to re-render Modules as isolated, neutrally-labeled specimens. |
+| Completeness for downstream build | 20 | Tokens cover what components/layouts/mockups will need (color, type, space, radius, shadow, motion — including the full type system: families, weights, line-heights, tracking, not sizes alone). `preview.html` is the **tokens-only** sheet `gen-preview.mjs` generates (the component catalog lives separately in `component/gallery.html`): check it exists and was script-generated (`gp-` namespaced markup), that `tokens.md §2.2` has a **Text styles** table and the preview rendered one specimen per row (the gen-preview `counts` include them), that `tokens.md §3` documents the Primitives/Components/Modules inventory and the gen-preview `counts` match §3.2/§3.3/§3.4, and that the preview carries the **component-gallery link**. BLOCKER if a token category downstream phases need is absent, if `preview.html` is missing or hand-written instead of generated, or if `tokens.md §3` is empty (the component skill and audit have no names to reuse); WARNING if the Text styles table is missing (preview falls back to raw axes) or §3 counts disagree with the generated preview. Do **not** expect component specimens inside `preview.html` — a tokens-only preview is correct by construction; the catalog's completeness is `/twt-component-validate`'s job. |
 | Naming / structure hygiene | 15 | Token names are systematic and namespaced; no duplicate/conflicting definitions. |
 
 After assigning all scores, run (Bash) to compute weighted sums and health:

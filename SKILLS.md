@@ -217,7 +217,7 @@ Document the component library the site needs — anatomy, variants, states, tok
 
 **Success criteria:**
 - `components.md` documents each component with anatomy · variants · states · tokens · responsive behavior
-- `gallery.html` renders every component/variant/state and links `../design-system/tokens.css`
+- `gallery.html` is scaffolded by `gen-gallery.mjs` (chrome + cell shells), links `../tokens.css`, and every `gal:fill` slot is filled with the component's variants/states (`--check` reports zero unfilled slots and zero inventory mismatches)
 - Idempotent: refines an existing `components.md` (reading `validation-report.md`) instead of overwriting (rule 10)
 
 ---
@@ -241,6 +241,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/component/gallery.html
 - .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 
 **Writes:**
@@ -745,15 +746,21 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define
+- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define, twt-component-validate
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/validation-report.md
 
 **Writes:**
+- .twt-artifacts/design/design-system/tokens.md                # via /twt-design-system-define
+- .twt-artifacts/design/design-system/tokens.css               # via /twt-design-system-define
+- .twt-artifacts/design/design-system/preview.html             # via /twt-design-system-define
+- .twt-artifacts/design/design-system/decisions.md             # via /twt-design-system-define (collect mode)
+- .twt-artifacts/design/design-system/validation-report.md     # via /twt-design-system-validate
 - .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always)
 - .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always)
+- .twt-artifacts/design/design-system/component/validation-report.md  # via /twt-component-validate
 
 **Non-goals:**
 - Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
@@ -762,7 +769,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 **Success criteria:**
 - Produces/refines `tokens.md`, `tokens.css`, a **tokens-only** `preview.html` (the component catalog lives in the gallery, linked from preview) and a current `validation-report.md`
-- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
+- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect — and validates it (`/twt-component-validate`, or the collect-mode self-check) into `component/validation-report.md`. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 

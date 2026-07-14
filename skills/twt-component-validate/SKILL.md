@@ -13,6 +13,7 @@ reads:
   - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/design-system/component/gallery.html
   - .twt-artifacts/design/design-system/tokens.css
+  - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/pre-design/ia/sitemap.md
 writes:
   - .twt-artifacts/design/design-system/component/validation-report.md
@@ -42,9 +43,12 @@ writes:
 Read `.twt-artifacts/design/design-system/component/components.md`. If absent, check the pre-move legacy path `.twt-artifacts/design/component/components.md` (read-only — projects built before the catalog moved into the design-system spine; the next `/twt-component-define` run writes to the canonical path). Only if neither exists, abort: "No component library — run /twt-component-define first." Do not create it. Also read `gallery.html` and `tokens.css` if present, and `sitemap.md` if present (coverage check).
 
 ### Step 1a — Deterministic render checks on `gallery.html` (read-only)
-Two defect classes ship silently unless hunted explicitly; check both before scoring:
-- **Dark-surface text resolution.** For every specimen on a dark surface (`--color-surface-contrast`, hero gradient, inverted footer), list its descendant text elements and resolve each one's effective `color` through `tokens.css`. Any descendant whose color resolves to a dark value on the dark surface (e.g. a bare `.spec-body` whose class default is the light-surface body color) is a **BLOCKER** under A11y affordances — compute and cite the contrast ratio. A scope-class override (e.g. `.spec-on-ink :is(…){color:var(--color-text-on-ink)}`) covering *all* text classes used inside is the expected pattern.
-- **Image stretch.** Any `<img>` inside a **column** flex container without an explicit `align-self:flex-start` stretches to the column width while its height stays fixed — a distorted logo. Flag as **WARNING** with the offending element.
+Run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --check` — it reads the gallery + inventory + `tokens.css` and prints a ` ```json ` evidence block **without writing anything** (stays within rule 11). Use it as the authoritative evidence instead of estimating by eye; if the script is unavailable (global install), fall back to performing the same checks manually. Interpret:
+- **`unfilled_slots[]`** — `gal:fill` shells never filled with specimens. Any entry is a **BLOCKER** under State/variant coverage (the component is documented but not rendered).
+- **`inventory_missing[]` / `inventory_extras[]`** — the catalog vs `components.md` + `tokens.md §3` name cross-check (the breadth sheet and the depth sheet must agree). Missing = **WARNING** (BLOCKER if a whole tier is absent); extras = **SUGGESTION** (name them — either document in §3 or remove).
+- **`raw_values[]`** — hex/rgba/px literals in specimen CSS. Evidence for the Token-only styling criterion; cite the selectors.
+- **`dark_surface_suspects[]`** — descendants of a dark-surface specimen whose effective color resolves below 3:1 against it (static-cascade **heuristic**: confirm each before reporting). Confirmed = **BLOCKER** under A11y affordances, citing the ratio; the expected fix is the on-ink scope pattern (`.spec-on-ink :is(…){color:var(--color-text-on-ink)}`).
+- **`imgs_missing_height[]`** — `<img>` without an explicit height distorts in flex columns (stretched logo). **WARNING** with the offending tag; also check `align-self:flex-start` in column contexts manually.
 
 Optionally confirm visually: `/twt-block-preview` can screenshot a single module by CSS selector.
 

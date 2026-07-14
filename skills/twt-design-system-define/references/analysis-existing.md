@@ -22,14 +22,15 @@ Compared Figma to existing tokens.md:
   • Tokens only in existing system : <n>
 ```
 
-Then ask via the **AskUserQuestion** tool (single-select, header "Apply Figma?") how the Figma file should be applied to the existing design system:
+Then ask via the **AskUserQuestion** tool (single-select, header "Apply Figma?", max 4 options) how the Figma file should be applied to the existing design system:
 - **Update** — add only the tokens missing in tokens.md (recommended; safest, preserves consistency)
 - **Adjust** — review each conflict and decide per-token (add / replace / skip)
-- **Regenerate** — discard the existing system and rebuild from Figma (destructive — confirms twice)
 - **No change** — keep tokens.md as-is, just use it as context for the current task
 - **You decide** — I apply the safest fit (defaults to Update; never Regenerate without explicit confirmation)
 
-Record the choice and continue. Record the choice as `<system_update_mode>`. Apply it in Step 5 and Step 10:
+**Regenerate** (discard the existing system and rebuild from Figma) is deliberately not a listed option — it's destructive and rare. If the user types it via the free-form escape (or asks for it in `$ARGUMENTS`), treat it as mode 3 in the table below, including the double confirmation.
+
+Record the choice as `<system_update_mode>`. Apply it in Step 5 and Step 10:
 
 | Choice | Step 5 behavior | Step 10 (write) behavior |
 |--------|-----------------|--------------------------|
@@ -38,7 +39,7 @@ Record the choice and continue. Record the choice as `<system_update_mode>`. App
 | **3 — Regenerate** | Ignore `<existing_system>`. Use Figma + other sources as the only basis. **Before writing**, ask once more: `Type REGENERATE to confirm destructive rewrite.` If anything else is typed, fall back to Update. | Back up the old file to `tokens.md.bak` first (overwriting any previous backup — one rolling backup, not an accumulating series; git history covers the rest), then write fresh. |
 | **4 — No change** | Skip token extraction merge entirely. Use `<existing_system>` as-is for downstream work (component hierarchy, exports). | Do not modify `tokens.md`. Completion summary notes `Output file: unchanged`. |
 
-In **Adjust** mode, render the conflict walkthrough as a compact table the user can answer with a single line of letters, e.g.:
+In **Adjust** mode, render the conflict walkthrough as a compact table the user can answer with a single line of letters. (This is bulk **free-form input** per CONVENTIONS §4 — one plain-text answer covering N conflicts — not a fixed-option menu; per-conflict AskUserQuestion calls would mean dozens of prompts.) E.g.:
 
 ```
 # Conflicts (existing vs Figma):

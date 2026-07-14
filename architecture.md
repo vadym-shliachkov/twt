@@ -112,6 +112,7 @@ flowchart TB
     twt_design_system_define -.-> twt_design_system
     twt_design_system_validate -.-> twt_design_system
     twt_component_define -.-> twt_design_system
+    twt_component_validate -.-> twt_design_system
     twt_brand -.-> twt_design_system_audit
     twt_design_system_define -.-> twt_design_system_audit
     twt_design_system_validate -.-> twt_design_system_audit
@@ -520,12 +521,13 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design
+- Soft consumers: twt-design, twt-design-system
 
 **Reads:**
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-system/component/gallery.html
 - .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 
 **Writes:**
@@ -894,7 +896,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define
+- Soft: twt-design-system-define, twt-design-system-validate, twt-component-define, twt-component-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -907,8 +909,14 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
+| .twt-artifacts/design/design-system/tokens.md                # via /twt-design-system-define |  |
+| .twt-artifacts/design/design-system/tokens.css               # via /twt-design-system-define |  |
+| .twt-artifacts/design/design-system/preview.html             # via /twt-design-system-define |  |
+| .twt-artifacts/design/design-system/decisions.md             # via /twt-design-system-define (collect mode) |  |
+| .twt-artifacts/design/design-system/validation-report.md     # via /twt-design-system-validate |  |
 | .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always) |  |
 | .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always) |  |
+| .twt-artifacts/design/design-system/component/validation-report.md  # via /twt-component-validate |  |
 
 ### /twt-design-system-audit
 
@@ -1006,6 +1014,8 @@ flowchart TB
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/design-system/preview.html
+- .twt-artifacts/design/design-system/decisions.md
+- .twt-artifacts/design/design-read.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 
 **Writes:**
@@ -2331,7 +2341,7 @@ flowchart TB
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
 | /twt-design | none | twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
-| /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define |
+| /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define, twt-component-validate |
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |

@@ -155,9 +155,16 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit.mjs" analyze "<OUT>/blocks.json" --ou
 ```
 Read `<OUT>/audit.json`. Its shape: `summary` (pages, blocks, clusters, `consistency_pct`, `deviating_instances`), `ds_stats` (token/color/type/space/radius/component counts + `source`), `canonical_blocks[]` (per cluster: role, instances, pages, `example` instance, canonical styles/structure), `deviations[]` (`{cluster, role, page, block, match, tier, reason_types[], deltas[], deltas_typed[]}`), `block_status[]` (one entry per instance — drifting **and** OK — `{page, block, cluster, role, match, tier, reason_types[], reasons[]}`, the full matrix), `page_stylesheets`, and `quality_signals`. This is the evidence backbone — do not re-derive it by eyeballing HTML.
 
+## Step 5b — Compute the comparison metrics (deterministic)
+
+Run only when a DS was **provided or synthesized**. Compute the Design System vs. Site comparison metrics (14 categories, ~90 metrics) **now — before Step 6, which reads them**. The script reads `audit.json`, the crawled `pages/` HTML, and `tokens.css` (if available) — no new network calls — and writes `metrics.json` to the audit directory:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/ds-metrics.mjs" --out "<OUT>" [--tokens "<tokens>"]
+```
+
 ## Step 6 — Design-system quality pass (5 scores + DS coherence detail)
 
-Run only when a DS was **provided or synthesized**. Read `<OUT>/metrics.json` (written by `ds-metrics.mjs` in Step 7c below — run Step 7c first, then come back to Step 6 judgment). The metrics.json `scores` object gives you the deterministically-computed **Implementation Adoption**, **Visual Consistency**, **Accessibility Safety**, and **Governance** scores with their hard caps already applied. Your role in Step 6 is to compute **Design System Coherence** (the model-judgment score) and then assemble the final **Product-System Alignment** score with any additional caps your judgment finds.
+Run only when a DS was **provided or synthesized**. Read `<OUT>/metrics.json` (written in Step 5b). The metrics.json `scores` object gives you the deterministically-computed **Implementation Adoption**, **Visual Consistency**, **Accessibility Safety**, and **Governance** scores with their hard caps already applied. Your role in Step 6 is to compute **Design System Coherence** (the model-judgment score) and then assemble the final **Product-System Alignment** score with any additional caps your judgment finds.
 
 ### 6a — Design System Coherence (Score 1, weight 20%)
 
@@ -220,7 +227,7 @@ Product-System Alignment =
 + Score_5 × 0.10
 ```
 
-Apply additional hard caps from Requirements v2 §15 that the model can see but `ds-metrics.mjs` cannot (e.g. component override rate from `audit.json`):
+Apply the additional hard caps below — signals the model can see but `ds-metrics.mjs` cannot (e.g. component override rate from `audit.json`):
 - If component override rate > 30%: `Product-System Alignment` max = 65
 - If metrics.json `hard_gates.token_usage_zero` = true: `Product-System Alignment` max = 45 (already capped in metrics.json, confirm)
 - If metrics.json `hard_gates.critical_a11y_failure` = true: max = 70
@@ -321,14 +328,9 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --html-only
 
 The script writes `<OUT>/shots/` (PNGs when Playwright ran), `<OUT>/previews/` (HTML embeds when html-only), and `<OUT>/visuals.json`. A block with no preview renders without a thumbnail — the card is still shown. Never re-run ds-shots after Playwright has already produced screenshots; the visuals.json it writes is consumed as-is by Step 7c.
 
-## Step 7c — Compute comparison metrics + generate HTML report
+## Step 7c — Generate the HTML report (always last)
 
-First, compute the Design System vs. Site comparison metrics (14 categories, ~90 metrics). The script reads `audit.json`, the crawled `pages/` HTML, and `tokens.css` (if available) — no new network calls — and writes `metrics.json` to the audit directory. The HTML report reads it automatically.
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/ds-metrics.mjs" --out "<OUT>" [--tokens "<tokens>"]
-```
-
-Then run the report generator. It reads `audit.json` (+ `visuals.json`, `metrics.json`, and, when present, `quality.json` and the resolved `tokens.css`) and writes a **multi-file** report: `audit-report.html` (the homepage — scorecard, design-system review, DS comparison metrics, and the page list with per-page BLOCKER/WARNING/SUGGESTION/OK counts) plus one `audit-<page-slug>.html` per page (only that page's blocks, each a fused card with the now-vs-should-look visuals). Pass `--tokens` so the homepage shows the swatch row and the per-block deltas name the nearest token.
+Run the report generator **after everything it reads exists** — `metrics.json` (Step 5b), `quality.json` (Step 6c), `visuals.json` (Step 7b); generating earlier silently ships the homepage without the 5-score dashboard. It reads `audit.json` (+ `visuals.json`, `metrics.json`, and, when present, `quality.json` and the resolved `tokens.css`) and writes a **multi-file** report: `audit-report.html` (the homepage — scorecard, design-system review, DS comparison metrics, and the page list with per-page BLOCKER/WARNING/SUGGESTION/OK counts) plus one `audit-<page-slug>.html` per page (only that page's blocks, each a fused card with the now-vs-should-look visuals). Pass `--tokens` so the homepage shows the swatch row and the per-block deltas name the nearest token.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-audit-report.mjs" --out "<OUT>" [--tokens "<tokens>"]
 ```

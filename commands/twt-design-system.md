@@ -12,12 +12,19 @@ dependencies:
     - twt-design-system-define
     - twt-design-system-validate
     - twt-component-define
+    - twt-component-validate
 reads:
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/validation-report.md
 writes:
+  - .twt-artifacts/design/design-system/tokens.md                # via /twt-design-system-define
+  - .twt-artifacts/design/design-system/tokens.css               # via /twt-design-system-define
+  - .twt-artifacts/design/design-system/preview.html             # via /twt-design-system-define
+  - .twt-artifacts/design/design-system/decisions.md             # via /twt-design-system-define (collect mode)
+  - .twt-artifacts/design/design-system/validation-report.md     # via /twt-design-system-validate
   - .twt-artifacts/design/design-system/component/components.md  # via /twt-component-define (always)
   - .twt-artifacts/design/design-system/component/gallery.html   # via /twt-component-define (always)
+  - .twt-artifacts/design/design-system/component/validation-report.md  # via /twt-component-validate
 ---
 
 # /twt-design-system
@@ -37,7 +44,7 @@ writes:
 
 **Success criteria:**
 - Produces/refines `tokens.md`, `tokens.css`, a **tokens-only** `preview.html` (the component catalog lives in the gallery, linked from preview) and a current `validation-report.md`
-- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
+- Always builds the full component catalog (`component/components.md` + `gallery.html`) via `/twt-component-define` — in every mode, standalone or collect — and validates it (`/twt-component-validate`, or the collect-mode self-check) into `component/validation-report.md`. A complete design system includes tokens, preview, AND the full catalog of all primitives, components, and modules.
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states final Band + Health and whether BLOCKERs remain
 
@@ -67,5 +74,10 @@ A complete design system includes its component catalog, not just tokens. `previ
 
 After the design system is finalized, always dispatch `/twt-component-define` (Agent tool) — regardless of mode, standalone or collect — so `component/components.md` + `gallery.html` are produced from the just-written tokens. Pass `subagent-collect` when this orchestrator is itself in collect mode. It reuses the `tokens.md §3` Primitive/Component/Module names so the catalog and the design system agree. Best-effort — if it cannot run, note it and continue; never block the design-system result on it.
 
+**Then validate the catalog too** — the catalog is half the deliverable, and its defect classes (unfilled slots, dark-on-dark modules, inventory drift) live there, not in tokens:
+- **Standalone:** dispatch `/twt-component-validate` once (Agent tool) after component-define returns; read its Band/Health/BLOCKER count.
+- **Collect mode:** instruct the component-define dispatch to self-check against the `/twt-component-validate` rubric (including the `gen-gallery.mjs --check` evidence) and write the sibling `component/validation-report.md` in that format, bubbling open decisions in its `decisions.md`.
+Same §9 policy as Step 2: at most one BLOCKER-driven re-dispatch of component-define, never on WARNING/SUGGESTION. Best-effort like the define leg — never block the design-system result on it.
+
 ## Step 3 — Report
-State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). Name `component/gallery.html` + `components.md` as part of the delivered design system (always built in Step 2b), and point to the tokens-only `preview.html` (which links the gallery). If decisions remain unresolved or Band < Pass, present them and the human-decision options (provide design sources / accept and edit directly / defer) — never auto-fix.
+State **both** final Bands + Healths — design system (tokens) and component catalog — with their BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). Name `component/gallery.html` + `components.md` as part of the delivered design system (always built and validated in Step 2b), and point to the tokens-only `preview.html` (which links the gallery). If decisions remain unresolved or either Band < Pass, present them and the human-decision options (provide design sources / accept and edit directly / defer) — never auto-fix.

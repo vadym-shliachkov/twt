@@ -106,11 +106,7 @@ If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinemen
 
 Before asking any questions, check whether `.twt-artifacts/design/design-system/tokens.md` already exists.
 
-- **Exists:** Read it in full. Hold it in memory as `<existing_system>`. Capture (a) the token names + values, (b) the naming convention in use, (c) the section structure. Record `<existing_system_present> = true`. To understand what changed since the last run, diff the existing tokens.css against the candidate new tokens (after writing candidate CSS to a temp path):
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/diff-tokens.mjs" ".twt-artifacts/design/design-system/tokens.css" "<candidate-tokens.css>"
-```
-The output `{added, changed, removed, unchanged_count}` identifies new/changed/dropped tokens. Surface any removals to the user before overwriting — dropped tokens may break downstream builds.
+- **Exists:** Read it in full. Hold it in memory as `<existing_system>`. Capture (a) the token names + values, (b) the naming convention in use, (c) the section structure. Record `<existing_system_present> = true`. (The what-changed diff runs later, at Step 10a, once candidate tokens actually exist to compare.)
 - **Does not exist:** Record `<existing_system_present> = false` and continue normally.
 
 If `<existing_system_present> = true`, print:
@@ -130,18 +126,19 @@ This check influences Step 2 (mode selection wording), Step 3 (Figma-present bra
 
 ## Step 2 — Mode Selection
 
-**(Skipped in collect mode — see Step 1b.)** Ask via the **AskUserQuestion** tool (single-select, header "Analysis mode") which analysis mode to use:
-- **Single screen** — analyze a single screen (scoped extraction, partial hierarchy)
-- **Full Figma DS** — analyze full Figma design system (full extraction, full exports)
-- **Merge Figma files** — merge multiple Figma files (full extraction + conflict report)
-- **Reverse-engineer** — reverse-engineer existing product UI (full extraction, emphasis on patterns)
-- **Tokens only** — extract tokens only (skip atomic hierarchy)
-- **Full architecture** — generate full architecture (full extraction + full exports)
-- **Inconsistency compare** — compare design inconsistencies (emphasis on findings tables)
-- **Implementation guide** — generate implementation guidelines (emphasis on export section)
-- **You decide** — I pick the mode that fits the sources (greenfield/brand-brief → Full architecture; a single screenshot → Single screen; multiple Figma files → Merge)
+**(Skipped in collect mode — see Step 1b.)** AskUserQuestion takes at most 4 options per question, so mode selection is one goal question plus (only when needed) one follow-up. Ask via the **AskUserQuestion** tool (single-select, header "Analysis goal"):
+- **Full system** — extract everything: tokens, component hierarchy, patterns, exports
+- **Tokens only** — extract tokens only, skip the component hierarchy
+- **Compare / merge** — merge multiple files, or report design inconsistencies (follow-up below)
+- **You decide** — I pick what fits the sources (greenfield/brand-brief → Full architecture; a single screenshot → Single screen; multiple Figma files → Merge)
 
-Record the choice as `<mode>`. Each mode tunes Steps 4–8:
+Resolve the answer to an internal `<mode>` (the numbered modes below, which tune Steps 4–8):
+- **Full system** → mode **6** (full architecture) by default; mode **2** when the source is a single full Figma design system; mode **1** when the only source is a single screen/screenshot (scoped extraction — say so); mode **4** emphasis (patterns) when the source is live product UI rather than a design file; mode **8** emphasis when `$ARGUMENTS` asks for implementation guidelines.
+- **Tokens only** → mode **5**.
+- **Compare / merge** → ask one follow-up via **AskUserQuestion** (single-select, header "Compare how?"): **Merge files** (mode **3** — merged token set + conflict report) · **Inconsistency report** (mode **7** — findings tables, no merge) · **You decide** (>1 Figma file → Merge, else Inconsistency report).
+- **You decide** → pick per the rules above and tell the user which mode you chose and why.
+
+Each mode tunes Steps 4–8:
 
 | Mode | Token extraction | Atomic hierarchy | Pattern report | Multi-file merge | Export section |
 |------|------------------|------------------|----------------|------------------|----------------|
@@ -308,139 +305,24 @@ If the existing system (Step 4) uses a different convention, follow that instead
 
 Write `.twt-artifacts/design/design-system/tokens.md`. Create the parent directory if it doesn't exist. If the file already exists, read it first and merge — never silently overwrite custom additions.
 
-The file MUST include the following sections in this order:
+**Read `${CLAUDE_PLUGIN_ROOT}/skills/twt-design-system-define/references/output-formats.md` now** — it carries the exact 10-section `tokens.md` skeleton, the formatting rules, the two-layer `tokens.css` example, and the opt-in export-file examples. Follow it exactly. The load-bearing constraints, so they're never missed:
 
-```md
-# Design System — <Project Name>
-
-## 1. Overview
-- design philosophy
-- visual language
-- UI consistency principles
-- spacing philosophy
-- interaction patterns
-- accessibility direction
-- responsive behavior assumptions
-- confidence summary (how many tokens confirmed vs inferred)
-
-## 2. Tokens
-### 2.1 Colors           (table: name · HEX · RGB · HSL · role · usage · confidence)
-### 2.2 Typography       (families · scale · weights · line-height · tracking · responsive · **Text styles** table)
-### 2.3 Spacing          (scale · rhythm · responsive deltas)
-### 2.4 Radius           (scale · category mapping)
-### 2.5 Shadows          (elevation system · overlay · interactive)
-### 2.6 Motion           (durations · easings · defaults)
-### 2.7 Grid             (breakpoints · columns · gutters · container widths)
-
-## 3. Component Architecture (Tokens → Primitives → Components → Modules)
-### 3.1 Tokens                   (pointer back to Section 2)
-### 3.2 Primitives               (each: tokens consumed · variants · states)
-### 3.3 Components               (each: which Primitives it composes)
-### 3.4 Modules                  (each: which Components/Primitives it composes)
-### 3.5 Inferred Components       (only if any)
-
-> Keep the `### 3.2 / 3.3 / 3.4` **numbering** exactly — `gen-preview.mjs` parses the inventory by section number — and keep each row's first cell as the bold component name (`| **Button** | … |`).
-
-## 4. Pattern & Inconsistency Report
-### 4.1 Findings table
-### 4.2 Normalization recommendations
-### 4.3 Conflict report           (multi-file merge only)
-
-## 5. Accessibility
-- contrast audit (token pairs · WCAG level)
-- focus states
-- keyboard navigation assumptions
-- minimum touch targets
-- typography scaling
-- dark mode readiness
-
-## 6. Responsive System
-- breakpoint logic
-- responsive typography rules
-- responsive spacing rules
-- adaptive layouts
-- mobile behavior changes
-
-## 7. Naming Convention
-- the rule
-- examples
-- migration notes for drift
-
-## 8. Token Exports
-### 8.1 CSS Variables
-### 8.2 SCSS
-### 8.3 Tailwind config
-### 8.4 JSON tokens
-### 8.5 Style Dictionary format
-
-## 9. Governance
-- maintenance workflow
-- how to add a component
-- token expansion rules
-- contribution workflow
-- scalability recommendations
-
-## 10. Migration Recommendations
-- prioritized cleanup
-- refactor recommendations
-- per-finding migration plan
-```
-
-### Formatting rules
-
-- Use tables for every token category.
-- Use ASCII anatomy diagrams for components where helpful.
-- Use hierarchy trees for the atomic structure.
-- Use variant matrices for element states.
-- Avoid vague wording or purely aesthetic commentary — every statement should be actionable.
-- Mark every assumption explicitly. Separate **confirmed** vs **inferred**.
-
-### Export examples (Section 8)
-
-CSS:
-
-```css
-:root {
-  --color-primary: #0057FF;
-  --color-surface: #FFFFFF;
-  --radius-card: 16px;
-  --space-4: 16px;
-  --motion-duration-fast: 120ms;
-}
-```
-
-JSON (Style Dictionary–compatible):
-
-```json
-{
-  "color": {
-    "primary": { "value": "#0057FF" },
-    "surface": { "value": "#FFFFFF" }
-  },
-  "radius": { "card": { "value": "16px" } },
-  "space":  { "4":    { "value": "16px" } }
-}
-```
-
-Tailwind:
-
-```js
-module.exports = {
-  theme: {
-    extend: {
-      colors:       { primary: '#0057FF', surface: '#FFFFFF' },
-      borderRadius: { card: '16px' },
-      spacing:      { 4: '16px' }
-    }
-  }
-}
-```
+- **§3 numbering is parsed.** Keep `### 3.2 / 3.3 / 3.4` exactly (`gen-preview.mjs` and `gen-gallery.mjs` read the inventory by section number), each row's first cell the bold component name (`| **Button** | … |`).
+- **§2.2 must contain the Text styles table** (Step 5 format) — `gen-preview.mjs` renders one specimen per row.
+- **§8 never inlines token values.** `tokens.css` is the single canonical export; `tokens.json` / `tailwind.config.js` are opt-in *files* (Step 11). No inline SCSS/JSON/Tailwind blocks — a second copy of the values goes stale the first time a token changes.
+- **§9 Governance and §10 Migration are analyse-existing-only** (or when §4 has high-severity findings); greenfield runs write `Not applicable — greenfield build.` under each.
 
 ---
 
 ## Step 10a — Generate `tokens.css` (always)
 
 After writing `tokens.md`, write `.twt-artifacts/design/design-system/tokens.css` — a single `:root` block exporting **every** token as a CSS custom property. This is the one stylesheet every downstream HTML artifact (preview, gallery, mockups) links, so it must be complete and authoritative.
+
+**Pre-write gate when a `tokens.css` already exists** (`<existing_system_present> = true`): write the candidate CSS to a temp path first and diff it against the live file (Bash):
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/diff-tokens.mjs" ".twt-artifacts/design/design-system/tokens.css" "<candidate-tokens.css>"
+```
+The output `{added, changed, removed, unchanged_count}` identifies new/changed/dropped tokens. **Surface any `removed` entries before overwriting** — dropped tokens may break downstream builds that already reference them. Interactive: ask; collect mode: record the removals in `decisions.md` (`## Model-decided assumptions` when intentional, `## Open questions` when unsure) and proceed per `<system_update_mode>`.
 
 Rules:
 - One custom property per token, named from the token's kebab-case name: `--color-primary`, `--space-4`, `--radius-card`, `--font-size-body-m`, `--font-family-base`, `--font-weight-bold`, `--line-height-body-m`, `--tracking-tight`, `--shadow-e2`, `--motion-duration-fast`, etc.
@@ -455,44 +337,7 @@ Colors MUST be split into two layers — **every time, no exceptions**:
 **Layer 1 — Primitives** (raw values only): the complete palette — every hex solid and every alpha tone.  
 **Layer 2 — By purpose** (`var()` references only): semantic/role tokens that point to Layer 1. **No raw hex or rgba values may appear in Layer 2.** A purpose token names the *use*, not the color.
 
-```css
-:root {
-  /* ── Layer 1: Color primitives — solids ── */
-  --color-ink:       #090E22;
-  --color-white:     #FFFFFF;
-  --color-slate:     #3A3F5C;
-  /* ── Layer 1: Color primitives — alpha tones ── */
-  --color-ink-a08:   rgba(9, 14, 34, .08);
-  --color-white-a85: rgba(255, 255, 255, .85);
-
-  /* ── Layer 2: Colors by purpose — var() only ── */
-  --color-bg:            var(--color-white);
-  --color-text:          var(--color-slate);
-  --color-text-heading:  var(--color-ink);
-  --color-primary:       var(--color-ink);
-  --color-on-primary:    var(--color-white);
-  --color-border:        var(--color-ink-a08);
-
-  /* Typography — family, size, weight, line-height, tracking (not size alone) */
-  --font-family-base:    "Inter", system-ui, sans-serif;
-  --font-family-heading: "Inter", system-ui, sans-serif;
-  --font-size-body-m:    1rem;
-  --font-weight-regular: 400;
-  --font-weight-medium:  500;
-  --font-weight-bold:    700;
-  --line-height-body-m:  1.5;
-  --tracking-tight:      -0.01em;
-  --tracking-wide:        0.04em;
-  /* Spacing */
-  --space-4: 16px;
-  /* Radius */
-  --radius-card: 16px;
-  /* Shadows — reference color primitives via var(), never raw rgba */
-  --shadow-e2: 0 2px 8px var(--color-ink-a08);
-  /* Motion */
-  --motion-duration-fast: 120ms;
-}
-```
+(A full worked example lives in `references/output-formats.md` — the same file Step 10 already loaded.)
 
 This two-layer rule also applies to **Shadows**: shadow values must reference color primitive tokens via `var()` rather than hard-coding rgba literals. Add any alpha-tone primitives needed for shadows into Layer 1.
 
@@ -529,8 +374,8 @@ The script prints a ` ```json ` block to stdout with `counts` and `contrast_fail
 Read the `contrast_failures[]` array from the gen-preview JSON (Step 10b). Each entry is an **intended** text-on-surface pairing that fails **WCAG AA for normal-size text** (ratio < 4.5) — e.g. a silver label token on a white surface at 3.76:1. This is the deterministic accessibility check that must catch low-contrast pairings **here at the design step**, not later at QA.
 
 - **If `contrast_failures` is empty:** note "contrast: all intended pairs pass AA" and continue.
-- **If it is non-empty and this is interactive (not collect mode):** surface the failures to the user — list each `text` / `surface` / `ratio` and recommend the fix (darken the text token until the pair reaches ≥ 4.5:1, or restrict that token to large text / structure only). Ask via **AskUserQuestion** (header "Contrast") whether to **Fix now** (adjust the token values and re-run Step 10a→10b), **Restrict to large-only** (annotate the token's role in `tokens.md §2.1` and §5 as large-text/structure only), or **Accept the risk** (record in `decisions.md`). Default recommendation: Fix now.
-- **In collect mode:** do **not** prompt. Record each failure in `decisions.md` under `## Open questions` (question: "Text token `<text>` on `<surface>` is <ratio>:1 — below AA 4.5:1 for normal text"; options: [darken text token, restrict to large/structure only, accept]; model-leaning: darken unless the token is already documented as a label/structure-only role; why it matters: fails WCAG AA, will block at QA). Leave `status: open` for the orchestrator/validator to surface.
+- **If it is non-empty and this is interactive (not collect mode):** surface the failures to the user — list each `text` / `surface` / `ratio` and recommend the fix (darken the text token until the pair reaches ≥ 4.5:1, or restrict that token to large text / structure only). Ask via **AskUserQuestion** (header "Contrast") whether to **Fix now** (adjust the token values and re-run Step 10a→10b), **Restrict to large-only** (annotate the token's role in `tokens.md §2.1` and §5 as large-text/structure only), or **Accept the risk** (record in `decisions.md`). Default recommendation: Fix now. **Restrict to large-only is only offerable when the failure's `aa_large` flag is true** (ratio ≥ 3.0:1 — AA for large text); below that the pair fails even as large text, so the real options are Fix now or Accept the risk.
+- **In collect mode:** do **not** prompt. Record each failure in `decisions.md` under `## Open questions` (question: "Text token `<text>` on `<surface>` is <ratio>:1 — below AA 4.5:1 for normal text"; options: [darken text token, restrict to large/structure only *(only when `aa_large` is true)*, accept]; model-leaning: darken unless the token is already documented as a label/structure-only role; why it matters: fails WCAG AA, will block at QA). Leave `status: open` for the orchestrator/validator to surface.
 
 Either way, reflect the result in `tokens.md §5` (Accessibility → contrast audit): list each intended pair's ratio + WCAG verdict so the written audit matches the generated matrix.
 
@@ -546,7 +391,7 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 | `.twt-artifacts/design/design-system/tailwind.config.js` | mode 8, or on request |
 | `.twt-artifacts/design/design-system/tokens.json` | mode 8, or on request |
 
-`tokens.md` is always generated. The others are opt-in.
+`tokens.md` is always generated. The others are opt-in. Shape examples for `tokens.json` / `tailwind.config.js` are in `references/output-formats.md`; values come from `tokens.md` — never introduce a value that isn't there.
 
 ---
 
@@ -579,8 +424,8 @@ Print a concise plain-text summary (no ASCII box): mode · sources analyzed · t
 Then tell the user what to read first:
 - Section 1 for the philosophy summary
 - Section 4 for inconsistency findings
-- Section 8 for ready-to-use code exports
-- Section 10 for the migration plan if any high-severity findings exist
+- `tokens.css` for the canonical ready-to-use export (plus any opt-in `tokens.json` / `tailwind.config.js` from Step 11)
+- Section 10 for the migration plan if any high-severity findings exist (analyse-existing runs)
 
 ---
 
