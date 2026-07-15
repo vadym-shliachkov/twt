@@ -104,7 +104,7 @@ put('overview.md', fm(projectName, 'overview', 'draft') +
 `);
 
 put('inbox.md',
-`<!-- APPEND-ONLY. Written by the capture hook and by twt skills. Drained by /twt-wiki
+`<!-- APPEND-ONLY. Written by the harvester (/twt-wiki-fetch), on demand. Drained by /twt-wiki
      (twt-wiki-define). Do not edit or reorder by hand; do not delete undrained entries.
      Entry format (header/detail/notes lines appear only when the tool call
      carried them; notes are the user's own words - treat them as the why):
@@ -118,7 +118,7 @@ put('inbox.md',
      - **notes:** the user's free-text note on the choice
 
      The separator is a middle dot (U+00B7), not a hyphen - it is what the
-     capture hook emits and what the curator parses. Do not "correct" it.
+     harvester emits and what the curator parses. Do not "correct" it.
 -->
 `);
 

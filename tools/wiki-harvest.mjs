@@ -46,8 +46,7 @@ function toPosix(p) {
   return String(p).split('\\').join('/');
 }
 
-// Matches the capture hook's stamp exactly (hooks/twt-wiki-capture.js):
-// ISO-8601 UTC with milliseconds stripped.
+// The inbox entry timestamp stamp: ISO-8601 UTC with milliseconds stripped.
 function nowStamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
@@ -246,8 +245,8 @@ function extToKind(ext) {
 }
 
 // ---------------------------------------------------------------------------
-// Entry builders - each renders the inbox entry contract from
-// hooks/twt-wiki-capture.js: "## <ISO-8601 UTC> · <kind> · <source>" then
+// Entry builders - each renders the inbox entry contract:
+// "## <ISO-8601 UTC> · <kind> · <source>" then
 // "- **key:** value" lines. Never invent a `why` - an absent rationale is
 // written as the literal string "_not recorded_", never guessed at.
 // ---------------------------------------------------------------------------

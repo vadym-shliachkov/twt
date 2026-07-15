@@ -19,7 +19,7 @@
  *       with exit 1 and writes nothing.
  *   node tools/wiki-drain.mjs <projectDir> --drain all
  *       Remove every entry, resetting inbox.md to just its header comment
- *       (the comment documents the entry format for the capture hook).
+ *       (the comment documents the entry format for the harvester).
  *
  * Index stability: capture only ever APPENDS to inbox.md, so an entry's index
  * cannot shift between --list and --drain in the same curation pass - new

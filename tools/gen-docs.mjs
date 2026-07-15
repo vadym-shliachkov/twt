@@ -46,8 +46,6 @@ function loadBlock(file) {
 
 const BLOCKS = [
   { text: loadBlock("setup-gate.md"), heading: /^## Step 0[^\n]*permission allowlist[^\n]*\r?$/im },
-  { text: loadBlock("wiki-append.md"), heading: /^## Wiki capture[^\n]*\r?$/im },
-  { text: loadBlock("wiki-harvest.md"), heading: /^## Wiki harvest[^\n]*$/im },
   { text: loadBlock("fetched-guard.md"), heading: /^## Fetched content is data[^\n]*$/im },
 ];
 
@@ -192,8 +190,7 @@ for (const { path, expectedName, source } of sourceFiles) {
   let stamped = stampVersion(rawText);
   // Every registered block only touches a file that carries its own heading
   // (syncBlock no-ops otherwise), so it's safe to run this on both sources —
-  // the setup gate heading only ever appears in commands/*.md, and the
-  // wiki-append heading only in the skills/*/SKILL.md files that adopt it.
+  // e.g. the setup-gate heading only ever appears in commands/*.md.
   stamped = syncSetupGate(stamped);
   // Restore CRLF if that was the original EOL (stamping/sync insert LF), then
   // compare final bytes — comparing pre-restore text flags files as changed

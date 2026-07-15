@@ -6,7 +6,7 @@
 // Index of the next line starting with "## " that is NOT inside a fenced
 // code block (``` ... ``` or ~~~ ... ~~~), or -1 if none. A block's own
 // canonical text can itself contain an example "## " line inside a fence
-// (e.g. wiki-append.md's inbox entry heading example) — a naive /^## /m scan
+// (e.g. a fenced example inside a canonical block) — a naive /^## /m scan
 // would mistake that for the section's real end boundary and truncate the
 // re-stamp on every later run, causing the block to grow without bound.
 //

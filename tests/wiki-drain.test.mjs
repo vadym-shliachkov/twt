@@ -64,7 +64,7 @@ test('--drain all resets inbox.md to just the header comment', () => {
   // The blank separator line before the first entry belongs to the preamble
   // slice (byte-faithful split), so it survives - harmless: the hook appends
   // "\n## ..." regardless.
-  assert.equal(inbox(dir), PREAMBLE + '\n', 'the format comment survives for the capture hook');
+  assert.equal(inbox(dir), PREAMBLE + '\n', 'the format comment survives for the harvester');
   assert.match(out, /drained 2, kept 0/);
 });
 
@@ -85,7 +85,7 @@ test('a non-numeric token aborts and writes nothing', () => {
 test('entries appended after --list keep earlier indices valid (append-only stability)', () => {
   const dir = newInbox(2);
   run(dir, ['--list']);
-  // The capture hook appends mid-pass - indices 1 and 2 must still name the
+  // A concurrent harvest appends mid-pass - indices 1 and 2 must still name the
   // same entries, and the new arrival must survive the drain untouched.
   appendFileSync(join(dir, '.project-wiki', 'inbox.md'), ENTRY(9), 'utf8');
   run(dir, ['--drain', '1']);

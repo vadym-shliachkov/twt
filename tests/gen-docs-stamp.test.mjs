@@ -5,8 +5,8 @@ import { syncBlock, nextHeadingIndex } from '../tools/lib/stamp-block.mjs';
 // Regression coverage for the fence-aware shared-block stamper in
 // tools/gen-docs.mjs. Before the fix, nextHeadingIndex() only tracked
 // backtick fences: a "## "-prefixed line inside a fenced example (which the
-// canonical block text itself legitimately contains, e.g. wiki-append.md's
-// inbox entry heading) was mistaken for the section's real end boundary,
+// canonical block text itself can legitimately contain in a fenced example)
+// was mistaken for the section's real end boundary,
 // truncating the re-stamp and causing the block to grow by the duplicated
 // tail on every subsequent run — unbounded growth on every CI run.
 

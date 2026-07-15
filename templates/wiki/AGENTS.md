@@ -1,4 +1,4 @@
-<!-- manual-version: 2 — stamped from the twt plugin's templates/wiki/AGENTS.md.
+<!-- manual-version: 3 — stamped from the twt plugin's templates/wiki/AGENTS.md.
      When the plugin ships a newer manual, /twt-wiki offers an upgrade (a plain
      re-stamp; hand edits are recoverable from git history). Do not remove this line. -->
 
@@ -27,7 +27,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 |---|---|
 | `index.md` | Catalog of every page. The entry point. |
 | `overview.md` | The project in one page: what, for whom, where it stands. |
-| `inbox.md` | **Append-only raw capture.** Written by the capture hook and by skills. Only the curator drains it. |
+| `inbox.md` | **Append-only raw capture.** Written only by the harvester (`/twt-wiki-fetch`), on demand. Only the curator drains it. |
 | `log.md` | Append-only history: every ingest, sync, query, lint. |
 | `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD` — plus the provided-assets table. The pipeline's fact reconciliation writes here directly. |
 | `decisions/` | One page per durable decision: what, why, evidence, reversible, superseded-by. |
@@ -42,8 +42,8 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 
 ## Who may write what
 
-- **The capture hook and skills** append to `inbox.md` and **nothing else**. Appending
-  cannot corrupt.
+- **The harvester** (`/twt-wiki-fetch`, run on demand) appends to `inbox.md` and
+  **nothing else**. Nothing writes to the wiki automatically. Appending cannot corrupt.
 - **The scaffolder** seeds each curated page — `decisions/`, `entities/`, `ideas/`,
   `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md` — with an
   empty stub once, at init, never overwriting a file that already exists.
