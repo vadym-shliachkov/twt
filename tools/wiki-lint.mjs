@@ -282,21 +282,6 @@ function main() {
     }
   }
 
-  // --- dual facts ledger: the wiki is canonical; a still-live legacy ledger drifts
-  const legacyFacts = join(projectDir, '.twt-artifacts', 'pre-design', 'curation', 'facts.md');
-  if (existsSync(factsPath) && existsSync(legacyFacts)) {
-    try {
-      const legacy = readFileSync(legacyFacts, 'utf8');
-      // The migration stub carries `status: moved` and no ledger table; a real
-      // header row still containing "canonical" means the legacy file is live.
-      if (/\|[^\n]*canonical[^\n]*\|/i.test(legacy) && !/^status:\s*moved$/m.test(legacy)) {
-        add('WARNING', '.twt-artifacts/pre-design/curation/facts.md',
-          'a live legacy facts ledger exists alongside the canonical .project-wiki/facts.md - two ledgers WILL drift apart',
-          're-run /twt-curation-define (it merges the legacy rows into the wiki ledger and stubs the legacy file), or stub it by hand');
-      }
-    } catch (e) { /* unreadable legacy file - nothing to compare */ }
-  }
-
   // --- open questions --------------------------------------------------------
   const oqPath = join(wiki, 'open-questions.md');
   if (existsSync(oqPath)) {

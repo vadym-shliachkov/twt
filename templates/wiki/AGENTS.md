@@ -1,4 +1,4 @@
-<!-- manual-version: 3 — stamped from the twt plugin's templates/wiki/AGENTS.md.
+<!-- manual-version: 4 — stamped from the twt plugin's templates/wiki/AGENTS.md.
      When the plugin ships a newer manual, /twt-wiki offers an upgrade (a plain
      re-stamp; hand edits are recoverable from git history). Do not remove this line. -->
 
@@ -29,7 +29,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `overview.md` | The project in one page: what, for whom, where it stands. |
 | `inbox.md` | **Append-only raw capture.** Written only by the harvester (`/twt-wiki-fetch`), on demand. Only the curator drains it. |
 | `log.md` | Append-only history: every ingest, sync, query, lint. |
-| `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD` — plus the provided-assets table. The pipeline's fact reconciliation writes here directly. |
+| `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD` — plus the provided-assets table. Written only by the curator (`twt-wiki-define`), from fact rows harvested on demand; the pipeline keeps its own ledger in `.twt-artifacts/` and never writes here. |
 | `decisions/` | One page per durable decision: what, why, evidence, reversible, superseded-by. |
 | `open-questions.md` | Unresolved: live conflicts, un-overruled blockers, unanswered asks. |
 | `ideas/` | Functionality and content ideas — `raw` / `shaped` / `scoped` / `shipped` / `dropped`. |

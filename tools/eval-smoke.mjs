@@ -199,9 +199,9 @@ function checkCuration(projectDir) {
   const outlines = join(cur, 'outlines');
   const pages = existsSync(outlines) ? readdirSync(outlines).filter((f) => f.endsWith('.md')) : [];
   if (!pages.length) problems.push('no outlines/<page>.md written');
-  // no wiki in this fixture → the ledger's resolved path is the legacy one
+  // the ledger always lives in the artifacts (the pipeline never writes the wiki)
   const ledger = join(cur, 'facts.md');
-  if (!existsSync(ledger)) problems.push('missing facts.md — Step 3.5 did not build the ledger at its resolved (legacy, no-wiki) path');
+  if (!existsSync(ledger)) problems.push('missing facts.md — Step 3.5 did not build the ledger at .twt-artifacts/pre-design/curation/facts.md');
   else if (!/\|[^\n]*canonical[^\n]*\|/i.test(readFileSync(ledger, 'utf8'))) problems.push('facts.md has no canonical-facts table');
   const dec = join(cur, 'decisions.md');
   if (existsSync(dec)) for (const p of checkDecisions(readFileSync(dec, 'utf8'))) problems.push(`decisions.md: ${p}`);

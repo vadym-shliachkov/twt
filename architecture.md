@@ -806,7 +806,6 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
 
@@ -814,7 +813,6 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/pre-design/curation/inventory.md |  |
-| .project-wiki/facts.md |  |
 | .twt-artifacts/pre-design/curation/facts.md |  |
 | .twt-artifacts/pre-design/curation/outlines/<page-slug>.md |  |
 | .twt-artifacts/pre-design/curation/decisions.md |  |
@@ -838,7 +836,6 @@ flowchart TB
 **Reads:**
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -1558,7 +1555,6 @@ flowchart TB
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
@@ -1596,7 +1592,6 @@ flowchart TB
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md

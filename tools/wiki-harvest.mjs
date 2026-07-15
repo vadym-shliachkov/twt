@@ -132,9 +132,10 @@ function parseDecisions(text) {
 }
 
 // facts.md (skills/twt-curation-define/SKILL.md Step 3.5): a pipe table
-// whose header includes "canonical". This only ever matches LEGACY ledgers:
-// once a wiki exists the pipeline writes .project-wiki/facts.md directly and
-// stubs the artifact copy (status: moved, no table). For a legacy ledger,
+// whose header includes "canonical". The artifact ledger at
+// .twt-artifacts/pre-design/curation/facts.md is always the pipeline's
+// canonical ledger — the pipeline never writes .project-wiki/facts.md — so
+// harvesting it on demand is the only path its rows have into the wiki.
 // EVERY status row is harvested, not just CONFLICT - it is a special basename
 // (no sources.md row, so the curator never reads it as a source), so if
 // resolved facts aren't pulled into the inbox they have no path into the

@@ -17,9 +17,10 @@
 //   - incoming TBD/UNVERIFIED-ATTR over an existing RESOLVED → kept (a weaker
 //     claim never degrades a settled one); sources merged
 //
-// The ledger path resolves the standard way: .project-wiki/facts.md when the
-// wiki exists, else the legacy .twt-artifacts/pre-design/curation/facts.md.
-// Everything outside the Canonical-facts table is preserved byte-for-byte.
+// Targets the wiki's curated ledger at .project-wiki/facts.md — its only
+// caller, twt-wiki-define, runs with a wiki present. (The pipeline keeps its
+// own ledger in .twt-artifacts/ and never calls this.) Everything outside the
+// Canonical-facts table is preserved byte-for-byte.
 //
 // Usage:
 //   node tools/wiki-facts-merge.mjs <projectDir> --row "fact|canonical|status|sources" [--row ...]

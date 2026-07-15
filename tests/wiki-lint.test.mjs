@@ -237,7 +237,7 @@ test('an operating manual older than the plugin template warns', () => {
   assert.ok(r.findings.some((f) => f.tier === 'WARNING' && /obeys the stale manual/.test(f.problem)));
 });
 
-test('a live legacy facts ledger alongside the wiki ledger warns; the moved stub does not', () => {
+test('the artifact facts ledger alongside a wiki facts.md is not flagged (artifact ledger is canonical; wiki page is a curated derivative)', () => {
   const dir = newWiki();
   const legacy = join(dir, '.twt-artifacts', 'pre-design', 'curation');
   mkdirSync(legacy, { recursive: true });
@@ -248,15 +248,7 @@ test('a live legacy facts ledger alongside the wiki ledger warns; the moved stub
     '| firm-tenure | 20+ years | RESOLVED | 20+@book |', '',
   ].join('\n'), 'utf8');
   const r = lintJson(dir);
-  assert.ok(r.findings.some((f) => f.tier === 'WARNING' && /two ledgers WILL drift/.test(f.problem)));
-
-  // After migration the legacy file is a pointer stub - no warning.
-  writeFileSync(join(legacy, 'facts.md'), [
-    '---', 'generated: 2026-07-12', 'area: curation', 'producer: twt-curation-define', 'status: moved', '---',
-    '', '# Facts ledger', '', 'Moved to `.project-wiki/facts.md` — the wiki is the canonical ledger.', '',
-  ].join('\n'), 'utf8');
-  const r2 = lintJson(dir);
-  assert.equal(r2.findings.some((f) => /drift/.test(f.problem)), false);
+  assert.equal(r.findings.some((f) => /drift/.test(f.problem)), false, 'a live artifact ledger beside the wiki must not warn');
 });
 
 test('human-readable output ends with a tier count summary', () => {

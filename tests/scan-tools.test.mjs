@@ -46,16 +46,6 @@ test('status-scan: legacy component-catalog layout is detected and names the mig
   assert.match(out, /twt-component-define/);
 });
 
-test('status-scan: a live legacy facts ledger beside a wiki is detected; the moved stub is not', () => {
-  const dir = newProject();
-  mkdirSync(join(dir, '.project-wiki'), { recursive: true });
-  const legacy = join(dir, '.twt-artifacts', 'pre-design', 'curation', 'facts.md');
-  put(legacy, '# Facts ledger\n\n| fact | canonical | status | sources |\n|---|---|---|---|\n| x | y | RESOLVED | y@z |\n');
-  assert.match(run(STATUS, [dir]), /LEGACY LAYOUT: live legacy facts ledger/);
-  put(legacy, '---\nstatus: moved\n---\n\n# Facts ledger\n\nMoved to `.project-wiki/facts.md`.\n');
-  assert.equal(/live legacy facts ledger/.test(run(STATUS, [dir])), false, 'the moved stub must not warn');
-});
-
 // ---- qa-scan -------------------------------------------------------------------
 
 function seedSite(dir) {

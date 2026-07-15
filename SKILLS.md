@@ -620,13 +620,11 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/inventory.md
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
 
 **Writes:**
 - .twt-artifacts/pre-design/curation/inventory.md
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/outlines/<page-slug>.md
 - .twt-artifacts/pre-design/curation/decisions.md
@@ -664,7 +662,6 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 **Reads:**
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -1545,7 +1542,6 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md
@@ -1594,7 +1590,6 @@ Read-only critique of the page mockups — real-content usage, token/design-syst
 - .twt-artifacts/design/layout/layouts/
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/pre-design/curation/outlines/
-- .project-wiki/facts.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/design/design-read.md
 - references/external-design-skills.md

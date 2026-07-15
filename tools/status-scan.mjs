@@ -17,7 +17,7 @@
 // Exits 0 always (a freshness report is not a failure); exits 2 only on bad usage.
 'use strict';
 
-import { statSync, readdirSync, existsSync, readFileSync } from 'node:fs';
+import { statSync, readdirSync, existsSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
 // ---- the canonical DAG (mirrors the table in commands/twt-status.md) ---------
@@ -187,17 +187,6 @@ const LEGACY_CHECKS = [
     when: () => existsSync(join(ART, 'design', 'component', 'components.md'))
       && !existsSync(join(ART, 'design', 'design-system', 'component', 'components.md')),
     warn: 'component catalog at pre-move design/component/ (now design-system/component/) — skills fall back read-only; re-run /twt-component-define (or /twt-design) to migrate',
-  },
-  {
-    when: () => {
-      const legacy = join(ART, 'pre-design', 'curation', 'facts.md');
-      if (!existsSync(legacy) || !existsSync(join(projectDir, '.project-wiki'))) return false;
-      try {
-        const t = readFileSync(legacy, 'utf8');
-        return /\|[^\n]*canonical[^\n]*\|/i.test(t) && !/^status:\s*moved$/m.test(t);
-      } catch { return false; }
-    },
-    warn: 'live legacy facts ledger beside the canonical .project-wiki/facts.md — two ledgers WILL drift; re-run /twt-curation-define (it merges + stubs the legacy file)',
   },
   {
     when: () => existsSync(join(ART, 'content')) && !existsSync(join(ART, 'content-quality')),
