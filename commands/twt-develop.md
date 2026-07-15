@@ -1,8 +1,8 @@
 ---
 name: twt-develop
 category: develop
-description: (v1.3.6) Phase 3 full path — promote the Phase-2 design into the chosen build target
-version: 1.3.6
+description: (v1.3.7) Phase 3 full path — promote the Phase-2 design into the chosen build target
+version: 1.3.7
 accepts_arguments: true
 inputs:
   - Optional --target html|elementor (else menu); optional page scope
@@ -127,16 +127,6 @@ Each page file is disjoint, so there is no write conflict. Wait for the whole ba
 
 ### Step 4c — Merge deltas (serial)
 Apply the returned deltas to the shared files yourself, one at a time, **de-duplicating**: if two pages returned the same new section (same purpose/selector), add it once and point both pages at it. Then, if any page needed a partial change, re-inline the partial into every page; re-mirror `tokens.css` if a token was added. Finally run the builder's own inline build checks across all pages (every page links the CSS / registers its widgets; no literals; links resolve; chrome identical; no lorem where real content exists).
-
-## Wiki harvest — capture this phase's decisions (skip if no wiki)
-Check with Glob (never a shell command) that `.project-wiki/` exists at the project root; if not, skip this step silently — the wiki is opt-in and this must not change behavior for a project without one.
-
-If it exists, run (Bash, single command):
-`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-harvest.mjs" "$CLAUDE_PROJECT_DIR"`
-
-It pulls this phase's decision-bearing content — `decisions.md` items, every `facts.md` ledger row (resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs, session-log Q&A — into `.project-wiki/inbox.md`, and registers every other artifact in `sources.md`. Idempotent (`.harvest-state.json`), always exits 0 with a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors, note it and continue.
-
-Carry the summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page is written here. Turning inbox entries into cited pages is `/twt-wiki`, user-invoked — never part of this run.
 
 ## Step 5 — Report
 

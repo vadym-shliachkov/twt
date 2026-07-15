@@ -1,8 +1,8 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: (v1.2.5) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.2.5
+description: (v1.2.6) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+version: 1.2.6
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -149,16 +149,6 @@ Thin index — canonical detail lives in the linked artifacts; this file is link
 <aggregate unresolved BLOCKERs from each sub-area's validation-report.md, each linked to its source file — or "none">
 ```
 Keep it short: the value is the link table + the aggregated BLOCKERs, never prose restating the artifacts. Never mask a sub-area's BLOCKERs.
-
-## Wiki harvest — capture this phase's decisions (skip if no wiki)
-Check with Glob (never a shell command) that `.project-wiki/` exists at the project root; if not, skip this step silently — the wiki is opt-in and this must not change behavior for a project without one.
-
-If it exists, run (Bash, single command):
-`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-harvest.mjs" "$CLAUDE_PROJECT_DIR"`
-
-It pulls this phase's decision-bearing content — `decisions.md` items, every `facts.md` ledger row (resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs, session-log Q&A — into `.project-wiki/inbox.md`, and registers every other artifact in `sources.md`. Idempotent (`.harvest-state.json`), always exits 0 with a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors, note it and continue.
-
-Carry the summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page is written here. Turning inbox entries into cited pages is `/twt-wiki`, user-invoked — never part of this run.
 
 ## Step 8 — Report
 Which sub-areas ran, where the brief is, and any outstanding BLOCKERs the user should review before Phase 2. If brand validation produced a `## Before design proceeds` notice, quote it directly: Phase 2 may continue with explicit caveats, but the user must be informed before brand choices are bound into design tokens, components, layouts, or copy.

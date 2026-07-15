@@ -1,8 +1,8 @@
 ---
 name: twt-layout-define
 category: layout
-description: (v1.2.4) Define per-page layout specs (section order, component slots, content map, breakpoints)
-version: 1.2.4
+description: (v1.2.5) Define per-page layout specs (section order, component slots, content map, breakpoints)
+version: 1.2.5
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -82,28 +82,6 @@ Wait for all the page agents to finish before reporting.
 
 ## Step 5 — Asset manifest (media planning)
 After the page layouts are written, scan them for sections that call for an image or video. For each, add a row to `.twt-artifacts/design/assets/manifest.md` (create it in the asset-manifest format — frontmatter `generated`/`phase: design`/`area: assets`, a `# Asset manifest` heading, and a table with columns id | type (image|video) | filename (kebab-case, web format) | placement (page → section → slot) | spec (dimensions/aspect/treatment) | alt | source (generate|stock|provided) | generation_prompt if absent; append missing rows, dedupe by `filename`). Run this **serially in this parent skill** (not in the parallel Step-4 agents) so the shared manifest is never written concurrently. Each row: stable `id`, `type` (image|video), exact `filename` (kebab-case, web format), `placement` (page → section → slot), `spec` (dimensions/aspect/treatment), `alt`, `source` (generate|stock|provided), and a concrete `generation_prompt`. Plan only — never claim a real asset exists; client-supplied ones are `source: provided`. Do not generate binaries.
-
-## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
-
-One entry per judgment a human would otherwise have to re-make:
-- a decision made autonomously (collect mode, or an unattended run)
-- a factual `CONFLICT` you resolved, or refused to resolve
-- a validator BLOCKER you overruled, and on what grounds
-- an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
-
-Append only — never rewrite; the curator drains it:
-
-```
-## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
-- **decision:** <what you settled>
-- **why:** <the evidence, tradeoff, or constraint that forced it>
-- **evidence:** <path, URL, or artifact this rests on>
-- **reversible:** <yes|no>
-```
-
-Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).
 
 ## Step 6 — Report
 List the layout files written, the asset rows added to the manifest, and what to run next (`/twt-layout-validate`, then `/twt-mockup-define`).

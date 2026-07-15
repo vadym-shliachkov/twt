@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-define
 category: wiki
-description: (v1.0.8) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-version: 1.0.8
+description: (v1.0.9) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.9
 accepts_arguments: true
 inputs:
   - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -138,7 +138,7 @@ tags: [design-system, color]
 **Superseded by:** _none_
 ```
 
-**When there is no paired reason, do not invent one.** The capture hook only ever emits `question` / `options` / `chosen` (or `raw`) — it never records *why* a choice was made; a `why` exists only when a separate `kind: reason` entry was also captured alongside the `decision` (a mechanism not every skill uses yet). If Step 3's grouping finds a `decision` with no matching `reason` entry, that page legitimately has no rationale on record. Fabricating a plausible-sounding one — even a cautious, "probably because..." guess — is never acceptable: it fabricates provenance in a system whose entire purpose is trustworthy provenance, which is worse than an honest gap. Write the `why` as explicitly unknown instead, and mark the page for human follow-up:
+**When there is no paired reason, do not invent one.** The harvester only ever emits `question` / `options` / `chosen` (or `raw`) — it never records *why* a choice was made; a `why` exists only when a separate `kind: reason` entry was also captured alongside the `decision` (a mechanism not every skill uses yet). If Step 3's grouping finds a `decision` with no matching `reason` entry, that page legitimately has no rationale on record. Fabricating a plausible-sounding one — even a cautious, "probably because..." guess — is never acceptable: it fabricates provenance in a system whose entire purpose is trustworthy provenance, which is worse than an honest gap. Write the `why` as explicitly unknown instead, and mark the page for human follow-up:
 
 ```
 **Why:** _not captured — the choice was recorded, the reason was not._

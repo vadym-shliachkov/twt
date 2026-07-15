@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.12) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.12
+description: (v1.8.13) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.13
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -394,28 +394,6 @@ If the user asks for them (or if `<mode>` strongly implies them), also write:
 `tokens.md` is always generated. The others are opt-in. Shape examples for `tokens.json` / `tailwind.config.js` are in `references/output-formats.md`; values come from `tokens.md` — never introduce a value that isn't there.
 
 ---
-
-## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
-
-One entry per judgment a human would otherwise have to re-make:
-- a decision made autonomously (collect mode, or an unattended run)
-- a factual `CONFLICT` you resolved, or refused to resolve
-- a validator BLOCKER you overruled, and on what grounds
-- an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
-
-Append only — never rewrite; the curator drains it:
-
-```
-## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
-- **decision:** <what you settled>
-- **why:** <the evidence, tradeoff, or constraint that forced it>
-- **evidence:** <path, URL, or artifact this rests on>
-- **reversible:** <yes|no>
-```
-
-Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).
 
 ## Step 12 — Completion
 

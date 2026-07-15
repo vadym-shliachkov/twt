@@ -1,8 +1,8 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: (v1.5.7) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
-version: 1.5.7
+description: (v1.5.8) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
+version: 1.5.8
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -114,16 +114,6 @@ In interactive mode, tell the user this workbook is the human approval surface f
 Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding the Figma URL and any notes so it starts page/block development (in auto mode, resolve its open decisions the same way as Step 2):
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 - `<target>` = **html** → `/twt-html-block-creator`
-
-## Wiki harvest — capture this phase's decisions (skip if no wiki)
-Check with Glob (never a shell command) that `.project-wiki/` exists at the project root; if not, skip this step silently — the wiki is opt-in and this must not change behavior for a project without one.
-
-If it exists, run (Bash, single command):
-`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-harvest.mjs" "$CLAUDE_PROJECT_DIR"`
-
-It pulls this phase's decision-bearing content — `decisions.md` items, every `facts.md` ledger row (resolved facts must survive artifact deletion, not just CONFLICTs), validator BLOCKERs, session-log Q&A — into `.project-wiki/inbox.md`, and registers every other artifact in `sources.md`. Idempotent (`.harvest-state.json`), always exits 0 with a one-line summary such as `3 harvested, 5 already present. 12 inbox entries pending curation.` — a harvest problem must never fail or block this phase; if the tool errors, note it and continue.
-
-Carry the summary line into this phase's Report step. **This is capture, not curation (§17):** it only appends to the inbox — no curated page is written here. Turning inbox entries into cited pages is `/twt-wiki`, user-invoked — never part of this run.
 
 ## Step 5 — Report & finalize the log
 **First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).

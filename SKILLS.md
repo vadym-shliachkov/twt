@@ -183,7 +183,7 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.10
+**Version:** 1.3.11
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -602,7 +602,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.5
+**Version:** 1.1.6
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -690,7 +690,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.3.4
+**Version:** 1.3.5
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -830,7 +830,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.6
+**Version:** 1.3.7
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -1331,7 +1331,7 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 ## /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Produce the canonical site structure — `sitemap.md` (page hierarchy with purpose + CTA) and `functional-scope.md` (global/per-page features and integrations) — from scratch or refined.
@@ -1408,7 +1408,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.4
+**Version:** 1.2.5
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1526,7 +1526,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.4
+**Version:** 1.3.5
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1652,7 +1652,7 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.5
+**Version:** 1.2.6
 **Accepts arguments:** yes
 
 Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
@@ -1737,7 +1737,7 @@ Convert messy project notes, links, Figma references, document paths, and constr
 ## /twt-qa
 
 **Category:** qa
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
 One-call QA: pick the mode (local files, or live crawl if a URL is given), run the applicable audits, then aggregate a `qa-report.md` (with a PASS/FAIL verdict) and synthesize a client-ready `gaps.md` punch-list of outstanding content and links.
@@ -2020,7 +2020,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.12.7
+**Version:** 1.12.8
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2074,7 +2074,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.7
+**Version:** 1.5.8
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -2229,7 +2229,7 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 ## /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.6
+**Version:** 1.0.7
 **Accepts arguments:** yes
 
 The single entry point to the project wiki — `.project-wiki/`, the durable memory that holds what `.twt-artifacts/` cannot: why decisions were made, what was ruled out, what the client said, ideas not yet scoped, and the assets themselves.
@@ -2255,7 +2255,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
 **Success criteria:**
-- `.project-wiki/` exists and capture is armed (the hook only records once the folder exists).
+- `.project-wiki/` exists and is ready to receive harvested decisions.
 - Requested sources are ingested and registered.
 - The inbox is drained into cited pages.
 - The user is told what needs their decision.

@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.10) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.10
+description: (v1.3.11) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.11
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -105,28 +105,6 @@ Run (Bash):
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --check
 ```
 It prints a ` ```json ` block: `unfilled_slots[]` (must end empty), `inventory_missing[]`/`inventory_extras[]` (gallery vs `components.md` + `tokens.md §3` — resolve every mismatch), `raw_values[]` (hardcoded literals in specimen CSS — replace with tokens), `imgs_missing_height[]`, and `dark_surface_suspects[]` (static-cascade heuristic — confirm each, then fix real ones with the on-ink scope pattern). Fix and re-run until `unfilled_slots`, `inventory_missing`, and `dark_surface_suspects` are empty; justify anything you deliberately keep in `components.md`. Don't write your own checker script — this is the only Bash this step needs.
-
-## Wiki capture — record what you decided and why
-If `.project-wiki/` exists at the project root (Glob/Read — never a shell command), append your reasoning to `.project-wiki/inbox.md` before finishing. The capture hook records what the **user** chose; this records what **you** decided and **why** — which nothing else in the pipeline preserves.
-
-One entry per judgment a human would otherwise have to re-make:
-- a decision made autonomously (collect mode, or an unattended run)
-- a factual `CONFLICT` you resolved, or refused to resolve
-- a validator BLOCKER you overruled, and on what grounds
-- an idea you raised but did not scope
-- a free-form answer the user typed at a plain-text prompt (the capture hook sees only AskUserQuestion menus) — put their words in **decision:** verbatim, not paraphrased
-
-Append only — never rewrite; the curator drains it:
-
-```
-## <UTC timestamp, no milliseconds, e.g. 2026-07-11T14:03:22Z> · reason · <this skill's name>
-- **decision:** <what you settled>
-- **why:** <the evidence, tradeoff, or constraint that forced it>
-- **evidence:** <path, URL, or artifact this rests on>
-- **reversible:** <yes|no>
-```
-
-Write nothing else in `.project-wiki/` — curated pages have exactly one writer, and it is not you. No `.project-wiki/` → skip this step silently (the wiki is opt-in).
 
 ## Step 6 — Report
 List components written, both file paths, and what to run next (`/twt-component-validate`, then `/twt-layout-define`).

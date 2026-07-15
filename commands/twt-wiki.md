@@ -1,8 +1,8 @@
 ---
 name: twt-wiki
 category: wiki
-description: (v1.0.6) Initialize, ingest into, and curate the project wiki — the project's durable memory
-version: 1.0.6
+description: (v1.0.7) Initialize, ingest into, and curate the project wiki — the project's durable memory
+version: 1.0.7
 accepts_arguments: true
 inputs:
   - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -32,7 +32,7 @@ writes:
 - Never writes a curated page itself — it dispatches `twt-wiki-define`, the sole curator.
 
 **Success criteria:**
-- `.project-wiki/` exists and capture is armed (the hook only records once the folder exists).
+- `.project-wiki/` exists and is ready to receive harvested decisions.
 - Requested sources are ingested and registered.
 - The inbox is drained into cited pages.
 - The user is told what needs their decision.
@@ -50,7 +50,7 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 Use Glob/Read — never a shell command — to check whether `.project-wiki/AGENTS.md` exists at the project root.
 
 **If it is missing**, ask via **AskUserQuestion** (single-select, header "Wiki"):
-- **Create the wiki** (recommended — scaffolds `.project-wiki/` and arms decision capture)
+- **Create the wiki** (recommended — scaffolds `.project-wiki/`)
 - **Skip** (stop here; nothing is written)
 - **You decide**
 
@@ -58,7 +58,7 @@ On **Create the wiki**, ask the user for the project's name in a plain-text prom
 
 `node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-init.mjs" "$CLAUDE_PROJECT_DIR" --name "<project name>"`
 
-It is idempotent and never overwrites an existing file. Tell the user that decision capture is now armed: from here on, every question they answer in any twt skill is recorded to `.project-wiki/inbox.md` automatically.
+It is idempotent and never overwrites an existing file. Tell the user the wiki is ready. Capture is **not** automatic — nothing in the pipeline writes to the wiki on its own. Decisions reach `.project-wiki/inbox.md` only when the user harvests them: run `/twt-wiki` with `.twt-artifacts/` as a source (or `/twt-wiki-fetch .twt-artifacts/`) to pull the decisions already on disk into the inbox.
 
 Then, using **Glob** (never a shell command), check whether `.twt-artifacts/` exists at the project root. If it does, this project already has decisions sitting on disk that the fresh wiki knows nothing about — offer via **AskUserQuestion** (single-select, header "Sync"):
 - **Harvest existing artifacts** (recommended — pulls decisions already on disk into the inbox)
@@ -104,7 +104,7 @@ If the report has **BLOCKERs the curator can fix mechanically** (a stale index, 
 
 ## Step 4 — Report
 Tell the user:
-- Whether the wiki was created, and that capture is armed
+- Whether the wiki was created
 - Whether an artifact sync was offered, and its outcome (harvested — with counts — skipped, or not offered because there was no `.twt-artifacts/` yet)
 - Sources ingested
 - Pages created or updated

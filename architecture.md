@@ -390,7 +390,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -478,7 +478,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.10
+**Version:** 1.3.11
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -787,7 +787,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -852,7 +852,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.4
+**Version:** 1.3.5
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -961,7 +961,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.12
+**Version:** 1.8.13
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -1026,7 +1026,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.6
+**Version:** 1.3.7
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -1396,7 +1396,7 @@ flowchart TB
 ### /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -1453,7 +1453,7 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.4
+**Version:** 1.2.5
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -1538,7 +1538,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.4
+**Version:** 1.3.5
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1633,7 +1633,7 @@ flowchart TB
 ### /twt-positioning-define
 
 **Category:** positioning
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -1687,7 +1687,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.5
+**Version:** 1.2.6
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -1753,7 +1753,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -1968,7 +1968,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.7
+**Version:** 1.12.8
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2007,7 +2007,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.7
+**Version:** 1.5.8
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2062,7 +2062,7 @@ flowchart TB
 ### /twt-spec-define
 
 **Category:** spec
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional starting notes, a Figma URL, or answers; otherwise fully interactive
@@ -2167,7 +2167,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2192,7 +2192,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.8
+**Version:** 1.0.9
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
