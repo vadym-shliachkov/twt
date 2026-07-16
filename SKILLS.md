@@ -602,7 +602,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.6
+**Version:** 1.1.7
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -647,7 +647,7 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 ## /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** no
 
 Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
@@ -1523,7 +1523,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.5
+**Version:** 1.3.6
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
@@ -1571,7 +1571,7 @@ Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HT
 ## /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** no
 
 Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.

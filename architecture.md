@@ -787,7 +787,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.6
+**Version:** 1.1.7
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -820,7 +820,7 @@ flowchart TB
 ### /twt-curation-validate
 
 **Category:** curation
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - (none — reads curation artifacts and upstream)
@@ -1535,7 +1535,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.5
+**Version:** 1.3.6
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts
@@ -1572,7 +1572,7 @@ flowchart TB
 ### /twt-mockup-validate
 
 **Category:** mockup
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - none (reads the mockup artifacts)
@@ -2187,7 +2187,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.9
+**Version:** 1.0.10
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2291,7 +2291,7 @@ flowchart TB
 ### /twt-wiki-validate
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - (none — reads the whole .project-wiki/)
