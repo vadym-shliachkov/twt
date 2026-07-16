@@ -1,8 +1,8 @@
 ---
 name: twt-ia-define
 category: ia
-description: (v1.0.3) Build or refine sitemap.md and functional-scope.md
-version: 1.0.3
+description: (v1.1.1) Build or refine sitemap.md and functional-scope.md
+version: 1.1.1
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive
@@ -10,9 +10,11 @@ dependencies:
   hard: []
   soft:
     - twt-positioning-define
+    - twt-audience-define
     - twt-content-fetch
 reads:
   - .twt-artifacts/pre-design/positioning/positioning.md
+  - .twt-artifacts/pre-design/audience/personas.md
   - .twt-artifacts/pre-design/content/fetched/
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/ia/functional-scope.md
@@ -50,10 +52,10 @@ If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
 
 ## Step 2 — Gather soft context
-**(Skipped in collect mode — see Step 1b.)** Read `positioning.md` (audience/value props drive which pages exist) and content-fetch outputs (what content already exists). Degrade to interview if absent.
+**(Skipped in collect mode — see Step 1b.)** Read `positioning.md` (audience/value props drive which pages exist), `audience/personas.md` if present (persona journeys drive page priority, nav order, and which conversion pages must exist), and content-fetch outputs (what content already exists). Degrade to interview if absent.
 
 ## Step 3 — Define sitemap
-Interview/refine the page hierarchy. For each page capture slug, title, parent, purpose, primary CTA. Write `sitemap.md` as a nested list.
+Interview/refine the page hierarchy. For each page capture slug, title, parent, purpose, primary CTA. When `personas.md` exists: order the nav by what the primary personas' journeys reach first, make sure every journey's conversion action has a page whose primary CTA serves it, and note on each page entry which persona journey stage(s) it serves (e.g. `serves: <persona> — proof`) — never edit personas.md itself (its unbound `Page` cells stay as written; this mapping lives in sitemap.md). Record persona-driven structure choices in `decisions.md`. Write `sitemap.md` as a nested list.
 
 ## Step 4 — Define functional scope
 Capture global features, per-page features (keyed by sitemap slug), integrations. Write `functional-scope.md`. Keep page slugs consistent with sitemap.md.

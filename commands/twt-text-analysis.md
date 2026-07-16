@@ -1,17 +1,19 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.3.1) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
-version: 1.3.1
+description: (v1.4.1) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
+version: 1.4.1
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint
 dependencies:
   hard: []
-  soft: []
+  soft:
+    - twt-audience-define
 reads:
   - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
   - .twt-artifacts/pre-design/brand/brand-brief.md
+  - .twt-artifacts/pre-design/audience/personas.md
 writes:
   - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md
   - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.xlsx
@@ -66,7 +68,7 @@ Parse `$ARGUMENTS`:
 
 Derive a kebab-case `<subject-slug>` from the file name or the first words of pasted text. If the subject is pasted text, persist it verbatim to `.twt-artifacts/pre-design/content/text-analysis/<subject-slug>/source.md` so the analysis points at a file on disk.
 
-Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present. Brand voice is context, not a metric: copy that is intentionally on-voice is not penalized as cliche unless it is also empty of meaning. Analyze in the subject's own language; the metrics are language-agnostic.
+Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present. Brand voice is context, not a metric: copy that is intentionally on-voice is not penalized as cliche unless it is also empty of meaning. Also read `.twt-artifacts/pre-design/audience/personas.md` if present: the primary persona's tone preference and reading context calibrate the clarity/UX-writing judgment (what counts as jargon for a lay persona is precision for an expert one). Persona fit is context like brand voice — a mismatch informs scoring and the `Reason` line, but is never on its own grounds to invent a rewrite (all safe-fix and validation gates still apply). Analyze in the subject's own language; the metrics are language-agnostic.
 
 ## Step 2 - Split into blocks
 

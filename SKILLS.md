@@ -8,6 +8,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 
 | command | category | description |
 |---------|----------|-------------|
+| [/twt-audience](#twt-audience) | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
@@ -55,6 +56,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-qa-elementor](#twt-qa-elementor) | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | [/twt-search-site](#twt-search-site) | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
+| [/twt-seo](#twt-seo) | seo | Orchestrate the SEO define/validate skills in a single define→validate pass |
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
 | [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
@@ -66,6 +68,39 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 
 ---
+## /twt-audience
+
+**Category:** audience
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+One-call audience workflow: define → validate in one pass (§9 — no iteration loop) — personas seeded from positioning segments plus journey stages that IA, curation, layout, and text analysis read.
+
+**Inputs:**
+- Optional; runs define then the single validate pass
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-audience-define, twt-audience-validate
+
+**Reads:**
+- .twt-artifacts/pre-design/audience/personas.md
+- .twt-artifacts/pre-design/audience/validation-report.md
+
+**Writes:**
+- (none)
+
+**Non-goals:**
+- Dispatches sub-skills (rule 5); no inline logic
+- No unbounded loop, no auto-downgrade of severity
+
+**Success criteria:**
+- Produces/refines `personas.md` + current `validation-report.md`
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
+- On exit, states whether BLOCKERs remain
+
+---
+
 ## /twt-block-preview
 
 **Category:** design-system
@@ -264,7 +299,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.3.3
+**Version:** 1.4.1
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -274,7 +309,7 @@ Create the content approval workbook that proves every page, shared header/foote
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define
+- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define, twt-seo-define
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
@@ -289,6 +324,7 @@ Create the content approval workbook that proves every page, shared header/foote
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/
+- .twt-artifacts/pre-design/seo/seo-map.md
 
 **Writes:**
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
@@ -602,7 +638,7 @@ Read-only content-quality critic — score any text against an 8-criterion UX-wr
 ## /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.7
+**Version:** 1.2.1
 **Accepts arguments:** yes
 
 Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
@@ -612,13 +648,14 @@ Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand-define, twt-ia-define
+- Soft: twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define
 
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
@@ -1328,7 +1365,7 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 ## /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.3
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 Produce the canonical site structure — `sitemap.md` (page hierarchy with purpose + CTA) and `functional-scope.md` (global/per-page features and integrations) — from scratch or refined.
@@ -1338,10 +1375,11 @@ Produce the canonical site structure — `sitemap.md` (page hierarchy with purpo
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-positioning-define, twt-content-fetch
+- Soft: twt-positioning-define, twt-audience-define, twt-content-fetch
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
@@ -1405,7 +1443,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.5
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1415,10 +1453,11 @@ For every page in the sitemap, define a layout spec — section order, the compo
 
 **Dependencies:**
 - Hard: none
-- Soft: none
+- Soft: twt-audience-define
 
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/curation/outlines/
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-read.md
@@ -1647,31 +1686,35 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 ## /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.6
+**Version:** 1.3.1
 **Accepts arguments:** yes
 
-Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
+Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation, plus the optional audience-personas and SEO-map sub-areas — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
+- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-audience-define, twt-audience-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate, twt-seo-define, twt-seo-validate
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/seo/seo-map.md
 - .twt-artifacts/pre-design/brand/validation-report.md
 - .twt-artifacts/pre-design/spec/validation-report.md
 - .twt-artifacts/pre-design/positioning/validation-report.md
+- .twt-artifacts/pre-design/audience/validation-report.md
 - .twt-artifacts/pre-design/ia/validation-report.md
 - .twt-artifacts/pre-design/curation/validation-report.md
+- .twt-artifacts/pre-design/seo/validation-report.md
 
 **Writes:**
 - .twt-artifacts/pre-design/pre-design-brief.md
@@ -1682,9 +1725,9 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
-- Each requested sub-area runs in order A → (B ∥ S) → D → E → C — Brand and Spec run concurrently (disjoint inputs and outputs); Positioning waits for both
+- Each requested sub-area runs in order A → (B ∥ S) → D → [audience] → E → C → [seo] — Brand and Spec run concurrently (disjoint inputs and outputs); Positioning waits for both; bracketed areas are **optional** (Steps 4b/6b decide whether they run) and skipping them never blocks the phase
 - `--from <area>` resumes from a sub-area; `--only <area>` scopes to one
-- `pre-design-brief.md` summarizes brand, the north-star spec/direction, positioning, IA, and curation with links to every detailed artifact
+- `pre-design-brief.md` summarizes brand, the north-star spec/direction, positioning, IA, and curation — plus audience and SEO when those optional sub-areas ran — with links to every detailed artifact
 
 ---
 
@@ -1979,6 +2022,39 @@ Find every occurrence of a specific string across a website's pages and produce 
 
 ---
 
+## /twt-seo
+
+**Category:** seo
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+One-call SEO workflow: define → validate in one pass (§9 — no iteration loop) — per-page keywords, slugs, meta drafts, schema, and the redesign redirect map.
+
+**Inputs:**
+- Optional; runs define then the single validate pass
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-seo-define, twt-seo-validate
+
+**Reads:**
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/pre-design/seo/validation-report.md
+
+**Writes:**
+- (none)
+
+**Non-goals:**
+- Dispatches sub-skills (rule 5); no inline logic
+- No unbounded loop, no auto-downgrade of severity
+
+**Success criteria:**
+- Produces/refines `seo-map.md` + current `validation-report.md`
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
+- On exit, states whether BLOCKERs remain
+
+---
+
 ## /twt-setup
 
 **Category:** meta
@@ -2015,7 +2091,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.12.8
+**Version:** 1.13.1
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2183,7 +2259,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.3.1
+**Version:** 1.4.1
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.
@@ -2193,11 +2269,12 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 
 **Dependencies:**
 - Hard: none
-- Soft: none
+- Soft: twt-audience-define
 
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
 - .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/audience/personas.md
 
 **Writes:**
 - .twt-artifacts/pre-design/content/text-analysis/<subject-slug>/analysis-report.md

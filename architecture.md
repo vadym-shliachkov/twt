@@ -8,6 +8,9 @@ Auto-generated dependency and artifact map. For editorial workflows, see [WORKFL
 
 ```mermaid
 flowchart TB
+    twt_audience["/twt-audience"]:::skill
+    twt_audience_define["/twt-audience-define"]:::skill
+    twt_audience_validate["/twt-audience-validate"]:::skill
     twt_block_preview["/twt-block-preview"]:::skill
     twt_brand["/twt-brand"]:::skill
     twt_brand_define["/twt-brand-define"]:::skill
@@ -61,6 +64,9 @@ flowchart TB
     twt_qa_elementor["/twt-qa-elementor"]:::skill
     twt_qa_links["/twt-qa-links"]:::skill
     twt_search_site["/twt-search-site"]:::skill
+    twt_seo["/twt-seo"]:::skill
+    twt_seo_define["/twt-seo-define"]:::skill
+    twt_seo_validate["/twt-seo-validate"]:::skill
     twt_setup["/twt-setup"]:::skill
     twt_site["/twt-site"]:::skill
     twt_site_dev["/twt-site-dev"]:::skill
@@ -74,6 +80,12 @@ flowchart TB
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_wiki_query["/twt-wiki-query"]:::skill
     twt_wiki_validate["/twt-wiki-validate"]:::skill
+    twt_audience_define -.-> twt_audience
+    twt_audience_validate -.-> twt_audience
+    twt_positioning_define -.-> twt_audience_define
+    twt_brand_define -.-> twt_audience_define
+    twt_content_fetch -.-> twt_audience_define
+    twt_audience_define --> twt_audience_validate
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -84,6 +96,7 @@ flowchart TB
     twt_design_system_define -.-> twt_content_approval_checklist
     twt_layout_define -.-> twt_content_approval_checklist
     twt_mockup_define -.-> twt_content_approval_checklist
+    twt_seo_define -.-> twt_content_approval_checklist
     twt_content_approval_checklist --> twt_content_approval_implement
     twt_html_block_creator -.-> twt_content_approval_implement
     twt_elementor_block_creator -.-> twt_content_approval_implement
@@ -100,6 +113,7 @@ flowchart TB
     twt_content_fetch -.-> twt_curation_define
     twt_brand_define -.-> twt_curation_define
     twt_ia_define -.-> twt_curation_define
+    twt_audience_define -.-> twt_curation_define
     twt_curation_define --> twt_curation_validate
     twt_content_validate -.-> twt_curation_validate
     twt_design_system_define -.-> twt_design
@@ -137,8 +151,10 @@ flowchart TB
     twt_html_site_creator --> twt_html_block_creator
     twt_design_system_define -.-> twt_html_block_creator
     twt_positioning_define -.-> twt_ia_define
+    twt_audience_define -.-> twt_ia_define
     twt_content_fetch -.-> twt_ia_define
     twt_ia_define --> twt_ia_validate
+    twt_audience_define -.-> twt_layout_define
     twt_positioning_define -.-> twt_positioning
     twt_positioning_validate -.-> twt_positioning
     twt_brand_define -.-> twt_positioning_define
@@ -152,16 +168,27 @@ flowchart TB
     twt_spec_validate -.-> twt_pre_design
     twt_positioning_define -.-> twt_pre_design
     twt_positioning_validate -.-> twt_pre_design
+    twt_audience_define -.-> twt_pre_design
+    twt_audience_validate -.-> twt_pre_design
     twt_ia_define -.-> twt_pre_design
     twt_ia_validate -.-> twt_pre_design
     twt_curation_define -.-> twt_pre_design
     twt_curation_validate -.-> twt_pre_design
+    twt_seo_define -.-> twt_pre_design
+    twt_seo_validate -.-> twt_pre_design
     twt_qa_content -.-> twt_qa
     twt_qa_design -.-> twt_qa
     twt_qa_a11y -.-> twt_qa
     twt_qa_links -.-> twt_qa
     twt_qa_elementor -.-> twt_qa
     twt_content_validate -.-> twt_qa_content
+    twt_seo_define -.-> twt_seo
+    twt_seo_validate -.-> twt_seo
+    twt_ia_define -.-> twt_seo_define
+    twt_positioning_define -.-> twt_seo_define
+    twt_curation_define -.-> twt_seo_define
+    twt_content_fetch -.-> twt_seo_define
+    twt_seo_define --> twt_seo_validate
     twt_pre_design -.-> twt_site
     twt_design -.-> twt_site
     twt_text_analysis -.-> twt_site
@@ -179,6 +206,7 @@ flowchart TB
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
+    twt_audience_define -.-> twt_text_analysis
     twt_wiki_define --> twt_wiki
     twt_wiki_fetch -.-> twt_wiki
     twt_wiki_validate -.-> twt_wiki
@@ -191,6 +219,12 @@ flowchart TB
 ```
 
 ## Skills by category
+
+### audience
+
+- /twt-audience - Orchestrate the audience define/validate skills in a single define→validate pass
+- /twt-audience-define - Build or refine personas.md — personas seeded from positioning segments, with journey stages and conversion actions
+- /twt-audience-validate - Critique personas.md — segment traceability, value-prop linkage, journey actionability; write validation-report.md
 
 ### brand
 
@@ -304,6 +338,12 @@ flowchart TB
 
 - /twt-search-site - Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
 
+### seo
+
+- /twt-seo - Orchestrate the SEO define/validate skills in a single define→validate pass
+- /twt-seo-define - Build or refine seo-map.md — per-page keywords, slugs, meta drafts, schema — plus a redirect map on redesigns
+- /twt-seo-validate - Critique seo-map.md — coverage, slug/keyword integrity, meta limits, redirect completeness; write validation-report.md
+
 ### site
 
 - /twt-site - Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development)
@@ -331,6 +371,87 @@ flowchart TB
 - /twt-wiki-validate - Lint the project wiki's health — structure, links, provenance, freshness — and write a validation-report.md (read-only critic)
 
 ## Per-skill details
+
+### /twt-audience
+
+**Category:** audience
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional; runs define then the single validate pass
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-audience-define, twt-audience-validate
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/pre-design/audience/personas.md
+- .twt-artifacts/pre-design/audience/validation-report.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+
+### /twt-audience-define
+
+**Category:** audience
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional answers; otherwise interactive
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-positioning-define, twt-brand-define, twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: twt-audience-validate
+- Soft consumers: twt-audience, twt-curation-define, twt-ia-define, twt-layout-define, twt-pre-design, twt-text-analysis
+
+**Reads:**
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/content/fetched/
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/audience/personas.md
+- .twt-artifacts/pre-design/audience/validation-report.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/audience/personas.md |  |
+| .twt-artifacts/pre-design/audience/decisions.md |  |
+
+### /twt-audience-validate
+
+**Category:** audience
+**Version:** 1.0.1
+
+**Inputs:**
+- (none — reads personas.md and upstream artifacts)
+
+**Dependencies:**
+- Hard: twt-audience-define
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-audience, twt-pre-design
+
+**Reads:**
+- .twt-artifacts/pre-design/audience/personas.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/audience/validation-report.md |  |
 
 ### /twt-block-preview
 
@@ -401,7 +522,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-brand-validate
-- Soft consumers: twt-brand, twt-curation-define, twt-export-template-create, twt-positioning-define, twt-pre-design
+- Soft consumers: twt-audience-define, twt-brand, twt-curation-define, twt-export-template-create, twt-positioning-define, twt-pre-design
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
@@ -538,14 +659,14 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.3.3
+**Version:** 1.4.1
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define
+- Soft: twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define, twt-seo-define
 
 **Feeds into:**
 - Hard consumers: twt-content-approval-implement
@@ -564,6 +685,7 @@ flowchart TB
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/curation/
+- .twt-artifacts/pre-design/seo/seo-map.md
 
 **Writes:**
 | Path | Notes |
@@ -615,7 +737,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-wiki-fetch
+- Soft consumers: twt-audience-define, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-seo-define, twt-wiki-fetch
 
 **Reads:**
 - <provided sources>
@@ -787,24 +909,25 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.1.7
+**Version:** 1.2.1
 
 **Inputs:**
 - Optional answers; otherwise interactive
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand-define, twt-ia-define
+- Soft: twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define
 
 **Feeds into:**
 - Hard consumers: twt-curation-validate
-- Soft consumers: twt-eval-smoke, twt-pre-design
+- Soft consumers: twt-eval-smoke, twt-pre-design, twt-seo-define
 
 **Reads:**
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/facts.md
 - .twt-artifacts/pre-design/curation/validation-report.md
@@ -1393,21 +1516,22 @@ flowchart TB
 ### /twt-ia-define
 
 **Category:** ia
-**Version:** 1.0.3
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional answers; otherwise interactive
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-positioning-define, twt-content-fetch
+- Soft: twt-positioning-define, twt-audience-define, twt-content-fetch
 
 **Feeds into:**
 - Hard consumers: twt-ia-validate
-- Soft consumers: twt-curation-define, twt-eval-smoke, twt-pre-design
+- Soft consumers: twt-curation-define, twt-eval-smoke, twt-pre-design, twt-seo-define
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/content/fetched/
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
@@ -1450,14 +1574,14 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.2.5
+**Version:** 1.3.1
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
 
 **Dependencies:**
 - Hard: none
-- Soft: none
+- Soft: twt-audience-define
 
 **Feeds into:**
 - Hard consumers: none
@@ -1465,6 +1589,7 @@ flowchart TB
 
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/curation/outlines/
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/design-read.md
@@ -1639,7 +1764,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-positioning-validate
-- Soft consumers: twt-ia-define, twt-positioning, twt-pre-design
+- Soft consumers: twt-audience-define, twt-ia-define, twt-positioning, twt-pre-design, twt-seo-define
 
 **Reads:**
 - .twt-artifacts/pre-design/brand/brand-brief.md
@@ -1682,14 +1807,14 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.2.6
+**Version:** 1.3.1
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate
+- Soft: twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-audience-define, twt-audience-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate, twt-seo-define, twt-seo-validate
 
 **Feeds into:**
 - Hard consumers: none
@@ -1699,15 +1824,19 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/spec/specification.md
 - .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/audience/personas.md
 - .twt-artifacts/pre-design/ia/sitemap.md
 - .twt-artifacts/pre-design/ia/functional-scope.md
 - .twt-artifacts/pre-design/curation/inventory.md
 - .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/seo/seo-map.md
 - .twt-artifacts/pre-design/brand/validation-report.md
 - .twt-artifacts/pre-design/spec/validation-report.md
 - .twt-artifacts/pre-design/positioning/validation-report.md
+- .twt-artifacts/pre-design/audience/validation-report.md
 - .twt-artifacts/pre-design/ia/validation-report.md
 - .twt-artifacts/pre-design/curation/validation-report.md
+- .twt-artifacts/pre-design/seo/validation-report.md
 
 **Writes:**
 | Path | Notes |
@@ -1936,6 +2065,88 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/search/<domain>/search-report-<query-slug>.md |  |
 
+### /twt-seo
+
+**Category:** seo
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional; runs define then the single validate pass
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-seo-define, twt-seo-validate
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/pre-design/seo/validation-report.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+
+### /twt-seo-define
+
+**Category:** seo
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional answers; otherwise interactive
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-ia-define, twt-positioning-define, twt-curation-define, twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: twt-seo-validate
+- Soft consumers: twt-content-approval-checklist, twt-pre-design, twt-seo
+
+**Reads:**
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/curation/facts.md
+- .twt-artifacts/pre-design/curation/outlines/
+- .twt-artifacts/pre-design/content/fetched/site/
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/pre-design/seo/validation-report.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/seo/seo-map.md |  |
+| .twt-artifacts/pre-design/seo/decisions.md |  |
+
+### /twt-seo-validate
+
+**Category:** seo
+**Version:** 1.0.1
+
+**Inputs:**
+- (none — reads seo-map.md and upstream artifacts)
+
+**Dependencies:**
+- Hard: twt-seo-define
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-pre-design, twt-seo
+
+**Reads:**
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/pre-design/ia/sitemap.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/content/fetched/site/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/seo/validation-report.md |  |
+
 ### /twt-setup
 
 **Category:** meta
@@ -1963,7 +2174,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.12.8
+**Version:** 1.13.1
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2135,14 +2346,14 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.3.1
+**Version:** 1.4.1
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
 
 **Dependencies:**
 - Hard: none
-- Soft: none
+- Soft: twt-audience-define
 
 **Feeds into:**
 - Hard consumers: none
@@ -2151,6 +2362,7 @@ flowchart TB
 **Reads:**
 - the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
 - .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/audience/personas.md
 
 **Writes:**
 | Path | Notes |
@@ -2317,6 +2529,9 @@ flowchart TB
 
 | Skill | Hard deps | Soft deps |
 |-------|-----------|-----------|
+| /twt-audience | none | twt-audience-define, twt-audience-validate |
+| /twt-audience-define | none | twt-positioning-define, twt-brand-define, twt-content-fetch |
+| /twt-audience-validate | twt-audience-define | none |
 | /twt-block-preview | none | none |
 | /twt-brand | none | twt-brand-fetch, twt-brand-define, twt-brand-validate |
 | /twt-brand-define | none | twt-brand-fetch |
@@ -2324,7 +2539,7 @@ flowchart TB
 | /twt-brand-validate | twt-brand-define | none |
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
-| /twt-content-approval-checklist | none | twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define |
+| /twt-content-approval-checklist | none | twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define, twt-seo-define |
 | /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator |
 | /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma |
 | /twt-content-fetch-doc | none | twt-content-fetch |
@@ -2333,7 +2548,7 @@ flowchart TB
 | /twt-content-fetch-site | none | WebFetch, twt-content-fetch |
 | /twt-content-optimize | twt-content-validate | none |
 | /twt-content-validate | none | twt-content-fetch-site |
-| /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define |
+| /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
 | /twt-design | none | twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define, twt-component-validate |
@@ -2351,9 +2566,9 @@ flowchart TB
 | /twt-export-template-create | none | twt-brand-define |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
 | /twt-html-site-creator | none | none |
-| /twt-ia-define | none | twt-positioning-define, twt-content-fetch |
+| /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |
 | /twt-ia-validate | twt-ia-define | none |
-| /twt-layout-define | none | none |
+| /twt-layout-define | none | twt-audience-define |
 | /twt-layout-validate | none | none |
 | /twt-marketplace-docs | none | none |
 | /twt-mockup-define | none | none |
@@ -2361,7 +2576,7 @@ flowchart TB
 | /twt-positioning | none | twt-positioning-define, twt-positioning-validate |
 | /twt-positioning-define | none | twt-brand-define, twt-content-fetch |
 | /twt-positioning-validate | twt-positioning-define | none |
-| /twt-pre-design | none | twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate |
+| /twt-pre-design | none | twt-content-fetch, twt-brand-fetch, twt-brand-define, twt-brand-validate, twt-spec-define, twt-spec-validate, twt-positioning-define, twt-positioning-validate, twt-audience-define, twt-audience-validate, twt-ia-define, twt-ia-validate, twt-curation-define, twt-curation-validate, twt-seo-define, twt-seo-validate |
 | /twt-project-intake | none | none |
 | /twt-qa | none | twt-qa-content, twt-qa-design, twt-qa-a11y, twt-qa-links, twt-qa-elementor |
 | /twt-qa-a11y | none | none |
@@ -2370,6 +2585,9 @@ flowchart TB
 | /twt-qa-elementor | none | none |
 | /twt-qa-links | none | none |
 | /twt-search-site | none | WebFetch |
+| /twt-seo | none | twt-seo-define, twt-seo-validate |
+| /twt-seo-define | none | twt-ia-define, twt-positioning-define, twt-curation-define, twt-content-fetch |
+| /twt-seo-validate | twt-seo-define | none |
 | /twt-setup | none | none |
 | /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
 | /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
@@ -2377,7 +2595,7 @@ flowchart TB
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
 | /twt-status | none | none |
-| /twt-text-analysis | none | none |
+| /twt-text-analysis | none | twt-audience-define |
 | /twt-wiki | twt-wiki-define | twt-wiki-fetch, twt-wiki-validate |
 | /twt-wiki-define | none | twt-wiki-fetch |
 | /twt-wiki-fetch | none | twt-content-fetch |

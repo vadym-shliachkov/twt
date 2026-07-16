@@ -42,6 +42,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 <!-- TWT_SKILLS_TABLE_START -->
 | command | category | description |
 |---------|----------|-------------|
+| /twt-audience | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
 | /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
@@ -89,6 +90,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-qa-elementor | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
 | /twt-qa-links | qa | Audit built or served pages for link integrity and declared responsive tiers |
 | /twt-search-site | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
+| /twt-seo | seo | Orchestrate the SEO define/validate skills in a single define→validate pass |
 | /twt-setup | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
 | /twt-site | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | /twt-site-dev | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |

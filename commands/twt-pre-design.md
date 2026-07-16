@@ -1,8 +1,8 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: (v1.2.6) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.2.6
+description: (v1.3.1) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+version: 1.3.1
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -17,23 +17,31 @@ dependencies:
     - twt-spec-validate
     - twt-positioning-define
     - twt-positioning-validate
+    - twt-audience-define
+    - twt-audience-validate
     - twt-ia-define
     - twt-ia-validate
     - twt-curation-define
     - twt-curation-validate
+    - twt-seo-define
+    - twt-seo-validate
 reads:
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/spec/specification.md
   - .twt-artifacts/pre-design/positioning/positioning.md
+  - .twt-artifacts/pre-design/audience/personas.md
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/ia/functional-scope.md
   - .twt-artifacts/pre-design/curation/inventory.md
   - .twt-artifacts/pre-design/curation/outlines/
+  - .twt-artifacts/pre-design/seo/seo-map.md
   - .twt-artifacts/pre-design/brand/validation-report.md
   - .twt-artifacts/pre-design/spec/validation-report.md
   - .twt-artifacts/pre-design/positioning/validation-report.md
+  - .twt-artifacts/pre-design/audience/validation-report.md
   - .twt-artifacts/pre-design/ia/validation-report.md
   - .twt-artifacts/pre-design/curation/validation-report.md
+  - .twt-artifacts/pre-design/seo/validation-report.md
 writes:
   - .twt-artifacts/pre-design/pre-design-brief.md
 ---
@@ -46,7 +54,7 @@ writes:
 
 ## Intent
 
-**Purpose:** Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
+**Purpose:** Drive the whole pre-design phase end to end — content ingest → brand → positioning → IA → curation, plus the optional audience-personas and SEO-map sub-areas — then synthesize everything into a single `pre-design-brief.md` that hands off to Phase 2 (Design).
 
 **Non-goals:**
 - Doesn't do design, development, or QA (later phases)
@@ -54,9 +62,9 @@ writes:
 - The brief is a static synthesis, not a live transition skill
 
 **Success criteria:**
-- Each requested sub-area runs in order A → (B ∥ S) → D → E → C — Brand and Spec run concurrently (disjoint inputs and outputs); Positioning waits for both
+- Each requested sub-area runs in order A → (B ∥ S) → D → [audience] → E → C → [seo] — Brand and Spec run concurrently (disjoint inputs and outputs); Positioning waits for both; bracketed areas are **optional** (Steps 4b/6b decide whether they run) and skipping them never blocks the phase
 - `--from <area>` resumes from a sub-area; `--only <area>` scopes to one
-- `pre-design-brief.md` summarizes brand, the north-star spec/direction, positioning, IA, and curation with links to every detailed artifact
+- `pre-design-brief.md` summarizes brand, the north-star spec/direction, positioning, IA, and curation — plus audience and SEO when those optional sub-areas ran — with links to every detailed artifact
 
 ---
 
@@ -68,7 +76,7 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 - Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
 
 ## Step 1 — Discovery
-Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/brand/spec/positioning/ia/curation).
+Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ content/brand/spec/positioning/audience/ia/curation/seo). Naming `audience` or `seo` in a flag counts as opting in — the Step 4b/6b opt-in questions are then skipped.
 
 **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** ask anything — the orchestrator already ran the intake interview and forwarded the project brief in `$ARGUMENTS`. Read it: what the site is for / the audience / the goal, content sources, brand-or-design source, and stage. Use those as the discovery answers and continue.
 
@@ -107,6 +115,17 @@ Run positioning's single define→validate pass inline (same pattern; `/twt-posi
 2. Dispatch `/twt-positioning-validate` (Agent tool) → `.twt-artifacts/pre-design/positioning/validation-report.md`.
 Surface open positioning decisions per the rule-13 protocol above (ask here, or bubble upward when this command itself runs in collect mode); at most one BLOCKER-driven re-run.
 
+## Step 4b — Audience personas (optional)
+Runs after Positioning (personas are seeded from its segments) and before IA (journeys inform page priorities). Decide whether it runs:
+- **Standalone:** ask via the **AskUserQuestion** tool (single-select, header "Personas"): **Yes — deepen audience** (build 2–4 personas + journeys from the positioning segments) · **Skip** (positioning's audience section is enough) · **You decide** (I run it when the site has multiple distinct audiences or conversion paths; skip for a single-audience brochure site).
+- **Collect mode:** run only when the forwarded project brief asks for personas / audience depth (e.g. the intake extras named "Audience personas"); otherwise skip silently and note the skip.
+- A `--from audience` / `--only audience` flag always runs it (Step 1).
+
+When it runs, use the same inline single define→validate pass as Step 5:
+1. Dispatch `/twt-audience-define` (Agent tool) with `subagent-collect`, forwarding the project brief → `personas.md` + `decisions.md`.
+2. Dispatch `/twt-audience-validate` (Agent tool) → `.twt-artifacts/pre-design/audience/validation-report.md`.
+3. **Surface / bubble** exactly as Step 5 sub-step 3 (rule 13); at most one BLOCKER-driven re-run.
+
 ## Step 5 — IA (E)
 IA and curation have **no standalone command** — run their single define→validate pass inline here (the same one-pass policy the former `twt-ia` / `twt-curation` wrappers applied, CONVENTIONS §9):
 1. Dispatch `/twt-ia-define` (Agent tool) with `subagent-collect`, forwarding the project brief. It writes `sitemap.md` + `functional-scope.md`, plus a `decisions.md` (`status: open`) for any choice it had to make.
@@ -119,7 +138,20 @@ Curation depends on IA's `sitemap.md`, so it runs after Step 5. Same inline sing
 2. Dispatch `/twt-curation-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/pre-design/curation/validation-report.md`.
 3. **Surface / bubble** exactly as Step 5 sub-step 3 (rule 13); at most one BLOCKER-driven re-run.
 
-(Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`. `--only ia` / `--only curation` runs just that inline pass.)
+(Respect `--from`/`--only`: skip sub-areas before `--from`; run exactly one for `--only`. `--only audience` / `--only ia` / `--only curation` / `--only seo` runs just that inline pass.)
+
+## Step 6b — SEO map (optional)
+Runs after Curation — it needs the final `sitemap.md` plus the outlines/facts for keyword grounding. Decide whether it runs:
+- **Standalone:** ask via the **AskUserQuestion** tool (single-select, header "SEO"): **Yes — build the SEO map** (per-page keywords, slugs, meta drafts, schema; + redirect map on redesigns) · **Skip** · **You decide** (I run it when an old-site sitemap was fetched — a redesign needs its redirect map — or the brief mentions search/SEO goals; skip otherwise).
+- **Collect mode:** run when the forwarded project brief asks for SEO **or** a fetched old-site sitemap exists (`content/fetched/site/<domain>/_sitemap.md` — the redesign signal); otherwise skip silently and note the skip.
+- A `--from seo` / `--only seo` flag always runs it (Step 1).
+
+When it runs, use the same inline single define→validate pass:
+1. Dispatch `/twt-seo-define` (Agent tool) with `subagent-collect`, forwarding the project brief → `seo-map.md` + `decisions.md`.
+2. Dispatch `/twt-seo-validate` (Agent tool) → `.twt-artifacts/pre-design/seo/validation-report.md`.
+3. **Surface / bubble** exactly as Step 5 sub-step 3 (rule 13); at most one BLOCKER-driven re-run.
+
+The map feeds `/twt-content-approval-checklist`, which seeds its `seo:*` rows from it — SEO recommendations get human-approved in the workbook like all other content.
 
 ## Step 7 — Synthesize the brief (thin pointer-index)
 The brief is an **index, not a copy**. Read **only** each sub-area's `validation-report.md` (for its Band + outstanding BLOCKERs) — do **not** re-summarize the artifacts. **Use the file tools, never a shell command:** Glob `.twt-artifacts/pre-design/*/validation-report.md` to list the reports, then Read each (or Grep across them for verdict/BLOCKER lines) — do **not** `cd` into the folder or run a `cat`/`grep`/`for` loop, which forces a permission prompt on every run. The same applies wherever you gather a set of sibling `decisions.md` files. Downstream skills read the canonical files directly, so a prose re-summary just burns tokens and drifts from source. Write `.twt-artifacts/pre-design/pre-design-brief.md`:
@@ -142,8 +174,10 @@ Thin index — canonical detail lives in the linked artifacts; this file is link
 | Brand | [brand-brief](brand/brand-brief.md) | <Band, or — if no report> |
 | Direction (spec) | [specification](spec/specification.md) | <Band> |
 | Positioning | [positioning](positioning/positioning.md) | <Band> |
+| Audience | [personas](audience/personas.md) | <Band, or — if skipped> |
 | IA | [sitemap](ia/sitemap.md) · [functional-scope](ia/functional-scope.md) | <Band> |
 | Curation | [inventory](curation/inventory.md) · outlines/ | <Band> |
+| SEO | [seo-map](seo/seo-map.md) | <Band, or — if skipped> |
 
 ## Outstanding BLOCKERs
 <aggregate unresolved BLOCKERs from each sub-area's validation-report.md, each linked to its source file — or "none">

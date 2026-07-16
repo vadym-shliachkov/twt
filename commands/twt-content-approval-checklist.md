@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-checklist
 category: content
-description: (v1.3.3) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
-version: 1.3.3
+description: (v1.4.1) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+version: 1.4.1
 accepts_arguments: true
 inputs:
   - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -13,6 +13,7 @@ dependencies:
     - twt-design-system-define
     - twt-layout-define
     - twt-mockup-define
+    - twt-seo-define
 reads:
   - Figma URL or Figma design context supplied via $ARGUMENTS
   - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
@@ -26,6 +27,7 @@ reads:
   - .twt-artifacts/design/assets/manifest.md
   - .twt-artifacts/pre-design/ia/sitemap.md
   - .twt-artifacts/pre-design/curation/
+  - .twt-artifacts/pre-design/seo/seo-map.md
 writes:
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/content-approval/content-approval-checklist-report.md
@@ -151,7 +153,7 @@ For media rows, use links or paths in `approved content`:
 Header and footer are global, so they get their **own** worksheets and must **not** be repeated on any page worksheet.
 
 **Page worksheets** — for each discovered page (including the detail/category pages synthesised in Step 2a), include these row groups in a readable order, and include **no** header or footer rows:
-1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed (these are per-page, so they stay on the page sheet).
+1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed (these are per-page, so they stay on the page sheet). **When `.twt-artifacts/pre-design/seo/seo-map.md` has an entry for the page**, seed each row's `recommended content` from the map — slug, primary+secondary keywords, meta title draft, meta description draft, schema type — suffixing the value with `(from seo-map)` so the reviewer knows its provenance; the value still lands in `recommended content` only (never `approved content` — SEO recommendations are approved in this workbook like all other content). Pages missing from the map, or when the map is absent, fall back to the standard notes (`Needs approved final copy`, etc.).
 2. Page-specific blocks from the design/layout, each with all dynamic text, links, image/video/file assets, form labels, placeholders, validation messages, and microcopy.
 3. For a **collection/listing page** (per Step 2a): a `Taxonomy` block whose rows are the category/filter terms (`taxonomy:term`), so the approved category set is explicit — not buried in a filter-chip text field. For an **item-detail / category-archive page**: the full template field set (title, role/meta, hero/media, body sections, gallery, links, prev/next) so the per-item content is approvable like any other page.
 
@@ -195,6 +197,7 @@ Write `.twt-artifacts/content-approval/content-approval-checklist-report.md` wit
 - Block-section count per worksheet, plus total row count and rows by field family: text, link, image, video, file, form, SEO.
 - Source artifacts used and missing source artifacts.
 - **Text-analysis pass:** how many pages were analyzed and how many `recommended content` cells were filled with a text-analysis suggested version (and any pages skipped because the analysis was unavailable/empty).
+- **SEO-map pass:** whether `pre-design/seo/seo-map.md` was found, and how many `seo:*` `recommended content` cells were seeded from it (plus pages the map didn't cover).
 - **Collections/taxonomies expanded:** each collection block detected, the taxonomy terms promoted, and the detail/category worksheets synthesised from it (with how many real item pages a `(template)` worksheet represents).
 - Any assumptions or inferred blocks that need human review.
 - Next step: fill `approved content`, set ready cells to `true`, then run `/twt-content-approval-implement`.

@@ -1,8 +1,8 @@
 ---
 name: twt-curation-define
 category: curation
-description: (v1.1.7) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
-version: 1.1.7
+description: (v1.2.1) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
+version: 1.2.1
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive
@@ -12,11 +12,13 @@ dependencies:
     - twt-content-fetch
     - twt-brand-define
     - twt-ia-define
+    - twt-audience-define
 reads:
   - .twt-artifacts/pre-design/content/fetched/
   - .twt-artifacts/pre-design/brand/brand-brief.md
   - .twt-artifacts/pre-design/brand/_fetched-brand.md
   - .twt-artifacts/pre-design/ia/sitemap.md
+  - .twt-artifacts/pre-design/audience/personas.md
   - .twt-artifacts/pre-design/curation/inventory.md
   - .twt-artifacts/pre-design/curation/facts.md
   - .twt-artifacts/pre-design/curation/validation-report.md
@@ -60,7 +62,7 @@ If `$ARGUMENTS` contains the token `subagent-collect`, run in **collect mode**: 
 If `$ARGUMENTS` additionally contains resolved answers (re-dispatch in refinement mode), apply them, set `decisions.md` `status: resolved`, and finalize.
 
 ## Step 2 — Gather context
-Read content-fetch outputs (the items to curate), `sitemap.md` (the target pages — REQUIRED for outline generation; if absent, warn and produce inventory only), and `brand-brief.md` (voice, to judge ELEVATE/SKIP). Degrade gracefully when soft deps are missing.
+Read content-fetch outputs (the items to curate), `sitemap.md` (the target pages — REQUIRED for outline generation; if absent, warn and produce inventory only), `brand-brief.md` (voice, to judge ELEVATE/SKIP), and `audience/personas.md` if present (persona information needs weigh keep/skip/elevate: ELEVATE content a persona's journey stage requires — proof for the objection-heavy persona, specifics for the researcher — and SKIP content no persona needs; cite the persona in the rationale). Degrade gracefully when soft deps are missing.
 
 ## Step 3 — Build the inventory
 **(Skipped in collect mode — see Step 1b.)** Enumerate every fetched content item. For each, decide KEEP / SKIP / ELEVATE with the user and assign a target page slug from the sitemap (or none). Write `inventory.md` as the flat decision table with rationale.

@@ -1,16 +1,18 @@
 ---
 name: twt-layout-define
 category: layout
-description: (v1.2.5) Define per-page layout specs (section order, component slots, content map, breakpoints)
-version: 1.2.5
+description: (v1.3.1) Define per-page layout specs (section order, component slots, content map, breakpoints)
+version: 1.3.1
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to (re)define; otherwise all sitemap pages
 dependencies:
   hard: []
-  soft: []
+  soft:
+    - twt-audience-define
 reads:
   - .twt-artifacts/pre-design/ia/sitemap.md
+  - .twt-artifacts/pre-design/audience/personas.md
   - .twt-artifacts/pre-design/curation/outlines/
   - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/design-read.md
@@ -69,7 +71,7 @@ If `.twt-artifacts/design/design-read.md` exists, read it and pass its dials (es
 
 ## Step 4 — Specify each page layout (in parallel)
 Each page writes its own `layouts/<page-slug>.md` and reads only shared, read-only inputs, so the pages are independent — **dispatch one Agent per page in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Give each agent a self-contained prompt instructing it to:
-- Read `sitemap.md` (its page's entry), `outlines/<page-slug>.md`, and `components.md`.
+- Read `sitemap.md` (its page's entry), `outlines/<page-slug>.md`, and `components.md`. When `.twt-artifacts/pre-design/audience/personas.md` exists, also read it plus the sitemap's `serves:` notes for this page: order sections so the page's primary persona meets its journey-stage information needs first (proof high for an objection-heavy persona, the conversion CTA where the journey converts) — this shapes section *order*, never invents content the outline lacks.
 - Write `layouts/<page-slug>.md` with:
   - **Section order** — top → bottom
   - **Component slots** — each section names component(s) that MUST exist in `components.md`
