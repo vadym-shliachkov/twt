@@ -55,6 +55,6 @@ or
 
 Tell the user:
 - How many entries were added (or that they were already present)
-- That the allowlist covers routine Bash utilities, WebFetch, the Figma read MCP tools, and read/write access to the two locations outside the project the pipeline legitimately touches: the installed **plugin cache** (`~/.claude/plugins`, read-only — where the plugin's own bundled scripts live) and the session **scratchpad** (`<os-temp>/claude`, read+write — where transient files go so they never land in the project)
+- That the allowlist covers routine Bash utilities, WebFetch, the Figma read MCP tools, the Playwright browser MCP tools (the navigate/screenshot/evaluate/inspect set — never `run_code_unsafe`, form-fill, or file-upload, which still prompt), and read/write access to the two locations outside the project the pipeline legitimately touches: the installed **plugin cache** (`~/.claude/plugins`, read-only — where the plugin's own bundled scripts live) and the session **scratchpad** (`<os-temp>/claude`, read+write — where transient files go so they never land in the project)
 - That to undo this at any time, run the same command with `--remove` appended:
   `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude" --remove`

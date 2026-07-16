@@ -50,6 +50,7 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 - **Missing, unattended** (auto mode, or dispatched as a subagent): seed silently — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, continue.
 - **Present:** continue without asking (the seeder is idempotent).
 - Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
+- **Keep every Bash call allowlist-matchable (applies to the whole run):** the seeded rules match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`). Never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed, so they force a manual prompt even when the binary is allowlisted. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
 ## Step 1 — Gather sources
 Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — site URLs, PDF paths, document paths/URLs, and/or Figma links (one per line):". Wait.

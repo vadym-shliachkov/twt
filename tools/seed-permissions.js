@@ -42,8 +42,24 @@ const os = require('os');
 const BASH_UTILS = [
   'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
   'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext', 'pandoc',
-  'cd', 'sed', 'sort', 'uniq', 'bc',
+  'cd', 'sed', 'sort', 'uniq', 'bc', 'curl',
 ];
+
+// Playwright browser MCP tools (portable — plain tool names, never a path).
+// Live QA, /twt-block-preview, and the DS audit drive a browser to inspect,
+// screenshot, and read computed styles from pages; these navigate/read/inspect
+// calls (plus the light interactions QA needs — click, hover, keys, selects)
+// are routine and no riskier than the already-allowed WebFetch(domain:*).
+// Deliberately NOT allowed (still prompt): browser_run_code_unsafe,
+// browser_type, browser_fill_form, browser_file_upload, browser_handle_dialog —
+// the shapes that submit data into live sites or run code outside the page.
+const PLAYWRIGHT_MCP = [
+  'browser_navigate', 'browser_navigate_back', 'browser_snapshot',
+  'browser_take_screenshot', 'browser_evaluate', 'browser_close',
+  'browser_resize', 'browser_console_messages', 'browser_network_requests',
+  'browser_wait_for', 'browser_click', 'browser_hover', 'browser_press_key',
+  'browser_select_option', 'browser_find', 'browser_tabs',
+].map((t) => `mcp__plugin_playwright_playwright__${t}`);
 
 // Playwright browser cache (read-only). The export skills render PDF / PDF-slides
 // via Chromium through the optional `playwright` package; those reads happen
@@ -87,6 +103,7 @@ const ALLOW = [
   ...PLAYWRIGHT_READS,
   ...PLUGIN_READS,
   ...SCRATCH_ACCESS,
+  ...PLAYWRIGHT_MCP,
   'WebFetch(domain:*)',
   'mcp__plugin_figma_figma__get_design_context',
   'mcp__plugin_figma_figma__get_screenshot',
