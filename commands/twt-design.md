@@ -1,14 +1,15 @@
 ---
 name: twt-design
 category: design
-description: (v1.3.5) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.3.5
+description: (v1.3.6) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+version: 1.3.6
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
 dependencies:
   hard: []
   soft:
+    - twt-direction-define
     - twt-design-system-define
     - twt-component-define
     - twt-component-validate
@@ -17,6 +18,7 @@ dependencies:
     - twt-mockup-define
     - twt-mockup-validate
 reads:
+  - .twt-artifacts/design/direction/decisions.md
   - .twt-artifacts/design/design-system/tokens.md
   - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/layout/layouts/
@@ -76,15 +78,15 @@ Ask what's provided (brand-brief already exists from Phase 1; optional Figma/scr
 ## Step 1b — Visual-direction gate (user sets the requirements)
 The brand-brief fixes *brand* facts (logo, core palette, voice). It does **not** decide the **site's visual design** — aesthetic family, layout paradigm, type pairing, accent usage, density, motion. When no Figma is provided, that direction must be **set with the user**, not silently inferred.
 
-- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** ask. Leave `design-read.md` at `status: proposed` and record the visual direction as an **open decision** in `.twt-artifacts/design/decisions.md` (`## Open questions` → "Confirm site visual direction", with the proposed Design Read + dials as the leaning, and the four resolution options below). The orchestrator surfaces it (rule 13).
+- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** ask. Leave `design-read.md` at `status: proposed` and record the visual direction as an **open decision** in `.twt-artifacts/design/decisions.md` (`## Open questions` → "Confirm site visual direction", with the proposed Design Read + dials as the leaning, and the resolution options below — including comparing style tiles via `/twt-direction-define`). The orchestrator surfaces it (rule 13).
 - **Auto / unattended** (the run was started in a fully-unattended mode, e.g. site `auto`): do not ask — accept the proposed read, set `status: model-decided`, and log it for the final summary.
 - **Interactive** (user-invoked, not collect): present the proposed Design Read (one-line read + the three dials + the type/color/layout/motion direction notes) and ask via the **AskUserQuestion** tool (single-select, header "Visual direction"):
+  - **Compare style tiles** (recommended) — choose by looking, not by dial numbers: dispatch `/twt-direction-define` (Agent tool) with `subagent-collect`. It renders 2–3 genuinely distinct directions as self-contained HTML tiles (`direction/tiles/*.html` + a side-by-side `direction/index.html`), writes `direction/directions.md`, and records the pick as an open decision in `direction/decisions.md`. Surface it here (rule 13): report the `index.html` path so the user can open it, ask which direction via **AskUserQuestion** (one option per tile + **You decide**, free-type = revision request), then re-dispatch `/twt-direction-define` in refinement mode with the answer — it finalizes `directions.md` and writes `design-read.md` with `status: confirmed` itself (skip the write below).
   - **Approve** — accept the proposed direction as-is
-  - **Adjust dials** — open follow-up questions for DESIGN_VARIANCE / MOTION_INTENSITY / VISUAL_DENSITY (and, if the user wants, type feel / color approach), then re-render the read
-  - **Override** — run the full requirements interview: aesthetic direction (e.g. editorial / minimal-Linear / bold-brand / premium), reference sites to **emulate** and to **avoid** (free-text URLs), density, motion intensity, type feel, color/accent approach — then rebuild the read from the answers
+  - **Adjust or override** — follow-up **AskUserQuestion** (single-select, header "How"): **Adjust dials** — open follow-up questions for DESIGN_VARIANCE / MOTION_INTENSITY / VISUAL_DENSITY (and, if the user wants, type feel / color approach), then re-render the read · **Override** — run the full requirements interview: aesthetic direction (e.g. editorial / minimal-Linear / bold-brand / premium), reference sites to **emulate** and to **avoid** (free-text URLs), density, motion intensity, type feel, color/accent approach — then rebuild the read from the answers
   - **You decide** — accept the proposed direction; the model owns this choice. (Per CONVENTIONS §4 this resolves *only* the visual-direction question — it does not auto-decide later questions.)
 
-  Apply the answer, then **write `design-read.md` with `status: confirmed`** (record the chosen option and any interview answers under "Constraints carried from Phase 1" / a new "User decisions" note). Every design sub-area below inherits the confirmed file.
+  Apply the answer, then **write `design-read.md` with `status: confirmed`** (record the chosen option and any interview answers under "Constraints carried from Phase 1" / a new "User decisions" note) — unless **Compare style tiles** ran, in which case `/twt-direction-define` already wrote it. Every design sub-area below inherits the confirmed file.
 
 A real brand-brief/spec decision still wins over taste defaults — the gate is about the **site design** choices the brief leaves open, never about overriding a provided brand fact.
 

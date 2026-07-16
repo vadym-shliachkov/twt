@@ -35,6 +35,7 @@ flowchart TB
     twt_design_system_define["/twt-design-system-define"]:::skill
     twt_design_system_validate["/twt-design-system-validate"]:::skill
     twt_develop["/twt-develop"]:::skill
+    twt_direction_define["/twt-direction-define"]:::skill
     twt_elementor_block_creator["/twt-elementor-block-creator"]:::skill
     twt_elementor_theme_creator["/twt-elementor-theme-creator"]:::skill
     twt_eval_smoke["/twt-eval-smoke"]:::skill
@@ -116,6 +117,7 @@ flowchart TB
     twt_audience_define -.-> twt_curation_define
     twt_curation_define --> twt_curation_validate
     twt_content_validate -.-> twt_curation_validate
+    twt_direction_define -.-> twt_design
     twt_design_system_define -.-> twt_design
     twt_component_define -.-> twt_design
     twt_component_validate -.-> twt_design
@@ -271,6 +273,10 @@ flowchart TB
 ### develop
 
 - /twt-develop - Phase 3 full path — promote the Phase-2 design into the chosen build target
+
+### direction
+
+- /twt-direction-define - Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md
 
 ### elementor
 
@@ -972,20 +978,21 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.5
+**Version:** 1.3.6
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
+- Soft: twt-direction-define, twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Feeds into:**
 - Hard consumers: none
 - Soft consumers: twt-site
 
 **Reads:**
+- .twt-artifacts/design/direction/decisions.md
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
@@ -1178,6 +1185,39 @@ flowchart TB
 | site/assets/css/general.css             # html target — merged deltas |  |
 | <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas |  |
 | <THEME>/assets/css/design-system.css    # elementor target — merged token deltas |  |
+
+### /twt-direction-define
+
+**Category:** direction
+**Version:** 1.0.1
+
+**Inputs:**
+- "Optional: number of directions (2 or 3, default 3); or a chosen direction slug / resolved answers (finalize mode)"
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-design
+
+**Reads:**
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/spec/specification.md
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
+- .twt-artifacts/design/direction/directions.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/design/direction/directions.md |  |
+| .twt-artifacts/design/direction/tiles/ |  |
+| .twt-artifacts/design/direction/index.html |  |
+| .twt-artifacts/design/direction/decisions.md |  |
+| .twt-artifacts/design/design-read.md |  |
 
 ### /twt-elementor-block-creator
 
@@ -2550,12 +2590,13 @@ flowchart TB
 | /twt-content-validate | none | twt-content-fetch-site |
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define |
 | /twt-curation-validate | twt-curation-define | twt-content-validate |
-| /twt-design | none | twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
+| /twt-design | none | twt-direction-define, twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate |
 | /twt-design-system | none | twt-design-system-define, twt-design-system-validate, twt-component-define, twt-component-validate |
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
 | /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
+| /twt-direction-define | none | none |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
 | /twt-eval-smoke | none | twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define |

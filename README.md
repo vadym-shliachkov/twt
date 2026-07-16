@@ -63,6 +63,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
+| /twt-direction-define | direction | Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
 | /twt-eval-smoke | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |

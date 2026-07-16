@@ -29,6 +29,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
+| [/twt-direction-define](#twt-direction-define) | direction | Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
 | [/twt-eval-smoke](#twt-eval-smoke) | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
@@ -724,7 +725,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.3.5
+**Version:** 1.3.6
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -734,9 +735,10 @@ Drive the whole design phase end to end — design-system → component → layo
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
+- Soft: twt-direction-define, twt-design-system-define, twt-component-define, twt-component-validate, twt-layout-define, twt-layout-validate, twt-mockup-define, twt-mockup-validate
 
 **Reads:**
+- .twt-artifacts/design/direction/decisions.md
 - .twt-artifacts/design/design-system/tokens.md
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
@@ -907,6 +909,51 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - After the pilot is approved, the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially
 - Approved workbook rows are **not** applied by this skill; after stakeholder confirmation, the user explicitly runs `/twt-content-approval-implement` to update the corresponding blocks/pages
 - Reports what was built per page and anything to follow up before Phase 4
+
+---
+
+## /twt-direction-define
+
+**Category:** direction
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Before any tokens are committed, render the brand as **2–3 genuinely distinct visual directions** — small self-contained HTML "style tiles" built from real Phase-1 copy — so the user chooses the site's aesthetic **by looking**, not by reading dial numbers. The winning direction is locked into `design-read.md`, which every design sub-area inherits. This mirrors the pilot-page gate in Development: catch a wrong direction after one cheap artifact, not after the full design-system → components → layouts → mockups chain.
+
+**Inputs:**
+- "Optional: number of directions (2 or 3, default 3); or a chosen direction slug / resolved answers (finalize mode)"
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/pre-design/brand/brand-brief.md
+- .twt-artifacts/pre-design/positioning/positioning.md
+- .twt-artifacts/pre-design/spec/specification.md
+- .twt-artifacts/design/design-read.md
+- references/external-design-skills.md
+- .twt-artifacts/design/direction/directions.md
+
+**Writes:**
+- .twt-artifacts/design/direction/directions.md
+- .twt-artifacts/design/direction/tiles/
+- .twt-artifacts/design/direction/index.html
+- .twt-artifacts/design/direction/decisions.md
+- .twt-artifacts/design/design-read.md
+
+**Non-goals:**
+- Not a design system — tiles are throwaway comparison artifacts; no `tokens.css`, no `components.md` (that's `/twt-design-system-define` / `/twt-component-define`)
+- Doesn't invent copy — tiles reuse real headline/CTA/body lines from positioning/brand, and the **same content appears in every tile** so only the design varies
+- Doesn't run when a Figma/exported design drives the project — that design is authoritative; direction exploration is for the no-source (greenfield) path
+- Doesn't loop generating endless variants — one set, one pick, at most one revision pass
+
+**Success criteria:**
+- 2–3 tiles at `direction/tiles/<slug>.html`, each self-contained, each a visibly different aesthetic family, all sharing identical real content
+- `index.html` compares them side by side with a per-direction spec table
+- `directions.md` documents every candidate (family, type pairing, palette, shape/density, motion, dials) and carries a `chosen:` field
+- On finalize, `design-read.md` reflects the chosen direction with `status: confirmed` (user picked) or `model-decided` (You decide / unattended)
+- Idempotent: an existing tile set is refined or re-used, never silently re-rendered from scratch (rule 10)
 
 ---
 
