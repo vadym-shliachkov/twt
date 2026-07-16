@@ -210,6 +210,7 @@ The script deduplicates (last value wins), normalizes names to `--kebab-case`, a
 | **Shadows** | Elevation system (e1 … eN), overlay shadows, interactive shadows. |
 | **Motion** | Durations, easing curves, hover/focus/modal/page transition defaults. |
 | **Grid** | Desktop / tablet / mobile columns, gutters, container widths, breakpoints. |
+| **Iconography** | The **single** icon family the design uses (§2.8). Analyse-existing: identify the family in the sources (match glyph style — stroke weight, corner treatment, grid). Greenfield: pick one open-source family that fits the design read (e.g. Lucide, Heroicons, Phosphor, Tabler, Feather) and its style variant (outline/solid, stroke weight). Record: family name · variant · grid size (e.g. 24px) · stroke weight · the `--icon-size-*` tokens · source URL · license. One family only — mixing families is a §4 finding. `/twt-assets-produce` fetches the actual SVGs from this record. |
 
 ### Typography hierarchy
 

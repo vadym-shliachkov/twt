@@ -8,6 +8,7 @@ Auto-generated dependency and artifact map. For editorial workflows, see [WORKFL
 
 ```mermaid
 flowchart TB
+    twt_assets_produce["/twt-assets-produce"]:::skill
     twt_audience["/twt-audience"]:::skill
     twt_audience_define["/twt-audience-define"]:::skill
     twt_audience_validate["/twt-audience-validate"]:::skill
@@ -81,6 +82,9 @@ flowchart TB
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_wiki_query["/twt-wiki-query"]:::skill
     twt_wiki_validate["/twt-wiki-validate"]:::skill
+    twt_layout_define -.-> twt_assets_produce
+    twt_mockup_define -.-> twt_assets_produce
+    twt_block_preview -.-> twt_assets_produce
     twt_audience_define -.-> twt_audience
     twt_audience_validate -.-> twt_audience
     twt_positioning_define -.-> twt_audience_define
@@ -139,6 +143,7 @@ flowchart TB
     twt_elementor_theme_creator -.-> twt_develop
     twt_elementor_block_creator -.-> twt_develop
     twt_content_approval_checklist -.-> twt_develop
+    twt_assets_produce -.-> twt_develop
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
     twt_ia_define -.-> twt_eval_smoke
@@ -221,6 +226,10 @@ flowchart TB
 ```
 
 ## Skills by category
+
+### assets
+
+- /twt-assets-produce - Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
 
 ### audience
 
@@ -378,6 +387,43 @@ flowchart TB
 
 ## Per-skill details
 
+### /twt-assets-produce
+
+**Category:** assets
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-layout-define, twt-mockup-define, twt-block-preview, WebFetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-develop
+
+**Reads:**
+- $ARGUMENTS (provided-asset paths, row scope)
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/pre-design/curation/facts.md
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/pre-design/positioning/positioning.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/design/assets/img/ |  |
+| .twt-artifacts/design/assets/video/ |  |
+| .twt-artifacts/design/assets/icons/ |  |
+| .twt-artifacts/design/assets/meta/ |  |
+| .twt-artifacts/design/assets/manifest.md |  |
+| .twt-artifacts/design/assets/production-report.md |  |
+| .twt-artifacts/design/assets/decisions.md |  |
+
 ### /twt-audience
 
 **Category:** audience
@@ -474,7 +520,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-design-system-audit
+- Soft consumers: twt-assets-produce, twt-design-system-audit
 
 **Reads:**
 - $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
@@ -1160,7 +1206,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce
 
 **Feeds into:**
 - Hard consumers: none
@@ -1625,7 +1671,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design
+- Soft consumers: twt-assets-produce, twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/pre-design/ia/sitemap.md
@@ -1711,7 +1757,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-checklist, twt-design
+- Soft consumers: twt-assets-produce, twt-content-approval-checklist, twt-design
 
 **Reads:**
 - .twt-artifacts/design/layout/layouts/
@@ -2569,6 +2615,7 @@ flowchart TB
 
 | Skill | Hard deps | Soft deps |
 |-------|-----------|-----------|
+| /twt-assets-produce | none | twt-layout-define, twt-mockup-define, twt-block-preview, WebFetch |
 | /twt-audience | none | twt-audience-define, twt-audience-validate |
 | /twt-audience-define | none | twt-positioning-define, twt-brand-define, twt-content-fetch |
 | /twt-audience-validate | twt-audience-define | none |
@@ -2595,7 +2642,7 @@ flowchart TB
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
-| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist |
+| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce |
 | /twt-direction-define | none | none |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |

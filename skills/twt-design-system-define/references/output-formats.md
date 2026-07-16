@@ -32,6 +32,7 @@ The file MUST include the following sections in this order:
 ### 2.5 Shadows          (elevation system · overlay · interactive)
 ### 2.6 Motion           (durations · easings · defaults)
 ### 2.7 Grid             (breakpoints · columns · gutters · container widths)
+### 2.8 Iconography      (the ONE icon family · style variant · grid/stroke · size tokens · source URL · license)
 
 ## 3. Component Architecture (Tokens → Primitives → Components → Modules)
 ### 3.1 Tokens                   (pointer back to Section 2)

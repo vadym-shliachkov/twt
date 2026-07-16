@@ -8,6 +8,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 
 | command | category | description |
 |---------|----------|-------------|
+| [/twt-assets-produce](#twt-assets-produce) | assets | Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs |
 | [/twt-audience](#twt-audience) | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
@@ -69,6 +70,58 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 
 ---
+## /twt-assets-produce
+
+**Category:** assets
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Close the asset loop the manifest opens: for every row in `.twt-artifacts/design/assets/manifest.md`, either ingest the provided file, generate a brand-tokened placeholder (including the favicon/OG meta set and the design system's icon SVGs), or produce a concrete human to-do (stock briefs, missing files) — so mockups render, Development has real files to copy, and QA's MISSING-ASSET findings become an actionable checklist instead of noise.
+
+**Inputs:**
+- Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-layout-define, twt-mockup-define, twt-block-preview, WebFetch
+
+**Reads:**
+- $ARGUMENTS (provided-asset paths, row scope)
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/pre-design/curation/facts.md
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/pre-design/positioning/positioning.md
+
+**Writes:**
+- .twt-artifacts/design/assets/img/
+- .twt-artifacts/design/assets/video/
+- .twt-artifacts/design/assets/icons/
+- .twt-artifacts/design/assets/meta/
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/design/assets/production-report.md
+- .twt-artifacts/design/assets/decisions.md
+
+**Non-goals:**
+- Doesn't write into a build target (`site/`, a theme) — `/twt-develop` syncs the produced pool into the build it owns
+- Doesn't download stock imagery or anything with unknown licensing — stock rows get a search brief, never a fetched binary
+- Doesn't fabricate real-world imagery: headshots, client logos, office/product photos of real subjects must be `source: provided`; a missing one is flagged, never faked
+- Doesn't edit mockup pages, layouts, or any upstream artifact — it verifies references resolve and reports mismatches
+- Doesn't plan assets (that's `/twt-layout-define` Step 5 / `/twt-mockup-define` Step 6); it only appends the site-wide meta rows (favicon, OG) when planning missed them
+- Doesn't overwrite a provided real asset with a placeholder — provided always wins
+
+**Success criteria:**
+- Every manifest row ends the run with a `status` — `provided` / `generated` / `pending-stock` / `pending-video` / `missing-provided` — and no row is silently skipped
+- Every `generated` file exists in the pool (`.twt-artifacts/design/assets/img|video|icons|meta/`) under the **exact manifest `filename`**, styled from `tokens.css` values only
+- The meta set exists: `meta/favicon.svg` (plus PNG rasterizations when playwright is available) and `meta/og-default.png` (or the flagged SVG fallback)
+- When `tokens.md` §2.8 names an icon family, every icon name used by `components.md`/mockups exists in `icons/` as an SVG from that one family
+- `production-report.md` states counts per status, every human to-do (stock briefs, files to supply), and the mockup-reference resolution result
+- Idempotent: re-runs touch only rows that are still unfulfilled or explicitly re-scoped; existing `provided`/`generated` files are never regenerated without consent (rule 10)
+
+---
+
 ## /twt-audience
 
 **Category:** audience
@@ -876,7 +929,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce
 
 **Reads:**
 - .twt-artifacts/design/design-brief.md

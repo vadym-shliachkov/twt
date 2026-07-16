@@ -14,6 +14,7 @@ dependencies:
     - twt-elementor-theme-creator
     - twt-elementor-block-creator
     - twt-content-approval-checklist
+    - twt-assets-produce
 reads:
   - .twt-artifacts/design/design-brief.md
   - .twt-artifacts/design/mockup/index.html
@@ -93,6 +94,12 @@ After the child returns, verify `.twt-artifacts/content-approval/content-approva
 
 - `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool). If present, continue.
 - `<target>` = **html**: if `.twt-artifacts/html-site/conventions.md` is missing, dispatch `/twt-html-site-creator` (Agent tool). If present, continue.
+
+## Step 3a — Produce & sync assets (best-effort, never blocks)
+
+Read `.twt-artifacts/design/assets/manifest.md`. If it exists and has rows whose `status` is missing, `planned`, or `missing-provided`, dispatch `/twt-assets-produce` (Agent tool) **with `subagent-collect`** so the pool (`.twt-artifacts/design/assets/img|video|icons|meta/`) is as full as it can get before pages are built; aggregate its `decisions.md` upward per rule 13. If the dispatch fails or the manifest is absent, note it and continue — builders already emit manifest-correct paths for missing files.
+
+Then **sync the pool into the build target**: copy the pool's populated subdirectories into the build's asset root — html target → `site/assets/img|video|icons|meta/`, elementor target → the theme's `assets/img|video|icons|meta/` (per its `conventions.md`). One simple `cp -r "<pool-subdir>" "<build-assets-dir>"` per subdirectory (Bash) — no loops or chains; skip subdirectories that don't exist. Never overwrite a newer file already in the build with an older pool copy — when in doubt, report instead of clobbering. Rows still `pending-stock`/`pending-video`/`missing-provided` after the sync go into the Step 5 report as expected QA gaps.
 
 ## Step 4 — Promote pages (pilot first, gate, then parallel batch)
 
