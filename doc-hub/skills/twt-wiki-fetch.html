@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Brings outside material into the wiki's evidence layer — a file, URL, pasted note, or transcript — and records where it came from so every later claim">
+  <title>/twt-wiki-fetch | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-wiki-fetch</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · wiki</p>
+          <h1>/twt-wiki-fetch</h1>
+          <p class="lede">Bring an external source into the wiki's evidence layer: copy or register it under <code>.project-wiki/raw/</code>, and record it in <code>sources.md</code> so every later claim can cite it. Also covers...</p>
+          <div class="fact-row">
+            <span>Version 1.0.5</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Brings outside material into the wiki's evidence layer — a file, URL, pasted note, or transcript — and records where it came from so every later claim can cite it. It can also sweep your existing artifacts for decisions worth keeping.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.project-wiki/AGENTS.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/sources.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/raw/assets.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/</code><span class="file-desc">Your project's twt workspace — the shared folder every phase reads from and writes to.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.project-wiki/raw/</code><span class="file-desc">A folder of related files.</span></li><li><code>.project-wiki/sources.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/raw/assets.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/log.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/inbox.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/.harvest-state.json</code><span class="file-desc">A JSON data file.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Does not write curated pages — no <code>decisions/</code>, <code>entities/</code>, <code>ideas/</code>, <code>facts.md</code>, <code>open-questions.md</code>, <code>glossary.md</code>, <code>index.md</code>, <code>overview.md</code>. That is the curator's job alone, run separately via <code>/twt-wiki</code> → <code>twt-wiki-define</code>.</li><li>Does not interpret or synthesize. It registers evidence; it does not draw conclusions from it.</li><li>Does not delete or edit anything already in <code>raw/</code>. Raw evidence is immutable.</li><li>The <code>.twt-artifacts/</code> sync path is <strong>capture, not curation</strong>: it appends to <code>inbox.md</code> and adds rows to <code>sources.md</code> only. It never summarizes a generated file (tokens.css, a mockup, a report) into the wiki — those get a source link, nothing more.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Every requested source is either copied into <code>raw/</code> or registered in <code>sources.md</code> by path/URL.</li><li>Every binary lands in <code>raw/assets/</code> and gets a row in <code>raw/assets.md</code>.</li><li><code>log.md</code> gains one ingest (or sync) entry.</li><li>A <code>.twt-artifacts/</code> sync leaves <code>inbox.md</code> with new decision-bearing entries and <code>sources.md</code> with a row for everything else — and no curated page changed.</li><li>No curated page changed.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

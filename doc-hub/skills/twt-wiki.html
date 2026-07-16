@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Checks your source files for design fidelity: styling that comes only from tokens (no stray colors or sizes), every token actually defined, and each p">
-  <title>/twt-qa-design | twt skills</title>
+  <meta name="description" content="Sets up and maintains the project wiki — the durable memory that outlives generated artifacts: why decisions were made, what was ruled out, what the c">
+  <title>/twt-wiki | twt skills</title>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,15 +34,15 @@
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong class="breadcrumb-command">/twt-qa-design</strong>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-wiki</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
-          <p class="eyebrow">QA · qa</p>
-          <h1>/twt-qa-design</h1>
-          <p class="lede">Audit source files for design fidelity — token-only CSS and section structure matching the system.</p>
+          <p class="eyebrow">General · wiki</p>
+          <h1>/twt-wiki</h1>
+          <p class="lede">The single entry point to the project wiki — <code>.project-wiki/</code>, the durable memory that holds what <code>.twt-artifacts/</code> cannot: why decisions were made, what was ruled out, what the client...</p>
           <div class="fact-row">
-            <span>Version 1.1.2</span>
+            <span>Version 1.0.7</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -50,28 +50,28 @@
       <section class="detail-grid">
         <section class="detail-panel wide reveal">
     <h2>Purpose</h2>
-    <p>Checks your source files for design fidelity: styling that comes only from tokens (no stray colors or sizes), every token actually defined, and each page's structure including the components its layout calls for. It only reports — it doesn't edit.</p>
+    <p>Sets up and maintains the project wiki — the durable memory that outlives generated artifacts: why decisions were made, what was ruled out, what the client actually said, and ideas not yet scoped. Run it to initialize the wiki, feed it new material, or tidy what's already there.</p>
   </section>
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Optional local path; a URL is rejected (source-only audit)</p>
+    <p>Optional sources to ingest, or a focus for curation; otherwise interactive</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>site/assets/css/</code><span class="file-desc">The site's stylesheets.</span></li><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>.twt-artifacts/design/mockup/styles.css</code><span class="file-desc">The shared stylesheet powering the mockups, built from design tokens.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/design-system/component/components.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li></ul>
+    <ul class="file-list"><li><code>.project-wiki/</code><span class="file-desc">A folder of related files.</span></li><li><code>.twt-artifacts/</code><span class="file-desc">Your project's twt workspace — the shared folder every phase reads from and writes to.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/qa/design-report.md</code><span class="file-desc">The design &amp; token fidelity audit findings.</span></li></ul>
+    <ul class="file-list"><li><code>.project-wiki/</code><span class="file-desc">A folder of related files.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li><strong>Local source only.</strong> A served URL can't reveal token-only authoring; if given a URL, write a one-line note and exit</li><li>Doesn't edit anything (read-only)</li><li>Doesn't audit content or accessibility (other skills)</li></ul>
+    <ul><li>Does not answer questions about the project — that is <code>/twt-wiki-query</code>.</li><li>Does not lint the wiki inline — it dispatches <code>twt-wiki-validate</code> (Step 3b), which is the only thing that writes <code>validation-report.md</code>.</li><li>Does not harvest <code>.twt-artifacts/</code> itself — it only *offers* the sync and, on accept, dispatches <code>twt-wiki-fetch</code> (which runs the bundled harvester); it never reimplements that scan inline.</li><li>Never writes a curated page itself — it dispatches <code>twt-wiki-define</code>, the sole curator.</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Writes <code>.twt-artifacts/qa/design-report.md</code> opening with a weighted <strong>Scorecard → Health (0–100) / Band (Pass ≥80 / Revise 50–79 / Fail &lt;50)</strong>, followed by BLOCKER / WARNING / SUGGESTION findings, each as Where / Problem / Recommendation</li><li>Flags every raw literal in token-only CSS and every undefined custom property reference</li></ul>
+    <ul><li><code>.project-wiki/</code> exists and is ready to receive harvested decisions.</li><li>Requested sources are ingested and registered.</li><li>The inbox is drained into cited pages.</li><li>The user is told what needs their decision.</li></ul>
   </section>
       </section>
   </main>

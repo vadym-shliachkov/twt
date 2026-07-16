@@ -42,7 +42,7 @@
           <h1>/twt-component-define</h1>
           <p class="lede">Document every UI component — anatomy, variants, states, tokens — and render a full interactive gallery.</p>
           <div class="fact-row">
-            <span>Version 1.3.7</span>
+            <span>Version 1.3.11</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -71,7 +71,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li><code>components.md</code> documents each component with anatomy · variants · states · tokens · responsive behavior</li><li><code>gallery.html</code> renders every component/variant/state and links <code>../design-system/tokens.css</code></li><li>Idempotent: refines an existing <code>components.md</code> (reading <code>validation-report.md</code>) instead of overwriting (rule 10)</li></ul>
+    <ul><li><code>components.md</code> documents each component with anatomy · variants · states · tokens · responsive behavior</li><li><code>gallery.html</code> is scaffolded by <code>gen-gallery.mjs</code> (chrome + cell shells), links <code>../tokens.css</code>, and every <code>gal:fill</code> slot is filled with the component's variants/states (<code>--check</code> reports zero unfilled slots and zero inventory mismatches)</li><li>Idempotent: refines an existing <code>components.md</code> (reading <code>validation-report.md</code>) instead of overwriting (rule 10)</li></ul>
   </section>
       </section>
   </main>

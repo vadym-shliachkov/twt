@@ -42,7 +42,7 @@
           <h1>/twt-export-pdf</h1>
           <p class="lede">Convert Markdown into a polished, on-brand PDF document.</p>
           <div class="fact-row">
-            <span>Version 1.1.2</span>
+            <span>Version 1.1.4</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -71,7 +71,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format pdf --input &lt;markdown-path&gt;</code></li><li>Offers a theme choice when custom themes exist</li><li>Produces <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code></li><li>Writes <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, theme used, doc-type profile applied, and output path</li><li>Themed via the built-in <code>doc-hub-light</code> theme by default (css layers + bundled fonts), rendered via Chromium when the <code>playwright</code> npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)</li><li>Doc-type profile (report/brief/spec/generic) is detected and applied automatically</li><li>Intermediate HTML is always saved alongside the PDF at <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.html</code></li></ul>
+    <ul><li>Delegates conversion to <code>node &quot;${CLAUDE_PLUGIN_ROOT}/tools/export-document.mjs&quot; --format pdf --input &lt;markdown-path&gt;</code></li><li>Offers a theme choice when custom themes exist</li><li>Produces <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.pdf</code></li><li>Writes <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/render-notes.md</code> with heading nesting warnings, conversion warnings, theme used, doc-type profile applied, and output path</li><li>Themed via the built-in <code>doc-hub-light</code> theme by default (css layers + bundled fonts), rendered via Chromium when the <code>playwright</code> npm package is installed; otherwise falls back to pandoc LaTeX (noted in render-notes)</li><li>Doc-type profile (report/brief/spec/generic) is detected and applied automatically: structural transforms (labeled field cards, kv grids, score/severity chips, finding cards), a per-profile CSS layer (<code>css/profiles/&lt;profile&gt;.css</code>), an optional per-doc-type CSS layer (<code>css/doctypes/&lt;docType&gt;.css</code>), a doc-type + date meta line under the title, and a running page footer (doc label · page x / y) in the Chromium PDF</li><li>Intermediate HTML is always saved alongside the PDF at <code>.twt-artifacts/export/pdf/&lt;source-slug&gt;/&lt;source-slug&gt;.html</code></li></ul>
   </section>
       </section>
   </main>

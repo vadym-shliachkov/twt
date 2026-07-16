@@ -42,7 +42,7 @@
           <h1>/twt-curation-define</h1>
           <p class="lede">Turn fetched content into a keep/skip/elevate plan plus a per-page outline of what fills each section.</p>
           <div class="fact-row">
-            <span>Version 1.0.2</span>
+            <span>Version 1.2.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -63,11 +63,11 @@
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content/fetched/</code><span class="file-desc">The folder of content pulled in from your sources, all as clean Markdown.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/pre-design/ia/sitemap.md</code><span class="file-desc">The site map — every page, its purpose, and its primary call to action.</span></li><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content/fetched/</code><span class="file-desc">The folder of content pulled in from your sources, all as clean Markdown.</span></li><li><code>.twt-artifacts/pre-design/brand/brand-brief.md</code><span class="file-desc">Your canonical brand brief: voice, tone, personality, and the visual cues the whole project follows.</span></li><li><code>.twt-artifacts/pre-design/brand/_fetched-brand.md</code><span class="file-desc">Raw brand notes pulled from a source (brand book, Figma, site), used as the starting point for the brief.</span></li><li><code>.twt-artifacts/pre-design/ia/sitemap.md</code><span class="file-desc">The site map — every page, its purpose, and its primary call to action.</span></li><li><code>.twt-artifacts/pre-design/audience/personas.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/facts.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/pre-design/curation/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/outlines/&lt;page-slug&gt;.md</code><span class="file-desc">The section-by-section content outline for a single page.</span></li><li><code>.twt-artifacts/pre-design/curation/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/curation/inventory.md</code><span class="file-desc">A keep / skip / elevate decision for every piece of source content.</span></li><li><code>.twt-artifacts/pre-design/curation/facts.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/pre-design/curation/outlines/&lt;page-slug&gt;.md</code><span class="file-desc">The section-by-section content outline for a single page.</span></li><li><code>.twt-artifacts/pre-design/curation/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -75,7 +75,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li><code>inventory.md</code> lists every fetched item with a KEEP/SKIP/ELEVATE decision and a target page (or none)</li><li>One <code>outlines/&lt;page-slug&gt;.md</code> exists for each page in <code>sitemap.md</code></li><li>Every outline section carries drafted, on-brand transformed copy (or a <code>&gt; GAP</code> marker) — never a raw source excerpt</li><li>Outlines contain final-intent <strong>transformed copy</strong>, not source excerpts; verbatim-mirrored copy is a curation defect (see <code>twt-curation-validate</code>'s 'Copy transformed not mirrored' criterion)</li><li>Re-run enters refinement mode</li></ul>
+    <ul><li><code>inventory.md</code> lists every fetched item with a KEEP/SKIP/ELEVATE decision and a target page (or none)</li><li>One <code>outlines/&lt;page-slug&gt;.md</code> exists for each page in <code>sitemap.md</code></li><li>Every outline section carries drafted, on-brand transformed copy (or a <code>&gt; GAP</code> marker) — never a raw source excerpt</li><li>Outlines contain final-intent <strong>transformed copy</strong>, not source excerpts; verbatim-mirrored copy is a curation defect (see <code>twt-curation-validate</code>'s 'Copy transformed not mirrored' criterion)</li><li><code>facts.md</code> exists and reconciles every reusable fact across all sources: agreeing sources → RESOLVED, disagreeing sources → CONFLICT (canonical TBD, never a silent pick), generic-example-pinned-to-named-client → UNVERIFIED-ATTR, absent → TBD; plus a provided-assets table. Outlines never emit a reusable-fact value that contradicts <code>facts.md</code></li><li>Re-run enters refinement mode</li></ul>
   </section>
       </section>
   </main>

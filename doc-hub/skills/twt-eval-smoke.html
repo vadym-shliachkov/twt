@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A behavioral smoke test for the marketplace itself: it seeds a fixture project, runs real skills against it, and mechanically checks that they leave b">
+  <title>/twt-eval-smoke | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-eval-smoke</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · meta</p>
+          <h1>/twt-eval-smoke</h1>
+          <p class="lede">The standing behavioral eval. Unit tests and structural checkers guard the *tools* and *formats*; nothing else exercises the *prompts* — a broken dependency check or a dead contract...</p>
+          <div class="fact-row">
+            <span>Version 1.0.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>A behavioral smoke test for the marketplace itself: it seeds a fixture project, runs real skills against it, and mechanically checks that they leave behind what they promise. It's a marketplace-development tool — you won't need it on a normal website project.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional scope — ia | curation | design-system | wiki | all (default all)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>.twt-artifacts/pre-design/ia/sitemap.md</code><span class="file-desc">The site map — every page, its purpose, and its primary call to action.</span></li><li><code>.twt-artifacts/pre-design/ia/functional-scope.md</code><span class="file-desc">The features, integrations, and functionality each page needs.</span></li><li><code>.project-wiki/inbox.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.project-wiki/decisions/</code><span class="file-desc">A folder of related files.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li><li><code>.twt-artifacts/pre-design/content/fetched/site/&lt;domain&gt;/index.md</code><span class="file-desc">The cleaned Markdown for the site's main fetched page.</span></li><li><code>.project-wiki/inbox.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Not a quality eval — it asserts contracts (files at contract paths, parseable decisions.md, drained inbox, lint-clean wiki), never design taste.</li><li>Never runs against a real project: the seeder refuses any tree that exists without its ownership marker, and clean refuses any tree without it.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Each requested scope reports PASS from <code>eval-smoke.mjs check</code>, or the run ends with the FAIL lines and the fixture left in place for debugging.</li><li>A passing scope's fixture is cleaned; the repo tree is untouched (<code>.twt-artifacts/</code> and <code>.project-wiki/</code> fixtures only).</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

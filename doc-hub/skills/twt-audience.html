@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Checks your source files for design fidelity: styling that comes only from tokens (no stray colors or sizes), every token actually defined, and each p">
-  <title>/twt-qa-design | twt skills</title>
+  <meta name="description" content="Defines who the site is really for — named personas seeded from your positioning, each with the journey stages they move through — then reviews the re">
+  <title>/twt-audience | twt skills</title>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,15 +34,15 @@
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong class="breadcrumb-command">/twt-qa-design</strong>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-audience</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
-          <p class="eyebrow">QA · qa</p>
-          <h1>/twt-qa-design</h1>
-          <p class="lede">Audit source files for design fidelity — token-only CSS and section structure matching the system.</p>
+          <p class="eyebrow">General · audience</p>
+          <h1>/twt-audience</h1>
+          <p class="lede">One-call audience workflow: define → validate in one pass (§9 — no iteration loop) — personas seeded from positioning segments plus journey stages that IA, curation, layout, and text...</p>
           <div class="fact-row">
-            <span>Version 1.1.2</span>
+            <span>Version 1.0.1</span>
             <span>Arguments: yes</span>
           </div>
         </div>
@@ -50,28 +50,28 @@
       <section class="detail-grid">
         <section class="detail-panel wide reveal">
     <h2>Purpose</h2>
-    <p>Checks your source files for design fidelity: styling that comes only from tokens (no stray colors or sizes), every token actually defined, and each page's structure including the components its layout calls for. It only reports — it doesn't edit.</p>
+    <p>Defines who the site is really for — named personas seeded from your positioning, each with the journey stages they move through — then reviews the result in the same pass. IA, curation, layouts, and text analysis all read these personas, so pages speak to real people instead of a generic visitor.</p>
   </section>
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Optional local path; a URL is rejected (source-only audit)</p>
+    <p>Optional; runs define then the single validate pass</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>site/assets/css/</code><span class="file-desc">The site's stylesheets.</span></li><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>.twt-artifacts/design/mockup/styles.css</code><span class="file-desc">The shared stylesheet powering the mockups, built from design tokens.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/design-system/component/components.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/audience/personas.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/pre-design/audience/validation-report.md</code><span class="file-desc">A read-only critique of this artifact, listing blockers, warnings, and suggestions.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/qa/design-report.md</code><span class="file-desc">The design &amp; token fidelity audit findings.</span></li></ul>
+    <p>No files of its own — it orchestrates other skills or reports back to you.</p>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li><strong>Local source only.</strong> A served URL can't reveal token-only authoring; if given a URL, write a one-line note and exit</li><li>Doesn't edit anything (read-only)</li><li>Doesn't audit content or accessibility (other skills)</li></ul>
+    <ul><li>Dispatches sub-skills (rule 5); no inline logic</li><li>No unbounded loop, no auto-downgrade of severity</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Writes <code>.twt-artifacts/qa/design-report.md</code> opening with a weighted <strong>Scorecard → Health (0–100) / Band (Pass ≥80 / Revise 50–79 / Fail &lt;50)</strong>, followed by BLOCKER / WARNING / SUGGESTION findings, each as Where / Problem / Recommendation</li><li>Flags every raw literal in token-only CSS and every undefined custom property reference</li></ul>
+    <ul><li>Produces/refines <code>personas.md</code> + current <code>validation-report.md</code></li><li>Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)</li><li>On exit, states whether BLOCKERs remain</li></ul>
   </section>
       </section>
   </main>

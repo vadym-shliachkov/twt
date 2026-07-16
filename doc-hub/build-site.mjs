@@ -243,6 +243,13 @@ const longDescriptions = {
   "twt-spec": "Interviews you to capture a north-star spec — the one document that says what you're building and why — then reviews it for clarity in a single pass. It's the anchor everything else points back to.",
   "twt-status": "Tells you what's gone stale. Edit something early in the pipeline and everything downstream is quietly out of date — this compares timestamps, flags what's affected, and lists the smallest set of steps to re-run. It only reports; it never changes a thing.",
   "twt-text-analysis": "Splits your text into logical blocks, scores each one with metrics that fit that block type, and separates real problems from optional polish. It only suggests a rewrite when Claude can show the change fixes a detected weakness without inventing facts, weakening voice, or changing meaning.",
+  "twt-audience": "Defines who the site is really for — named personas seeded from your positioning, each with the journey stages they move through — then reviews the result in the same pass. IA, curation, layouts, and text analysis all read these personas, so pages speak to real people instead of a generic visitor.",
+  "twt-seo": "Plans the site's search presence page by page — target keywords, slugs, meta titles and descriptions, schema, and (for redesigns) the redirect map — then reviews the plan in the same pass. Development gets concrete values to build in, instead of SEO being left as an afterthought.",
+  "twt-direction-define": "Before any design tokens are locked in, renders your brand as two or three genuinely different visual directions — small self-contained style tiles built from your real copy — so you choose the site's look by seeing it, not by reading settings. The winning direction becomes the reference every later design step inherits.",
+  "twt-eval-smoke": "A behavioral smoke test for the marketplace itself: it seeds a fixture project, runs real skills against it, and mechanically checks that they leave behind what they promise. It's a marketplace-development tool — you won't need it on a normal website project.",
+  "twt-wiki": "Sets up and maintains the project wiki — the durable memory that outlives generated artifacts: why decisions were made, what was ruled out, what the client actually said, and ideas not yet scoped. Run it to initialize the wiki, feed it new material, or tidy what's already there.",
+  "twt-wiki-fetch": "Brings outside material into the wiki's evidence layer — a file, URL, pasted note, or transcript — and records where it came from so every later claim can cite it. It can also sweep your existing artifacts for decisions worth keeping.",
+  "twt-wiki-query": "Asks the project a question and answers it from the wiki with citations — including the questions no generated file can answer, like why the CTA is orange or what was ruled out and why.",
 };
 
 function detailCopy(skill) {
@@ -1021,6 +1028,153 @@ function writeHome() {
   write(path.join(outDir, "index.html"), layout({ title: "Home", body }));
 }
 
+function writeAltIndex() {
+  const blockSkillsOf = (id) => blocks.find((block) => block.id === id)?.skills ?? [];
+  const groups = [
+    {
+      id: "orchestration",
+      kicker: "Purpose",
+      title: "Run the whole pipeline",
+      purpose:
+        "Master orchestrators that chain the phases end to end. Pick one of these when you want the pipeline to drive itself — the full guided path, or the express lane from a finished Figma design.",
+      skills: ["twt-site", "twt-site-dev"],
+    },
+    {
+      id: "setup",
+      kicker: "Purpose",
+      title: "Set up and maintain a project",
+      purpose:
+        "One-time setup and ongoing housekeeping: merging the permission allowlist, spotting stale artifacts, regenerating the marketplace's own reference docs, and smoke-testing the skills themselves.",
+      skills: ["twt-setup", "twt-status", "twt-marketplace-docs", "twt-eval-smoke"],
+    },
+    {
+      id: "pre-design",
+      kicker: "Phase 1",
+      title: "Shape the project — Pre-design",
+      purpose: blocks.find((block) => block.id === "pre-design").description,
+      skills: [...blockSkillsOf("pre-design"), "twt-audience", "twt-seo"],
+    },
+    {
+      id: "design",
+      kicker: "Phase 2",
+      title: "Design the system and pages",
+      purpose: blocks.find((block) => block.id === "design").description,
+      skills: (() => {
+        const [orchestrator, ...rest] = blockSkillsOf("design");
+        return [orchestrator, "twt-direction-define", ...rest];
+      })(),
+    },
+    {
+      id: "develop",
+      kicker: "Phase 3",
+      title: "Build the site",
+      purpose: blocks.find((block) => block.id === "develop").description,
+      skills: blockSkillsOf("develop"),
+    },
+    {
+      id: "qa",
+      kicker: "Phase 4",
+      title: "Check the result — QA",
+      purpose: blocks.find((block) => block.id === "qa").description,
+      skills: blockSkillsOf("qa"),
+    },
+    {
+      id: "wiki",
+      kicker: "Purpose",
+      title: "Remember the project — the wiki",
+      purpose:
+        "The project's durable memory, kept apart from generated artifacts: decisions and the reasons behind them, client answers, and ideas not yet scoped — plus a way to ask questions against all of it.",
+      skills: ["twt-wiki", "twt-wiki-fetch", "twt-wiki-query"],
+    },
+    {
+      id: "export",
+      kicker: "Purpose",
+      title: "Export polished documents",
+      purpose:
+        "Turn Markdown into polished, on-brand deliverables — PDF, Word, or slides — plus the reusable templates that keep them consistent.",
+      skills: [
+        "twt-export",
+        "twt-export-docx",
+        "twt-export-pdf",
+        "twt-export-presentation",
+        "twt-export-template-create",
+      ],
+    },
+    {
+      id: "utilities",
+      kicker: "Purpose",
+      title: "Standalone utilities",
+      purpose: "Focused helpers you can run on any project, whether or not the pipeline is involved.",
+      skills: ["twt-search-site", "twt-content-optimize"],
+    },
+  ];
+
+  // Every skill in SKILLS.md must appear exactly once: anything the groups
+  // above don't name falls back to the group matching its inferred block.
+  const grouped = new Set(groups.flatMap((group) => group.skills));
+  const fallbackGroupId = { general: "utilities", "pre-design": "pre-design", design: "design", develop: "develop", qa: "qa" };
+  for (const skill of skills.values()) {
+    if (grouped.has(skill.slug)) continue;
+    const blockId = (skill.block ?? inferBlock(skill)).id;
+    groups.find((group) => group.id === fallbackGroupId[blockId]).skills.push(skill.slug);
+    grouped.add(skill.slug);
+  }
+
+  const groupSection = (group) => {
+    const groupSkills = group.skills.map((slug) => skills.get(slug)).filter(Boolean);
+    if (!groupSkills.length) return "";
+    const items = groupSkills
+      .map(
+        (skill) => `<li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/${skill.slug}.html"><code>${escapeHtml(skill.command)}</code></a>
+          <span class="alt-skill-name">${escapeHtml(displayName(skill))}</span>
+          <span class="alt-skill-version">v${escapeHtml(skill.version)}</span>
+        </span>
+        <p class="alt-skill-desc">${formatInline(detailCopy(skill))}</p>
+      </li>`
+      )
+      .join("");
+    return `<section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">${escapeHtml(group.kicker)} · ${groupSkills.length} skills</p>
+          <h2>${escapeHtml(group.title)}</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">${escapeHtml(group.purpose)}</p>
+      <ul class="alt-skill-list">${items}</ul>
+    </section>`;
+  };
+
+  const body = `
+    ${breadcrumbs([{ label: "Marketplace overview" }], "root")}
+    <section class="skill-hero docs-hero">
+      <div class="reveal">
+        <p class="eyebrow">The twt skills marketplace</p>
+        <h1>Every skill, one page — what this marketplace is and what's inside.</h1>
+        <p class="lede">A plain-language tour of the marketplace: what a skills marketplace even is, why this one exists, and all ${skills.size} skills grouped by what they're for.</p>
+      </div>
+    </section>
+    <section class="detail-grid alt-intro-grid">
+      <section class="detail-panel reveal">
+        <h2>What is a skills marketplace?</h2>
+        <p>A skills marketplace is a catalog of ready-made skills for Claude Code — small, well-defined instruction packages that each teach the agent to do one job well, surfaced as slash commands. Instead of re-explaining a workflow every session, you install the marketplace once as a plugin and every skill in it becomes a command you can run in any project. Skills stay versioned and consistent, so the same command behaves the same way everywhere.</p>
+      </section>
+      <section class="detail-panel reveal">
+        <h2>What this marketplace is for</h2>
+        <p>twt focuses on one thing: taking a website project from raw notes to a QA-checked build. Its skills compose into a four-phase pipeline — Pre-design (brand, positioning, structure, content), Design (tokens, components, layouts, mockups), Development (static HTML or an Elementor child theme), and QA (accessibility, content, links, design fidelity) — plus standalone tools for exports, content quality, and search. Orchestrators run whole phases for you, sub-skills do one focused step, and validators critique the work without changing anything.</p>
+      </section>
+    </section>
+    ${groups.map(groupSection).join("")}`;
+
+  write(path.join(outDir, "index-alt.html"), layout({
+    title: "Marketplace overview",
+    body,
+    description: "What the twt skills marketplace is, why it exists, and every skill grouped by purpose.",
+  }));
+}
+
 function writeBlockPages() {
   for (const block of blocks) {
     const blockSkills = block.skills.map((slug) => skills.get(slug)).filter(Boolean);
@@ -1579,6 +1733,40 @@ main > nav {
 .detail-panel ol.sequence a { color: var(--ink); }
 .detail-panel ol.sequence a:hover code { border-color: var(--cyan); color: var(--cyan); }
 .detail-panel ol.sequence code { font-size: .82rem; }
+.alt-intro-grid { padding-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+.alt-group-note {
+  max-width: 860px;
+  margin: 0 0 1.4rem;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+.alt-skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 1860px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.alt-skill-list li { padding: 1.15rem 1.4rem; border-bottom: 1px solid var(--line); }
+.alt-skill-list li:last-child { border-bottom: 0; }
+.alt-skill-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .65rem; }
+.alt-skill-head a:hover code { border-color: var(--cyan); color: var(--cyan); }
+.alt-skill-head code { color: var(--cyan); }
+.alt-skill-name { color: var(--ink); font-weight: 700; }
+.alt-skill-version {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: .1rem .5rem;
+  background: var(--code-bg);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.alt-skill-desc { margin: .45rem 0 0; max-width: 980px; color: var(--copy); font-size: .95rem; line-height: 1.5; }
 .site-footer {
   display: flex;
   align-items: center;
@@ -1704,7 +1892,8 @@ document.addEventListener("pointermove", (event) => {
 cleanGenerated();
 writeAssets();
 writeHome();
+writeAltIndex();
 writeBlockPages();
 writeSkillPages();
 
-console.log(`Generated ${blocks.length} block pages and ${skills.size} skill pages in ${path.relative(root, outDir)}`);
+console.log(`Generated ${blocks.length} block pages, ${skills.size} skill pages, and index-alt.html in ${path.relative(root, outDir)}`);

@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="What the twt skills marketplace is, why it exists, and every skill grouped by purpose.">
+  <title>Marketplace overview | twt skills</title>
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="index.html">Home</a>
+        <a href="blocks/general.html">General</a><a href="blocks/pre-design.html">Pre-design</a><a href="blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+    </header>
+  <main>
+    
+    
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="index.html">Home</a>
+      <span>/</span><strong>Marketplace overview</strong>
+    </nav>
+    <section class="skill-hero docs-hero">
+      <div class="reveal">
+        <p class="eyebrow">The twt skills marketplace</p>
+        <h1>Every skill, one page — what this marketplace is and what's inside.</h1>
+        <p class="lede">A plain-language tour of the marketplace: what a skills marketplace even is, why this one exists, and all 59 skills grouped by what they're for.</p>
+      </div>
+    </section>
+    <section class="detail-grid alt-intro-grid">
+      <section class="detail-panel reveal">
+        <h2>What is a skills marketplace?</h2>
+        <p>A skills marketplace is a catalog of ready-made skills for Claude Code — small, well-defined instruction packages that each teach the agent to do one job well, surfaced as slash commands. Instead of re-explaining a workflow every session, you install the marketplace once as a plugin and every skill in it becomes a command you can run in any project. Skills stay versioned and consistent, so the same command behaves the same way everywhere.</p>
+      </section>
+      <section class="detail-panel reveal">
+        <h2>What this marketplace is for</h2>
+        <p>twt focuses on one thing: taking a website project from raw notes to a QA-checked build. Its skills compose into a four-phase pipeline — Pre-design (brand, positioning, structure, content), Design (tokens, components, layouts, mockups), Development (static HTML or an Elementor child theme), and QA (accessibility, content, links, design fidelity) — plus standalone tools for exports, content quality, and search. Orchestrators run whole phases for you, sub-skills do one focused step, and validators critique the work without changing anything.</p>
+      </section>
+    </section>
+    <section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Purpose · 2 skills</p>
+          <h2>Run the whole pipeline</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Master orchestrators that chain the phases end to end. Pick one of these when you want the pipeline to drive itself — the full guided path, or the express lane from a finished Figma design.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-site.html"><code>/twt-site</code></a>
+          <span class="alt-skill-name">Site</span>
+          <span class="alt-skill-version">v1.13.1</span>
+        </span>
+        <p class="alt-skill-desc">Runs the whole twt pipeline — pre-design through QA — as one guided command. Pick the phases and build target up front, then approve, redo, or stop at each pause along the way; or kick off auto mode and let it run hands-free.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-site-dev.html"><code>/twt-site-dev</code></a>
+          <span class="alt-skill-name">Site Dev</span>
+          <span class="alt-skill-version">v1.5.8</span>
+        </span>
+        <p class="alt-skill-desc">The express lane to a built site: starting from a Figma link, it sets up your design system, builds the content-approval workbook, scaffolds your target, and dives straight into building pages — skipping the full pre-design and design phases. Auto mode runs the whole thing without questions.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Purpose · 4 skills</p>
+          <h2>Set up and maintain a project</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">One-time setup and ongoing housekeeping: merging the permission allowlist, spotting stale artifacts, regenerating the marketplace's own reference docs, and smoke-testing the skills themselves.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-setup.html"><code>/twt-setup</code></a>
+          <span class="alt-skill-name">Setup</span>
+          <span class="alt-skill-version">v1.0.3</span>
+        </span>
+        <p class="alt-skill-desc">Gets your project ready once so the pipeline runs smoothly: it merges a curated permission allowlist into your settings so routine, safe actions stop interrupting you. Anything genuinely risky or new still asks first.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-status.html"><code>/twt-status</code></a>
+          <span class="alt-skill-name">Status</span>
+          <span class="alt-skill-version">v1.1.0</span>
+        </span>
+        <p class="alt-skill-desc">Tells you what's gone stale. Edit something early in the pipeline and everything downstream is quietly out of date — this compares timestamps, flags what's affected, and lists the smallest set of steps to re-run. It only reports; it never changes a thing.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-marketplace-docs.html"><code>/twt-marketplace-docs</code></a>
+          <span class="alt-skill-name">Marketplace Docs</span>
+          <span class="alt-skill-version">v1.0.3</span>
+        </span>
+        <p class="alt-skill-desc">Rebuilds the marketplace's reference docs — the skills index, architecture map, and README table — straight from each skill's definition. Run it after you change any skill so the docs never drift out of sync.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-eval-smoke.html"><code>/twt-eval-smoke</code></a>
+          <span class="alt-skill-name">Eval Smoke</span>
+          <span class="alt-skill-version">v1.0.2</span>
+        </span>
+        <p class="alt-skill-desc">A behavioral smoke test for the marketplace itself: it seeds a fixture project, runs real skills against it, and mechanically checks that they leave behind what they promise. It's a marketplace-development tool — you won't need it on a normal website project.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Phase 1 · 18 skills</p>
+          <h2>Shape the project — Pre-design</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Shape the raw project signal into a practical brief: intake, content, brand, positioning, IA, and curation.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-project-intake.html"><code>/twt-project-intake</code></a>
+          <span class="alt-skill-name">Project Intake</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Takes scattered notes, links, file paths, and constraints and turns them into one clean brief the pipeline can actually read. Every later phase gets a reliable, editable starting point instead of guessing from the mess.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-pre-design.html"><code>/twt-pre-design</code></a>
+          <span class="alt-skill-name">Pre Design</span>
+          <span class="alt-skill-version">v1.3.1</span>
+        </span>
+        <p class="alt-skill-desc">Runs your entire pre-design phase — pulling in content, then defining brand, positioning, structure, and a content plan — and rolls it all into one brief ready for design. It's the fastest path from messy project notes to a solid foundation.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-spec.html"><code>/twt-spec</code></a>
+          <span class="alt-skill-name">Spec</span>
+          <span class="alt-skill-version">v1.1.4</span>
+        </span>
+        <p class="alt-skill-desc">Interviews you to capture a north-star spec — the one document that says what you're building and why — then reviews it for clarity in a single pass. It's the anchor everything else points back to.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-brand.html"><code>/twt-brand</code></a>
+          <span class="alt-skill-name">Brand</span>
+          <span class="alt-skill-version">v1.2.2</span>
+        </span>
+        <p class="alt-skill-desc">Gets your whole brand onto one page — the voice, tone, look, and promises that make it feel like you. Start from something you already have (a brand book, Figma file, or live site) or build it together from scratch; either way it double-checks the result for gaps before design begins.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-brand-fetch.html"><code>/twt-brand-fetch</code></a>
+          <span class="alt-skill-name">Brand Fetch</span>
+          <span class="alt-skill-version">v1.1.4</span>
+        </span>
+        <p class="alt-skill-desc">Gathers the brand clues already sitting in a source you hand it — a brand book PDF, a Figma file, screenshots, or a live site — and saves them as raw notes. Those notes give the brand-define step a running start instead of a blank page.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-positioning.html"><code>/twt-positioning</code></a>
+          <span class="alt-skill-name">Positioning</span>
+          <span class="alt-skill-version">v1.1.4</span>
+        </span>
+        <p class="alt-skill-desc">Sharpens how your brand shows up — who it's for, the value it offers, and what to lead with — then reviews it for clarity in one pass. It turns a fuzzy idea into a focused message the whole site can rally around.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-ia-define.html"><code>/twt-ia-define</code></a>
+          <span class="alt-skill-name">IA</span>
+          <span class="alt-skill-version">v1.1.1</span>
+        </span>
+        <p class="alt-skill-desc">Maps your site's structure — every page, what it's for, and its main call to action — plus the features and integrations each page needs. It's the blueprint the rest of the design follows.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-fetch.html"><code>/twt-content-fetch</code></a>
+          <span class="alt-skill-name">Content Fetch</span>
+          <span class="alt-skill-version">v1.1.3</span>
+        </span>
+        <p class="alt-skill-desc">One easy front door for pulling in content you already have. Give it any mix of websites, PDFs, documents, or Figma files and it works out what each one is, sends it to the right reader, and hands you clean, consistent Markdown.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-fetch-site.html"><code>/twt-content-fetch-site</code></a>
+          <span class="alt-skill-name">Content Fetch Site</span>
+          <span class="alt-skill-version">v1.2.1</span>
+        </span>
+        <p class="alt-skill-desc">Saves a website's pages as clean, reusable Markdown — great for copy migrations, content audits, or feeding other steps. It only reads, giving you a snapshot of what's published right now.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-fetch-pdf.html"><code>/twt-content-fetch-pdf</code></a>
+          <span class="alt-skill-name">Content Fetch PDF</span>
+          <span class="alt-skill-version">v1.0.0</span>
+        </span>
+        <p class="alt-skill-desc">Pulls the readable text out of a PDF and saves it as clean Markdown, ready for brand, IA, and curation work. Handy when your raw material lives in reports, brochures, or exported docs.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-fetch-doc.html"><code>/twt-content-fetch-doc</code></a>
+          <span class="alt-skill-name">Content Fetch Doc</span>
+          <span class="alt-skill-version">v1.0.0</span>
+        </span>
+        <p class="alt-skill-desc">Turns a Word or Google Doc into tidy Markdown that looks just like every other source you've pulled in. Because the shape is consistent, your brand, IA, and curation steps can use it right away — no cleanup needed.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-fetch-figma.html"><code>/twt-content-fetch-figma</code></a>
+          <span class="alt-skill-name">Content Fetch Figma</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Lifts all the visible words out of a Figma design — headings, body copy, button labels, navigation, the little bits of microcopy — and saves them as clean Markdown. Now a design file can feed the pipeline just like a fetched website or PDF would.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-curation-define.html"><code>/twt-curation-define</code></a>
+          <span class="alt-skill-name">Curation</span>
+          <span class="alt-skill-version">v1.2.1</span>
+        </span>
+        <p class="alt-skill-desc">Goes through the content you've collected and decides what to keep, skip, or spotlight — then maps each keeper onto a page. You end up with a clear inventory plus a per-page outline of what fills every section.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-text-analysis.html"><code>/twt-text-analysis</code></a>
+          <span class="alt-skill-name">Text Analysis</span>
+          <span class="alt-skill-version">v1.4.1</span>
+        </span>
+        <p class="alt-skill-desc">Splits your text into logical blocks, scores each one with metrics that fit that block type, and separates real problems from optional polish. It only suggests a rewrite when Claude can show the change fixes a detected weakness without inventing facts, weakening voice, or changing meaning.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-audience.html"><code>/twt-audience</code></a>
+          <span class="alt-skill-name">Audience</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Defines who the site is really for — named personas seeded from your positioning, each with the journey stages they move through — then reviews the result in the same pass. IA, curation, layouts, and text analysis all read these personas, so pages speak to real people instead of a generic visitor.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-seo.html"><code>/twt-seo</code></a>
+          <span class="alt-skill-name">Seo</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Plans the site's search presence page by page — target keywords, slugs, meta titles and descriptions, schema, and (for redesigns) the redirect map — then reviews the plan in the same pass. Development gets concrete values to build in, instead of SEO being left as an afterthought.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-curation-validate.html"><code>/twt-curation-validate</code></a>
+          <span class="alt-skill-name">Curation Validate</span>
+          <span class="alt-skill-version">v1.2.3</span>
+        </span>
+        <p class="alt-skill-desc">Reads your content plan like a sharp editor would: any gaps in coverage, any tone that's off-brand, anything made up or unsupported? It scores the plan and suggests fixes in a report.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-ia-validate.html"><code>/twt-ia-validate</code></a>
+          <span class="alt-skill-name">IA Validate</span>
+          <span class="alt-skill-version">v1.0.2</span>
+        </span>
+        <p class="alt-skill-desc">Looks over your sitemap and scope like an information architect: missing pages, confusing navigation, fuzzy page purposes, anything drifting from your positioning. It scores the structure and recommends fixes.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Phase 2 · 12 skills</p>
+          <h2>Design the system and pages</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Turn the brief into a design spine: tokens, component behavior, layouts, mockups, and design-system checks.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-design.html"><code>/twt-design</code></a>
+          <span class="alt-skill-name">Design</span>
+          <span class="alt-skill-version">v1.3.6</span>
+        </span>
+        <p class="alt-skill-desc">Runs your whole design phase — design system, components, page layouts, and mockups — and ties it all into one brief that's ready to hand to development. It's the quickest way to get from a pre-design brief to a design you can actually build.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-direction-define.html"><code>/twt-direction-define</code></a>
+          <span class="alt-skill-name">Direction</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Before any design tokens are locked in, renders your brand as two or three genuinely different visual directions — small self-contained style tiles built from your real copy — so you choose the site's look by seeing it, not by reading settings. The winning direction becomes the reference every later design step inherits.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-design-system.html"><code>/twt-design-system</code></a>
+          <span class="alt-skill-name">Design System</span>
+          <span class="alt-skill-version">v1.3.2</span>
+        </span>
+        <p class="alt-skill-desc">Sets up the foundation every page stands on — colors, type, spacing, and components — either from scratch or by studying designs you already have, then checks it for consistency. This is the shared reference that design, development, and QA all point back to.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-design-system-audit.html"><code>/twt-design-system-audit</code></a>
+          <span class="alt-skill-name">Design System Audit</span>
+          <span class="alt-skill-version">v1.5.2</span>
+        </span>
+        <p class="alt-skill-desc">Tells you how strong a real design system is and how closely a design actually sticks to it. Point it at a Figma file or live site and it scores the system, then names the exact page and block wherever the design drifts — and if no system exists, it works out the one that should have.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-block-preview.html"><code>/twt-block-preview</code></a>
+          <span class="alt-skill-name">Block Preview</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Takes a playwright screenshot of any HTML file or live URL — either the whole page or a single element you name with a CSS selector. It also runs in batch mode to capture every flagged block in a design-system audit, producing the thumbnails shown in the visual report. When playwright isn't installed it falls through to self-contained HTML previews that render faithfully without a browser.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-component-define.html"><code>/twt-component-define</code></a>
+          <span class="alt-skill-name">Component</span>
+          <span class="alt-skill-version">v1.3.11</span>
+        </span>
+        <p class="alt-skill-desc">Writes down every building block your site uses — buttons, cards, forms, and the bigger pieces they snap together into — with all their variants, states, and tokens. Then it builds a live gallery so you can see every component and variation in one place before a line of the site is built.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-layout-define.html"><code>/twt-layout-define</code></a>
+          <span class="alt-skill-name">Layout</span>
+          <span class="alt-skill-version">v1.3.1</span>
+        </span>
+        <p class="alt-skill-desc">Lays out every page — the order of sections, the components each one uses, the real content that fills it, and how it reflows on desktop, tablet, and mobile. It's the bridge between your site structure and the visual mockups.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-mockup-define.html"><code>/twt-mockup-define</code></a>
+          <span class="alt-skill-name">Mockup</span>
+          <span class="alt-skill-version">v1.3.6</span>
+        </span>
+        <p class="alt-skill-desc">Renders each page layout into a real, responsive HTML/CSS mockup filled with your actual content, plus an index to flip through them all. It's the high-fidelity preview of how the finished site will look.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-approval-checklist.html"><code>/twt-content-approval-checklist</code></a>
+          <span class="alt-skill-name">Content Approval Checklist</span>
+          <span class="alt-skill-version">v1.4.1</span>
+        </span>
+        <p class="alt-skill-desc">Builds a simple spreadsheet of everything that needs a real, approved value before launch — every page, shared element, asset, link, and SEO field. It's perfect when the content isn't final yet (think Figma mockups full of placeholder text), so nothing slips through unreviewed.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-component-validate.html"><code>/twt-component-validate</code></a>
+          <span class="alt-skill-name">Component Validate</span>
+          <span class="alt-skill-version">v1.0.5</span>
+        </span>
+        <p class="alt-skill-desc">Gives your component library an honest once-over: are styles coming from tokens, are pieces reused instead of copy-pasted, is every state covered, and is it accessible? It writes the findings to a report for you to act on — it never changes anything itself.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-layout-validate.html"><code>/twt-layout-validate</code></a>
+          <span class="alt-skill-name">Layout Validate</span>
+          <span class="alt-skill-version">v1.0.2</span>
+        </span>
+        <p class="alt-skill-desc">Reviews your page layouts for solid hierarchy, the right component in each slot, complete content mapping, and clear responsive intent. It writes the findings to a report — it doesn't change anything for you.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-mockup-validate.html"><code>/twt-mockup-validate</code></a>
+          <span class="alt-skill-name">Mockup Validate</span>
+          <span class="alt-skill-version">v1.2.3</span>
+        </span>
+        <p class="alt-skill-desc">Checks your mockups for what really matters before build: real content (not placeholder), faithful use of tokens, responsiveness, and a baseline of accessibility. The results go into a report.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Phase 3 · 6 skills</p>
+          <h2>Build the site</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Promote approved design into build targets: static HTML, Elementor widgets, themes, and implementation passes.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-develop.html"><code>/twt-develop</code></a>
+          <span class="alt-skill-name">Develop</span>
+          <span class="alt-skill-version">v1.3.7</span>
+        </span>
+        <p class="alt-skill-desc">Turns your approved design into real, production-ready code. It builds one foundation page first to lock in reusable patterns, then powers through the rest in parallel — keeping your content-approval list moving alongside.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-html-site-creator.html"><code>/twt-html-site-creator</code></a>
+          <span class="alt-skill-name">HTML Site Creator</span>
+          <span class="alt-skill-version">v1.2.1</span>
+        </span>
+        <p class="alt-skill-desc">Sets up a clean, dependency-free HTML/CSS site once per project, with shared header/footer partials and design tokens mirrored from your design system. Run it first so every page you build starts from the same base.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-html-block-creator.html"><code>/twt-html-block-creator</code></a>
+          <span class="alt-skill-name">HTML Block Creator</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Adds a static HTML page or a single section to your site, reusing shared partials and styling with tokens only. It can promote a finished mockup or build fresh from Figma, screenshots, or notes.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-elementor-theme-creator.html"><code>/twt-elementor-theme-creator</code></a>
+          <span class="alt-skill-name">Elementor Theme Creator</span>
+          <span class="alt-skill-version">v1.2.1</span>
+        </span>
+        <p class="alt-skill-desc">Sets up a Hello Elementor child theme and writes the conventions file the other Elementor tools rely on. Run it once when a WordPress project kicks off so everything shares the same footing.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-elementor-block-creator.html"><code>/twt-elementor-block-creator</code></a>
+          <span class="alt-skill-name">Elementor Block Creator</span>
+          <span class="alt-skill-version">v1.2.2</span>
+        </span>
+        <p class="alt-skill-desc">Builds an Elementor widget or full-page template that matches your theme's existing conventions. It reuses what you already have wherever it can, and only makes something new when nothing fits.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-approval-implement.html"><code>/twt-content-approval-implement</code></a>
+          <span class="alt-skill-name">Content Approval Implement</span>
+          <span class="alt-skill-version">v1.1.3</span>
+        </span>
+        <p class="alt-skill-desc">Takes your filled-in approval spreadsheet and places the approved content exactly where it belongs on the built site. It only touches the rows you've marked ready, so anything still in progress stays off the live pages.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Phase 4 · 7 skills</p>
+          <h2>Check the result — QA</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Audit the built work for accessibility, content fidelity, links, responsive risks, and design-token hygiene.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa.html"><code>/twt-qa</code></a>
+          <span class="alt-skill-name">QA</span>
+          <span class="alt-skill-version">v1.0.6</span>
+        </span>
+        <p class="alt-skill-desc">Runs the right quality checks for your project — on local files or a live site — and rolls them up into a pass/fail report plus a plain-language list of what's left to fix. It's the final gate before you call the site done.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa-a11y.html"><code>/twt-qa-a11y</code></a>
+          <span class="alt-skill-name">QA A11y</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Checks your pages for accessibility basics: image alt text, heading order, landmarks, form labels, and color contrast against WCAG AA. It reports what it finds without touching anything.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa-content.html"><code>/twt-qa-content</code></a>
+          <span class="alt-skill-name">QA Content</span>
+          <span class="alt-skill-version">v1.2.2</span>
+        </span>
+        <p class="alt-skill-desc">Makes sure your content is complete and on-plan — every page present, every section following its outline, and no leftover placeholder or empty gaps. Works on local files, or on the live site if you give it a URL.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa-design.html"><code>/twt-qa-design</code></a>
+          <span class="alt-skill-name">QA Design</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Checks your source files for design fidelity: styling that comes only from tokens (no stray colors or sizes), every token actually defined, and each page's structure including the components its layout calls for. It only reports — it doesn't edit.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa-elementor.html"><code>/twt-qa-elementor</code></a>
+          <span class="alt-skill-name">QA Elementor</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Checks an Elementor child theme for clean, maintainable code — token-only styling, properly registered widgets, translation coverage, and valid PHP. It reviews the code, not the live content, which lives in WordPress.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-qa-links.html"><code>/twt-qa-links</code></a>
+          <span class="alt-skill-name">QA Links</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Makes sure every link and anchor actually resolves, navigation stays consistent, and your declared responsive breakpoints hold up. It flags dead and placeholder links so they land on your fix list.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-validate.html"><code>/twt-content-validate</code></a>
+          <span class="alt-skill-name">Content Validate</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Grades any text against a UX-writing checklist and backs up every score with real quotes from the copy, so you can see exactly what's landing and what isn't. It only reviews and explains — the actual rewriting is a separate step.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Purpose · 3 skills</p>
+          <h2>Remember the project — the wiki</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">The project's durable memory, kept apart from generated artifacts: decisions and the reasons behind them, client answers, and ideas not yet scoped — plus a way to ask questions against all of it.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-wiki.html"><code>/twt-wiki</code></a>
+          <span class="alt-skill-name">Wiki</span>
+          <span class="alt-skill-version">v1.0.7</span>
+        </span>
+        <p class="alt-skill-desc">Sets up and maintains the project wiki — the durable memory that outlives generated artifacts: why decisions were made, what was ruled out, what the client actually said, and ideas not yet scoped. Run it to initialize the wiki, feed it new material, or tidy what's already there.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-wiki-fetch.html"><code>/twt-wiki-fetch</code></a>
+          <span class="alt-skill-name">Wiki Fetch</span>
+          <span class="alt-skill-version">v1.0.5</span>
+        </span>
+        <p class="alt-skill-desc">Brings outside material into the wiki's evidence layer — a file, URL, pasted note, or transcript — and records where it came from so every later claim can cite it. It can also sweep your existing artifacts for decisions worth keeping.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-wiki-query.html"><code>/twt-wiki-query</code></a>
+          <span class="alt-skill-name">Wiki Query</span>
+          <span class="alt-skill-version">v1.0.3</span>
+        </span>
+        <p class="alt-skill-desc">Asks the project a question and answers it from the wiki with citations — including the questions no generated file can answer, like why the CTA is orange or what was ruled out and why.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Purpose · 5 skills</p>
+          <h2>Export polished documents</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Turn Markdown into polished, on-brand deliverables — PDF, Word, or slides — plus the reusable templates that keep them consistent.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-export.html"><code>/twt-export</code></a>
+          <span class="alt-skill-name">Export</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Makes polished, on-brand documents and decks straight from your Markdown — PDF, Word, or slides — all from one guided command. It asks what you want, sets up a template if you need one, then runs the right export.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-export-docx.html"><code>/twt-export-docx</code></a>
+          <span class="alt-skill-name">Export DOCX</span>
+          <span class="alt-skill-version">v1.1.2</span>
+        </span>
+        <p class="alt-skill-desc">Turns a Markdown document into a polished, on-brand Word file. A reliable script handles the conversion, so the formatting comes out the same every time.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-export-pdf.html"><code>/twt-export-pdf</code></a>
+          <span class="alt-skill-name">Export PDF</span>
+          <span class="alt-skill-version">v1.1.4</span>
+        </span>
+        <p class="alt-skill-desc">Turns a Markdown document into a polished, on-brand PDF. A reliable script does the conversion, so the result looks identical on every run.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-export-presentation.html"><code>/twt-export-presentation</code></a>
+          <span class="alt-skill-name">Export Presentation</span>
+          <span class="alt-skill-version">v1.2.1</span>
+        </span>
+        <p class="alt-skill-desc">Turns a Markdown deck into polished slides — PowerPoint or PDF — using a presentation template. A quick way to spin up a clean, on-brand deck without leaving your writing.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-export-template-create.html"><code>/twt-export-template-create</code></a>
+          <span class="alt-skill-name">Export Template Create</span>
+          <span class="alt-skill-version">v2.0.2</span>
+        </span>
+        <p class="alt-skill-desc">Builds a reusable export template that your future PDF, Word, and slide exports can pick from. Base it on a brand brief, your own style notes, or both — and everything you export later can match it.</p>
+      </li></ul>
+    </section><section class="section-band catalog-section">
+      <div class="section-title reveal">
+        <div>
+          <p class="eyebrow">Purpose · 2 skills</p>
+          <h2>Standalone utilities</h2>
+        </div>
+      </div>
+      <p class="alt-group-note reveal">Focused helpers you can run on any project, whether or not the pipeline is involved.</p>
+      <ul class="alt-skill-list"><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-search-site.html"><code>/twt-search-site</code></a>
+          <span class="alt-skill-name">Search Site</span>
+          <span class="alt-skill-version">v1.1.1</span>
+        </span>
+        <p class="alt-skill-desc">Finds every spot a phrase shows up across a website and reports the exact page URLs, each with a little surrounding text for context. A handy standalone tool for tracking down copy wherever it's hiding.</p>
+      </li><li class="reveal">
+        <span class="alt-skill-head">
+          <a href="skills/twt-content-optimize.html"><code>/twt-content-optimize</code></a>
+          <span class="alt-skill-name">Content Optimize</span>
+          <span class="alt-skill-version">v1.2.2</span>
+        </span>
+        <p class="alt-skill-desc">Makes a piece of writing better for you: it scores the original, rewrites it to be clearer and tighter, then shows the before-and-after with the reason behind each change. Let it rewrite everything at once, or walk through the suggestions one by one.</p>
+      </li></ul>
+    </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="assets/app.js"></script>
+</body>
+</html>
