@@ -73,7 +73,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 ## /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Close the asset loop the manifest opens: for every row in `.twt-artifacts/design/assets/manifest.md`, either ingest the provided file, generate a brand-tokened placeholder (including the favicon/OG meta set and the design system's icon SVGs), or produce a concrete human to-do (stock briefs, missing files) — so mockups render, Development has real files to copy, and QA's MISSING-ASSET findings become an actionable checklist instead of noise.
@@ -272,7 +272,7 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.11
+**Version:** 1.3.12
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -919,7 +919,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.7
+**Version:** 1.3.8
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -1543,7 +1543,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-layout-define
 
 **Category:** layout
-**Version:** 1.3.1
+**Version:** 1.3.2
 **Accepts arguments:** yes
 
 For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
@@ -1662,7 +1662,7 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 ## /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.6
+**Version:** 1.3.7
 **Accepts arguments:** yes
 
 Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.

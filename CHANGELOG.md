@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-07-16 **v1.0.72** — twt-assets-produce.md → 1.0.1, twt-layout-define → 1.3.2, twt-mockup-define → 1.3.7, twt-design-system-define → 1.8.14, twt-component-define → 1.3.12, twt-develop.md → 1.3.8
 - 2026-07-16 **v1.0.71** — twt-setup.md → 1.0.3
 - 2026-07-16 **v1.0.70** — twt-direction-define → 1.0.1, twt-design.md → 1.3.6
 - 2026-07-16 **v1.0.69** — twt-audience-define → 1.0.2, twt-seo-define → 1.0.2

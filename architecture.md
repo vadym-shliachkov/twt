@@ -390,7 +390,7 @@ flowchart TB
 ### /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
@@ -651,7 +651,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.11
+**Version:** 1.3.12
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -1134,7 +1134,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.13
+**Version:** 1.8.14
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -1199,7 +1199,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.7
+**Version:** 1.3.8
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -1660,7 +1660,7 @@ flowchart TB
 ### /twt-layout-define
 
 **Category:** layout
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - Optional: which page(s) to (re)define; otherwise all sitemap pages
@@ -1746,7 +1746,7 @@ flowchart TB
 ### /twt-mockup-define
 
 **Category:** mockup
-**Version:** 1.3.6
+**Version:** 1.3.7
 
 **Inputs:**
 - Optional: which page(s) to (re)render; otherwise all layouts

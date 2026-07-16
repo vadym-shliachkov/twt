@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.11) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.11
+description: (v1.3.12) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.12
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines

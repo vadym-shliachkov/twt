@@ -1,8 +1,8 @@
 ---
 name: twt-assets-produce
 category: assets
-description: (v1.0.0) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
-version: 1.0.0
+description: (v1.0.1) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
