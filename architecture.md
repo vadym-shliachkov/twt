@@ -399,7 +399,7 @@ flowchart TB
 ### /twt-audience-define
 
 **Category:** audience
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional answers; otherwise interactive
@@ -2092,7 +2092,7 @@ flowchart TB
 ### /twt-seo-define
 
 **Category:** seo
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional answers; otherwise interactive

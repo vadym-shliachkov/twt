@@ -1,8 +1,8 @@
 ---
 name: twt-seo-define
 category: seo
-description: (v1.0.1) Build or refine seo-map.md — per-page keywords, slugs, meta drafts, schema — plus a redirect map on redesigns
-version: 1.0.1
+description: (v1.0.2) Build or refine seo-map.md — per-page keywords, slugs, meta drafts, schema — plus a redirect map on redesigns
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive
