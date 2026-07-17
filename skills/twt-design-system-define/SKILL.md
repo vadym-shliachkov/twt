@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.14) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.14
+description: (v1.8.15) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.15
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -378,7 +378,11 @@ Read the `contrast_failures[]` array from the gen-preview JSON (Step 10b). Each 
 - **If it is non-empty and this is interactive (not collect mode):** surface the failures to the user — list each `text` / `surface` / `ratio` and recommend the fix (darken the text token until the pair reaches ≥ 4.5:1, or restrict that token to large text / structure only). Ask via **AskUserQuestion** (header "Contrast") whether to **Fix now** (adjust the token values and re-run Step 10a→10b), **Restrict to large-only** (annotate the token's role in `tokens.md §2.1` and §5 as large-text/structure only), or **Accept the risk** (record in `decisions.md`). Default recommendation: Fix now. **Restrict to large-only is only offerable when the failure's `aa_large` flag is true** (ratio ≥ 3.0:1 — AA for large text); below that the pair fails even as large text, so the real options are Fix now or Accept the risk.
 - **In collect mode:** do **not** prompt. Record each failure in `decisions.md` under `## Open questions` (question: "Text token `<text>` on `<surface>` is <ratio>:1 — below AA 4.5:1 for normal text"; options: [darken text token, restrict to large/structure only *(only when `aa_large` is true)*, accept]; model-leaning: darken unless the token is already documented as a label/structure-only role; why it matters: fails WCAG AA, will block at QA). Leave `status: open` for the orchestrator/validator to surface.
 
-Either way, reflect the result in `tokens.md §5` (Accessibility → contrast audit): list each intended pair's ratio + WCAG verdict so the written audit matches the generated matrix.
+Either way, reflect the result in `tokens.md §5` (Accessibility → contrast audit): list each intended pair's ratio + WCAG verdict so the written audit matches the generated matrix. **Copy the ratios verbatim from the gen-preview JSON's `contrast_pairs[]`** (each entry carries the computed `ratio`) — never estimate a ratio by eye; a hand-written "~4.9:1" for a pair the tool measured at 5.96:1 is a factual error that downstream audits will contradict.
+
+## Step 10d — Token-name consistency sweep (always)
+
+Before finishing, Grep `tokens.md` and `decisions.md` for every `--token-name` they mention and confirm each exists in `tokens.css`. Renames during the run (e.g. an `--color-ink-aNN` ladder becoming purpose-named `--color-shadow-*` tokens) must be propagated to **every** prose reference — naming-convention examples (§7), normalization recommendations (§4.2), and decisions entries included. A documented name that no token implements sends downstream authors hunting for something that doesn't exist. Fix the prose (or add the missing token) — never leave the two out of sync.
 
 ## Step 11 — Optional Additional Outputs
 

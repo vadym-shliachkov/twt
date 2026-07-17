@@ -30,6 +30,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import https from 'node:https';
 import http from 'node:http';
+import { loadPlaywright, detectPlaywright } from './lib/resolve-playwright.mjs';
 
 // ── args ──────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -149,6 +150,15 @@ function buildTargets(audit) {
   for (const cl of audit.canonical_blocks || []) {
     if (cl.example) add(cl.example.page, cl.example.block, cl.id);
   }
+  // The best-matching instance per cluster — ds-audit-report.mjs uses it as the
+  // "how it should look" reference pane, so it must have a preview (same
+  // tie-breaking as the report: first instance wins on equal match).
+  const best = new Map();
+  for (const b of audit.block_status || []) {
+    const cur = best.get(b.cluster);
+    if (!cur || b.match > cur.match) best.set(b.cluster, b);
+  }
+  for (const b of best.values()) add(b.page, b.block, b.cluster);
   // Every itemized finding instance.
   for (const d of audit.deviations || []) add(d.page, d.block, d.cluster);
   return targets.slice(0, MAX_SHOTS);
@@ -217,9 +227,9 @@ ${outer}
 
 // ── playwright: element screenshots ──────────────────────────────────────────
 async function tryPlaywright(targets, audit, shotsDir, name, visuals, captured) {
-  let pw;
-  try { pw = await import('playwright'); }
-  catch { log('playwright npm package not installed — using HTML-embed fallback.\n  Note: the Claude Code playwright plugin (MCP) is a browser-automation tool for Claude,\n  not the npm package this script needs. To enable screenshots:\n    npm install playwright && npx playwright install chromium'); return false; }
+  const { pw, how } = await loadPlaywright();
+  if (!pw) { log('playwright npm package not installed (checked plugin root, project node_modules, and the global npm root) — using HTML-embed fallback.\n  Note: the Claude Code playwright plugin (MCP) is a browser-automation tool for Claude,\n  not the npm package this script needs. To enable screenshots:\n    npm install playwright && npx playwright install chromium'); return false; }
+  log('playwright resolved from: ' + how);
   let browser;
   try { browser = await pw.chromium.launch(); }
   catch (e) { log('chromium launch failed (' + (e && e.message) + ') — using fallback'); return false; }
@@ -257,6 +267,15 @@ function cssFromSel(sel) { return sel; }
 
 // ── main ─────────────────────────────────────────────────────────────────────
 (async () => {
+  // --detect: report whether the npm playwright package + Chromium are usable
+  // (checks plugin root, project node_modules, and the global npm root) and
+  // exit 0 when screenshots will work, 1 when they won't. Skills call this
+  // BEFORE ever asking the user to install anything.
+  if (flags.detect) {
+    const d = await detectPlaywright();
+    console.log(JSON.stringify(d));
+    process.exit(d.playwright && d.chromium ? 0 : 1);
+  }
   const auditPath = path.join(OUT, 'audit.json');
   if (!fs.existsSync(auditPath)) { log('audit.json not found in ' + OUT + ' — run ds-audit first'); process.exit(1); }
   const audit = JSON.parse(fs.readFileSync(auditPath, 'utf8'));

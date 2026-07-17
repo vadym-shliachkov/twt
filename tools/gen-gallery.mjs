@@ -33,6 +33,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { projectFontLinks } from './lib/google-fonts.mjs';
 
 const projectDir = process.argv[2];
 const scaffold = process.argv.includes('--scaffold');
@@ -267,6 +268,7 @@ if (scaffold) {
 <title>Component Gallery — ${esc(projName())}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+${projectFontLinks(existsSync(CSS) ? readFileSync(CSS, 'utf8') : '', { 'ibm plex mono': [400, 500], inter: [400, 500, 600, 700], montserrat: [600, 700, 800, 900] })}
 <link rel="stylesheet" href="../tokens.css">
 <style data-gal-chrome>
 ${CHROME_CSS}

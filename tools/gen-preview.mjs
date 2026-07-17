@@ -38,6 +38,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readHouseCss } from './house-style.mjs';
+import { projectFontLinks } from './lib/google-fonts.mjs';
 
 const projectDir = process.argv[2];
 const tokensOnly = process.argv.includes('--mode') &&
@@ -613,6 +614,7 @@ const html = `<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+${projectFontLinks(cssText, { 'ibm plex mono': [400, 500], inter: [400, 500, 600, 700], montserrat: [600, 700, 800, 900] })}
 <link rel="stylesheet" href="tokens.css">
 <style>${readHouseCss()}</style>
 <style>
@@ -1030,6 +1032,10 @@ const summary = {
     flat_gradients: flatGradients.length,
   },
   contrast_failures: failures,
+  // Every intended text/surface pair with its COMPUTED ratio + verdict — the
+  // written contrast audit (tokens.md §5) must copy these numbers verbatim,
+  // never hand-estimate a ratio.
+  contrast_pairs: contrastRows.filter((r) => r.intended),
   // consolidation warnings (non-fatal): near-identical primitives across roles +
   // gradients whose stops read as one flat fill. Validators surface these.
   near_dup_pairs: nearDupPairs.map(([a, b]) => ({ a, b })),

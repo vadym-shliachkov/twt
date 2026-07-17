@@ -59,6 +59,10 @@ const auditPath = path.join(OUT, 'audit.json');
 if (!fs.existsSync(auditPath)) { console.error('ds-audit-report: audit.json not found in ' + OUT); process.exit(1); }
 const audit = readJson(auditPath) || {};
 const visuals = readJson(path.join(OUT, 'visuals.json')) || {};
+if (!Object.keys(visuals).length) {
+  console.error('ds-audit-report: WARNING — visuals.json is missing or empty; block cards will render'
+    + ' without previews. Run ds-shots.mjs before this report to capture them.');
+}
 const quality = readJson(path.join(OUT, 'quality.json')); // may be null
 const metricsData = readJson(path.join(OUT, 'metrics.json')); // may be null
 const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;
@@ -85,11 +89,23 @@ function parseColor(v) {
     return { r: p[0], g: p[1], b: p[2], a: p[3] === undefined ? 1 : p[3] }; }
   return null;
 }
-function lenToPx(v) {
+// The site's real root font-size, detected by ds-audit.mjs — rem values on
+// both sides convert through it, never a hardcoded 16.
+const ROOT_PX = (audit.summary && audit.summary.root_font_px) || 16;
+function lenToPx(v, rootPx = ROOT_PX) {
   const m = String(v).trim().match(/^(-?\d*\.?\d+)(px|rem|em|pt)?$/i);
   if (!m) return null;
   const n = parseFloat(m[1]); const u = (m[2] || 'px').toLowerCase();
-  return u === 'rem' || u === 'em' ? n * 16 : u === 'pt' ? n * (96 / 72) : n;
+  return u === 'rem' || u === 'em' ? n * rootPx : u === 'pt' ? n * (96 / 72) : n;
+}
+// Same category heuristic as ds-audit.mjs: a nearest-token suggestion may only
+// come from the raw value's own category (plus uncategorized tokens) — never
+// suggest a --space-* for a font-size.
+function tokenCategory(name) {
+  if (/radius|rounded|corner/.test(name)) return 'radius';
+  if (/font-size|text-size|type-|\bfs-|-size\b/.test(name)) return 'font-size';
+  if (/space|gap|gutter|inset|pad|margin/.test(name)) return 'spacing';
+  return 'other';
 }
 const tokenList = [];
 if (tokensCss) {
@@ -100,11 +116,11 @@ if (tokensCss) {
     const val = m[2].trim();
     const col = parseColor(val);
     if (col) { tokenList.push({ name, val, kind: 'color', col }); continue; }
-    const px = lenToPx(val);
-    if (px != null) tokenList.push({ name, val, kind: 'len', px });
+    const px = lenToPx(val, 16); // tokens.css is authored against the default root
+    if (px != null) tokenList.push({ name, val, kind: 'len', px, cat: tokenCategory(name) });
   }
 }
-function nearestToken(rawVal) {
+function nearestToken(rawVal, category) {
   const col = parseColor(rawVal);
   if (col) {
     let best = null, bd = Infinity;
@@ -118,19 +134,33 @@ function nearestToken(rawVal) {
   const px = lenToPx(rawVal);
   if (px != null) {
     let best = null, bd = Infinity;
-    for (const t of tokenList) { if (t.kind !== 'len') continue; const d = Math.abs(t.px - px); if (d < bd) { bd = d; best = t; } }
+    for (const t of tokenList) {
+      if (t.kind !== 'len') continue;
+      if (category && t.cat !== category && t.cat !== 'other') continue; // same-category only
+      const d = Math.abs(t.px - px); if (d < bd) { bd = d; best = t; }
+    }
     return best && bd <= 4 ? best : null; // within 4px
   }
   return null;
 }
+// "1.5rem" for a 24px token when the raw value was in rem — so the suggestion
+// speaks the same unit the site's CSS uses.
+function tokenEquiv(near, rawVal) {
+  if (near.kind !== 'len') return esc(near.val);
+  const showRem = /rem|em/i.test(String(rawVal));
+  if (!showRem || /rem|em/i.test(near.val)) return esc(near.val);
+  const rem = Math.round((near.px / ROOT_PX) * 10000) / 10000;
+  return `${esc(near.val)} = ${rem}rem`;
+}
 // Enrich a delta string ("color `#7a82a8` is not a design-system token value")
-// with the nearest token, so the fix names the actual replacement.
+// with the nearest token, so the fix names the actual replacement. The delta's
+// leading word (color / spacing / font-size / radius) scopes the search.
 function enrichDelta(s) {
-  const m = String(s).match(/`([^`]+)`/);
+  const m = String(s).match(/^\s*(color|spacing|font-size|radius)?[^`]*`([^`]+)`/);
   if (!m) return esc(s);
-  const near = nearestToken(m[1]);
+  const near = nearestToken(m[2], m[1] || null);
   const base = esc(s);
-  return near ? `${base} <span class="near">→ use <code>${esc(near.name)}</code> (${esc(near.val)})</span>` : base;
+  return near ? `${base} <span class="near">→ use <code>${esc(near.name)}</code> (${tokenEquiv(near, m[2])})</span>` : base;
 }
 
 // ── small render helpers ──────────────────────────────────────────────────────
@@ -435,14 +465,24 @@ function blockCard(b) {
   const dev = devByPageBlock.get(vid(b.page, b.block));
   const own = visuals[vid(b.page, b.block)];
   const ref = canonRef(b.cluster);
-  const refV = ref ? visuals[vid(ref.page, ref.block)] : null;
+  const refDifferent = ref && vid(ref.page, ref.block) !== vid(b.page, b.block);
+  const refV = refDifferent ? visuals[vid(ref.page, ref.block)] : null;
   const name = b.name || clusterName.get(b.cluster) || b.role;
   const deltas = (dev && dev.deltas ? dev.deltas : (b.reasons || []));
   const reasonsHtml = deltas.length
     ? `<ul class="deltas">${deltas.map((x) => `<li>${enrichDelta(x)}</li>`).join('')}</ul>`
     : '<p class="ok small">Matches the design system — no drift.</p>';
   const isOk = b.tier === 'OK';
-  const previews = isOk ? '' : `
+  // Now-vs-canonical pair when a distinct canonical instance has a preview and
+  // the drift is actually perceivable at display size; single pane otherwise.
+  const showPair = refV && isSignificant(b);
+  const previews = isOk ? '' : showPair ? `
+    <div class="ba">
+      <figure class="ba-now"><figcaption>This instance <span class="muted">(${b.match}% match)</span></figcaption>
+        <div class="pane">${thumb(own, 'fullpv')}</div></figure>
+      <figure class="ba-should"><figcaption>Best-matching instance <span class="muted">(${esc(prettyPage(ref.page))} · ${ref.match}% match)</span></figcaption>
+        <div class="pane">${thumb(refV, 'fullpv')}</div></figure>
+    </div>` : `
     <div class="ba single">
       <figure class="ba-now"><figcaption>Block preview <span class="muted">(this instance)</span></figcaption>
         <div class="pane">${thumb(own, 'fullpv')}</div></figure>
@@ -551,9 +591,11 @@ table.grid{width:100%;border-collapse:collapse;font-size:13px;background:var(--b
 @media (max-width:720px){.ba{grid-template-columns:1fr}}
 .ba figure{margin:0}.ba figcaption{font-size:12px;font-weight:600;margin-bottom:6px}
 .ba-now figcaption{color:var(--blocker)}.ba-should figcaption{color:var(--ok)}
-.pane{height:420px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;outline:none}
-.pane img{width:100%;height:100%;border:0;display:block;object-fit:contain;object-position:top center}
-.pane iframe{width:100%;height:100%;border:0;display:block;outline:none}
+/* Natural image height, capped — no fixed-height letterboxing. Screenshots
+   shorter than the cap take only their own height; taller ones scroll. */
+.pane{max-height:480px;border:1px solid var(--line);border-radius:8px;overflow-y:auto;background:#fff;outline:none}
+.pane img{width:100%;height:auto;border:0;display:block}
+.pane iframe{width:100%;height:420px;border:0;display:block;outline:none}
 .noimg{display:flex;align-items:center;justify-content:center;height:100%;min-height:120px;color:var(--muted);font-size:12px;background:var(--soft)}
 .okwrap{margin-top:18px}.okwrap>summary{cursor:pointer;font-weight:600;color:var(--muted)}
 .oklist{list-style:none;padding:0;margin:10px 0;display:flex;flex-direction:column;gap:6px;font-size:13px}

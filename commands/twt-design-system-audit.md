@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-audit
 category: design-system
-description: (v1.5.2) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
-version: 1.5.2
+description: (v1.6.0) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
+version: 1.6.0
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -29,6 +29,7 @@ writes:
   - .twt-artifacts/design/design-system-audit/metrics.json
   - .twt-artifacts/design/design-system-audit/audit.json
   - .twt-artifacts/design/design-system-audit/blocks.json
+  - .twt-artifacts/design/design-system-audit/site-styles.css
   - .twt-artifacts/design/design-system-audit/visuals.json
   - .twt-artifacts/design/design-system-audit/pages/
   - .twt-artifacts/design/design-system-audit/shots/
@@ -251,6 +252,8 @@ Write `<OUT>/quality.json`:
 }
 ```
 
+**Override consistency.** If your judgment overrides a tool-computed number (a score, a count you verified against the live CSS), record it in a `score_overrides[]` entry **and recompute everything downstream of it in quality.json** — including `hard_gates`: a verified `!important` count of 39 means `important_blocker` is `true` per the tool's own 11+ rubric, even though `metrics.json` said `false` from its lower count. Never ship a quality.json whose gates contradict evidence your own report states.
+
 Write `<OUT>/quality-report.md`:
 ```markdown
 # Design System Quality Report — <ISO date>
@@ -308,20 +311,26 @@ Source: <figma url | site url>  ·  Baseline: <provided DS | synthesized from de
 ```
 **Tiering:** a deviation is a **BLOCKER** when it breaks a token rule that matters (a raw **opaque** color where a palette exists, or a structural omission of a required region); **WARNING** when it's a translucent tint/overlay off-palette, off-scale spacing/type/radius, or an undocumented variant; **SUGGESTION** for minor drift. The script already assigns each `deviations[]`/`block_status[]` entry a `name`, `tier`, and `reason_types` by exactly this rule — use them; don't re-derive. Drive the `.md` findings from `deviations[]` (sorted worst-match first), naming the literal `name`; the HTML report (Step 7c) renders every page's blocks as per-page card files from `block_status[]`. If `deviations[]` is empty, write "No block-level drift — the design follows its system consistently."
 
+**Finding hygiene (both reports):**
+- **Where must name real audited pages.** Every finding's `Where:` cites pages from `summary`/`block_status[]` verbatim — never a path inferred from a CSS class name (a `.insight-capture` block does not live on "/insight pages" unless such a page was actually crawled).
+- **Units:** when quoting a raw value next to a token, quote both in comparable units (the deltas already convert rem↔px through the site's detected `summary.root_font_px`); never claim a value is off-system by comparing a rem number against a px number, or a font-size against a spacing token.
+- **Unify list = true alternatives only.** Recommend converging two clusters only when they are genuinely alternative implementations of the same component. Never pair a container with its own descendant (a `div.hero-inner` inside `section.hero` is one hero, not two), and check the example selectors make semantic sense before calling something a header/nav/form variant.
+
 ## Step 7b — Generate block visuals
 
 **Detect Playwright first.** Run (Bash):
 ```bash
-node -e "import('playwright').then(()=>process.exit(0),()=>process.exit(1))"
+node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --detect
 ```
+This checks the plugin root, the project's `node_modules`, **and** the global npm root, and test-launches Chromium — it finds an existing install wherever it lives. **Never ask the user to install Playwright unless this detection exits 1.** It prints `{"playwright":…,"chromium":…,"how":…}`: `playwright:true, chromium:false` means only the browser download is missing — then suggest just `npx playwright install chromium`, not a package install.
 
-- **Exit 0 — Playwright is installed:** run `ds-shots` without any extra flags. The tool takes Playwright screenshots for every block it can locate. Blocks it cannot locate get **no preview** (`null`) — **no HTML fallback, ever**. The mix of screenshot + HTML-embed modes is explicitly disabled when Playwright is available.
+- **Exit 0 — Playwright is usable:** run `ds-shots` without any extra flags. The tool takes Playwright screenshots for every block it can locate. Blocks it cannot locate get **no preview** (`null`) — **no HTML fallback, ever**. The mix of screenshot + HTML-embed modes is explicitly disabled when Playwright is available.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>"
 ```
 
-- **Exit 1 — Playwright is not installed:** ask via the **AskUserQuestion** tool (single-select, header "Block visuals"):
-  - **Install Playwright** (recommended) — show the user: `npm install -D playwright && npx playwright install chromium`. Once the user confirms it is installed, re-run the detection check. If now installed, run `ds-shots` as above (Playwright path). If the install fails or the user skips, fall back to HTML.
+- **Exit 1 — Playwright is not usable:** ask via the **AskUserQuestion** tool (single-select, header "Block visuals"):
+  - **Install Playwright** (recommended) — show the user: `npm install -D playwright && npx playwright install chromium` (or only `npx playwright install chromium` when detection said the package exists but the browser is missing). Once the user confirms it is installed, re-run the detection check. If now installed, run `ds-shots` as above (Playwright path). If the install fails or the user skips, fall back to HTML.
   - **Use HTML previews** — run with `--html-only`, which fetches and inlines each page's stylesheets so the preview renders faithfully without a browser:
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --html-only

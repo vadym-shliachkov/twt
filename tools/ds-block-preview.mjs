@@ -29,6 +29,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { loadPlaywright } from './lib/resolve-playwright.mjs';
 
 const argv = process.argv.slice(2);
 const flags = {};
@@ -62,12 +63,11 @@ if (!outPath) {
 
 const target = file ? pathToFileURL(file).href : urlArg;
 
-let pw;
-try {
-  pw = await import('playwright');
-} catch {
+const { pw } = await loadPlaywright();
+if (!pw) {
   console.error([
-    'ds-block-preview: playwright npm package not installed.',
+    'ds-block-preview: playwright npm package not installed (checked plugin root,',
+    'project node_modules, and the global npm root).',
     'Install it with:',
     '  npm install playwright',
     '  npx playwright install chromium',

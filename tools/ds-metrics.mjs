@@ -38,8 +38,13 @@ const summary = audit.summary || {};
 
 const tokensCss = TOKENS_PATH && fs.existsSync(TOKENS_PATH) ? fs.readFileSync(TOKENS_PATH, 'utf8') : null;
 
-// Read all crawled page HTML + inline CSS
+// Read all crawled page HTML + the aggregated site CSS. ds-audit.mjs persists
+// `site-styles.css` (per-page inline <style> blocks + every LINKED stylesheet,
+// each counted once) — without it, only inline CSS is visible and every
+// stylesheet-wide count (!important, prefers-reduced-motion, colors, type)
+// undercounts badly.
 const pagesDir = path.join(OUT, 'pages');
+const siteStylesPath = path.join(OUT, 'site-styles.css');
 let allSiteCss = '';
 let allSiteHtml = '';
 let inlineStyleCount = 0;
@@ -53,8 +58,23 @@ if (fs.existsSync(pagesDir)) {
   }
   // inline style= attributes
   inlineStyleCount = (allSiteHtml.match(/\bstyle\s*=\s*["'][^"']+["']/gi) || []).length;
-  // !important
-  importantCount = (allSiteCss.match(/!important/gi) || []).length;
+}
+if (fs.existsSync(siteStylesPath)) {
+  // The aggregate already contains the inline blocks (once per page) plus the
+  // linked stylesheets — use it INSTEAD of the inline-only concatenation.
+  allSiteCss = fs.readFileSync(siteStylesPath, 'utf8');
+} else if (allSiteCss) {
+  console.error('ds-metrics: site-styles.css not found — measuring inline <style> CSS only; linked-stylesheet counts (!important, reduced-motion, colors) will undercount. Re-run ds-audit.mjs to produce it.');
+}
+importantCount = (allSiteCss.match(/!important/gi) || []).length;
+
+// rem→px conversions use the site's detected root font-size.
+const ROOT_PX = (summary.root_font_px && Number(summary.root_font_px)) || 16;
+function toPx(v, rootPx = ROOT_PX) {
+  const m = String(v).trim().match(/^(-?\d*\.?\d+)(px|rem|em|pt)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]); const u = (m[2] || 'px').toLowerCase();
+  return u === 'rem' || u === 'em' ? n * rootPx : u === 'pt' ? n * (96 / 72) : n;
 }
 
 // ── colour helpers ────────────────────────────────────────────────────────────
@@ -162,13 +182,15 @@ for (const sv of siteColors) {
   if (near) nearDupColorCount++;
 }
 
-// Lengths: near-token font-sizes, spacings
+// Lengths: near-token font-sizes, spacings. Both sides convert to px first —
+// site rem at the DETECTED root, token values at the default 16 — so 1.5rem
+// and 24px compare as the same number, never as 1.5 vs 24.
 function nearTokenLengths(siteVals, dsVals) {
-  const dsPx = dsVals.map((t) => parseFloat(t.val)).filter((n) => !isNaN(n));
+  const dsPx = dsVals.map((t) => toPx(t.val, 16)).filter((n) => n != null);
   let near = 0;
   for (const sv of siteVals) {
-    const n = parseFloat(sv); if (isNaN(n)) continue;
-    const exact = dsPx.some((d) => Math.abs(d - n) < 0.1);
+    const n = toPx(sv); if (n == null) continue;
+    const exact = dsPx.some((d) => Math.abs(d - n) < 0.5);
     if (exact) continue;
     const isNear = dsPx.some((d) => Math.abs(d - n) <= 2);
     if (isNear) near++;
@@ -179,12 +201,32 @@ const nearDupFontSizes = nearTokenLengths(siteFontSizes, dsTokens.fontSizes);
 const nearDupSpacings = nearTokenLengths(siteSpacings, dsTokens.spacings);
 
 // ── unmapped counts ───────────────────────────────────────────────────────────
-// Count site values not covered by DS tokens (by exact or var() reference).
-function unmappedCount(siteVals, dsVals) {
-  const dsSet = new Set(dsVals.map((t) => t.val.replace(/\s+/g, '')));
-  return siteVals.filter((v) => !dsSet.has(v.replace(/\s+/g, ''))).length;
+// Count site values not covered by DS tokens — px-equivalence for lengths,
+// normalized-string equality for everything else.
+function normStr(v) {
+  let s = String(v).toLowerCase().replace(/\s+/g, '');
+  s = s.replace(/([(,])\.(\d)/g, '$1' + '0.$2');
+  s = s.replace(/(\d\.\d*?)0+(?=\D|$)/g, '$1').replace(/(\d)\.(?=\D|$)/g, '$1');
+  const hm = s.match(/^#([0-9a-f]{3,4})$/);
+  if (hm) s = '#' + hm[1].split('').map((c) => c + c).join('');
+  return s;
 }
-const unmappedColors    = siteColors.length - (dsTokens.colors.length || 0); // rough: DS tokens are the approved set
+function unmappedCount(siteVals, dsVals) {
+  const dsSet = new Set(dsVals.map((t) => normStr(t.val)));
+  const dsPx = dsVals.map((t) => toPx(t.val, 16)).filter((n) => n != null);
+  return siteVals.filter((v) => {
+    if (dsSet.has(normStr(v))) return false;
+    const p = toPx(v);
+    return !(p != null && dsPx.some((d) => Math.abs(d - p) <= 0.5));
+  }).length;
+}
+// Real SET difference: site colors with no DS token equivalent. (The old
+// `siteCount − dsCount` clamped to 0 whenever the DS simply had MORE tokens
+// than the site had colors, reporting "0 extra" while off-palette colors
+// existed.)
+const dsColorSet = new Set(dsTokens.colors.map((t) => normStr(t.val)));
+const extraColorsList = siteColors.filter((c) => !dsColorSet.has(normStr(c)));
+const unmappedColors    = extraColorsList.length;
 const unmappedFontSizes = unmappedCount(siteFontSizes, dsTokens.fontSizes);
 const unmappedSpacings  = unmappedCount(siteSpacings, dsTokens.spacings);
 const unmappedRadii     = unmappedCount(siteRadii, dsTokens.radii);
@@ -253,13 +295,32 @@ const unapprovedFontFamilyCount = dsTokens.all.some((t) => t.name.includes('font
 
 // ── normalization opportunities ───────────────────────────────────────────────
 // Repeated raw values that appear 2+ times are candidates for token creation.
-function tokenCandidates(vals) {
-  const freq = {}; for (const v of vals) freq[v] = (freq[v] || 0) + 1;
-  return Object.values(freq).filter((n) => n >= 2).length;
+// This MUST count occurrences in the raw CSS — siteColors/siteSpacings/… are
+// de-duplicated Sets, so counting over them pinned every frequency at 1,
+// totalTokenCandidates at 0, and (downstream) the governance score at a
+// structural 100 for any site.
+function occurrences(css, re, map = (m) => m[1] || m[0]) {
+  const freq = {};
+  let m; const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+  while ((m = r.exec(css))) { const v = String(map(m) || '').toLowerCase().trim(); if (v) freq[v] = (freq[v] || 0) + 1; }
+  return freq;
 }
-const colorTokenCandidates = tokenCandidates(siteColors);
-const spacingTokenCandidates = tokenCandidates(siteSpacings);
-const fontSizeTokenCandidates = tokenCandidates(siteFontSizes);
+function candidateCount(freq, dsVals) {
+  const dsSet = new Set(dsVals.map((t) => normStr(t.val)));
+  const dsPx = dsVals.map((t) => toPx(t.val, 16)).filter((n) => n != null);
+  return Object.entries(freq).filter(([v, n]) => {
+    if (n < 2) return false;
+    if (dsSet.has(normStr(v))) return false; // already a token
+    const p = toPx(v);
+    return !(p != null && dsPx.some((d) => Math.abs(d - p) <= 0.5));
+  }).length;
+}
+const colorFreq = occurrences(siteOnlyCss, new RegExp(COLOR_RE.source, 'gi'), (m) => (m[1] ? '#' + m[1] : m[2] || ''));
+const spacingFreq = occurrences(siteOnlyCss, /(?:margin|padding|gap|inset)[a-z-]*\s*:\s*[^;{}]*?(-?\d*\.?\d+(?:px|rem|em))/gi);
+const fontSizeFreq = occurrences(siteOnlyCss, /font-size\s*:\s*[^;{}]*?(-?\d*\.?\d+(?:px|rem|em))/gi);
+const colorTokenCandidates = candidateCount(colorFreq, dsTokens.colors);
+const spacingTokenCandidates = candidateCount(spacingFreq, dsTokens.spacings);
+const fontSizeTokenCandidates = candidateCount(fontSizeFreq, dsTokens.fontSizes);
 const totalTokenCandidates = colorTokenCandidates + spacingTokenCandidates + fontSizeTokenCandidates;
 const normalizationOpportunities = Math.max(0, siteColors.length - ds.color_count) + Math.max(0, siteFontSizes.length - ds.type_size_count) + Math.max(0, siteSpacings.length - ds.space_count);
 
@@ -300,10 +361,10 @@ const metrics = [
     unit: 'x', st: status(ratio(siteColors.length, ds.color_count), 1.5, 2.5, { blocker: 4 }),
     desc: 'Site unique colors ÷ DS color tokens. A ratio above 1.5× means the site is using more colors than the system allows; 4×+ is systemic. Trust token coverage over this ratio — a low ratio with 0% token usage is still BLOCKER.' },
   { cat: 1, id: '1.4',  name: 'Extra colors count',
-    value: Math.max(0, siteColors.length - (ds.color_count || 0)),
+    value: unmappedColors,
     site: siteColors.length, ds: ds.color_count,
-    st: status(Math.max(0, siteColors.length - (ds.color_count || 0)), 3, 8, { blocker: 15 }),
-    desc: 'Site unique colors minus DS tokens. Every extra color is a value with no approved home in the system.' },
+    st: status(unmappedColors, 3, 8, { blocker: 15 }),
+    desc: 'Site colors with no equivalent DS token value (set difference, not a count difference). Every extra color is a value with no approved home in the system.' },
   { cat: 1, id: '1.5',  name: 'Approved color coverage',
     value: colorTokenCoverage, unit: '%',
     st: colorTokenCoverage == null ? null
@@ -838,8 +899,13 @@ const uniqueUiColorsBlocker = siteColors.length >= 25;
 const inlineStyleBlocker = inlineStyleCount > 20;
 const importantBlocker = importantCount >= 11;
 const rawValueBlocker = rawValueUsageCount >= 51;
+// Outline removal is only a CRITICAL failure when the CSS offers no focus
+// replacement at all — sites that remove the default outline but restyle
+// :focus/:focus-visible with their own outline or box-shadow are compliant.
+const outlineRemovals = (allSiteCss.match(/outline\s*:\s*(?:0|none)/gi) || []).length;
+const hasFocusReplacement = /:focus(?:-visible|-within)?[^{}]*\{[^}]*(?:outline\s*:\s*(?!0\b|none\b)|box-shadow\s*:)/i.test(allSiteCss);
 const hasCriticalA11yFailure = (contrastFailures ?? 0) > 0
-  || (allSiteCss.match(/outline\s*:\s*0|outline\s*:\s*none/gi) || []).length > 0;
+  || (outlineRemovals > 0 && !hasFocusReplacement);
 
 const hardGates = {
   token_usage_zero: isTokenUsageZero,

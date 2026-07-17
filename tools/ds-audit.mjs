@@ -123,11 +123,17 @@ function stylesheetHrefs(html, base) {
   return [...new Set(out)];
 }
 
+// Linked stylesheets are cached across pages: a shared site.css is fetched
+// once and counted ONCE in the aggregate CSS (`fresh`), so frequency-based
+// metrics don't see it multiplied by the page count. `page` still carries the
+// full CSS this page loads (for per-block fingerprinting).
+const sheetCache = new Map(); // abs url → css string ('' on failure)
 async function collectCss(html, base) {
-  let css = '';
+  let inline = '';
   const styleRe = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
   let m;
-  while ((m = styleRe.exec(html))) css += '\n' + m[1];
+  while ((m = styleRe.exec(html))) inline += '\n' + m[1];
+  let page = inline, fresh = inline;
   const linkRe = /<link\b[^>]*\brel=["']?stylesheet["']?[^>]*>/gi;
   const hrefRe = /\bhref=["']([^"']+)["']/i;
   const links = html.match(linkRe) || [];
@@ -136,11 +142,30 @@ async function collectCss(html, base) {
     if (!h) continue;
     try {
       const u = new URL(h[1], base).href;
+      if (sheetCache.has(u)) { page += '\n' + sheetCache.get(u); continue; }
       const r = await fetchUrl(u);
-      if (r.status >= 200 && r.status < 300) css += '\n/* ' + u + ' */\n' + r.body;
+      const body = (r.status >= 200 && r.status < 300) ? '\n/* ' + u + ' */\n' + r.body : '';
+      sheetCache.set(u, body);
+      page += body; fresh += body;
     } catch { /* ignore */ }
   }
-  return css;
+  return { page, fresh };
+}
+
+// The site's real root font-size (for rem→px conversion). Last html/:root
+// font-size declaration wins; defaults to 16px.
+function detectRootFontPx(css) {
+  let px = 16;
+  const re = /(?:^|[}\s,])(?:html|:root)\b[^{}]*\{([^}]*)\}/gi;
+  let m;
+  while ((m = re.exec(css))) {
+    const f = m[1].match(/font-size\s*:\s*([\d.]+)\s*(px|%|em|rem)/i);
+    if (!f) continue;
+    const n = parseFloat(f[1]);
+    const u = f[2].toLowerCase();
+    px = u === 'px' ? n : u === '%' ? 16 * (n / 100) : 16 * n;
+  }
+  return Math.round(px * 100) / 100;
 }
 
 // ── block extraction (static, approximate) ───────────────────────────────────
@@ -157,32 +182,81 @@ const ROLE_KEYWORDS = [
   ['pricing', /\bpricing|plans|tiers\b/i, 'pricing'],
 ];
 
-function guessRole(tag, classes, html) {
+// Role is classified from the block's OWN classes + id only. Inner HTML used
+// to be part of the haystack, which misclassified whole sections from
+// incidental content (a "Contact" link made a sticky CTA a `form`; a child
+// with a *-header class made a plain section a `header`).
+function guessRole(tag, classes, id) {
   if (tag === 'nav') return 'nav';
   if (tag === 'header') return 'header';
   if (tag === 'footer') return 'footer';
-  const hay = classes.join(' ') + ' ' + (html.slice(0, 200));
+  const hay = classes.join(' ') + ' ' + (id || '');
   for (const [, re, role] of ROLE_KEYWORDS) if (re.test(hay)) return role;
   return 'section';
 }
 
-// Pull top-level regions: header/nav/footer/main + section/article + direct
-// div children that carry a class (a reasonable proxy for "a block").
+// Index just past the balanced closing tag for an element whose opening tag
+// ends at `afterOpenIdx`. Returns { end, innerEnd } (innerEnd = closing tag's
+// start). Best-effort to EOF on unbalanced markup.
+function balancedEnd(html, tag, afterOpenIdx) {
+  const tokRe = new RegExp('<' + tag + '\\b[^>]*?(/?)>|</' + tag + '\\s*>', 'gi');
+  tokRe.lastIndex = afterOpenIdx;
+  let depth = 1, t;
+  while ((t = tokRe.exec(html))) {
+    if (t[0][1] === '/') { if (--depth === 0) return { end: tokRe.lastIndex, innerEnd: t.index }; }
+    else if (t[1] !== '/') depth++;
+  }
+  return { end: html.length, innerEnd: html.length };
+}
+
+// Pull TOP-LEVEL page regions: semantic landmarks (header/nav/footer/section/
+// article) plus class-bearing divs — with real nesting rules. The previous
+// version regex-matched class-bearing divs ANYWHERE in the page, so a hero's
+// inner wrapper, a header's nav-links div, and a grid's card all became
+// separate "blocks", double-counting the same UI at several DOM depths and
+// letting the report recommend "unifying" a container with its own child.
+// Now every region's balanced extent is computed and any candidate nested
+// inside an accepted region is dropped; page-spanning wrapper divs are skipped
+// (their children surface instead).
 function topLevelRegions(html) {
-  const regions = [];
-  const tagRe = /<(header|nav|footer|section|article)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+  const semantic = [];
+  const openRe = /<(header|nav|footer|section|article)\b([^>]*)>/gi;
   let m;
-  while ((m = tagRe.exec(html))) {
-    regions.push({ tag: m[1].toLowerCase(), attrs: m[2] || '', inner: m[3] || '' });
+  while ((m = openRe.exec(html))) {
+    const tag = m[1].toLowerCase();
+    const { end, innerEnd } = balancedEnd(html, tag, openRe.lastIndex);
+    semantic.push({ tag, attrs: m[2] || '', inner: html.slice(openRe.lastIndex, innerEnd), start: m.index, end });
   }
-  // Also class-bearing top divs that aren't already captured (cheap heuristic).
-  const divRe = /<div\b([^>]*\bclass=["'][^"']+["'][^>]*)>([\s\S]{40,}?)<\/div>/gi;
-  let d, count = 0;
-  while ((d = divRe.exec(html)) && count < 40) {
-    count++;
-    regions.push({ tag: 'div', attrs: d[1] || '', inner: d[2] || '' });
+  const contains = (outer, c) => c.start >= outer.start && c.end <= outer.end && !(c.start === outer.start && c.end === outer.end);
+  const accepted = [];
+  semantic.sort((a, b) => (a.start - b.start) || (b.end - a.end));
+  for (const c of semantic) {
+    if (accepted.some((p) => contains(p, c))) continue; // e.g. <nav> inside <header>
+    accepted.push(c);
   }
-  return regions;
+  // Class-bearing divs: only those that are not inside an accepted region, do
+  // not wrap one (page/layout wrappers), and are not page-spanning.
+  const bodyLen = ((html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i) || [, html])[1] || html).length;
+  const divs = [];
+  const divRe = /<div\b([^>]*\bclass=["'][^"']+["'][^>]*)>/gi;
+  let d;
+  while ((d = divRe.exec(html))) {
+    const { end, innerEnd } = balancedEnd(html, 'div', divRe.lastIndex);
+    const inner = html.slice(divRe.lastIndex, innerEnd);
+    if (inner.length < 40) continue;
+    divs.push({ tag: 'div', attrs: d[1] || '', inner, start: d.index, end });
+  }
+  divs.sort((a, b) => (a.start - b.start) || (b.end - a.end));
+  let divCount = 0;
+  for (const c of divs) {
+    if (divCount >= 40) break;
+    if (c.inner.length > bodyLen * 0.6) continue;             // page wrapper — recurse via children
+    if (accepted.some((p) => contains(p, c))) continue;       // nested inside an accepted block
+    if (accepted.some((p) => contains(c, p))) continue;       // wraps an accepted block
+    accepted.push(c); divCount++;
+  }
+  accepted.sort((a, b) => a.start - b.start);
+  return accepted;
 }
 
 function attrClasses(attrs) {
@@ -217,8 +291,15 @@ function parseCssRules(css) {
 const COLOR_RE = /#[0-9a-f]{3,8}\b|rgba?\([^)]+\)|hsla?\([^)]+\)/gi;
 const LEN_RE = /\b\d*\.?\d+(px|rem|em)\b/gi;
 
-function styleFingerprint(rules, classes, id, tag) {
-  const keys = new Set([...classes.map((c) => '.' + c.toLowerCase()), id ? '#' + id.toLowerCase() : '', tag].filter(Boolean));
+function styleFingerprint(rules, classes, id, tag, innerClasses = []) {
+  // The block is its whole subtree: since nested wrappers are no longer
+  // separate blocks, the fingerprint includes rules addressing the block's
+  // descendant classes so drift inside the block is still seen.
+  const keys = new Set([
+    ...classes.map((c) => '.' + c.toLowerCase()),
+    ...innerClasses.map((c) => '.' + c.toLowerCase()),
+    id ? '#' + id.toLowerCase() : '', tag,
+  ].filter(Boolean));
   let decl = '';
   for (const r of rules) {
     const sl = r.sel.toLowerCase();
@@ -232,11 +313,13 @@ function styleFingerprint(rules, classes, id, tag) {
   return { colors, spacing, fontSizes, radius, shadow };
 }
 function uniqLower(arr) { return [...new Set(arr.map((x) => String(x).toLowerCase().trim()))]; }
-function lenToPx(v) {
+// rem/em convert via the site's real root font-size (detected from html/:root),
+// not a hardcoded 16 — 3rem on a 16px root IS 48px and must match a 48px token.
+function lenToPx(v, rootPx = 16) {
   const m = String(v).trim().match(/^(-?\d*\.?\d+)(px|rem|em)?$/i);
   if (!m) return null;
   const n = parseFloat(m[1]);
-  return (m[2] || 'px').toLowerCase() === 'px' ? n : n * 16;
+  return (m[2] || 'px').toLowerCase() === 'px' ? n : n * rootPx;
 }
 // Canonicalize a color/length value so cosmetic formatting differences don't
 // read as drift: collapse whitespace, expand short hex (#abc → #aabbcc), and
@@ -248,6 +331,8 @@ function normVal(v) {
   const hm = s.match(/^#([0-9a-f]{3,4})$/);
   if (hm) s = '#' + hm[1].split('').map((c) => c + c).join('');
   s = s.replace(/([(,])\.(\d)/g, '$1' + '0.$2');
+  s = s.replace(/(\d\.\d*?)0+(?=\D|$)/g, '$1'); // .80 → .8 (trailing zeros)
+  s = s.replace(/(\d)\.(?=\D|$)/g, '$1');       // 1. → 1  (dangling dot)
   return s;
 }
 
@@ -255,6 +340,18 @@ function looksJsRendered(html) {
   const body = (html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i) || [, ''])[1];
   const text = body.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   return text.length < 200 && /<div\b[^>]*\bid=["'](root|app|__next)["']/i.test(html);
+}
+
+// Distinct class names inside a region's inner HTML (capped) — used to
+// fingerprint the block's whole subtree.
+function innerClassList(inner, cap = 40) {
+  const out = new Set();
+  const re = /class=["']([^"']+)["']/gi;
+  let m;
+  while ((m = re.exec(inner)) && out.size < cap) {
+    for (const c of m[1].trim().split(/\s+/)) { out.add(c); if (out.size >= cap) break; }
+  }
+  return [...out];
 }
 
 function blocksFromPage(pageUrl, html, css) {
@@ -269,15 +366,19 @@ function blocksFromPage(pageUrl, html, css) {
     const sig = (reg.tag + '|' + classes.join('.') + '|' + id);
     if (seen.has(sig)) continue;
     seen.add(sig);
-    const role = guessRole(reg.tag, classes, reg.inner);
+    const st = structure(reg.inner);
+    let role = guessRole(reg.tag, classes, id);
+    // "form" needs actual form controls — a section that merely says
+    // "contact" is a call-to-action, not a form.
+    if (role === 'form' && !st.inputs) role = 'cta';
     blocks.push({
       page: pageUrl,
       role,
       tag: reg.tag,
       classes,
       id,
-      structure: structure(reg.inner),
-      styles: styleFingerprint(rules, classes, id, reg.tag),
+      structure: st,
+      styles: styleFingerprint(rules, classes, id, reg.tag, innerClassList(reg.inner)),
     });
   }
   return blocks;
@@ -348,16 +449,39 @@ function canonicalStyles(cl) {
   return out;
 }
 
+// Category of a length token, from its name. Length comparison is
+// category-scoped: a font-size is only "on system" if it matches a type-scale
+// (or uncategorized) token — never because some spacing step happens to share
+// the number. The 'other' pool (container widths, terse live vars, breakpoints)
+// is accepted for every field as "a value the system defines somewhere".
+function tokenCategory(name) {
+  if (/radius|rounded|corner/.test(name)) return 'radius';
+  if (/font-size|text-size|type-|\bfs-|-size\b/.test(name)) return 'font-size';
+  if (/space|gap|gutter|inset|pad|margin/.test(name)) return 'spacing';
+  return 'other';
+}
+// Token values, split for unit-aware comparison: colors as normalized strings,
+// lengths as px numbers per category (converted at the DS's own 16px root —
+// tokens.css is authored against the default root).
 function tokenValueSet(tokensCss) {
   if (!tokensCss) return null;
-  const vals = new Set();
-  const re = /--[a-z0-9-]+\s*:\s*([^;]+);/gi;
+  const colors = new Set();
+  const lens = { 'font-size': [], spacing: [], radius: [], other: [] };
+  const re = /(--[a-z0-9-]+)\s*:\s*([^;]+);/gi;
   let m;
   while ((m = re.exec(tokensCss))) {
-    for (const v of (m[1].match(COLOR_RE) || [])) vals.add(normVal(v));
-    for (const v of (m[1].match(LEN_RE) || [])) vals.add(normVal(v));
+    const cat = tokenCategory(m[1].toLowerCase());
+    for (const v of (m[2].match(COLOR_RE) || [])) colors.add(normVal(v));
+    for (const v of (m[2].match(LEN_RE) || [])) {
+      const px = lenToPx(v);
+      if (px != null) lens[cat].push(px);
+    }
   }
-  return vals;
+  return { colors, lens };
+}
+function lenPoolMatch(lens, cat, px, tol = 0.5) {
+  const pool = (lens[cat] || []).concat(lens.other || []);
+  return pool.some((t) => Math.abs(t - px) <= tol);
 }
 
 // A stable CSS-ish selector for a block instance (also used by ds-shots).
@@ -425,20 +549,24 @@ function colorAlpha(v) {
   return 1;
 }
 function colorSeverity(raw) { return colorAlpha(raw) < 0.85 ? 'WARNING' : 'BLOCKER'; }
-function deviations(instance, canon, tokenVals) {
+function deviations(instance, canon, tokenVals, rootPx = 16) {
   const typed = [];
-  const hasTokens = tokenVals && tokenVals.size > 0;
+  const hasTokens = tokenVals && (tokenVals.colors.size > 0
+    || Object.values(tokenVals.lens).some((a) => a.length > 0));
   const check = (field, label, type) => {
     const canonNorm = hasTokens ? null : new Set((canon[field] || []).map(normVal));
     for (const raw of instance.styles[field]) {
       const v = normVal(raw);
       if (hasTokens) {
-        if (tokenVals.has(v)) continue; // value is part of the design system → OK
-        // Radius: tolerate ±4 px — values like 8 px vs 12 px are visually
-        // near-identical at typical display size and shouldn't inflate the report.
-        if (type === 'radius') {
-          const rpx = lenToPx(raw);
-          if (rpx != null && [...tokenVals].some(tv => { const tpx = lenToPx(tv); return tpx != null && Math.abs(tpx - rpx) <= 4; })) continue;
+        if (type === 'color') {
+          if (tokenVals.colors.has(v)) continue; // value is part of the design system → OK
+        } else {
+          // Lengths compare in px (site rem/em resolved at the DETECTED root
+          // font-size) against the same-category token pool. Radius keeps a
+          // ±4px tolerance — 8 vs 12px is visually near-identical at display size.
+          const rpx = lenToPx(raw, rootPx);
+          if (rpx == null) continue; // not statically comparable — don't guess
+          if (lenPoolMatch(tokenVals.lens, type, rpx, type === 'radius' ? 4 : 0.5)) continue;
         }
         typed.push({
           type, severity: type === 'color' ? colorSeverity(raw) : (SEVERITY_BY_TYPE[type] || 'WARNING'),
@@ -448,8 +576,8 @@ function deviations(instance, canon, tokenVals) {
         if (canonNorm.has(v)) continue; // matches the cluster's dominant value
         // Radius: tolerate ±4 px vs the cluster's canonical radius
         if (type === 'radius') {
-          const rpx = lenToPx(raw);
-          if (rpx != null && (canon[field] || []).some(cv => { const cpx = lenToPx(cv); return cpx != null && Math.abs(cpx - rpx) <= 4; })) continue;
+          const rpx = lenToPx(raw, rootPx);
+          if (rpx != null && (canon[field] || []).some(cv => { const cpx = lenToPx(cv, rootPx); return cpx != null && Math.abs(cpx - rpx) <= 4; })) continue;
         }
         const shown = (canon[field] || []).slice(0, 3).join(', ');
         typed.push({
@@ -515,8 +643,8 @@ function dsStats(tokensCss, componentCount, source) {
   return stats;
 }
 
-function qualitySignals(allCss, tokensCss) {
-  const tokenVals = tokenValueSet(tokensCss) || new Set();
+function qualitySignals(allCss, tokensCss, rootPx = 16) {
+  const tokenVals = tokenValueSet(tokensCss);
   const nonTokenCss = allCss; // tokens.css excluded by caller if desired
   const colors = uniqLower(nonTokenCss.match(COLOR_RE) || []);
   const lengths = uniqLower(nonTokenCss.match(LEN_RE) || []);
@@ -524,7 +652,11 @@ function qualitySignals(allCss, tokensCss) {
   const definedVars = new Set((tokensCss ? tokensCss + allCss : allCss).match(/--[a-z0-9-]+(?=\s*:)/gi)?.map((v) => v.toLowerCase()) || []);
   const undefinedVarRefs = varRefs.filter((v) => !definedVars.has(v));
   const valuesUsed = [...colors, ...lengths];
-  const covered = tokenVals.size ? valuesUsed.filter((v) => tokenVals.has(v)).length : 0;
+  const allLenPx = tokenVals ? Object.values(tokenVals.lens).flat() : [];
+  const covered = tokenVals
+    ? colors.filter((c) => tokenVals.colors.has(normVal(c))).length
+      + lengths.filter((l) => { const p = lenToPx(l, rootPx); return p != null && allLenPx.some((t) => Math.abs(t - p) <= 0.5); }).length
+    : 0;
   const usesVars = (nonTokenCss.match(/var\(\s*--/g) || []).length;
   const tokenCoveragePct = valuesUsed.length
     ? Math.round(((covered + usesVars) / (valuesUsed.length + usesVars || 1)) * 100) : 0;
@@ -543,6 +675,7 @@ function qualitySignals(allCss, tokensCss) {
 // ── assemble ─────────────────────────────────────────────────────────────────
 function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
   const tokenVals = tokenValueSet(tokensCss);
+  const rootPx = opts.rootPx || detectRootFontPx(allCss);
   // Cap per-block delta lists so a block with dozens of off-token values can't
   // bloat audit.json (and the report) — keep the match score from the full
   // count, store a bounded list with an overflow marker.
@@ -563,7 +696,7 @@ function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
       canonical: canon,
     });
     for (const inst of cl.members) {
-      const dv = deviations(inst, canon, tokenVals);
+      const dv = deviations(inst, canon, tokenVals, rootPx);
       matchSum += dv.match; matchN++;
       const sel = blockSel(inst);
       blockStatus.push({
@@ -589,13 +722,14 @@ function buildReport(blocks, allCss, tokensCss, extra = {}, opts = {}) {
       clusters: clusters.length,
       consistency_pct: consistency,
       deviating_instances: deviationsOut.length,
+      root_font_px: rootPx,
       ...extra,
     },
     ds_stats: dsStats(tokensCss, clusters.length, opts.dsSource),
     canonical_blocks: clusterOut,
     deviations: deviationsOut.sort((a, b) => a.match - b.match),
     block_status: blockStatus,
-    quality_signals: qualitySignals(allCss.replace(tokensOnly, ''), tokensCss),
+    quality_signals: qualitySignals(allCss.replace(tokensOnly, ''), tokensCss, rootPx),
   };
   if (opts.pageStylesheets) result.page_stylesheets = opts.pageStylesheets;
   return result;
@@ -629,12 +763,12 @@ async function runSite() {
     if (res.status < 200 || res.status >= 300 || !res.body) continue;
     if (!COUNT_ONLY) {
       const css = await collectCss(res.body, url);
-      allCss += '\n' + css;
+      allCss += '\n' + css.fresh;
       const slug = slugify(url);
       fs.writeFileSync(path.join(pagesDir, slug + '.html'), res.body);
       pageStylesheets[url] = { slug, stylesheets: stylesheetHrefs(res.body, url) };
       if (looksJsRendered(res.body)) jsPages.push(url);
-      for (const b of blocksFromPage(url, res.body, css)) blocks.push(b);
+      for (const b of blocksFromPage(url, res.body, css.page)) blocks.push(b);
     }
     for (const link of extractLinks(res.body, url)) if (!visited.has(link)) queue.push(link);
   }
@@ -656,6 +790,11 @@ async function runSite() {
     confidence: jsPages.length ? 'low (JS-rendered pages present — static analysis is partial)' : 'static',
   }, { pageStylesheets, dsSource: DS_SOURCE || (tokensCss ? 'provided' : 'none') });
   fs.writeFileSync(path.join(outDir, 'blocks.json'), JSON.stringify({ blocks }, null, 2) + '\n');
+  // Aggregate site CSS (inline styles + each linked sheet ONCE) — persisted so
+  // ds-metrics.mjs can measure the full stylesheet surface, not just inline
+  // <style> blocks (which undercounted !important and missed the
+  // prefers-reduced-motion block living in linked CSS).
+  fs.writeFileSync(path.join(outDir, 'site-styles.css'), allCss);
   emit(result, outDir);
 }
 
