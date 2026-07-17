@@ -1094,7 +1094,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.6.0
+**Version:** 1.6.1
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -1135,7 +1135,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.15
+**Version:** 1.8.16
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
