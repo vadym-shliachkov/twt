@@ -73,7 +73,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 ## /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Close the asset loop the manifest opens: for every row in `.twt-artifacts/design/assets/manifest.md`, either ingest the provided file, generate a brand-tokened placeholder (including the favicon/OG meta set and the design system's icon SVGs), or produce a concrete human to-do (stock briefs, missing files) — so mockups render, Development has real files to copy, and QA's MISSING-ASSET findings become an actionable checklist instead of noise.
@@ -353,7 +353,7 @@ Read-only critique of the component library — token-only styling, reuse/compos
 ## /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.4.1
+**Version:** 1.4.2
 **Accepts arguments:** yes
 
 Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
@@ -381,6 +381,7 @@ Create the content approval workbook that proves every page, shared header/foote
 - .twt-artifacts/pre-design/seo/seo-map.md
 
 **Writes:**
+- .twt-artifacts/content-approval/checklist-spec.json
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/content-approval/content-approval-checklist-report.md
 
@@ -404,7 +405,7 @@ Create the content approval workbook that proves every page, shared header/foote
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
@@ -1014,7 +1015,7 @@ Before any tokens are committed, render the brand as **2–3 genuinely distinct 
 ## /twt-elementor-block-creator
 
 **Category:** elementor
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 Build an Elementor widget or full-page template that follows the project's existing theme architecture (read from `conventions.md`). Applies reuse-first strategy: reuse existing widgets where possible, extend if close, create new only when nothing fits.
@@ -1914,7 +1915,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 ## /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Read-only accessibility audit of the built HTML (local) or the rendered pages (live, best-effort) — image alt text, heading order, landmarks, form labels, and WCAG AA contrast for declared color pairs.
@@ -2360,7 +2361,7 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 ## /twt-text-analysis
 
 **Category:** content
-**Version:** 1.4.1
+**Version:** 1.4.2
 **Accepts arguments:** yes
 
 Analyze text quality block by block using Information Style, UX-writing, and critical-reading principles. Claude must separate analysis from rewriting: first score the block, then decide whether a safe improvement is possible, and only then suggest wording if the rewrite clearly fixes a detected weakness.

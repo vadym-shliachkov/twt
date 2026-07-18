@@ -1,8 +1,8 @@
 ---
 name: twt-qa-a11y
 category: qa
-description: (v1.1.2) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
-version: 1.1.2
+description: (v1.1.3) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -46,19 +46,19 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 - **Keep every Bash call allowlist-matchable (applies to the whole run):** the seeded rules match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`). Never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed, so they force a manual prompt even when the binary is allowlisted. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
 ## Step 1 — Mode & subject
-Parse `$ARGUMENTS`. URL → **live mode** (`WebFetch` the entry page + up to 25 deduped internal pages). Else → **local mode** (`site/*.html`, else `mockup/pages/*.html`). If neither URL nor local HTML exists, abort: "No built HTML or URL to audit." Read `tokens.css` for contrast computation (local mode; in live mode compute contrast only where colors are inspectable).
+Parse `$ARGUMENTS`. URL → **live mode** (`WebFetch` the entry page + up to 25 deduped internal pages). Else → **local mode** (`site/*.html`, else `mockup/pages/*.html`). If neither URL nor local HTML exists, abort: "No built HTML or URL to audit." (Local-mode contrast comes from the scanner in Step 2, which reads `tokens.css` itself; in live mode compute contrast only where colors are inspectable.)
 
 ## Step 2 — Run checks
 
-In **local mode, gather the deterministic counts first — don't hand-scan attributes.** Run the bundled scanner; it returns exact `img_no_alt`, `control_no_label`, `heading_jumps`, `missing_h1`, `missing_lang`, and `link_no_text` counts with `file:line` locations:
+In **local mode, gather the deterministic counts first — don't hand-scan attributes.** Run the bundled scanner; it returns exact `img_no_alt`, `control_no_label`, `heading_jumps`, `missing_h1`, `missing_lang`, and `link_no_text` counts with `file:line` locations, **plus the WCAG AA token-pair contrast check** (`contrast_pairs` / `contrast_aa_failures` counts and a `contrast_fail` finding per failing pair, computed from `tokens.css` with the same shared math `gen-preview.mjs` uses at the design step — never recompute a ratio yourself):
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/qa-scan.mjs" a11y "$CLAUDE_PROJECT_DIR"
 ```
 
-Use its `counts`/`findings[]` for the attribute/structure evidence; the output also includes `evidence_hints` — pre-formatted strings keyed by criterion (alt_text, heading_landmarks, labels_roles, contrast, focusable) — paste these directly into the scorecard's Evidence column. **Contrast is not in the script** — compute WCAG AA token pairs yourself by reading `tokens.css` (the one check needing color math). In **live mode** there's no script — judge attributes from the `WebFetch`-rendered pages. Then, per page:
+Use its `counts`/`findings[]` for the attribute/structure/contrast evidence; the output also includes `evidence_hints` — pre-formatted strings keyed by criterion (alt_text, heading_landmarks, labels_roles, contrast, focusable) — paste these directly into the scorecard's Evidence column. When the project has no `tokens.css`, the contrast counts are absent and the hint says so — judge contrast only from whatever colors are inspectable, and say the check was partial. In **live mode** there's no script — judge attributes from the `WebFetch`-rendered pages. Then, per page:
 
-- **BLOCKER** — `<img>` without `alt` (scanner's `img_no_alt`); a skipped heading level, e.g. `h1`→`h3` (scanner's `heading_jumps`); no `<main>` or landmark element; a form control without an associated label (scanner's `control_no_label`); a declared text/background **token pair** that fails WCAG AA (< 4.5:1 for normal text — your contrast computation).
+- **BLOCKER** — `<img>` without `alt` (scanner's `img_no_alt`); a skipped heading level, e.g. `h1`→`h3` (scanner's `heading_jumps`); no `<main>` or landmark element; a form control without an associated label (scanner's `control_no_label`); a declared text/background **token pair** that fails WCAG AA (< 4.5:1 for normal text — scanner's `contrast_fail` findings, ratios verbatim).
 - **WARNING** — more than one `<h1>`; a link/button with no discernible text; non-descriptive `alt` (e.g. "image").
 - **SUGGESTION** — no skip-link; missing `lang` attribute; no focus-visible styling.
 

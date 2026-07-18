@@ -1,8 +1,8 @@
 ---
 name: twt-text-analysis
 category: content
-description: (v1.4.1) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
-version: 1.4.1
+description: (v1.4.2) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
+version: 1.4.2
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional scope hint
@@ -73,15 +73,13 @@ Read `.twt-artifacts/pre-design/brand/brand-brief.md` if present. Brand voice is
 
 ## Step 2 - Split into blocks
 
-If the subject is a file on disk, run Bash to segment it deterministically:
+The subject is always a file on disk by now (Step 1 persists pasted text to `source.md`). Run Bash to segment it deterministically:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/split-blocks.mjs" "<subject-file-path>"
 ```
 
-This outputs JSON `[{n, type, text}]` segmenting by structure: Heading, Paragraph, List, Code, Blockquote. Use it as the authoritative starting block list.
-
-For pasted text that is not a file, split by hand into logical blocks. After obtaining the block list, re-type each block by semantic intent:
+This outputs JSON `[{n, type, text}]` segmenting by structure: Heading, Paragraph, List, Code, Blockquote. Use it as the authoritative starting block list — never split by hand. After obtaining the block list, re-type each block by semantic intent:
 
 - **Heading:** page headings, section headings, card headings.
 - **Paragraph:** body paragraphs, descriptions, explanatory text.

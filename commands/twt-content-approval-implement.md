@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-implement
 category: content
-description: (v1.1.3) Apply ready approved XLSX content into the built site or development artifacts
-version: 1.1.3
+description: (v1.1.4) Apply ready approved XLSX content into the built site or development artifacts
+version: 1.1.4
 accepts_arguments: true
 inputs:
   - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -82,14 +82,15 @@ Read the target conventions before editing target files.
 
 ## Step 3 - Parse approved rows
 
-For every worksheet, read only the exact columns:
-`Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
+Don't hand-parse the XLSX — run the bundled reader (Bash, one command):
 
-A row with a blank `field type` is a section banner or a spacer (the checklist lays each block out as a labeled section) — skip these silently: do not count or report them.
+```bash
+python "${CLAUDE_PLUGIN_ROOT}/tools/checklist-xlsx.py" read --workbook ".twt-artifacts/content-approval/content-approval-checklist.xlsx"
+```
 
-Normalize readiness leniently: `true`, `yes`, `1`, and boolean TRUE mean ready; everything else means not ready. A row is implementable only when ready is true and approved content is not blank.
+(On Windows where `python` is unavailable but `py` exists, use `py`.) It prints a ```json block with every field row per worksheet — `block`, `field_type`, `family`, `current`, `recommended`, `approved`, `ready`, `implementable`, `row` — plus a `summary` and a `duplicates` list. The reader already applies the mechanics: banner/spacer rows (blank `field type`) are skipped silently, readiness is normalized leniently (`true`/`yes`/`1`/boolean TRUE mean ready), and `implementable` is true only when ready is true **and** approved content is not blank. Rows in `duplicates` (same page/block/field with conflicting approved values) are conflicts — skip them and report each.
 
-Classify each implementable row by `field type` prefix:
+Work from that JSON. Classify each implementable row by its `family` (the `field type` prefix):
 - `text:*` for visible copy and microcopy.
 - `link:*` for hrefs, labels, phone/mail/social links, and downloads.
 - `image:*` for image source/path/URL, alt text, captions, and thumbnails.

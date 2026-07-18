@@ -390,7 +390,7 @@ flowchart TB
 ### /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
@@ -711,7 +711,7 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.4.1
+**Version:** 1.4.2
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -742,13 +742,14 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
+| .twt-artifacts/content-approval/checklist-spec.json |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 | .twt-artifacts/content-approval/content-approval-checklist-report.md |  |
 
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -1135,7 +1136,7 @@ flowchart TB
 ### /twt-design-system-define
 
 **Category:** design-system
-**Version:** 1.8.16
+**Version:** 1.8.17
 
 **Inputs:**
 - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -1269,7 +1270,7 @@ flowchart TB
 ### /twt-elementor-block-creator
 
 **Category:** elementor
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - widget description or page description
@@ -1993,7 +1994,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2433,7 +2434,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.4.1
+**Version:** 1.4.2
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint

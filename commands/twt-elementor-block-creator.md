@@ -1,8 +1,8 @@
 ---
 name: twt-elementor-block-creator
 category: elementor
-description: (v1.2.2) Build an Elementor widget or full-page template following project conventions
-version: 1.2.2
+description: (v1.2.3) Build an Elementor widget or full-page template following project conventions
+version: 1.2.3
 accepts_arguments: true
 inputs:
   - widget description or page description
@@ -485,47 +485,13 @@ Follow the widget build process above for each `NEW` or `EXTEND` widget.
 
 #### Phase 3 — Generate Elementor import file
 
-Create `<THEME_PATH>/import/<page-slug>/import.json`.
+The import JSON is **script-generated** — don't hand-write it (hand-minted hex IDs collide and a mistyped `widgetType` fails the import silently). Run the bundled generator (Bash, one command), passing one `--section` per page section in order; a comma list inside one `--section` puts multiple widgets in the same container:
 
-If `<THEME_PATH>/import/` does not exist, create it.
-
-Use this Elementor 3.x container-layout template structure:
-
-```json
-{
-  "version": "0.4",
-  "title": "<Page Title>",
-  "type": "page",
-  "content": [
-    {
-      "id": "<8-char-hex>",
-      "elType": "container",
-      "settings": {
-        "content_width": "full",
-        "flex_direction": "column",
-        "padding": { "unit": "px", "top": "0", "right": "0", "bottom": "0", "left": "0", "isLinked": true }
-      },
-      "elements": [
-        {
-          "id": "<8-char-hex>",
-          "elType": "widget",
-          "widgetType": "<slug>_<widget-slug>",
-          "settings": {}
-        }
-      ],
-      "isInner": false
-    }
-  ],
-  "page_settings": {}
-}
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-elementor-import.mjs" --title "<Page Title>" --out "<THEME_PATH>/import/<page-slug>/import.json" --section "<slug>_hero" --section "<slug>_feature_grid,<slug>_cta_banner" --map "<THEME_PATH>/inc/elementor/class-<slug>-elementor.php"
 ```
 
-Import JSON rules:
-- Generate unique 8-character lowercase hex IDs for every `id` field (e.g. `a1b2c3d4`)
-- One top-level container per page section
-- `widgetType` must match the widget's `get_name()` return value exactly
-- Leave `settings: {}` empty — admin fills content in Elementor
-- Multiple widgets in a section go as additional elements inside the same container
+It writes the Elementor 3.x container-layout template (one full-width column container per section, unique 8-char lowercase hex IDs, `settings: {}` so the admin fills content in Elementor) and creates parent directories. Each `widgetType` must be the widget's `get_name()` return value exactly (`<slug>_<widget-slug>`). With `--map`, every widgetType is validated against the manager's `$map` — treat any warning as a registration you still owe (in normal mode fix it now; in parallel-promotion mode the warning is expected for widgets whose `$map` line you are returning as a delta). The tool prints a ```json summary — put its counts and warnings in your report.
 
 Copy any local image or asset files referenced in the design to:
 `<THEME_PATH>/import/<page-slug>/assets/`

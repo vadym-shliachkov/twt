@@ -1,8 +1,8 @@
 ---
 name: twt-assets-produce
 category: assets
-description: (v1.0.1) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
-version: 1.0.1
+description: (v1.0.2) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
@@ -34,7 +34,7 @@ writes:
 
 # /twt-assets-produce
 
-> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by `/twt-develop` or another orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch or external-skill load**, run this one Bash line so the complete skill-call tree reaches the run log:
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch or external-skill load** (figma, design-taste-frontend, emil-design-eng, superpowers, …), run this one Bash line so the complete skill-call tree reaches the run log:
 > `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
 > It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
@@ -124,7 +124,11 @@ If `tokens.md` §2.8 (Iconography) names an icon family: collect the icon names 
 If `tokens.md` has no §2.8, skip this step and note in the report that the design system predates icon-family selection (re-run `/twt-design-system-define` in refinement mode to add it).
 
 ## Step 9 — Update the manifest + verify references
-Rewrite the manifest table with the updated `status` per row (Edit tool — preserve all other columns byte-for-byte; append-only for new meta rows; dedupe by `filename`).
+Update the manifest's `status` cells and append any new meta rows with the bundled tool — never hand-edit the table (freehand table surgery is how a column silently drifts or a row is lost). Run (Bash; one call may carry several `--set-status` / `--add-row` flags):
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/manifest-update.mjs" ".twt-artifacts/design/assets/manifest.md" --set-status <id>=<status> --add-row "id|type|filename|placement|spec|alt|source|generation_prompt|status"`
+
+It touches only the named rows' `status` cells (or appends rows), preserving every other column byte-for-byte; adds a `status` column if an older manifest lacks one (defaulting existing rows to `planned`); dedupes `--add-row` by `filename` (an existing filename is skipped, never duplicated); and aborts the whole run without writing if a `--set-status` id is unknown. Valid statuses: `planned` / `provided` / `generated` / `pending-stock` / `pending-video` / `missing-provided`. It prints a `json` summary (`updated`/`added`/`skipped`) — fold its counts into the report.
 
 Then verify the mockups actually resolve: run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/scan-manifest.mjs" "$CLAUDE_PROJECT_DIR/.twt-artifacts/design/mockup"` and compare its `[{src, exists}]` output against the pool — every reference that now resolves is a win to report; every reference that still points somewhere other than `../../assets/<dir>/<filename>` (relative to `mockup/pages/`) is a **reference mismatch** to list for `/twt-mockup-define` refinement (this skill never edits pages).
 

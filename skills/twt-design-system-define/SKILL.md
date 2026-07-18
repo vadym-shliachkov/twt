@@ -1,8 +1,8 @@
 ---
 name: twt-design-system-define
 category: design-system
-description: (v1.8.16) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
-version: 1.8.16
+description: (v1.8.17) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
+version: 1.8.17
 accepts_arguments: true
 inputs:
   - Greenfield: derive from brand-brief.md. Or analyse existing Figma/screenshots/exported CSS/live URL
@@ -30,7 +30,7 @@ writes:
 
 # /twt-design-system-define
 
-> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before you load any external skill** (figma, design-taste-frontend, emil-design-eng, superpowers, …) or dispatch any sub-agent, run this one Bash line so those calls reach the run log:
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch or external-skill load** (figma, design-taste-frontend, emil-design-eng, superpowers, …), run this one Bash line so the complete skill-call tree reaches the run log:
 > `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
 > It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
 
@@ -382,7 +382,13 @@ Either way, reflect the result in `tokens.md §5` (Accessibility → contrast au
 
 ## Step 10d — Token-name consistency sweep (always)
 
-Before finishing, Grep `tokens.md` and `decisions.md` for every `--token-name` they mention and confirm each exists in `tokens.css`. Renames during the run (e.g. an `--color-ink-aNN` ladder becoming purpose-named `--color-shadow-*` tokens) must be propagated to **every** prose reference — naming-convention examples (§7), normalization recommendations (§4.2), and decisions entries included. A documented name that no token implements sends downstream authors hunting for something that doesn't exist. Fix the prose (or add the missing token) — never leave the two out of sync.
+Before finishing, run the bundled checker (Bash, one command) — don't Grep by hand:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/check-token-refs.mjs" ".twt-artifacts/design/design-system/tokens.css" ".twt-artifacts/design/design-system/tokens.md" ".twt-artifacts/design/design-system/decisions.md"
+```
+
+(Pass only the files that exist — `decisions.md` may be absent on interactive runs.) It scans every `--token-name` the prose mentions (including `--family-*` wildcard references) and exits non-zero listing each name `tokens.css` doesn't define, with a nearest-name hint. Renames during the run (e.g. an `--color-ink-aNN` ladder becoming purpose-named `--color-shadow-*` tokens) must be propagated to **every** prose reference — naming-convention examples (§7), normalization recommendations (§4.2), and decisions entries included. A documented name that no token implements sends downstream authors hunting for something that doesn't exist. Fix each reported reference (or add the missing token) and re-run until it exits clean — never leave the two out of sync.
 
 ## Step 11 — Optional Additional Outputs
 

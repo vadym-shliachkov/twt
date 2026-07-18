@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-07-18 **v1.0.75** — twt-qa-a11y.md → 1.1.3, twt-text-analysis.md → 1.4.2, twt-content-approval-checklist.md → 1.4.2, twt-content-approval-implement.md → 1.1.4, twt-elementor-block-creator.md → 1.2.3, twt-design-system-define → 1.8.17, twt-assets-produce.md → 1.0.2
 - 2026-07-17 **v1.0.74** — twt-design-system-audit.md → 1.6.1, twt-design-system-define → 1.8.16
 - 2026-07-16 **v1.0.72** — twt-assets-produce.md → 1.0.1, twt-layout-define → 1.3.2, twt-mockup-define → 1.3.7, twt-design-system-define → 1.8.14, twt-component-define → 1.3.12, twt-develop.md → 1.3.8
 - 2026-07-16 **v1.0.71** — twt-setup.md → 1.0.3
