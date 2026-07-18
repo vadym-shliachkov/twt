@@ -66,6 +66,27 @@ test('qa-scan a11y: counts the missing alt and heading jump', () => {
   const r = jsonBlock(run(QA, ['a11y', dir]));
   assert.ok(r.findings.some((f) => /alt/.test(f.kind)), 'missing alt found');
   assert.ok(r.findings.some((f) => /heading/.test(f.kind)), 'heading jump found');
+  // no tokens.css seeded → contrast counts absent, hint says compute manually
+  assert.equal(r.counts.contrast_pairs, undefined);
+  assert.match(r.evidence_hints.contrast, /no tokens\.css/);
+});
+
+test('qa-scan a11y: tokens.css contrast pairs use the shared WCAG math', () => {
+  const dir = newProject(); seedSite(dir);
+  put(join(dir, '.twt-artifacts', 'design', 'design-system', 'tokens.css'), `:root {
+  --color-ink: #1a1a2e;
+  --color-silver: #a8a8b8;
+  --color-surface-page: #ffffff;
+  --color-text-body: var(--color-ink);
+  --color-text-muted: var(--color-silver);
+}`);
+  const r = jsonBlock(run(QA, ['a11y', dir]));
+  assert.equal(r.counts.contrast_pairs, 2, 'two intended text/surface pairs');
+  assert.equal(r.counts.contrast_aa_failures, 1, 'the muted pair fails AA');
+  const fail = r.findings.find((f) => f.kind === 'contrast_fail');
+  assert.ok(fail, 'contrast_fail finding present');
+  assert.match(fail.detail, /--color-text-muted on --color-surface-page = 2\.34:1/);
+  assert.match(r.evidence_hints.contrast, /1 of 2 intended token pairs/);
 });
 
 test('qa-scan links: dead link + placeholder href found', () => {

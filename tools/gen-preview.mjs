@@ -39,6 +39,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readHouseCss } from './house-style.mjs';
 import { projectFontLinks } from './lib/google-fonts.mjs';
+import { parseCssVars, makeResolver, parseColor, isGradient, composite, relLum, ratio, buildContrastMatrix } from './lib/contrast.mjs';
 
 const projectDir = process.argv[2];
 const tokensOnly = process.argv.includes('--mode') &&
@@ -72,82 +73,11 @@ if (!existsSync(CSS)) {
 }
 
 // ---- CSS custom-property parsing --------------------------------------------
+// Parsing + color math live in tools/lib/contrast.mjs, shared with qa-scan.mjs
+// (a11y contrast) so design-phase and QA-phase ratios can never disagree.
 const cssText = readFileSync(CSS, 'utf8');
-// strip comments
-const noComments = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
-// Collect the BASE :root declarations (ignore @media overrides for resolution —
-// colors don't change responsively; we want the canonical value).
-const vars = new Map(); // name -> raw value (first/base definition wins)
-const order = [];       // preserve source order for the swatch grid
-// match the first :root { ... } block's contents, then any others, but skip
-// blocks nested under @media (those come after a `@media (...) {` token).
-const declRe = /(--[\w-]+)\s*:\s*([^;]+);/g;
-// Determine which declarations live inside an @media — naive but effective:
-// split on @media and only take the segment before the first @media for base,
-// then still register media-only vars if not already present.
-const segments = noComments.split(/@media[^{]*\{/);
-for (let i = 0; i < segments.length; i++) {
-  let m;
-  declRe.lastIndex = 0;
-  while ((m = declRe.exec(segments[i])) !== null) {
-    const name = m[1].trim();
-    const val = m[2].trim().replace(/\s+/g, ' ');
-    if (!vars.has(name)) { vars.set(name, val); order.push(name); }
-  }
-}
-
-// resolve var() chains to a concrete value
-function resolveVal(val, depth = 0) {
-  if (depth > 12 || !val) return val;
-  return val.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g, (_, ref, fallback) => {
-    if (vars.has(ref)) return resolveVal(vars.get(ref), depth + 1);
-    return fallback ? resolveVal(fallback.trim(), depth + 1) : `var(${ref})`;
-  });
-}
-
-// ---- color parsing + WCAG contrast ------------------------------------------
-function parseColor(v) {
-  if (!v) return null;
-  v = v.trim();
-  let m;
-  if ((m = v.match(/^#([0-9a-f]{3,8})$/i))) {
-    let h = m[1];
-    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
-    if (h.length === 4) h = h.split('').map((c) => c + c).join('');
-    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-    const a = h.length >= 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
-    return { r, g, b, a };
-  }
-  if ((m = v.match(/^rgba?\(([^)]+)\)$/i))) {
-    const p = m[1].split(/[,\s/]+/).filter(Boolean);
-    const r = +p[0], g = +p[1], b = +p[2];
-    const a = p[3] !== undefined ? +p[3] : 1;
-    if ([r, g, b].some(Number.isNaN)) return null;
-    return { r, g, b, a };
-  }
-  return null; // hsl/gradients/keywords not used for ratio math
-}
-function isGradient(v) { return /gradient\s*\(/i.test(v || ''); }
-function composite(fg, bg) { // fg over bg, both {r,g,b,a}
-  const a = fg.a;
-  return {
-    r: fg.r * a + bg.r * (1 - a),
-    g: fg.g * a + bg.g * (1 - a),
-    b: fg.b * a + bg.b * (1 - a),
-    a: 1,
-  };
-}
-function relLum({ r, g, b }) {
-  const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-}
-function ratio(fgRaw, bgRaw) {
-  const bg = bgRaw.a < 1 ? composite(bgRaw, { r: 255, g: 255, b: 255, a: 1 }) : bgRaw;
-  const fg = fgRaw.a < 1 ? composite(fgRaw, bg) : fgRaw;
-  const L1 = relLum(fg), L2 = relLum(bg);
-  const [hi, lo] = L1 > L2 ? [L1, L2] : [L2, L1];
-  return (hi + 0.05) / (lo + 0.05);
-}
+const { vars, order } = parseCssVars(cssText);
+const resolveVal = makeResolver(vars);
 
 // ---- categorize tokens ------------------------------------------------------
 const colorTokens = [], gradientTokens = [];
@@ -175,49 +105,8 @@ for (const name of order) {
 }
 
 // ---- contrast matrix --------------------------------------------------------
-const TEXT_HINT = /text|heading|label|body|ink|foreground|\bfg\b|on-dark|on-light|caption|muted/i;
-const SURFACE_HINT = /surface|background|\bbg\b|\bpage\b|panel|card|white|canvas|base|hero/i;
-// Prefer role-alias tokens; dedupe by resolved value so --color-heading and --ink
-// (same hex) don't both clutter the matrix — keep the role-named one.
-function pickSet(hint) {
-  const byVal = new Map();
-  for (const t of colorTokens) {
-    if (!hint.test(t.name)) continue;
-    if (t.color.a === 0) continue;
-    const key = `${Math.round(t.color.r)},${Math.round(t.color.g)},${Math.round(t.color.b)},${t.color.a}`;
-    const existing = byVal.get(key);
-    // prefer a role-alias name (has a hyphen role like color-/on-/surface-) over a raw brand token
-    const isRole = (n) => /^--(color|on|surface|text|bg|background)-/.test(n);
-    if (!existing || (isRole(t.name) && !isRole(existing.name))) byVal.set(key, t);
-  }
-  return [...byVal.values()];
-}
-const textSet = pickSet(TEXT_HINT);
-const surfaceSet = pickSet(SURFACE_HINT);
-
-// Build the matrix only for INTENDED polarity pairs (dark text on light surface,
-// or light text on dark surface). A dark-on-dark pair is not a real pairing, so
-// it is reported as n/a rather than a false FAIL.
-const contrastRows = [];
-const failures = [];
-for (const s of surfaceSet) {
-  const sBg = s.color.a < 1 ? composite(s.color, { r: 255, g: 255, b: 255, a: 1 }) : s.color;
-  const surfaceLight = relLum(sBg) > 0.5;
-  for (const t of textSet) {
-    const tComp = t.color.a < 1 ? composite(t.color, sBg) : t.color;
-    const textDark = relLum(tComp) <= 0.5;
-    const intended = surfaceLight === textDark; // dark text on light, or light text on dark
-    const r = ratio(t.color, s.color);
-    const aaNormal = r >= 4.5, aaLarge = r >= 3.0;
-    const row = {
-      text: t.name, surface: s.name, ratio: Math.round(r * 100) / 100,
-      intended, aa_normal: aaNormal, aa_large: aaLarge,
-      verdict: !intended ? 'n/a' : aaNormal ? 'AA' : aaLarge ? 'AA-large-only' : 'FAIL',
-    };
-    contrastRows.push(row);
-    if (intended && !aaNormal) failures.push(row);
-  }
-}
+// Built by the shared lib (tools/lib/contrast.mjs) — intended-polarity pairs only.
+const { rows: contrastRows, failures, textSet, surfaceSet } = buildContrastMatrix(colorTokens);
 
 // ---- color palette split: primitive (raw value) vs semantic (var() alias) ---
 const primitiveColors = colorTokens.filter((t) => !/^\s*var\s*\(/.test(t.raw));

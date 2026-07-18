@@ -27,6 +27,7 @@
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, relative, dirname, basename } from 'node:path';
+import { colorTokensFromCss, buildContrastMatrix } from './lib/contrast.mjs';
 
 const CAP = 40; // max findings emitted per kind (counts are always exact)
 
@@ -91,7 +92,9 @@ function buildEvidenceHints(checkType, counts) {
     alt_text: `${counts.img_no_alt} image${counts.img_no_alt !== 1 ? 's' : ''} missing alt`,
     heading_landmarks: `${counts.heading_jumps} heading level skip${counts.heading_jumps !== 1 ? 's' : ''}, ${counts.missing_h1} page${counts.missing_h1 !== 1 ? 's' : ''} missing h1`,
     labels_roles: `${counts.control_no_label} unlabeled control${counts.control_no_label !== 1 ? 's' : ''}, ${counts.link_no_text} link${counts.link_no_text !== 1 ? 's' : ''} with no text`,
-    contrast: '— compute from tokens.css WCAG AA pairs (not in scanner)',
+    contrast: counts.contrast_pairs === undefined
+      ? '— no tokens.css found; compute contrast manually if colors are inspectable'
+      : `${counts.contrast_aa_failures} of ${counts.contrast_pairs} intended token pair${counts.contrast_pairs !== 1 ? 's' : ''} fail${counts.contrast_aa_failures === 1 ? 's' : ''} WCAG AA (4.5:1)`,
     focusable: `${counts.missing_lang} page${counts.missing_lang !== 1 ? 's' : ''} missing lang attribute`,
   };
   if (checkType === 'tokens') return {
@@ -301,6 +304,25 @@ function runContent(html) {
 }
 
 // ---- a11y --------------------------------------------------------------------
+// Token-pair contrast (WCAG AA) from tokens.css — the same shared math
+// gen-preview.mjs uses at the design step, so QA can never disagree with it.
+// Project-level (tokens, not per-page); absent tokens.css leaves the counts out
+// and the evidence hint says to compute manually.
+function runContrast(counts, findings) {
+  const tokensCss = join(ART, 'design', 'design-system', 'tokens.css');
+  if (!existsSync(tokensCss)) return;
+  const { rows, failures } = buildContrastMatrix(colorTokensFromCss(read(tokensCss)));
+  const intended = rows.filter((r) => r.intended);
+  counts.contrast_pairs = intended.length;
+  counts.contrast_aa_failures = failures.length;
+  for (const p of failures) {
+    findings.push({
+      kind: 'contrast_fail', file: rel(tokensCss), line: 0,
+      detail: `${p.text} on ${p.surface} = ${p.ratio}:1 (< 4.5${p.aa_large ? '; passes AA-large 3.0' : '; fails even AA-large'})`,
+    });
+  }
+}
+
 function runA11y(html) {
   const findings = [];
   const counts = { img_no_alt: 0, control_no_label: 0, heading_jumps: 0, missing_h1: 0, missing_lang: 0, link_no_text: 0 };
@@ -340,6 +362,7 @@ function runA11y(html) {
       if (heads[i].level - heads[i - 1].level > 1) { counts.heading_jumps++; findings.push({ kind: 'heading_jump', file: rel(f), line: heads[i].line, detail: `h${heads[i - 1].level} → h${heads[i].level} skips a level` }); }
     }
   }
+  runContrast(counts, findings);
   return { counts, findings };
 }
 

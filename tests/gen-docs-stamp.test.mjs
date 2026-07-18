@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { syncBlock, nextHeadingIndex } from '../tools/lib/stamp-block.mjs';
+import { syncBlock, nextHeadingIndex, syncBlockquote } from '../tools/lib/stamp-block.mjs';
 
 // Regression coverage for the fence-aware shared-block stamper in
 // tools/gen-docs.mjs. Before the fix, nextHeadingIndex() only tracked
@@ -96,4 +96,42 @@ test('nextHeadingIndex treats a backtick fence and a tilde fence as independent 
 test('nextHeadingIndex returns -1 when no real heading follows', () => {
   const text = ['some text', '```', '## fenced only', '```', 'trailing text'].join('\n');
   assert.equal(nextHeadingIndex(text), -1);
+});
+
+// ---- syncBlockquote (trace self-logging block) -------------------------------
+
+const TRACE_ANCHOR = /^>\s*\*\*Trace self-logging/m;
+const CANON = [
+  '> **Trace self-logging (when dispatched).** Canonical line one.',
+  '> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "..."`',
+  '> Canonical line three.',
+].join('\n');
+
+test('syncBlockquote replaces a drifted blockquote and is idempotent', () => {
+  const drifted = [
+    '# /twt-demo',
+    '',
+    '> **Trace self-logging (when dispatched).** A DIFFERENT older phrasing.',
+    '> `node "old-path"`',
+    '> Old third line that drifted.',
+    '',
+    '## Intent',
+    'Body must survive.',
+  ].join('\n');
+  const target = { text: CANON, anchor: TRACE_ANCHOR };
+
+  const first = syncBlockquote(drifted, target);
+  const second = syncBlockquote(first, target);
+
+  assert.equal(second, first, 'second stamp must be byte-identical (no growth/drift)');
+  assert.match(first, /Canonical line one\./);
+  assert.doesNotMatch(first, /older phrasing/);
+  // The block ends at the first non-"> " line — the heading and body survive.
+  assert.match(first, /## Intent\nBody must survive\./);
+  assert.equal((first.match(/## Intent/g) || []).length, 1);
+});
+
+test('syncBlockquote is a no-op when the anchor is absent', () => {
+  const text = '# /twt-demo\n\n## Intent\nNo trace block here.\n';
+  assert.equal(syncBlockquote(text, { text: CANON, anchor: TRACE_ANCHOR }), text);
 });

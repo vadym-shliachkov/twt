@@ -42,6 +42,26 @@ export function syncBlock(text, { text: block, heading }) {
   return text.slice(0, start) + block + "\n\n" + text.slice(end);
 }
 
+// Replace a leading blockquote block (a contiguous run of lines starting with
+// ">") identified by `anchor` — a regex matching the block's FIRST line — with
+// `block`'s canonical text. Unlike syncBlock this is not heading-delimited:
+// the trace self-logging notice sits above any "## " heading, as a "> …" quote.
+// The block is the maximal run of consecutive ">"-prefixed lines starting at
+// the anchor line. No-op if `block` is falsy or `anchor` isn't found.
+export function syncBlockquote(text, { text: block, anchor }) {
+  if (!block) return text;
+  const lines = text.split("\n");
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (anchor.test(lines[i])) { start = i; break; }
+  }
+  if (start === -1) return text;
+  let end = start;
+  while (end < lines.length && /^>/.test(lines[end])) end++;
+  const canonical = block.replace(/\r\n/g, "\n").trimEnd().split("\n");
+  return [...lines.slice(0, start), ...canonical, ...lines.slice(end)].join("\n");
+}
+
 // Apply every registered { text, heading } block to `text` in turn. Each
 // block only touches a file that carries its own heading (syncBlock no-ops
 // otherwise).
