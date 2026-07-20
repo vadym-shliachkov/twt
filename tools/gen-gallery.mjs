@@ -17,6 +17,12 @@
 //                                                  hex/px literals in specimens,
 //                                                  <img> height guard, dark-surface
 //                                                  contrast suspects
+//   node gen-gallery.mjs <projectDir> --geometry   read-only RENDERED-layout evidence
+//                                                  (needs the npm playwright package;
+//                                                  degrades to skipped without it):
+//                                                  cell overflow, overlapping specimen
+//                                                  siblings, zero-gap chip/badge
+//                                                  spacing, oversized empty stages
 //
 // Reads:
 //   .twt-artifacts/design/design-system/tokens.css                   (var resolution)
@@ -33,13 +39,15 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { projectFontLinks } from './lib/google-fonts.mjs';
 
 const projectDir = process.argv[2];
 const scaffold = process.argv.includes('--scaffold');
 const checkOnly = process.argv.includes('--check');
-if (!projectDir || (!scaffold && !checkOnly) || (scaffold && checkOnly)) {
-  console.error('usage: gen-gallery.mjs <projectDir> --scaffold | --check');
+const geometry = process.argv.includes('--geometry');
+if (!projectDir || [scaffold, checkOnly, geometry].filter(Boolean).length !== 1) {
+  console.error('usage: gen-gallery.mjs <projectDir> --scaffold | --check | --geometry');
   process.exit(2);
 }
 
@@ -202,19 +210,24 @@ code{font-family:var(--gal-font-mono);font-size:.88em}
 .gal-sub{display:block;margin:56px 0 18px;color:var(--gal-ink);font-family:var(--gal-font-heading);font-size:1.05rem;font-weight:800}
 .gal-legend{max-width:92ch;margin-bottom:20px;color:var(--gal-text);font-size:.92rem;line-height:1.6}
 .gal-legend code{color:var(--gal-ink);background:var(--gal-panel-soft);border:1px solid var(--gal-rule-soft);padding:2px 6px;border-radius:4px}
-/* component cells: name-first cards with a delimited specimen stage */
-.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.gal-cell{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
+/* component cells: name-first cards with a delimited specimen stage.
+   align-items:start — cells take their NATURAL height; without it every cell
+   stretches to the tallest row-mate and short cells show a huge empty stage. */
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}
+.gal-cell{display:flex;flex-direction:column;gap:12px;padding:16px;min-width:0;border:1px solid var(--gal-rule);border-radius:8px;background:var(--gal-panel);transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out}
+/* wide-by-nature components (nav, search bar, table, form, …) span the full
+   row — cramming them into one ~300px column distorts their real proportions */
+.gal-cell--wide{grid-column:1/-1}
 @media (hover:hover) and (pointer:fine){.gal-cell:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}}
 /* card header: WHAT it is, in ink — readable at first glance */
 .gal-cell-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .gal-name{font-family:var(--gal-font-heading);font-size:.92rem;font-weight:800;color:var(--gal-ink);line-height:1.2}
 .gal-meta{font-family:var(--gal-font-mono);font-size:.66rem;color:var(--gal-muted);text-align:right}
 /* specimen stage: dashed canvas that separates live specimens from chrome text */
-.gal-stage{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:14px;border:1px dashed var(--gal-rule);border-radius:6px}
+.gal-stage{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:14px;min-width:0;border:1px dashed var(--gal-rule);border-radius:6px}
 .gal-stage--bare{padding:0;border:none;display:block}
 /* one variant/state instance + its own micro-label (no positional guessing) */
-.gal-var{display:flex;flex-direction:column;gap:5px;align-items:flex-start;max-width:100%}
+.gal-var{display:flex;flex-direction:column;gap:5px;align-items:flex-start;max-width:100%;min-width:0}
 .gal-var--row{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
 .gal-var--fill{align-self:stretch}
 .gal-varlabel{font-family:var(--gal-font-mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--gal-muted)}
@@ -233,11 +246,17 @@ const TIERS = [
   { key: 'modules', tag: 'Tier 4', title: 'Modules', legend: 'Full sections (header, hero, footer, …). Dark or full-bleed modules replace the dashed canvas via <code>gal-stage--bare</code> and must scope-override every text primitive they contain to the on-dark token.' },
 ];
 
+// Components that are wide by nature: rendered inside one ~300px column they
+// get cramped or overflow, so their cell spans the full row. The model may
+// add/remove gal-cell--wide per cell if a specimen proves the heuristic wrong.
+const WIDE_NAME = /\b(nav|navigation|menu|header|footer|hero|banner|toolbar|table|breadcrumbs?|pagination|tabs?|stepper|carousel|slider|form|bar|timeline|ticker|marquee)\b/i;
+
 function cellShell(it) {
-  return `      <div class="gal-cell" data-component="${esc(it.name)}">
+  const wide = WIDE_NAME.test(it.name);
+  return `      <div class="gal-cell${wide ? ' gal-cell--wide' : ''}" data-component="${esc(it.name)}">
         <header class="gal-cell-head"><span class="gal-name">${esc(it.name)}</span><span class="gal-meta"></span></header>
         <div class="gal-stage">
-          <!-- gal:fill ${esc(it.name)} — replace this comment with the full variant × state matrix for “${esc(it.name)}”: one <div class="gal-var"> per instance (specimen, then <span class="gal-varlabel">label</span>), token-only var(--…) styling. Note in gal-meta one key token if helpful.${it.note ? ` Spec note: ${esc(it.note)}` : ''} -->
+          <!-- gal:fill ${esc(it.name)} — replace this comment with the full variant × state matrix for “${esc(it.name)}”: one <div class="gal-var"> per instance (specimen, then <span class="gal-varlabel">label</span>), token-only var(--…) styling. Note in gal-meta one key token if helpful. If the specimen needs the full row width (or clearly doesn't), add/remove gal-cell--wide on this cell. Adjacent inline pieces (badge next to a numeral, label next to a value) always sit in a flex row with an explicit gap token — never bare concatenation.${it.note ? ` Spec note: ${esc(it.note)}` : ''} -->
         </div>
       </div>`;
 }
@@ -298,6 +317,101 @@ ${TIERS.map(tierSection).filter(Boolean).join('\n')}
     counts: { cells: invAll.length, primitives: inv.primitives.length, components: inv.components.length, modules: inv.modules.length, unfilled_slots: invAll.length },
     unfilled_slots: invAll.map((i) => i.name),
   });
+  process.exit(0);
+}
+
+// ---- geometry (rendered-layout evidence via Playwright) ------------------------
+// Static checks can't see what the browser draws: a specimen wider than its
+// cell, two chips overlapping, a badge glued to a numeral, a stage that is
+// mostly empty air. This mode renders gallery.html headless and measures the
+// boxes. Findings are SUSPECTS (validator judges) — capped, deduped, and
+// skipped gracefully when the playwright npm package / Chromium is missing.
+if (geometry) {
+  if (!existsSync(OUT)) {
+    console.log(`gen-gallery: no gallery.html at ${OUT} — run --scaffold (or /twt-component-define) first.`);
+    printJson({ tool: 'gen-gallery', mode: 'geometry', ok: false, reason: 'gallery.html missing' });
+    process.exit(0);
+  }
+  const { loadPlaywright } = await import(new URL('./lib/resolve-playwright.mjs', import.meta.url));
+  const { pw, how } = await loadPlaywright();
+  let browser = null;
+  if (pw) { try { browser = await pw.chromium.launch(); } catch { /* no chromium binary */ } }
+  if (!browser) {
+    console.log('gen-gallery (geometry) — skipped: playwright/Chromium unavailable. Layout must be judged visually instead.');
+    printJson({ tool: 'gen-gallery', mode: 'geometry', ok: false, skipped: true, reason: `playwright unavailable (${how})` });
+    process.exit(0);
+  }
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(pathToFileURL(OUT).href, { waitUntil: 'load' });
+  await page.evaluate(() => document.fonts.ready);
+  const findings = await page.evaluate(() => {
+    const out = [];
+    const rectOf = (el) => el.getBoundingClientRect();
+    const visible = (el) => { const r = rectOf(el); return r.width > 0 && r.height > 0; };
+    const sig = (el) => `${el.tagName.toLowerCase()}${el.className ? '.' + String(el.className).trim().split(/\s+/)[0] : ''} “${(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28)}”`;
+    const chipLike = (el) => {
+      const cs = getComputedStyle(el);
+      const bordered = ['Top', 'Right', 'Bottom', 'Left'].some((s) => parseFloat(cs[`border${s}Width`]) > 0 && cs[`border${s}Style`] !== 'none');
+      const filled = cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent';
+      return bordered || filled;
+    };
+
+    for (const cell of document.querySelectorAll('.gal-cell')) {
+      const name = cell.getAttribute('data-component') || '?';
+      // specimen wider than its cell — the "element bigger than its area" defect
+      if (cell.scrollWidth > cell.clientWidth + 2) {
+        out.push({ kind: 'overflow_x', component: name, by_px: cell.scrollWidth - cell.clientWidth });
+      }
+      // stage that is mostly empty air below its content — dead vertical space
+      const stage = cell.querySelector('.gal-stage');
+      if (stage) {
+        const kids = [...stage.children].filter(visible);
+        if (kids.length) {
+          const top = Math.min(...kids.map((k) => rectOf(k).top));
+          const bottom = Math.max(...kids.map((k) => rectOf(k).bottom));
+          const dead = rectOf(stage).height - (bottom - top);
+          if (dead > 120) out.push({ kind: 'dead_space', component: name, empty_px: Math.round(dead) });
+        }
+      }
+    }
+
+    // inside each specimen stage (gal-var instances AND bare module markup):
+    // sibling boxes that overlap, or a chip/badge glued to its neighbor with
+    // no gap (the "ILLUSTRATIVE|40%" defect)
+    for (const stageEl of document.querySelectorAll('.gal-stage')) {
+      const name = stageEl.closest('.gal-cell')?.getAttribute('data-component') || '?';
+      for (const parent of [stageEl, ...stageEl.querySelectorAll('*')]) {
+        const kids = [...parent.children].filter(visible).filter((k) => !k.classList.contains('gal-varlabel'));
+        for (let i = 0; i < kids.length; i++) {
+          for (let j = i + 1; j < kids.length; j++) {
+            const A = kids[i], B = kids[j];
+            const a = rectOf(A), b = rectOf(B);
+            const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+            const oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+            // two plain inline runs share line boxes — their rects "overlap" by
+            // design, so only judge pairs where at least one is block-ish
+            const bothInline = getComputedStyle(A).display === 'inline' && getComputedStyle(B).display === 'inline';
+            // >4px in BOTH axes: 1–3px intersections are just line-height noise
+            if (ox > 4 && oy > 4 && !bothInline && !A.contains(B) && !B.contains(A)) {
+              out.push({ kind: 'overlap', component: name, a: sig(A), b: sig(B), overlap_px: [Math.round(ox), Math.round(oy)] });
+            } else if (oy > Math.min(a.height, b.height) * 0.5 && ox > -2 && ox <= 2 && (chipLike(A) || chipLike(B))) {
+              out.push({ kind: 'tight_spacing', component: name, a: sig(A), b: sig(B) });
+            }
+          }
+        }
+        if (out.length >= 80) return out;
+      }
+    }
+    return out;
+  });
+  await browser.close();
+
+  const byKind = {};
+  for (const f of findings) (byKind[f.kind] ??= []).push(f);
+  const counts = Object.fromEntries(Object.entries(byKind).map(([k, v]) => [k, v.length]));
+  console.log(`gen-gallery (geometry) — ${findings.length} layout suspect(s): ` +
+    (Object.entries(counts).map(([k, n]) => `${n} ${k}`).join(', ') || 'none') + '.');
+  printJson({ tool: 'gen-gallery', mode: 'geometry', ok: true, viewport: 1440, counts, findings });
   process.exit(0);
 }
 

@@ -192,6 +192,15 @@ async function fetchPage(url) {
   return { html: await res.text(), finalUrl: normalizeUrl(res.url) || url };
 }
 
+// Follow any redirect on the start URL (apex -> www, http -> https) so the
+// crawl host and the output domain folder reflect the final destination —
+// otherwise every link on the redirected-to site fails the same-host check
+// and the crawl dies after one page.
+async function resolveStartUrl(startUrl) {
+  try { return (await fetchPage(startUrl)).finalUrl; }
+  catch { return startUrl; } // unreachable start is reported by crawl() itself
+}
+
 // BFS crawl over internal pages. onPage(url, html, n) is called per fetched page.
 async function crawl(startUrl, max, onPage) {
   const host = new URL(startUrl).hostname;
@@ -207,6 +216,10 @@ async function crawl(startUrl, max, onPage) {
     try { page = await fetchPage(url); }
     catch (e) { unreachable.push({ url, reason: e.message }); continue; }
     if (visited.has(page.finalUrl) && page.finalUrl !== url) continue; // redirect to an already-seen page
+    if (new URL(page.finalUrl).hostname !== host) { // redirected off-site — never save foreign content
+      unreachable.push({ url, reason: `redirects off-site to ${page.finalUrl}` });
+      continue;
+    }
     visited.add(page.finalUrl);
     fetched++;
     await onPage(page.finalUrl, page.html, fetched);
@@ -226,8 +239,9 @@ const write = (path, content) => { mkdirSync(dirname(path), { recursive: true })
 async function runSearch() {
   const [query, rawUrl] = positionals(2);
   if (!query || !rawUrl) usage("search needs <query> and <url>");
-  const startUrl = normalizeUrl(rawUrl);
-  if (!startUrl) usage(`invalid URL: ${rawUrl}`);
+  const givenUrl = normalizeUrl(rawUrl);
+  if (!givenUrl) usage(`invalid URL: ${rawUrl}`);
+  const startUrl = await resolveStartUrl(givenUrl);
   const max = Number(flag("--max", 50));
   const domain = new URL(startUrl).hostname;
   const slug = (query.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "query").slice(0, 40);
@@ -296,8 +310,9 @@ ${noMatches.length} pages${noMatches.length ? ` — ${noMatches.map((p) => p.url
 async function runFetch() {
   const [rawUrl] = positionals(1);
   if (!rawUrl) usage("fetch needs <url>");
-  const startUrl = normalizeUrl(rawUrl);
-  if (!startUrl) usage(`invalid URL: ${rawUrl}`);
+  const givenUrl = normalizeUrl(rawUrl);
+  if (!givenUrl) usage(`invalid URL: ${rawUrl}`);
+  const startUrl = await resolveStartUrl(givenUrl);
   const scope = flag("--scope", "all");
   const max = scope === "homepage" ? 1 : Number(flag("--max", 50));
   const domain = new URL(startUrl).hostname;
