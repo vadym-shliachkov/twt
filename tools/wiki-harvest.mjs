@@ -418,7 +418,7 @@ function harvest(projectDir, { dryRun = false } = {}) {
       const id = `${relPath}#source#${sha1_12(relPath)}`;
       if (record(id)) {
         const kind = extToKind(extname(file));
-        sourceRows.push(`| ${bn} | ${kind} | ${relPath} | ${today()} |`);
+        sourceRows.push(`| ${bn} | ${kind} | ${relPath} | ${today()} | n/a |`);
       }
       continue;
     }

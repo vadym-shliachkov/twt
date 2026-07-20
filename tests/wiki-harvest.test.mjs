@@ -283,7 +283,7 @@ test('a non-decision artifact (tokens.css) gets a sources.md row and no inbox en
   writeArtifact(dir, 'design/design-system/tokens.css', TOKENS_CSS);
   run(dir);
   const sources = readFileSync(sourcesPath(dir), 'utf8');
-  assert.match(sources, /tokens\.css/);
+  assert.match(sources, /tokens\.css \| .* \| n\/a \|$/m, 'a harvested artifact row is tagged n/a (link-only)');
   const inbox = readFileSync(inboxPath(dir), 'utf8');
   assert.equal(/tokens\.css/.test(inbox), false, 'a regenerable artifact must never reach the inbox');
 });
