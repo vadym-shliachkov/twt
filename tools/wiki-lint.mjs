@@ -13,7 +13,8 @@
  *              no successor, core machinery missing
  *   WARNING  - the wiki degrades: invalid frontmatter, dead citations,
  *              un-indexed pages, live CONFLICTs, uncaptured whys,
- *              stale-vs-source pages, an inbox nobody drains
+ *              stale-vs-source pages, an inbox nobody drains, a source
+ *              registered but never synthesized into a page
  *   SUGGESTION - polish: missing summaries, TBD/UNVERIFIED-ATTR facts,
  *              open questions to resolve
  *
@@ -306,6 +307,44 @@ function main() {
       } else {
         add('SUGGESTION', 'inbox.md', `${stamps.length} entr${stamps.length === 1 ? 'y' : 'ies'} pending curation`,
           'run /twt-wiki to curate when convenient');
+      }
+    }
+  }
+
+  // --- sources: registered but never synthesized ------------------------------
+  // Lazy grandfather: only rows that HAVE a 5th (Synthesized) cell are checked;
+  // a legacy 4-column table is skipped until wiki-sources-mark migrates it.
+  const sourcesPath = join(wiki, 'sources.md');
+  if (existsSync(sourcesPath)) {
+    const PENDING = '—'; // em-dash — matches wiki-sources-mark's sentinel
+    const sLines = readFileSync(sourcesPath, 'utf8').split(/\r?\n/);
+    const sPipe = (l) => /^\s*\|.*\|\s*$/.test(l);
+    const sSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+    const sCells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    let hAt = -1;
+    for (let i = 0; i < sLines.length - 1; i++) {
+      if (sPipe(sLines[i]) && !sSep(sLines[i]) && /source/i.test(sLines[i]) && /ingested/i.test(sLines[i]) && sSep(sLines[i + 1])) { hAt = i; break; }
+    }
+    if (hAt !== -1 && /synthesized/i.test(sLines[hAt])) {
+      let sEnd = hAt + 2;
+      while (sEnd < sLines.length && sPipe(sLines[sEnd]) && !sSep(sLines[sEnd])) sEnd++;
+      for (let i = hAt + 2; i < sEnd; i++) {
+        const cells = sCells(sLines[i]);
+        const source = cells[0] || '';
+        if (source === '' || /^_.*_$/.test(source)) continue; // placeholder
+        if (cells.length < 5 || cells[4] !== PENDING) continue; // n/a, dated, or 4-col row
+        const where = (cells[2] || '').replace(/`/g, '');
+        const ingested = Date.parse(cells[3] || '');
+        const ageDays = Number.isNaN(ingested) ? 0 : Math.floor((Date.now() - ingested) / 86400000);
+        if (ageDays > maxAgeDays) {
+          add('WARNING', `sources.md → ${where}`,
+            `\`${source}\` was registered (${cells[3]}) but never synthesized into a page (${ageDays} days)`,
+            'run /twt-wiki to curate it, or confirm it is reference-only (mark its Where under .twt-artifacts/ so it reads n/a)');
+        } else {
+          add('SUGGESTION', `sources.md → ${where}`,
+            `\`${source}\` is registered but not yet synthesized into a page`,
+            'run /twt-wiki to curate it when convenient');
+        }
       }
     }
   }

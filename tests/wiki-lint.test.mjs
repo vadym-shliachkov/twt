@@ -256,6 +256,44 @@ test('human-readable output ends with a tier count summary', () => {
   assert.match(run(dir), /lint: 0 blocker\(s\), 0 warning\(s\), \d+ suggestion\(s\)\./);
 });
 
+test('a pending source older than the threshold warns; a fresh one only suggests; n/a and dated rows and legacy 4-col tables never fire', () => {
+  const dir = newWiki();
+  const P = '—'; // em-dash pending sentinel
+  const today = new Date().toISOString().slice(0, 10);
+  writeFileSync(join(dir, '.project-wiki', 'sources.md'), [
+    '---', 'title: Sources', 'type: source', 'status: current', 'updated: 2026-07-12', 'sources: []', 'tags: []', '---',
+    '', '# Sources', '',
+    '| Source | Kind | Where | Ingested | Synthesized |',
+    '|---|---|---|---|---|',
+    `| Old brief | doc | raw/old-brief.md | 2020-01-01 | ${P} |`,   // stale candidate -> WARNING
+    `| Fresh note | note | raw/fresh.md | ${today} | ${P} |`,        // fresh candidate -> SUGGESTION
+    '| tokens.css | stylesheet | `.twt-artifacts/design/tokens.css` | 2020-01-01 | n/a |', // link-only -> silent
+    '| Done doc | doc | raw/done.md | 2020-01-01 | 2026-07-12 |',    // already synthesized -> silent
+    '| _none yet_ | | | | |',                                        // placeholder -> silent
+    '',
+  ].join('\n'), 'utf8');
+  const r = lintJson(dir);
+  assert.ok(r.findings.some((f) => f.tier === 'WARNING' && /old-brief\.md/.test(f.where) && /never synthesized/.test(f.problem)));
+  assert.ok(r.findings.some((f) => f.tier === 'SUGGESTION' && /fresh\.md/.test(f.where)));
+  assert.equal(r.findings.some((f) => /tokens\.css/.test(f.where) && /synthesized/.test(f.problem)), false);
+  assert.equal(r.findings.some((f) => /done\.md/.test(f.where)), false);
+  assert.equal(r.findings.some((f) => /_none yet_/.test(f.where)), false);
+});
+
+test('a legacy 4-column sources.md (no Synthesized column) never triggers the synthesis check', () => {
+  const dir = newWiki();
+  writeFileSync(join(dir, '.project-wiki', 'sources.md'), [
+    '---', 'title: Sources', 'type: source', 'status: current', 'updated: 2026-07-12', 'sources: []', 'tags: []', '---',
+    '', '# Sources', '',
+    '| Source | Kind | Where | Ingested |',
+    '|---|---|---|---|',
+    '| Old brief | doc | raw/old-brief.md | 2020-01-01 |',
+    '',
+  ].join('\n'), 'utf8');
+  const r = lintJson(dir);
+  assert.equal(r.findings.some((f) => /never synthesized/.test(f.problem)), false);
+});
+
 test('refuses to run without a wiki', () => {
   const dir = mkdtempSync(join(tmpdir(), 'twt-wiki-lint-'));
   assert.throws(() => run(dir), /no \.project-wiki/);
