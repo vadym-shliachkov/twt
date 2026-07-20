@@ -15,7 +15,7 @@ const TOOLS = [
   'export-document', 'export-html', 'export-presentation',
   'export-source-create', 'export-theme-create', 'export-transform',
   'gen-tokens-from-candidates', 'house-style', 'pdf-render', 'scan-manifest',
-  'score-rubric', 'split-blocks', 'theme', 'wiki-facts-merge',
+  'score-rubric', 'split-blocks', 'theme', 'wiki-facts-merge', 'wiki-sources-mark',
 ];
 
 for (const tool of TOOLS) {
