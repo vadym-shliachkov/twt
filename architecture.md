@@ -1544,7 +1544,7 @@ flowchart TB
 ### /twt-figma-design-system
 
 **Category:** figma-export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional: a target Figma file URL, and/or a scope hint (foundations | full)
@@ -1574,7 +1574,7 @@ flowchart TB
 ### /twt-figma-mockup
 
 **Category:** figma-export
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional: which page(s) to export and a breakpoint hint (desktop | all)

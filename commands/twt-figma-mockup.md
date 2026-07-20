@@ -1,8 +1,8 @@
 ---
 name: twt-figma-mockup
 category: figma-export
-description: (v1.0.0) Assemble the HTML page mockups in Figma as frames built from the pushed design-system library
-version: 1.0.0
+description: (v1.0.1) Assemble the HTML page mockups in Figma as frames built from the pushed design-system library
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional: which page(s) to export and a breakpoint hint (desktop | all)

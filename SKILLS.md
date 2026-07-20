@@ -1379,7 +1379,7 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 ## /twt-figma-design-system
 
 **Category:** figma-export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Push the canonical design system (`.twt-artifacts/design/design-system/`) into a Figma file: tokens become Figma **variables** (with modes when the token set has light/dark), the type scale and shadows become **text/effect styles**, and — in full scope — the component catalog (`component/components.md`) becomes real Figma **components with variant sets** bound to those variables. Re-runs update the same file in place via the node-map in `figma-export/figma-map.md`.
@@ -1422,7 +1422,7 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 ## /twt-figma-mockup
 
 **Category:** figma-export
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.html`) inside the project's Figma file — one frame per selected page × breakpoint — **instantiating the design-system library components** pushed by `/twt-figma-design-system` wherever a mockup section maps to a cataloged component, with the mockup's real content. Re-runs update existing page frames in place via the node-map.

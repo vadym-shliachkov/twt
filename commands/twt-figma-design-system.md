@@ -1,8 +1,8 @@
 ---
 name: twt-figma-design-system
 category: figma-export
-description: (v1.0.0) Push the design system into a Figma file as variables, styles, and variant components
-version: 1.0.0
+description: (v1.0.1) Push the design system into a Figma file as variables, styles, and variant components
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional: a target Figma file URL, and/or a scope hint (foundations | full)
