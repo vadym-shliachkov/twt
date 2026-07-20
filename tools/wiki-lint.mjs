@@ -339,7 +339,7 @@ function main() {
         if (ageDays > maxAgeDays) {
           add('WARNING', `sources.md → ${where}`,
             `\`${source}\` was registered (${cells[3]}) but never synthesized into a page (${ageDays} days)`,
-            'run /twt-wiki to curate it, or confirm it is reference-only (mark its Where under .twt-artifacts/ so it reads n/a)');
+            'run /twt-wiki to curate it into a page, or leave it pending if it is intentionally reference-only');
         } else {
           add('SUGGESTION', `sources.md → ${where}`,
             `\`${source}\` is registered but not yet synthesized into a page`,
