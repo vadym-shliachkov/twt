@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Close the asset loop the manifest opens: for every row in `.twt-artifacts/design/assets/manifest.md`, either ingest the provided file, generate a bran">
+  <title>/twt-assets-produce | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-assets-produce</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · assets</p>
+          <h1>/twt-assets-produce</h1>
+          <p class="lede">Close the asset loop the manifest opens: for every row in <code>.twt-artifacts/design/assets/manifest.md</code>, either ingest the provided file, generate a brand-tokened placeholder (including...</p>
+          <div class="fact-row">
+            <span>Version 1.0.2</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Close the asset loop the manifest opens: for every row in <code>.twt-artifacts/design/assets/manifest.md</code>, either ingest the provided file, generate a brand-tokened placeholder (including the favicon/OG meta set and the design system's icon SVGs), or produce a concrete human to-do (stock briefs, missing files) — so mockups render, Development has real files to copy, and QA's MISSING-ASSET findings become an actionable checklist instead of noise.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/design/assets/manifest.md</code><span class="file-desc">An inventory of the images and assets the design references.</span></li><li><code>.twt-artifacts/pre-design/curation/facts.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/design-system/tokens.md</code><span class="file-desc">The human-readable token reference — colors, type, spacing, and more.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/design-system/component/components.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/pre-design/positioning/positioning.md</code><span class="file-desc">Your positioning: who the site is for, the value it offers, and what to promote first.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/assets/img/</code><span class="file-desc">A folder of related files.</span></li><li><code>.twt-artifacts/design/assets/video/</code><span class="file-desc">A folder of related files.</span></li><li><code>.twt-artifacts/design/assets/icons/</code><span class="file-desc">A folder of related files.</span></li><li><code>.twt-artifacts/design/assets/meta/</code><span class="file-desc">A folder of related files.</span></li><li><code>.twt-artifacts/design/assets/manifest.md</code><span class="file-desc">An inventory of the images and assets the design references.</span></li><li><code>.twt-artifacts/design/assets/production-report.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/assets/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't write into a build target (<code>site/</code>, a theme) — <code>/twt-develop</code> syncs the produced pool into the build it owns</li><li>Doesn't download stock imagery or anything with unknown licensing — stock rows get a search brief, never a fetched binary</li><li>Doesn't fabricate real-world imagery: headshots, client logos, office/product photos of real subjects must be <code>source: provided</code>; a missing one is flagged, never faked</li><li>Doesn't edit mockup pages, layouts, or any upstream artifact — it verifies references resolve and reports mismatches</li><li>Doesn't plan assets (that's <code>/twt-layout-define</code> Step 5 / <code>/twt-mockup-define</code> Step 6); it only appends the site-wide meta rows (favicon, OG) when planning missed them</li><li>Doesn't overwrite a provided real asset with a placeholder — provided always wins</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Every manifest row ends the run with a <code>status</code> — <code>provided</code> / <code>generated</code> / <code>pending-stock</code> / <code>pending-video</code> / <code>missing-provided</code> — and no row is silently skipped</li><li>Every <code>generated</code> file exists in the pool (<code>.twt-artifacts/design/assets/img|video|icons|meta/</code>) under the <strong>exact manifest <code>filename</code></strong>, styled from <code>tokens.css</code> values only</li><li>The meta set exists: <code>meta/favicon.svg</code> (plus PNG rasterizations when playwright is available) and <code>meta/og-default.png</code> (or the flagged SVG fallback)</li><li>When <code>tokens.md</code> §2.8 names an icon family, every icon name used by <code>components.md</code>/mockups exists in <code>icons/</code> as an SVG from that one family</li><li><code>production-report.md</code> states counts per status, every human to-do (stock briefs, files to supply), and the mockup-reference resolution result</li><li>Idempotent: re-runs touch only rows that are still unfulfilled or explicitly re-scoped; existing <code>provided</code>/<code>generated</code> files are never regenerated without consent (rule 10)</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

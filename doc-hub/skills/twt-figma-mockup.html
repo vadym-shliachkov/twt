@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.html`) inside the project's Figma file — one frame per selected page × br">
+  <title>/twt-figma-mockup | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><span class="nav-disabled" aria-disabled="true">Develop</span><span class="nav-disabled" aria-disabled="true">QA</span>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-figma-mockup</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · figma-export</p>
+          <h1>/twt-figma-mockup</h1>
+          <p class="lede">Rebuild the Phase-2 HTML page mockups (<code>.twt-artifacts/design/mockup/pages/*.html</code>) inside the project's Figma file — one frame per selected page × breakpoint — **instantiating the...</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Rebuild the Phase-2 HTML page mockups (<code>.twt-artifacts/design/mockup/pages/*.html</code>) inside the project's Figma file — one frame per selected page × breakpoint — <strong>instantiating the design-system library components</strong> pushed by <code>/twt-figma-design-system</code> wherever a mockup section maps to a cataloged component, with the mockup's real content. Re-runs update existing page frames in place via the node-map.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional: which page(s) to export and a breakpoint hint (desktop | all)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/design/mockup/styles.css</code><span class="file-desc">The shared stylesheet powering the mockups, built from design tokens.</span></li><li><code>.twt-artifacts/design/design-system/tokens.css</code><span class="file-desc">The design tokens as CSS custom properties, ready for the build to consume.</span></li><li><code>.twt-artifacts/design/design-system/component/components.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/figma-export/figma-map.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/figma-export/figma-map.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/figma-export/mockup-report.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/figma-export/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't redesign anything — the HTML mockups are the source of truth; this exports them</li><li>Doesn't modify <code>.twt-artifacts/design/</code> (read-only on mockups and the design system)</li><li>Doesn't push the design system itself (that is <code>/twt-figma-design-system</code>; this skill only *offers* to dispatch it)</li><li>Doesn't chase pixel-perfect parity with browser rendering — the target is structural + token fidelity (layout, components, type, color, spacing, real copy), not rendering quirks</li><li>Doesn't delete anything in Figma — page frames for mockups that no longer exist are flagged as orphans in the report</li><li>Doesn't reproduce the Figma plugin skills' Plugin-API mechanics inline — it loads <code>figma-use</code> + <code>figma-generate-design</code> and follows them</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>One Figma frame per selected page × breakpoint (desktop 1440 / tablet 768 / mobile 390), named <code>&lt;page-slug&gt; / &lt;breakpoint&gt;</code></li><li>When a design-system export exists, sections that map to cataloged components are <strong>instances</strong> of the library components (checked via the map's <code>### Components</code> keys), not detached frames</li><li>All frame content is the mockup's real copy — never lorem</li><li><code>figma-map.md</code> gains/updates <code>### Pages</code> rows; <code>mockup-report.md</code> lists per-page results</li><li>Aborts with an actionable message when mockups or the Figma MCP are missing</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
