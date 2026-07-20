@@ -54,7 +54,10 @@ test('wiki: seed → check fails → simulated curation passes', () => {
     '**Why:** warm-editorial brand voice.', ''].join('\n'), 'utf8');
   execFileSync(process.execPath, [DRAIN, dir, '--drain', 'all'], { encoding: 'utf8' });
   execFileSync(process.execPath, [INDEX, dir], { encoding: 'utf8' });
-  assert.match(run(['check', dir, '--scope', 'wiki']), /PASS/);
+  const checkOut = run(['check', dir, '--scope', 'wiki']);
+  assert.match(checkOut, /PASS/);
+  // A stale pending source is seeded; the lint must flag it as never synthesized.
+  assert.match(checkOut, /never synthesized/, 'eval-smoke wiki scope must surface the unsynthesized-source lint');
 
   run(['clean', dir, '--scope', 'wiki']);
   assert.equal(existsSync(join(dir, '.project-wiki')), false);

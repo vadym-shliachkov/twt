@@ -143,7 +143,19 @@ function seedWiki(projectDir) {
   const wiki = join(projectDir, '.project-wiki');
   put(join(wiki, MARKER), 'seeded by eval-smoke — safe for clean to remove\n');
   writeFileSync(join(wiki, 'inbox.md'), readFileSync(join(wiki, 'inbox.md'), 'utf8') + FIXTURE_INBOX_ENTRIES, 'utf8');
-  console.log('seeded: wiki fixture (scaffold + 2 inbox entries). Dispatch:');
+  // wiki-init.mjs scaffolds sources.md as a 4-column placeholder table (grandfathered,
+  // lint skips it); overwrite with a 5-column table carrying one STALE pending row so
+  // the "never synthesized" lint has something to fire on.
+  put(join(wiki, 'sources.md'), [
+    '---', 'title: Sources', 'type: source', 'status: current', 'updated: 2026-07-12', 'sources: []', 'tags: []', '---',
+    '', '# Sources', '',
+    'Every piece of evidence this wiki cites. Artifacts are **linked, never copied**.', '',
+    '| Source | Kind | Where | Ingested | Synthesized |',
+    '|---|---|---|---|---|',
+    '| Kickoff notes | doc | raw/kickoff.md | 2020-01-01 | — |',
+    '',
+  ].join('\n'));
+  console.log('seeded: wiki fixture (scaffold + 2 inbox entries + 1 stale pending source). Dispatch:');
   console.log('  twt-wiki-define with: inbox only');
 }
 
@@ -223,6 +235,12 @@ function checkWiki(projectDir) {
   try {
     const parsed = JSON.parse(lint.stdout);
     if (parsed.blockers > 0) problems.push(`wiki-lint reports ${parsed.blockers} BLOCKER(s) after curation`);
+    // WARNING-tier findings don't fail the check (curation is otherwise clean), but
+    // surface them so a caller (or the smoke test) can see the lint actually fired —
+    // e.g. the stale pending source seeded above should trip the "never synthesized" rule.
+    for (const f of parsed.findings.filter((x) => x.tier === 'WARNING')) {
+      console.log(`  [wiki-lint WARNING] ${f.where}: ${f.problem}`);
+    }
   } catch { problems.push('wiki-lint did not return JSON: ' + (lint.stderr || lint.stdout).slice(0, 200)); }
   return problems;
 }
