@@ -1,4 +1,4 @@
-<!-- manual-version: 4 — stamped from the twt plugin's templates/wiki/AGENTS.md.
+<!-- manual-version: 5 — stamped from the twt plugin's templates/wiki/AGENTS.md.
      When the plugin ships a newer manual, /twt-wiki offers an upgrade (a plain
      re-stamp; hand edits are recoverable from git history). Do not remove this line. -->
 
@@ -28,7 +28,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `index.md` | Catalog of every page. The entry point. |
 | `overview.md` | The project in one page: what, for whom, where it stands. |
 | `inbox.md` | **Append-only raw capture.** Written only by the harvester (`/twt-wiki-fetch`), on demand. Only the curator drains it. |
-| `log.md` | Append-only history: every ingest, sync, query, lint. |
+| `log.md` | Append-only history: every ingest, sync, and query. (Lints leave their dated trail in `validation-report.md`'s git history, not here.) |
 | `facts.md` | Canonical ledger — `RESOLVED` / `CONFLICT` / `UNVERIFIED-ATTR` / `TBD` — plus the provided-assets table. Written only by the curator (`twt-wiki-define`), from fact rows harvested on demand; the pipeline keeps its own ledger in `.twt-artifacts/` and never writes here. |
 | `decisions/` | One page per durable decision: what, why, evidence, reversible, superseded-by. |
 | `open-questions.md` | Unresolved: live conflicts, un-overruled blockers, unanswered asks. |
@@ -42,15 +42,19 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 
 ## Who may write what
 
-- **The harvester** (`/twt-wiki-fetch`, run on demand) appends to `inbox.md` and
-  **nothing else**. Nothing writes to the wiki automatically. Appending cannot corrupt.
+- **The harvester** (`/twt-wiki-fetch`, run on demand) appends to `inbox.md`, adds rows
+  to `sources.md`, and records processed-item IDs in `.harvest-state.json` — and touches
+  **no curated page**. Nothing writes to the wiki automatically. Appending cannot corrupt.
 - **The scaffolder** seeds each curated page — `decisions/`, `entities/`, `ideas/`,
   `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md` — with an
   empty stub once, at init, never overwriting a file that already exists.
 - **The curator** (`twt-wiki-define`) is the only thing that writes *into* a curated
-  page after that — the same list, now with real content. One exception: `facts.md`
-  also accepts the pipeline's fact reconciliation (`twt-curation-define`), which merges
-  by fact key and never silently flips a value — a disagreement becomes a `CONFLICT` row.
+  page after that — the same list, now with real content. That includes `facts.md`: the
+  curator is its only writer, merging fact rows mechanically through
+  `tools/wiki-facts-merge.mjs` (by fact key, never silently flipping a value — a
+  disagreement becomes a `CONFLICT` row). The pipeline keeps its **own** separate ledger
+  in `.twt-artifacts/`; `twt-curation-define` writes only there and never touches this
+  wiki page (CONVENTIONS §17).
 - **Nothing** deletes a source file or a wiki page without explicit human approval.
 
 ## Page frontmatter
