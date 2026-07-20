@@ -193,7 +193,7 @@ function seedArtifactsReadme() {
       '| `qa/` | Phase 4 — audit reports and gaps |',
       '| `reports/index.html` | **Start here** — the consolidated review dashboard |',
       '| `site-log.md` / `site-dev-log.md` | Per-run log: questions, answers, dispatch trace |',
-      '| `export/`, `content-approval/`, `content-quality/`, `screenshots/`, `search/`, `intake/` | Standalone tool outputs, one folder per tool |',
+      '| `export/`, `figma-export/`, `content-approval/`, `content-quality/`, `screenshots/`, `search/`, `intake/` | Standalone tool outputs, one folder per tool |',
       '| `html-site/`, `elementor-theme/` | Build *conventions* and phase reviews — **the built site itself lives at the project root** (`site/` or `wp-content/themes/<slug>/`) |',
       '',
       'Every pipeline area carries the same trio: the artifact, a sibling `decisions.md`',
