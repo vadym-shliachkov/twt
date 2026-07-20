@@ -2633,7 +2633,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - The question to ask; otherwise interactive
@@ -2654,6 +2654,7 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .project-wiki/analyses/ |  |
+| .project-wiki/index.md |  |
 | .project-wiki/log.md |  |
 
 ### /twt-wiki-validate

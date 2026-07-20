@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-query
 category: wiki
-description: (v1.0.3) Ask the project a question and get an answer cited to the wiki and its sources
-version: 1.0.3
+description: (v1.0.4) Ask the project a question and get an answer cited to the wiki and its sources
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - The question to ask; otherwise interactive
@@ -15,6 +15,7 @@ reads:
   - .twt-artifacts/
 writes:
   - .project-wiki/analyses/
+  - .project-wiki/index.md
   - .project-wiki/log.md
 ---
 
@@ -81,7 +82,13 @@ If the answer took real work — you read several pages, reconciled sources, or 
 
 Do not ask for a trivial lookup — treat it as **Don't save** without asking; that is noise.
 
-If saved: write `.project-wiki/analyses/<slug>.md` with `type: analysis` frontmatter, the question, the answer, and its citations.
+If saved: write `.project-wiki/analyses/<slug>.md` with `type: analysis` frontmatter (including a one-line `summary:`), the question, the answer, and its citations. Then catalog it immediately so the index doesn't lie until the next curate run — regenerate the index deterministically (Bash, single command; never hand-edit `index.md`):
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-index.mjs" "$CLAUDE_PROJECT_DIR"
+```
+
+`wiki-index.mjs` recompiles the whole catalog from every page's frontmatter, so it only adds your new `analyses/` row and never touches curated content.
 
 Then, **whether or not the answer was saved**, append to `log.md` — it is the append-only record of every ingest, sync, query, and lint, not only the saved ones:
 

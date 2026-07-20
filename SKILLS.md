@@ -2572,7 +2572,7 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 ## /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Answer a question about the project from its durable memory — including the questions no artifact can answer, like *why is the CTA orange* or *what did we rule out and why*.
@@ -2590,6 +2590,7 @@ Answer a question about the project from its durable memory — including the qu
 
 **Writes:**
 - .project-wiki/analyses/
+- .project-wiki/index.md
 - .project-wiki/log.md
 
 **Non-goals:**
