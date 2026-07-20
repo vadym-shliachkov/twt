@@ -179,6 +179,12 @@ tags: [client]
 ## Step 4 — Synthesize newly ingested sources
 For each source in `sources.md` not yet reflected on any page, read it from the location in that row's `Where` column. That location is not always under `raw/`: per `twt-wiki-fetch`, a binary or fetched extract is copied into `raw/...`, but a file already in the repo (or a very large file) is registered by its original project-relative path instead and was never copied. Read whichever path the row actually names, then fold what matters into existing entity/concept pages. **One source usually touches several pages** — the client entity, a competitor entity, a fact row, a glossary term — not just one; walk the source's claims and route each to its home, cross-linking as you go (see Step 3's rule). **Update, never duplicate** — a second page about the same entity is a bug. Create a new page only when the knowledge is durable and has no home.
 
+After you fold a source into its pages, mark it synthesized so the next run does not re-process it and the lint stops flagging it — never hand-edit the `Synthesized` cell, use the tool (Bash; one call may carry several `--where` flags):
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/wiki-sources-mark.mjs" "$CLAUDE_PROJECT_DIR" --where <Where-path-from-the-sources.md-row>`
+
+It stamps today's date and, on a legacy 4-column table, migrates it to the 5-column schema in the same pass. A source you deliberately leave as reference-only needs no stamp — if its `Where` is under `.twt-artifacts/` it already reads `n/a`.
+
 ## Step 5 — Handle contradictions honestly (do not resolve them silently)
 When a new source contradicts a current page, or two sources disagree:
 - Set the affected page to `status: needs-review`.

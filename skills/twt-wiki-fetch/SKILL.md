@@ -68,10 +68,12 @@ Copy binaries and loose local files rather than linking them: a link to a file i
 ## Step 3 — Register every source
 For the `.twt-artifacts/` harvest path, skip this step — the harvester already wrote its own `sources.md` rows directly. For every other classified source, append one row per source to the table in `.project-wiki/sources.md`:
 
-| Source | Kind | Where | Ingested |
-|---|---|---|---|
-| Brand book v3 | asset | `raw/assets/brand-book-v3.pdf` | 2026-07-11 |
-| acme.com | site | `raw/acme-com.md` | 2026-07-11 |
+| Source | Kind | Where | Ingested | Synthesized |
+|---|---|---|---|---|
+| Brand book v3 | asset | `raw/assets/brand-book-v3.pdf` | 2026-07-11 | — |
+| acme.com | site | `raw/acme-com.md` | 2026-07-11 | — |
+
+New ingested rows start `—` (not yet synthesized); the curator stamps them via `wiki-sources-mark.mjs` once folded into pages. The `.twt-artifacts/` harvest path writes `n/a` itself.
 
 Never remove or rewrite an existing row, for any reason — not even supersession. If a source supersedes an earlier one, express that only on the **new** row's `Kind` cell (e.g. `site (supersedes acme-com)`); the old row for `acme-com` is left exactly as first registered.
 

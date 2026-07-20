@@ -1,4 +1,4 @@
-<!-- manual-version: 5 — stamped from the twt plugin's templates/wiki/AGENTS.md.
+<!-- manual-version: 6 — stamped from the twt plugin's templates/wiki/AGENTS.md.
      When the plugin ships a newer manual, /twt-wiki offers an upgrade (a plain
      re-stamp; hand edits are recoverable from git history). Do not remove this line. -->
 
@@ -36,7 +36,7 @@ This wiki must survive `rm -rf .twt-artifacts/`.
 | `entities/` | Client, audience segments, competitors, people, products — and durable concepts (`type: concept` pages live here too; there is no separate `concepts/` folder). |
 | `analyses/` | Saved answers from queries that were worth keeping. |
 | `glossary.md` | Terms, and banned words. |
-| `sources.md` | Registry of all evidence: `raw/` files, `.twt-artifacts/` paths, URLs. |
+| `sources.md` | Registry of all evidence: `raw/` files, `.twt-artifacts/` paths, URLs. The `Synthesized` column tracks each row's state — `n/a` (link-only pointer, never synthesized), `—` (a candidate not yet folded into a page), or a `YYYY-MM-DD` date. Only `wiki-sources-mark.mjs` (via the curator) stamps it. |
 | `raw/` | Immutable ingested sources. Assets, meeting notes. Never edit; never delete. |
 | `validation-report.md` | Wiki health report, written only by the validator; its git history is the dated trail. |
 
