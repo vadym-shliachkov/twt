@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-07-20 **v1.0.81** — twt-wiki-fetch → 1.0.7, twt-wiki-define → 1.0.12
 - 2026-07-20 **v1.0.79** — twt-wiki-query.md → 1.0.5
 - 2026-07-20 **v1.0.78** — twt-wiki-query.md → 1.0.4
 - 2026-07-20 **v1.0.77** — twt-figma-design-system.md → 1.0.1, twt-figma-mockup.md → 1.0.1
