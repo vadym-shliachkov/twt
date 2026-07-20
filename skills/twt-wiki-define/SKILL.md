@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-define
 category: wiki
-description: (v1.0.10) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-version: 1.0.10
+description: (v1.0.11) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.11
 accepts_arguments: true
 inputs:
   - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending

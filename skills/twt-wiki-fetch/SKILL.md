@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-fetch
 category: wiki
-description: (v1.0.5) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox
-version: 1.0.5
+description: (v1.0.6) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox
+version: 1.0.6
 accepts_arguments: true
 inputs:
   - One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/

@@ -2528,7 +2528,7 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 ## /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
 Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, every facts.md ledger row, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.

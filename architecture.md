@@ -2555,7 +2555,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.10
+**Version:** 1.0.11
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -2601,7 +2601,7 @@ flowchart TB
 ### /twt-wiki-fetch
 
 **Category:** wiki
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
