@@ -2633,7 +2633,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - The question to ask; otherwise interactive
