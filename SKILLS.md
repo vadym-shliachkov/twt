@@ -272,7 +272,7 @@ Pull whatever brand signal exists — from a provided source (brand book PDF, Fi
 ## /twt-component-define
 
 **Category:** component
-**Version:** 1.3.13
+**Version:** 1.3.14
 **Accepts arguments:** yes
 
 Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
@@ -314,7 +314,7 @@ Document the component library the site needs — anatomy, variants, states, tok
 ## /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** no
 
 Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
@@ -444,7 +444,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
@@ -580,7 +580,7 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 ## /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Pull a website's pages into the local working directory as clean, frontmatter-tagged Markdown — for use as reference material in copy migrations, content audits, or as input to other skills.
@@ -779,7 +779,7 @@ Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score 
 ## /twt-design
 
 **Category:** design
-**Version:** 1.3.6
+**Version:** 1.3.7
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -2193,7 +2193,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.13.1
+**Version:** 1.13.2
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.

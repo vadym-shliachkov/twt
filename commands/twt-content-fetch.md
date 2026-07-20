@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch
 category: content
-description: (v1.1.3) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
-version: 1.1.3
+description: (v1.1.4) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
+version: 1.1.4
 accepts_arguments: true
 inputs:
   - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -63,7 +63,7 @@ Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — sit
 - otherwise → **unrecognized** (collect for the report; do not dispatch)
 
 ## Step 3 — Dispatch (in parallel)
-For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, `/twt-content-fetch-doc`, or `/twt-content-fetch-figma`), passing the source as its argument. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own output subfolder under `fetched/` — sites to `site/<domain>/`, PDFs **and** Word/Google docs both to `doc/<filename>/`, Figma to `figma/<file-key>/` — one folder per source file, so there is no write conflict (a PDF and a doc that slugify to the same `<filename>` are the only collision case): **issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest.
+For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, `/twt-content-fetch-doc`, or `/twt-content-fetch-figma`), passing the source as its argument — plus at most a scope hint (`homepage` / `all pages`) for sites. **Never invent CLI-style flags** (`--output`, `--sitemap`, `--preserve-copy`, …) in the dispatch prompt: the sub-skills define their own output layout, and made-up flags push executors off their bundled scripts into improvised fetching. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own output subfolder under `fetched/` — sites to `site/<domain>/`, PDFs **and** Word/Google docs both to `doc/<filename>/`, Figma to `figma/<file-key>/` — one folder per source file, so there is no write conflict (a PDF and a doc that slugify to the same `<filename>` are the only collision case): **issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest.
 
 ## Step 4 — Write the manifest
 Write `.twt-artifacts/pre-design/content/fetched/_manifest.md`:

@@ -1,8 +1,8 @@
 ---
 name: twt-design
 category: design
-description: (v1.3.6) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.3.6
+description: (v1.3.7) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+version: 1.3.7
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -70,6 +70,13 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 ## Step 1 — Discovery
 Ask what's provided (brand-brief already exists from Phase 1; optional Figma/screenshots for analyse-existing mode). Parse `--from <area>` / `--only <area>` from `$ARGUMENTS` (area ∈ design-system/component/layout/mockup). Record whether a **Figma/exported-design source** was provided as `<has_figma>`.
 
+**Page scope — never assume "all pages".** Determine `<page-scope>` (which pages get layouts + mockups):
+- Stated in `$ARGUMENTS` / the dispatch context (e.g. forwarded by `/twt-site`) → use it, state it back.
+- **Interactive and not stated → always ask** via **AskUserQuestion** (single-select, header "Pages"): **Full site** (every sitemap page) · **Homepage only** · **A subset** (follow-up plain-text: "List the pages:") · **You decide** (full site for a production build; homepage-first for an experiment or direction probe).
+- **Collect mode and not stated** → default to full site, but record it in `.twt-artifacts/design/decisions.md` under `## Model-decided assumptions (review)` so the orchestrator surfaces it.
+
+`<page-scope>` binds Steps 4 (layouts) and 5 (mockups): dispatch them with the scope, design exactly the scoped pages, and list the rest as out of scope in the report.
+
 ## Step 1a — No-Figma gate: external design skills + Design Read
 **Run only when `<has_figma>` is false** (greenfield, designing from the brand-brief rather than an existing design). When a Figma/exported design is provided, that design is authoritative — skip this step.
 
@@ -78,6 +85,13 @@ Ask what's provided (brand-brief already exists from Phase 1; optional Figma/scr
 
 ## Step 1b — Visual-direction gate (user sets the requirements)
 The brand-brief fixes *brand* facts (logo, core palette, voice). It does **not** decide the **site's visual design** — aesthetic family, layout paradigm, type pairing, accent usage, density, motion. When no Figma is provided, that direction must be **set with the user**, not silently inferred.
+
+**Redesign posture first.** If the project is a **redesign** (a `<redesign-posture>` was forwarded, or a fetched current site exists at `.twt-artifacts/pre-design/content/fetched/site/`), resolve the posture before anything else — "redesign" does *not* mean "reproduce the current site with new markup":
+- Posture already forwarded (e.g. by `/twt-site`) → apply it.
+- Interactive and unknown → ask via **AskUserQuestion** (single-select, header "Style"): **Fresh direction** (recommended — propose genuinely new looks; the current site is content/brand-fact input only) · **Evolve the current style** (recognizable but modernized) · **Keep the current style** (same visual system, rebuilt) · **You decide** (defaults to Fresh direction).
+- Collect mode and unknown → lean **Fresh direction** and record the posture as an open question in `decisions.md` (the orchestrator surfaces it).
+
+On **Fresh direction**, the proposed Design Read and any style tiles must be derived from the brand-brief + positioning, **not** from the current site's aesthetic — and at least the tile set must contain zero options that read as the existing site restyled. On **Evolve**, name explicitly what is kept and what changes. On **Keep**, analyse-existing mode is the source of truth.
 
 - **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** ask. Leave `design-read.md` at `status: proposed` and record the visual direction as an **open decision** in `.twt-artifacts/design/decisions.md` (`## Open questions` → "Confirm site visual direction", with the proposed Design Read + dials as the leaning, and the resolution options below — including comparing style tiles via `/twt-direction-define`). The orchestrator surfaces it (rule 13).
 - **Auto / unattended** (the run was started in a fully-unattended mode, e.g. site `auto`): do not ask — accept the proposed read, set `status: model-decided`, and log it for the final summary.
@@ -107,13 +121,13 @@ Step 2 already built the component catalog (`components.md` + `gallery.html`) vi
 
 ## Step 4 — Layouts
 Layouts have **no standalone command** — same inline single define→validate pass:
-1. Dispatch `/twt-layout-define` (Agent tool) with `subagent-collect` → it writes `layouts/<page>.md` and a `decisions.md`.
+1. Dispatch `/twt-layout-define` (Agent tool) with `subagent-collect` **and the `<page-scope>` page list** (it produces layouts for exactly those pages) → it writes `layouts/<page>.md` and a `decisions.md`.
 2. Dispatch `/twt-layout-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/layout/validation-report.md`.
 3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run.
 
 ## Step 5 — Mockups
 Mockups have **no standalone command** — same inline single define→validate pass:
-1. Dispatch `/twt-mockup-define` (Agent tool) with `subagent-collect` → it writes `pages/<page>.html`, `index.html`, `styles.css` and a `decisions.md`.
+1. Dispatch `/twt-mockup-define` (Agent tool) with `subagent-collect` **and the `<page-scope>` page list** (it renders exactly those pages) → it writes `pages/<page>.html`, `index.html`, `styles.css` and a `decisions.md`.
 2. Dispatch `/twt-mockup-validate` (Agent tool) with `subagent-collect` → `.twt-artifacts/design/mockup/validation-report.md`.
 3. **Surface / bubble** per the protocol below; at most one BLOCKER-driven re-run.
 

@@ -1,8 +1,8 @@
 ---
 name: twt-component-validate
 category: component
-description: (v1.0.5) Read-only critique of components.md and gallery.html into validation-report.md
-version: 1.0.5
+description: (v1.0.6) Read-only critique of components.md and gallery.html into validation-report.md
+version: 1.0.6
 accepts_arguments: false
 inputs:
   - none (reads the component artifacts)
@@ -49,6 +49,12 @@ Run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_
 - **`raw_values[]`** — hex/rgba/px literals in specimen CSS. Evidence for the Token-only styling criterion; cite the selectors.
 - **`dark_surface_suspects[]`** — descendants of a dark-surface specimen whose effective color resolves below 3:1 against it (static-cascade **heuristic**: confirm each before reporting). Confirmed = **BLOCKER** under A11y affordances, citing the ratio; the expected fix is the on-ink scope pattern (`.spec-on-ink :is(…){color:var(--color-text-on-ink)}`).
 - **`imgs_missing_height[]`** — `<img>` without an explicit height distorts in flex columns (stretched logo). **WARNING** with the offending tag; also check `align-self:flex-start` in column contexts manually.
+
+Then run `node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --geometry` (also read-only; prints `skipped` without Playwright — then judge layout from screenshots via `/twt-block-preview` instead). It measures the **rendered** boxes and reports layout suspects — confirm each against the markup before reporting:
+- **`overflow_x`** — specimen wider than its cell (squeezed component). Confirmed = **WARNING** (BLOCKER if content is cut off); expected fix is `gal-cell--wide` or a corrected specimen.
+- **`overlap`** — two specimen siblings drawn over each other. Confirmed = **BLOCKER** under State/variant coverage (the specimen misrenders).
+- **`tight_spacing`** — a chip/badge gapless against its neighbor (missing flex gap). Confirmed = **WARNING**, unless it's an intentional gapless bordered grid noted in `components.md`.
+- **`dead_space`** — a stage that is mostly empty air (cell far taller than its content). **WARNING**; usually a width-tier misassignment.
 
 Optionally confirm visually: `/twt-block-preview` can screenshot a single module by CSS selector.
 

@@ -1,8 +1,8 @@
 ---
 name: twt-component-define
 category: component
-description: (v1.3.13) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
-version: 1.3.13
+description: (v1.3.14) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
+version: 1.3.14
 accepts_arguments: true
 inputs:
   - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -87,7 +87,7 @@ Run (Bash):
 ```
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --scaffold
 ```
-**Run this command directly — do not hunt for the tool** (`${CLAUDE_PLUGIN_ROOT}` is always set; its only flags are `--scaffold` and `--check`). It writes the full page chrome — the doc-hub light skin (same canonical look `gen-preview.mjs` gives `preview.html`), the font links, the `../tokens.css` link, one `gal-tier` section per level, and one `gal-cell` shell per component from `components.md` / `tokens.md §3` — each cell holding a `<!-- gal:fill <Name> … -->` slot. **Never edit the `data-gal-chrome` style block or hand-write your own chrome** — the skin is script-owned now, exactly like preview's. If the existing `gallery.html` predates the scaffolder and must be preserved, skip the scaffold and only fill/fix in place.
+**Run this command directly — do not hunt for the tool** (`${CLAUDE_PLUGIN_ROOT}` is always set; its only flags are `--scaffold`, `--check`, and `--geometry`). It writes the full page chrome — the doc-hub light skin (same canonical look `gen-preview.mjs` gives `preview.html`), the font links, the `../tokens.css` link, one `gal-tier` section per level, and one `gal-cell` shell per component from `components.md` / `tokens.md §3` — each cell holding a `<!-- gal:fill <Name> … -->` slot. **Never edit the `data-gal-chrome` style block or hand-write your own chrome** — the skin is script-owned now, exactly like preview's. If the existing `gallery.html` predates the scaffolder and must be preserved, skip the scaffold and only fill/fix in place.
 
 ⚠️ Scaffolding **overwrites** `gallery.html`. In refinement mode (Step 2 = Refine), only re-scaffold when the component set changed; otherwise edit the existing file's slots in place.
 
@@ -98,6 +98,8 @@ Replace each `gal:fill` comment with that component's variant × state matrix, a
 - **Cell anatomy — one label per instance.** Each variant/state instance is its own `<div class="gal-var">` (`gal-var--row` for chip-sized items side by side, `gal-var--fill` for full-width fields): the specimen, then `<span class="gal-varlabel">hover</span>`. Never one run-on label ("default / hover / selected") that maps to specimens positionally. Optionally set the cell's `gal-meta` to one key token, and add a `gal-note` for token refs / behavior notes only (skip it when it adds nothing).
 - **Dark-surface modules — on-ink override rule.** Any specimen on a dark surface (`--color-surface-contrast`, a hero gradient, an inverted footer) must explicitly override **every** text primitive inside it — body, caption, heading, nav, link — to the on-dark text token, via one scope class + one rule set: `.spec-on-ink :is(.spec-body,.spec-caption,.spec-h3,.spec-nav){color:var(--color-text-on-ink)}`, then `class="spec-hero spec-on-ink"`. Never rely on a text class's light-surface default cascading in — a bare `.spec-body` on an Ink hero disappears. Full-bleed dark modules use `<div class="gal-stage gal-stage--bare">` so the module surface replaces the dashed canvas.
 - **Logo / image specimens.** Give logos an explicit `height` and `width:auto` — and inside any **column** flex container, an explicit `align-self:flex-start` (the flex default `stretch` distorts the wordmark). Don't blanket-force `align-self` in CSS — that breaks vertical centering in flex rows.
+- **Cell width must fit the component.** The scaffold pre-marks wide-by-nature components (nav, search bar, table, form, hero, …) with `gal-cell--wide` (full-row cell). While filling, adjust per cell: a specimen that needs more than ~300px of width to show its real proportions gets `gal-cell--wide` added; a compact one that got the class by name-heuristic accident gets it removed. Never squeeze a wide component into a narrow cell by shrinking it below its token-specified sizes.
+- **Adjacent pieces always get an explicit gap.** A badge next to a numeral, a label next to a value, chips in a row — every such pair sits in a flex container with a `gap: var(--space-…)` token. Never rely on inline-flow whitespace between `<span>`s (zero gap when the markup has no space; collisions like a flag glued to "40%" are exactly what this rule prevents). `align-self` only works inside a flex/grid parent — putting it on a span in a plain block is a sign the container is missing.
 
 ### 5c — Check (script) and fix
 Run (Bash):
@@ -105,6 +107,13 @@ Run (Bash):
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --check
 ```
 It prints a ` ```json ` block: `unfilled_slots[]` (must end empty), `inventory_missing[]`/`inventory_extras[]` (gallery vs `components.md` + `tokens.md §3` — resolve every mismatch), `raw_values[]` (hardcoded literals in specimen CSS — replace with tokens), `imgs_missing_height[]`, and `dark_surface_suspects[]` (static-cascade heuristic — confirm each, then fix real ones with the on-ink scope pattern). Fix and re-run until `unfilled_slots`, `inventory_missing`, and `dark_surface_suspects` are empty; justify anything you deliberately keep in `components.md`. Don't write your own checker script — this is the only Bash this step needs.
+
+### 5d — Geometry check (script, rendered layout) and fix
+Run (Bash):
+```
+node "${CLAUDE_PLUGIN_ROOT}/tools/gen-gallery.mjs" "$CLAUDE_PROJECT_DIR" --geometry
+```
+It renders the gallery headless (Playwright; prints `skipped` and moves on if unavailable) and measures the real boxes: `overflow_x` (specimen wider than its cell — widen the cell with `gal-cell--wide` or fix the specimen), `overlap` (two specimen siblings drawn on top of each other), `tight_spacing` (a chip/badge glued gapless to its neighbor — add a flex container with a gap token), `dead_space` (a stage that is mostly empty air — usually a missing `gal-cell--wide` rebalancing or leftover forced height). These are suspects: confirm each against the markup, fix the real ones, re-run until what remains is only intentional (e.g. a gapless bordered grid) — and note those in `components.md`.
 
 ## Step 6 — Report
 List components written, both file paths, and what to run next (`/twt-component-validate`, then `/twt-layout-define`).

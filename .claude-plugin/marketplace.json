@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Marketplace hosting the twt web-design pipeline plugin.",
-    "version": "1.0.75"
+    "version": "1.0.76"
   },
   "plugins": [
     {

@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-site
 category: content
-description: (v1.2.1) Fetch a website's content via the bundled crawler and save as clean Markdown
-version: 1.2.1
+description: (v1.2.2) Fetch a website's content via the bundled crawler and save as clean Markdown
+version: 1.2.2
 accepts_arguments: true
 inputs:
   - URL (homepage or full crawl up to 50 pages)
@@ -68,20 +68,20 @@ Record the choice and continue. (When dispatched with `subagent-collect`, don't 
 
 ## Step 3 — Run the crawler script
 
-Crawling, HTML→Markdown conversion, and file layout are **deterministic**, so they are delegated to the bundled crawler — fetching up to 50 pages through the model wastes tokens and produces inconsistent Markdown. Run (Bash, single command):
+Crawling, HTML→Markdown conversion, and file layout are **deterministic**, so they are delegated to the bundled crawler — fetching up to 50 pages through the model wastes tokens and produces inconsistent Markdown. **The script is the only permitted fetch mechanism while it is runnable** — never crawl pages yourself (WebFetch/curl) alongside or instead of it, and never re-implement its file layout. If the dispatch prompt carries options the script doesn't have, ignore those options and run the script with the flags below; note the ignored options in your report. Run (Bash, single command):
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/site-crawl.mjs" fetch "<url>" --scope <all|homepage>
 ```
 
-The script crawls internal pages breadth-first (same hostname only; query strings/fragments stripped; asset files, auth paths, and `mailto:`/`tel:`/`javascript:` links excluded; hard cap 50 pages — `--max <n>` to change it) and, per page:
+The script crawls internal pages breadth-first (same hostname only; query strings/fragments stripped; asset files, auth paths, and `mailto:`/`tel:`/`javascript:` links excluded; hard cap 50 pages — `--max <n>` to change it). It follows redirects on the start URL (`xivic.com` → `www.xivic.com`), so the **final** hostname names the domain folder and drives the crawl; pages that redirect off-site or return errors are listed in `unreachable[]`, never written as files. Per page it:
 - prefers the `<main>`/`<article>` content region and strips nav/header/footer/aside/script chrome
 - converts headings, paragraphs, lists, links (absolutized), bold/italic/code, code blocks, and tables to Markdown
 - writes `<url-path>/index.md` under the domain folder (`/` → `index.md`, `/about` → `about/index.md`, `/docs/api.html` → `docs/api/index.md`) with `url` / `title` / `fetched_at` frontmatter
 
 In crawl scope it also writes `_sitemap.md` (domain, crawl date, page count, page→file table). It prints per-page progress to stderr and a final JSON summary to stdout: `out_dir`, `pages_written`, `sitemap`, `cap_hit`, `unreachable[]`.
 
-**Fallback (script unavailable):** if the plugin root or Node is missing, fetch the page(s) with the **WebFetch** tool instead (same link rules and cap), convert to Markdown yourself, and write the same file layout and frontmatter — note the fallback in your report.
+**Fallback (script unavailable):** only if the plugin root or Node is missing, fetch the page(s) with the **WebFetch** tool instead (same link rules and cap), convert to Markdown yourself, and write the same file layout and frontmatter — note the fallback in your report. In the fallback, error and redirect responses are **not content**: never write a file for a non-2xx response (301/404/etc. bodies like "Moved Permanently" must not become pages) — follow the redirect to its destination instead, and list pages that stay unreachable in your report only.
 
 ---
 

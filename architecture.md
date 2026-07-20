@@ -651,7 +651,7 @@ flowchart TB
 ### /twt-component-define
 
 **Category:** component
-**Version:** 1.3.13
+**Version:** 1.3.14
 
 **Inputs:**
 - Optional: which components to (re)define; otherwise derive from IA/outlines
@@ -683,7 +683,7 @@ flowchart TB
 ### /twt-component-validate
 
 **Category:** component
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - none (reads the component artifacts)
@@ -779,7 +779,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -878,7 +878,7 @@ flowchart TB
 ### /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - URL (homepage or full crawl up to 50 pages)
@@ -1025,7 +1025,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.6
+**Version:** 1.3.7
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -2262,7 +2262,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.1
+**Version:** 1.13.2
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
