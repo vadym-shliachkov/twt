@@ -39,6 +39,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
+| [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
+| [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
@@ -1371,6 +1373,93 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 - Creates `.twt-artifacts/export/themes/<theme-slug>/preview-notes.md`
 - Theme names are human-distinguishable and combine context, style direction, and scope where possible
 - With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-theme-create.mjs`
+
+---
+
+## /twt-figma-design-system
+
+**Category:** figma-export
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Push the canonical design system (`.twt-artifacts/design/design-system/`) into a Figma file: tokens become Figma **variables** (with modes when the token set has light/dark), the type scale and shadows become **text/effect styles**, and — in full scope — the component catalog (`component/components.md`) becomes real Figma **components with variant sets** bound to those variables. Re-runs update the same file in place via the node-map in `figma-export/figma-map.md`.
+
+**Inputs:**
+- Optional: a target Figma file URL, and/or a scope hint (foundations | full)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/tokens.json
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/figma-export/figma-map.md
+
+**Writes:**
+- .twt-artifacts/figma-export/figma-map.md
+- .twt-artifacts/figma-export/design-system-report.md
+- .twt-artifacts/figma-export/decisions.md
+
+**Non-goals:**
+- Doesn't design or invent anything — it exports what the design-system artifacts already define, nothing more
+- Doesn't modify `.twt-artifacts/design/` (read-only on all design artifacts)
+- Doesn't delete anything in Figma — tokens/components removed from the artifacts since the last export are flagged as orphans in the report, never removed
+- Doesn't export page mockups (that is `/twt-figma-mockup`)
+- Doesn't reproduce the Figma plugin skills' Plugin-API mechanics inline — it loads `figma-use` + `figma-generate-library` and follows them (CONVENTIONS §5 spirit: dispatch/compose, never re-implement)
+
+**Success criteria:**
+- The target Figma file contains variables, text/effect styles (and, in full scope, variant components) matching `tokens.md` + `components.md`
+- `.twt-artifacts/figma-export/figma-map.md` records the target file and an artifact → Figma-node map
+- A second run after editing a token **updates** the existing variable instead of creating a duplicate
+- `design-system-report.md` lists created / updated / skipped / orphaned items and the Figma file URL
+- Aborts with an actionable message when inputs or the Figma MCP are missing
+
+---
+
+## /twt-figma-mockup
+
+**Category:** figma-export
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.html`) inside the project's Figma file — one frame per selected page × breakpoint — **instantiating the design-system library components** pushed by `/twt-figma-design-system` wherever a mockup section maps to a cataloged component, with the mockup's real content. Re-runs update existing page frames in place via the node-map.
+
+**Inputs:**
+- Optional: which page(s) to export and a breakpoint hint (desktop | all)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp, twt-figma-design-system
+
+**Reads:**
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/styles.css
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/figma-export/figma-map.md
+
+**Writes:**
+- .twt-artifacts/figma-export/figma-map.md
+- .twt-artifacts/figma-export/mockup-report.md
+- .twt-artifacts/figma-export/decisions.md
+
+**Non-goals:**
+- Doesn't redesign anything — the HTML mockups are the source of truth; this exports them
+- Doesn't modify `.twt-artifacts/design/` (read-only on mockups and the design system)
+- Doesn't push the design system itself (that is `/twt-figma-design-system`; this skill only *offers* to dispatch it)
+- Doesn't chase pixel-perfect parity with browser rendering — the target is structural + token fidelity (layout, components, type, color, spacing, real copy), not rendering quirks
+- Doesn't delete anything in Figma — page frames for mockups that no longer exist are flagged as orphans in the report
+- Doesn't reproduce the Figma plugin skills' Plugin-API mechanics inline — it loads `figma-use` + `figma-generate-design` and follows them
+
+**Success criteria:**
+- One Figma frame per selected page × breakpoint (desktop 1440 / tablet 768 / mobile 390), named `<page-slug> / <breakpoint>`
+- When a design-system export exists, sections that map to cataloged components are **instances** of the library components (checked via the map's `### Components` keys), not detached frames
+- All frame content is the mockup's real copy — never lorem
+- `figma-map.md` gains/updates `### Pages` rows; `mockup-report.md` lists per-page results
+- Aborts with an actionable message when mockups or the Figma MCP are missing
 
 ---
 

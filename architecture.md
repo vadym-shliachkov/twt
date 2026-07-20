@@ -45,6 +45,8 @@ flowchart TB
     twt_export_pdf["/twt-export-pdf"]:::skill
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
+    twt_figma_design_system["/twt-figma-design-system"]:::skill
+    twt_figma_mockup["/twt-figma-mockup"]:::skill
     twt_html_block_creator["/twt-html-block-creator"]:::skill
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
@@ -155,6 +157,7 @@ flowchart TB
     twt_export_presentation -.-> twt_export
     twt_export_template_create -.-> twt_export
     twt_brand_define -.-> twt_export_template_create
+    twt_figma_design_system -.-> twt_figma_mockup
     twt_html_site_creator --> twt_html_block_creator
     twt_design_system_define -.-> twt_html_block_creator
     twt_positioning_define -.-> twt_ia_define
@@ -299,6 +302,11 @@ flowchart TB
 - /twt-export-pdf - Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
 - /twt-export-presentation - Convert Markdown to PPTX or PDF slides via the presentation export script
 - /twt-export-template-create - Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
+
+### figma-export
+
+- /twt-figma-design-system - Push the design system into a Figma file as variables, styles, and variant components
+- /twt-figma-mockup - Assemble the HTML page mockups in Figma as frames built from the pushed design-system library
 
 ### html
 
@@ -1533,6 +1541,66 @@ flowchart TB
 | .twt-artifacts/export/themes/<theme-slug>/preview/preview.html |  |
 | .twt-artifacts/export/themes/<theme-slug>/preview-notes.md |  |
 
+### /twt-figma-design-system
+
+**Category:** figma-export
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional: a target Figma file URL, and/or a scope hint (foundations | full)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-figma-mockup
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.md
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/tokens.json
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/figma-export/figma-map.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/figma-export/figma-map.md |  |
+| .twt-artifacts/figma-export/design-system-report.md |  |
+| .twt-artifacts/figma-export/decisions.md |  |
+
+### /twt-figma-mockup
+
+**Category:** figma-export
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional: which page(s) to export and a breakpoint hint (desktop | all)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp, twt-figma-design-system
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/mockup/styles.css
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/design/design-system/component/components.md
+- .twt-artifacts/figma-export/figma-map.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/figma-export/figma-map.md |  |
+| .twt-artifacts/figma-export/mockup-report.md |  |
+| .twt-artifacts/figma-export/decisions.md |  |
+
 ### /twt-html-block-creator
 
 **Category:** html
@@ -2654,6 +2722,8 @@ flowchart TB
 | /twt-export-pdf | none | none |
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
+| /twt-figma-design-system | none | figma-mcp |
+| /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |
@@ -2702,6 +2772,7 @@ flowchart TB
   design/
   elementor-theme/
   export/
+  figma-export/
   html-site/
   intake/
   pre-design/

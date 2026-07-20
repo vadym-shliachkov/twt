@@ -73,6 +73,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-export-pdf | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
 | /twt-export-presentation | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | /twt-export-template-create | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
+| /twt-figma-design-system | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
+| /twt-figma-mockup | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
