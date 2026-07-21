@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { TOKEN_USAGE_GUIDE, tokenUsageFor } from "./token-usage.mjs";
 
 const root = process.cwd();
 const outDir = path.join(root, "doc-hub");
@@ -86,7 +87,7 @@ const blocks = [
     name: "Develop",
     kicker: "Phase 3",
     href: "blocks/develop.html",
-    status: "Coming soon",
+    status: "Maintenance",
     description:
       "Promote approved design into build targets: static HTML, Elementor widgets, themes, and implementation passes.",
     skills: [
@@ -103,7 +104,7 @@ const blocks = [
     name: "QA",
     kicker: "Phase 4",
     href: "blocks/qa.html",
-    status: "Coming soon",
+    status: "Maintenance",
     description:
       "Audit the built work for accessibility, content fidelity, links, responsive risks, and design-token hygiene.",
     skills: [
@@ -117,6 +118,8 @@ const blocks = [
     ],
   },
 ];
+
+const MAINTENANCE_NOTICE = "Under maintenance. These skills are being reviewed and may change. Verify their output before using it in production.";
 
 const blockBySkill = new Map();
 for (const block of blocks) {
@@ -728,6 +731,24 @@ function displayName(skill) {
     .join(" ");
 }
 
+function tokenMeterMarkup(filledSegments) {
+  return Array.from({ length: 4 }, (_, index) =>
+    `<i${index < filledSegments ? ' class="is-filled"' : ""}></i>`
+  ).join("");
+}
+
+function tokenUsageMarkup(skill, { compact = false } = {}) {
+  const usage = tokenUsageFor(skill.slug);
+  const segments = tokenMeterMarkup(usage.segments);
+  const classes = ["token-usage", `token-usage--${usage.key}`];
+  if (compact) classes.push("token-usage--compact");
+  return `<span class="${classes.join(" ")}" data-token-usage="${usage.key}" aria-label="Token usage: ${usage.label}">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true">${segments}</span>
+    <strong>${usage.label}</strong>
+  </span>`;
+}
+
 function parseSkills(markdown) {
   const headingMatches = [...markdown.matchAll(/^##\s+\/twt-[^\n]+/gm)];
   const bySlug = new Map();
@@ -980,7 +1001,7 @@ function skillListCard(skill, pageDir = "blocks") {
   const rel = relFrom(pageDir);
   const icon = skill.command.replace("/twt-", "").charAt(0).toUpperCase();
   const writesCount = skill.writes.filter((item) => item !== "(none)").length;
-  return `<a class="skill-card skill-row reveal" href="${rel}skills/${skill.slug}.html">
+  return `<a class="skill-card skill-row reveal" href="${rel}skills/${skill.slug}.html" data-skill="${skill.slug}">
     <span class="skill-icon" aria-hidden="true">${escapeHtml(icon)}</span>
     <span class="skill-heading">
       <span class="skill-title">${escapeHtml(displayName(skill))}</span>
@@ -988,6 +1009,7 @@ function skillListCard(skill, pageDir = "blocks") {
     </span>
     <span class="skill-version">v${escapeHtml(skill.version)}</span>
     <span class="skill-copy">${formatInline(cardCopy(skill))}</span>
+    ${tokenUsageMarkup(skill, { compact: true })}
     <span class="skill-stats">inputs ${escapeHtml(skill.acceptsArguments)} · reads ${skill.reads.length} · writes ${writesCount}</span>
     <span class="skill-action">View details</span>
   </a>`;
@@ -1069,6 +1091,7 @@ function writeAltIndex() {
       kicker: "Phase 3",
       title: "Build the site",
       purpose: blocks.find((block) => block.id === "develop").description,
+      maintenance: true,
       skills: blockSkillsOf("develop"),
     },
     {
@@ -1076,6 +1099,7 @@ function writeAltIndex() {
       kicker: "Phase 4",
       title: "Check the result — QA",
       purpose: blocks.find((block) => block.id === "qa").description,
+      maintenance: true,
       skills: blockSkillsOf("qa"),
     },
     {
@@ -1125,24 +1149,27 @@ function writeAltIndex() {
     if (!groupSkills.length) return "";
     const items = groupSkills
       .map(
-        (skill) => `<li class="reveal">
+        (skill) => `<li class="reveal" data-skill="${skill.slug}">
         <span class="alt-skill-head">
           <a href="skills/${skill.slug}.html"><code>${escapeHtml(skill.command)}</code></a>
           <span class="alt-skill-name">${escapeHtml(displayName(skill))}</span>
           <span class="alt-skill-version">v${escapeHtml(skill.version)}</span>
         </span>
         <p class="alt-skill-desc">${formatInline(detailCopy(skill))}</p>
+        ${tokenUsageMarkup(skill)}
       </li>`
       )
       .join("");
-    return `<section class="section-band catalog-section">
+    const maintenanceClass = group.maintenance ? " is-maintenance" : "";
+    const maintenanceAttribute = group.maintenance ? ` data-maintenance-section="${group.id}"` : "";
+    return `<section class="section-band catalog-section${maintenanceClass}"${maintenanceAttribute}>
       <div class="section-title reveal">
         <div>
           <p class="eyebrow">${escapeHtml(group.kicker)} · ${groupSkills.length} skills</p>
           <h2>${escapeHtml(group.title)}</h2>
         </div>
       </div>
-      <p class="alt-group-note reveal">${escapeHtml(group.purpose)}</p>
+      ${group.maintenance ? `<p class="maintenance-notice">${escapeHtml(MAINTENANCE_NOTICE)}</p>\n      ` : ""}<p class="alt-group-note reveal">${escapeHtml(group.purpose)}</p>
       <ul class="alt-skill-list">${items}</ul>
     </section>`;
   };
@@ -1156,19 +1183,87 @@ function writeAltIndex() {
         <p class="lede">A plain-language tour of the marketplace: what a skills marketplace even is, why this one exists, and all ${skills.size} skills grouped by what they're for.</p>
       </div>
     </section>
-    <section class="detail-grid alt-intro-grid">
-      <section class="detail-panel reveal">
+    <section class="marketplace-story" aria-label="Marketplace introduction">
+      <section class="marketplace-story__step">
+        <span class="marketplace-story__index" aria-hidden="true">01</span>
         <h2>What is a skills marketplace?</h2>
-        <p>A skills marketplace is a catalog of ready-made skills for Claude Code — small, well-defined instruction packages that each teach the agent to do one job well, surfaced as slash commands. Instead of re-explaining a workflow every session, you install the marketplace once as a plugin and every skill in it becomes a command you can run in any project. Skills stay versioned and consistent, so the same command behaves the same way everywhere.</p>
+        <p>A skills marketplace is a catalog of installed, versioned command packages. Each skill gives Claude Code a repeatable way to handle one job, so you can run the same workflow across projects without explaining it again every time.</p>
       </section>
-      <section class="detail-panel reveal">
+      <section class="marketplace-story__step">
+        <span class="marketplace-story__index" aria-hidden="true">02</span>
         <h2>What this marketplace is for</h2>
-        <p>twt focuses on one thing: taking a website project from raw notes to a QA-checked build. Its skills compose into a four-phase pipeline — Pre-design (brand, positioning, structure, content), Design (tokens, components, layouts, mockups), Development (static HTML or an Elementor child theme), and QA (accessibility, content, links, design fidelity) — plus standalone tools for exports, content quality, and search. Orchestrators run whole phases for you, sub-skills do one focused step, and validators critique the work without changing anything.</p>
+        <p>twt carries a website project from raw notes to a QA-checked build. Its commands cover Pre-design, Design, Development, and QA; focused utilities handle exports, content quality, search, and project memory alongside that pipeline.</p>
       </section>
     </section>
+    <section class="knowledge-guide" aria-labelledby="knowledge-guide-title">
+      <header class="orientation-heading">
+        <p class="eyebrow">How the pieces fit together</p>
+        <h2 id="knowledge-guide-title">One project, one source of knowledge</h2>
+        <p>The hub brings the project's durable knowledge and its repeatable workflows into one place, so decisions, context, and execution stay connected.</p>
+      </header>
+      <div class="orientation-rows">
+        <article class="orientation-row">
+          <h3>Project wiki</h3>
+          <p>The project's durable memory: facts, decisions and their rationale, sources, open questions, and useful context. It is maintained knowledge, not a generated pipeline artifact.</p>
+        </article>
+        <article class="orientation-row">
+          <h3>Pipeline skills</h3>
+          <p>Orchestrators that coordinate several phases, skills, dependencies, and approval points in the right sequence. Use one when you want the workflow to manage the path.</p>
+        </article>
+        <article class="orientation-row">
+          <h3>Single-task skills</h3>
+          <p>Focused commands that perform one defined operation. Use one when you already know the exact job, such as validating content, exporting a PDF, or checking links.</p>
+        </article>
+      </div>
+    </section>
+    <section class="install-guide" aria-labelledby="install-guide-title">
+      <header class="orientation-heading">
+        <p class="eyebrow">Get started</p>
+        <h2 id="install-guide-title">Install in Claude Code</h2>
+        <p>Use the same setup in Claude Code CLI or the Claude desktop app.</p>
+      </header>
+      <ol class="install-steps">
+        <li>
+          <span class="install-step__number" aria-hidden="true">01</span>
+          <div><strong>Add the marketplace</strong><pre><code>/plugin marketplace add vadym-shliachkov/twt</code></pre></div>
+        </li>
+        <li>
+          <span class="install-step__number" aria-hidden="true">02</span>
+          <div><strong>Install the plugin</strong><pre><code>/plugin install twt@twt-marketplace</code></pre></div>
+        </li>
+        <li>
+          <span class="install-step__number" aria-hidden="true">03</span>
+          <div><strong>Restart Claude Code</strong><p>Restart the CLI or desktop app so the new commands are loaded.</p></div>
+        </li>
+        <li>
+          <span class="install-step__number" aria-hidden="true">04</span>
+          <div><strong>Prepare each project once</strong><p>Run <code>/twt-setup</code> inside the project to merge the curated runtime permission allowlist.</p></div>
+        </li>
+      </ol>
+    </section>
+    <aside class="token-usage-legend" aria-labelledby="token-usage-title">
+      <header class="orientation-heading">
+        <p class="eyebrow">Planning aid</p>
+        <h2 id="token-usage-title">Token usage estimates</h2>
+        <p>Qualitative cost for a typical complete command run, including any sub-skills it dispatches.</p>
+      </header>
+      <ul class="usage-guide-rows">
+        ${TOKEN_USAGE_GUIDE.map((usage) => `<li data-usage-level="${usage.key}">
+          <span class="token-meter" aria-hidden="true">${tokenMeterMarkup(usage.segments)}</span>
+          <strong>${escapeHtml(usage.label)}</strong>
+          <span class="usage-window">Approx. ${escapeHtml(usage.windowImpact)} of a 5-hour usage window</span>
+          <p>${escapeHtml(usage.description)}</p>
+        </li>`).join("")}
+      </ul>
+      <div class="usage-caveat">
+        <strong>These are planning estimates, not a fixed token-to-quota formula.</strong>
+        <p>Actual usage depends heavily on the amount of source information, loaded conversation and project context, codebase size, model and effort level, tools or connectors, other activity on the plan, and how much iteration or rerunning the task needs.</p>
+      </div>
+      <p class="usage-check">Use <code>/usage</code> in Claude Code to check your current allowance and reset status.</p>
+    </aside>
     ${groups.map(groupSection).join("")}`;
 
-  write(path.join(outDir, "index-alt.html"), layout({
+  write(path.join(outDir, "index.html"), layout({
     title: "Marketplace overview",
     body,
     description: "What the twt skills marketplace is, why it exists, and every skill grouped by purpose.",
@@ -1178,14 +1273,16 @@ function writeAltIndex() {
 function writeBlockPages() {
   for (const block of blocks) {
     const blockSkills = block.skills.map((slug) => skills.get(slug)).filter(Boolean);
+    const maintenance = block.status === "Maintenance";
     const body = `
       ${breadcrumbs([{ label: block.name }], "blocks")}
-      <section class="block-hero ${block.status === "Coming soon" ? "is-soon" : ""}">
-        <div class="reveal">
+      <section class="block-hero ${maintenance ? "is-maintenance" : ""}">
+        <div class="${maintenance ? "" : "reveal"}">
           <p class="eyebrow">${escapeHtml(block.kicker)}</p>
           <h1>${escapeHtml(block.name)}</h1>
-          <p class="lede">${escapeHtml(block.description)}</p>
-          ${block.status === "Coming soon" ? `<span class="status-ribbon">Coming soon</span>` : ""}
+          <p class="lede">${escapeHtml(block.description)}</p>${maintenance ? `
+          <span class="status-ribbon maintenance">Maintenance</span>
+          <p class="maintenance-notice">${escapeHtml(MAINTENANCE_NOTICE)}</p>` : ""}
         </div>
         <img class="block-image reveal" src="../assets/previews/blocks/${block.id}.svg" alt="${escapeHtml(block.name)} preview">
       </section>
@@ -1241,6 +1338,7 @@ function writeSkillPages() {
           <div class="fact-row">
             <span>Version ${escapeHtml(skill.version)}</span>
             <span>Arguments: ${escapeHtml(skill.acceptsArguments)}</span>
+            ${tokenUsageMarkup(skill, { compact: true })}
           </div>
         </div>
       </section>
@@ -1310,7 +1408,8 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3, h4 { font-family: var(--font-heading); color: var(--ink); line-height: 1.15; }
+h1, h2, h3, h4 { font-family: var(--font-heading); color: var(--ink); line-height: 1.15; text-wrap: balance; }
+p { text-wrap: pretty; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
 code {
@@ -1569,11 +1668,23 @@ main > nav {
 .pill { color: #fff; background: var(--cyan); border-radius: var(--radius-pill); padding: .18rem .5rem; font-weight: 700; }
 .pill.soon, .status-ribbon { background: var(--coral); color: var(--ink); }
 .status-ribbon { display: inline-flex; margin-top: 1.5rem; border: 1px solid var(--coral); border-radius: var(--radius-pill); padding: .4rem .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; box-shadow: var(--shadow); }
+.maintenance-notice {
+  max-width: 860px;
+  margin: 0 0 1.4rem;
+  border-left: 4px solid var(--coral);
+  padding: 1rem 1.15rem;
+  background: #fff8df;
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.55;
+}
+.block-hero .maintenance-notice { margin: 1rem 0 0; }
+.catalog-section.is-maintenance { border-top-color: var(--coral); }
 .skill-card.skill-row {
   position: relative;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr) auto;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   column-gap: 1rem;
   row-gap: 1rem;
   min-height: 260px;
@@ -1655,7 +1766,7 @@ main > nav {
   display: block;
   align-self: end;
   grid-column: 1 / 3;
-  grid-row: 3;
+  grid-row: 4;
   color: var(--quiet);
   font-family: var(--font-mono);
   font-size: .72rem;
@@ -1668,7 +1779,7 @@ main > nav {
   align-self: end;
   justify-self: end;
   grid-column: 3;
-  grid-row: 3;
+  grid-row: 4;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: .46rem .72rem;
@@ -1694,7 +1805,7 @@ main > nav {
 .breadcrumbs strong { color: var(--cyan); }
 .breadcrumbs .breadcrumb-command { text-transform: none; }
 .fact-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.5rem; }
-.fact-row span { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .45rem .8rem; color: var(--ink); background: var(--surface); font-size: .9rem; }
+.fact-row > span { border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .45rem .8rem; color: var(--ink); background: var(--surface); font-size: .9rem; }
 .docs-hero {
   display: block;
   padding-block: clamp(3.2rem, 8vw, 6rem);
@@ -1733,7 +1844,143 @@ main > nav {
 .detail-panel ol.sequence a { color: var(--ink); }
 .detail-panel ol.sequence a:hover code { border-color: var(--cyan); color: var(--cyan); }
 .detail-panel ol.sequence code { font-size: .82rem; }
-.alt-intro-grid { padding-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+.marketplace-story {
+  padding: 0 clamp(1rem, 4vw, 3rem) clamp(3rem, 7vw, 5.5rem);
+}
+.marketplace-story__step {
+  display: grid;
+  grid-template-columns: 56px minmax(260px, .72fr) minmax(0, 1.28fr);
+  gap: clamp(1.5rem, 4vw, 5rem);
+  padding: clamp(2.4rem, 5vw, 4.4rem) 0;
+  border-top: 1px solid var(--line);
+}
+.marketplace-story__step:last-child { border-bottom: 1px solid var(--line); }
+.marketplace-story__index {
+  position: relative;
+  align-self: stretch;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.marketplace-story__step:first-child .marketplace-story__index::after {
+  content: "";
+  position: absolute;
+  top: 2rem;
+  bottom: -4.4rem;
+  left: .55rem;
+  width: 1px;
+  background: var(--line);
+}
+.marketplace-story__step h2 {
+  margin: -.15rem 0 0;
+  max-width: 520px;
+  font-size: clamp(1.75rem, 3vw, 3rem);
+  letter-spacing: -.015em;
+}
+.marketplace-story__step p {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--copy);
+  font-size: clamp(1rem, 1.4vw, 1.16rem);
+  line-height: 1.7;
+}
+.knowledge-guide,
+.install-guide,
+.token-usage-legend {
+  box-sizing: border-box;
+  width: calc(100% - 2rem);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(3rem, 7vw, 5.5rem) 0;
+  border-top: 1px solid var(--line);
+}
+.token-usage-legend { display: block; border-bottom: 1px solid var(--line); }
+.orientation-heading {
+  display: grid;
+  grid-template-columns: minmax(240px, .75fr) minmax(0, 1.25fr);
+  gap: 1rem clamp(2rem, 6vw, 5rem);
+  margin-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+.orientation-heading .eyebrow { grid-column: 1 / -1; margin-bottom: .2rem; }
+.orientation-heading h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 3.5rem);
+  line-height: 1.06;
+  letter-spacing: -.018em;
+}
+.orientation-heading > p:last-child {
+  max-width: 66ch;
+  margin: .1rem 0 0;
+  color: var(--copy);
+  font-size: clamp(1rem, 1.4vw, 1.12rem);
+  line-height: 1.7;
+}
+.orientation-rows { border-bottom: 1px solid var(--line); }
+.orientation-row {
+  display: grid;
+  grid-template-columns: minmax(200px, .62fr) minmax(0, 1.38fr);
+  gap: 1.25rem clamp(2rem, 6vw, 5rem);
+  padding: 1.55rem 0;
+  border-top: 1px solid var(--line);
+}
+.orientation-row h3 { margin: 0; font-size: 1.08rem; }
+.orientation-row p { max-width: 72ch; margin: 0; color: var(--copy); line-height: 1.65; }
+.install-steps,
+.usage-guide-rows { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--line); }
+.install-steps li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.4rem 0;
+  border-top: 1px solid var(--line);
+}
+.install-step__number {
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+}
+.install-steps strong { display: block; margin-bottom: .7rem; }
+.install-steps p { margin: 0; color: var(--copy); line-height: 1.65; }
+.install-steps pre {
+  max-width: 100%;
+  margin: 0;
+  padding: .9rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+}
+.install-steps pre code { border: 0; padding: 0; color: var(--ink); background: transparent; white-space: pre-wrap; overflow-wrap: anywhere; }
+.usage-guide-rows li {
+  display: grid;
+  grid-template-columns: 72px 90px minmax(220px, .85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 1rem 1.4rem;
+  padding: 1.3rem 0;
+  border-top: 1px solid var(--line);
+}
+.usage-guide-rows strong { color: var(--ink); }
+.usage-window {
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+.usage-guide-rows p { margin: 0; color: var(--copy); line-height: 1.55; }
+.usage-caveat {
+  margin-top: 1.5rem;
+  border-left: 4px solid var(--coral);
+  padding: 1.15rem 1.25rem;
+  background: var(--surface);
+}
+.usage-caveat strong { display: block; color: var(--ink); }
+.usage-caveat p { max-width: 88ch; margin: .55rem 0 0; color: var(--copy); line-height: 1.6; }
+.usage-check { margin: 1rem 0 0; color: var(--copy); }
+.usage-check code { color: var(--cyan); }
+}
 .alt-group-note {
   max-width: 860px;
   margin: 0 0 1.4rem;
@@ -1767,6 +2014,41 @@ main > nav {
   white-space: nowrap;
 }
 .alt-skill-desc { margin: .45rem 0 0; max-width: 980px; color: var(--copy); font-size: .95rem; line-height: 1.5; }
+.token-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  margin-top: .8rem;
+  color: var(--copy);
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  line-height: 1;
+}
+.token-usage__label { color: var(--copy); }
+.token-usage strong { color: var(--ink); font: inherit; font-weight: 500; }
+.token-meter { display: inline-flex; gap: 3px; }
+.token-meter i {
+  display: block;
+  width: 13px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.token-meter i.is-filled { background: var(--cyan); }
+.token-usage--low .token-meter i.is-filled { background: var(--subtle); }
+.token-usage--very-high .token-meter i.is-filled { background: var(--ink); }
+.token-usage--compact { margin-top: 0; }
+.skill-row .token-usage {
+  align-self: end;
+  grid-column: 1 / 4;
+  grid-row: 3;
+}
+.fact-row .token-usage {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: .45rem .8rem;
+  background: var(--surface);
+}
 .site-footer {
   display: flex;
   align-items: center;
@@ -1840,17 +2122,42 @@ main > nav {
     grid-row: 3;
     margin-top: .9rem;
   }
-  .skill-stats {
+  .skill-row .token-usage {
     grid-column: 1 / 3;
     grid-row: 4;
+    margin-top: .35rem;
+  }
+  .skill-stats {
+    grid-column: 1 / 3;
+    grid-row: 5;
     margin-top: 1rem;
   }
   .skill-action {
     justify-self: start;
     grid-column: 1 / 3;
-    grid-row: 5;
+    grid-row: 6;
     margin-top: 1rem;
   }
+  .marketplace-story__step {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 1rem;
+    padding: 2.4rem 0;
+  }
+  .marketplace-story__index { grid-row: 1 / 3; }
+  .marketplace-story__step h2,
+  .marketplace-story__step p { grid-column: 2; }
+  .marketplace-story__step:first-child .marketplace-story__index::after { bottom: -2.4rem; }
+  .orientation-heading,
+  .orientation-row { grid-template-columns: 1fr; gap: .8rem; }
+  .orientation-heading .eyebrow { grid-column: 1; }
+  .orientation-row { padding: 1.35rem 0; }
+  .usage-guide-rows li {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: .7rem 1rem;
+  }
+  .usage-guide-rows strong { align-self: center; }
+  .usage-window,
+  .usage-guide-rows p { grid-column: 2; }
   .hero-logo { left: 0; }
   .hero-mark { min-height: 340px; }
   .section-title { display: block; }
@@ -1891,9 +2198,8 @@ document.addEventListener("pointermove", (event) => {
 
 cleanGenerated();
 writeAssets();
-writeHome();
 writeAltIndex();
 writeBlockPages();
 writeSkillPages();
 
-console.log(`Generated ${blocks.length} block pages, ${skills.size} skill pages, and index-alt.html in ${path.relative(root, outDir)}`);
+console.log(`Generated ${blocks.length} block pages, ${skills.size} skill pages, and index.html in ${path.relative(root, outDir)}`);
