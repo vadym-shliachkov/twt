@@ -170,6 +170,108 @@ export function renderMarkdown(data) {
   return L.join('\n');
 }
 
+const esc = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+
+const CSS = `
+:root{--bg:#fff;--fg:#16181d;--mut:#616a76;--line:#e3e6ea;--card:#f7f8fa;
+--blocker:#b3261e;--high:#c2410c;--medium:#a16207;--low:#616a76}
+@media(prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e8eaed;--mut:#98a1ad;
+--line:#2a2e35;--card:#1c1f25}}
+*{box-sizing:border-box}body{margin:0;padding:2rem 1.25rem;background:var(--bg);color:var(--fg);
+font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:60rem;margin:0 auto}h1{font-size:1.6rem;margin:0 0 .25rem}
+h2{font-size:1.15rem;margin:2.5rem 0 .75rem;padding-bottom:.3rem;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.75rem 0 .5rem;color:var(--mut)}
+h4{font-size:.98rem;margin:0 0 .5rem}
+.meta{color:var(--mut);font-size:.88rem;margin-bottom:1.5rem}
+table{width:100%;border-collapse:collapse;margin:.5rem 0 1rem;font-size:.9rem}
+.scroll{overflow-x:auto}
+th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:600}
+.status{font-weight:700}.status.not-ready{color:var(--blocker)}
+.status.ready-with-assumptions{color:var(--medium)}.status.ready{color:#15803d}
+.issue{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--mut);
+border-radius:6px;padding:1rem;margin:0 0 1rem}
+.issue.blocker{border-left-color:var(--blocker)}.issue.high{border-left-color:var(--high)}
+.issue.medium{border-left-color:var(--medium)}
+.issue dl{display:grid;grid-template-columns:auto 1fr;gap:.3rem .9rem;margin:0;font-size:.9rem}
+.issue dt{color:var(--mut)}.issue dd{margin:0}
+.issue img{display:block;max-width:100%;margin-top:.9rem;border:1px solid var(--line);border-radius:4px}
+a{color:inherit}.none{color:var(--mut);font-style:italic}
+`;
+
+const issueHtml = (f) => `
+<div class="issue ${slug(f.severity)}">
+  <h4>${esc(f.title)}</h4>
+  <dl>
+    <dt>Category</dt><dd>${esc(f.category)}</dd>
+    <dt>Severity</dt><dd>${esc(f.severity)} &middot; Confidence ${esc(f.confidence)}</dd>
+    <dt>Location</dt><dd><a href="${esc(f.link)}">${esc(f.location.page)} / ${esc(f.location.frame)}${f.location.layers.length ? ' / ' + esc(f.location.layers.join(', ')) : ''}</a></dd>
+    <dt>Detected</dt><dd>${esc(f.detected)}</dd>
+    <dt>Impact</dt><dd>${esc(f.impact || 'not yet assessed')}</dd>
+    <dt>Action</dt><dd>${esc(f.action || 'not yet assessed')}</dd>
+    <dt>Owner</dt><dd>${esc(f.owner)} &middot; Blocking: ${f.blocking ? 'Yes' : 'No'}</dd>
+  </dl>
+  ${f.shot ? `<img src="${esc(f.shot)}" alt="${esc(f.title)} in context">` : ''}
+</div>`;
+
+export function renderHtml(data) {
+  const { meta, findings, decisions } = data;
+  const { shown, withheld, lows } = applyCaps(findings);
+  const rows = readiness(findings);
+  const count = (s) => findings.filter((f) => f.severity === s).length;
+  const blockers = shown.filter((f) => f.blocking);
+  const rest = shown.filter((f) => !f.blocking);
+  // Union with withheld's keys - see the matching comment in renderMarkdown:
+  // a category whose cap overflow is entirely Blockers has no shown
+  // non-blocking finding to key off, so without this union its withheld
+  // count would never be printed anywhere in the page.
+  const cats = [...new Set([...rest.map((f) => f.category), ...Object.keys(withheld)])];
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Developer readiness — ${esc(meta.file)}</title>
+<style>${CSS}</style></head><body><main>
+<h1>Developer readiness — ${esc(meta.file)}</h1>
+<p class="meta">Platform <strong>${esc(meta.platform)}</strong> &middot; scanned ${esc(meta.scannedAt)} &middot; ${meta.frameCount} frames, ${meta.nodeCount} nodes<br>
+${meta.dsAuditReport
+  ? `Related: design-system findings live in <code>${esc(meta.dsAuditReport)}</code> and are not repeated here.`
+  : 'There is no design-system audit on record — token, colour and spacing-consistency findings are out of scope for this report.'}</p>
+
+<h2>Summary</h2>
+<div class="scroll"><table><tr><th>Total</th><th>Blockers</th><th>High</th><th>Medium</th><th>Low</th><th>Decisions</th></tr>
+<tr><td>${findings.length}</td><td>${count('Blocker')}</td><td>${count('High')}</td><td>${count('Medium')}</td><td>${count('Low')}</td><td>${decisions.length}</td></tr></table></div>
+
+<h2>Development readiness</h2>
+<div class="scroll"><table><tr><th>Area</th><th>Status</th><th>Blocker</th><th>High</th><th>Medium</th><th>Low</th></tr>
+${Object.entries(rows).map(([row, v]) => `<tr><td>${esc(row)}</td><td class="status ${slug(v.status)}">${esc(v.status)}</td><td>${v.blocker}</td><td>${v.high}</td><td>${v.medium}</td><td>${v.low}</td></tr>`).join('')}
+</table></div>
+<p class="meta">Handoff hygiene is excluded from this matrix — it measures handoff quality, not build readiness.</p>
+
+<h2>Blocking issues</h2>
+${blockers.length ? blockers.map(issueHtml).join('') : '<p class="none">None.</p>'}
+
+<h2>Decisions required</h2>
+${decisions.length ? `<div class="scroll"><table><tr><th>Question</th><th>Why it is not in the file</th><th>Owner</th></tr>
+${decisions.map((d) => `<tr><td>${esc(d.question)}</td><td>${esc(d.why)}</td><td>${esc(d.owner)}</td></tr>`).join('')}</table></div>`
+  : '<p class="none">None.</p>'}
+
+<h2>All issues</h2>
+${cats.length ? cats.map((cat) => `<h3>${esc(cat)}</h3>${rest.filter((f) => f.category === cat).map(issueHtml).join('')}${withheld[cat] ? `<p class="meta">${withheld[cat]} further ${esc(cat)} issue(s) withheld by the per-category cap — complete set in <code>findings.json</code>.</p>` : ''}`).join('')
+  : '<p class="none">None.</p>'}
+
+${Object.keys(lows).length ? `<h2>Low-severity roll-up</h2>
+<div class="scroll"><table><tr><th>Category</th><th>Count</th><th>Examples</th></tr>
+${Object.entries(lows).map(([cat, v]) => `<tr><td>${esc(cat)}</td><td>${v.count}</td><td>${v.examples.map((f) => `<a href="${esc(f.link)}">${esc(f.location.layers[0] || f.nodeIds[0])}</a>`).join(', ')}</td></tr>`).join('')}
+</table></div><p class="meta">Complete list in <code>findings.json</code>.</p>` : ''}
+</main></body></html>`;
+}
+
 function runSelfTest() {
   const r = readiness([{ category: 'Responsive coverage', severity: 'Blocker' }]);
   assert.equal(r.responsive.status, 'Not ready');
@@ -186,6 +288,14 @@ function runSelfTest() {
   const lowOnly = applyCaps([{ id: 'a', category: 'Handoff hygiene', severity: 'Low' }]);
   assert.equal(lowOnly.shown.length, 0);
   assert.equal(lowOnly.lows['Handoff hygiene'].count, 1);
+
+  const html = renderHtml({
+    meta: { file: 'T', url: '', platform: 'web', scannedAt: 'now', dsAuditReport: null,
+            nodeCount: 1, frameCount: 1 },
+    findings: [], decisions: [],
+  });
+  assert.match(html, /<!doctype html>/i);
+  assert.doesNotMatch(html, /<script\s+src=/i);
   console.log('figma-dev-report self-test: OK');
 }
 
@@ -211,7 +321,8 @@ function main() {
 
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'readiness-report.md'), renderMarkdown(data), 'utf8');
-  console.log(`wrote ${join(outDir, 'readiness-report.md')}`);
+  writeFileSync(join(outDir, 'readiness-report.html'), renderHtml(data), 'utf8');
+  console.log(`wrote ${join(outDir, 'readiness-report.md')} and readiness-report.html`);
 }
 
 if (process.argv[1]?.endsWith('figma-dev-report.mjs')) main();

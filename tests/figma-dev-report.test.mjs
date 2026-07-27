@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readiness, applyCaps, renderMarkdown, ROW_CATEGORIES } from '../tools/figma-dev-report.mjs';
+import { readiness, applyCaps, renderMarkdown, renderHtml, ROW_CATEGORIES } from '../tools/figma-dev-report.mjs';
 
 const f = (o) => ({
   id: o.id || 'X-1', rule: o.rule || 'X', title: o.title || 'T',
@@ -152,4 +152,55 @@ test('renderMarkdown states a withheld count even when a category\'s cap overflo
   assert.match(md, /1 further States issue\(s\) withheld/i);
   const blockingSection = md.slice(md.indexOf('## Blocking issues'), md.indexOf('## Decisions required'));
   assert.equal((blockingSection.match(/^#### /gm) || []).length, 5, 'exactly 5 Blocker blocks rendered');
+});
+
+test('renderHtml is a self-contained page with no external requests', () => {
+  const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'Blocker' })]));
+  assert.match(html, /<!doctype html>/i);
+  assert.match(html, /<style>/);
+  assert.doesNotMatch(html, /<script\s+src=/i, 'no external scripts');
+  assert.doesNotMatch(html, /<link[^>]+stylesheet/i, 'no external stylesheets');
+});
+
+test('renderHtml renders the readiness matrix with status classes', () => {
+  const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'Blocker' })]));
+  assert.match(html, /class="status not-ready"/);
+  assert.match(html, /responsive/);
+});
+
+test('renderHtml embeds a screenshot only when the finding carries one', () => {
+  const withShot = renderHtml(envelope([
+    f({ id: 'a', category: 'Responsive coverage', severity: 'High', shot: 'shots/1-1.png' }),
+  ]));
+  assert.match(withShot, /<img src="shots\/1-1\.png"/);
+
+  const without = renderHtml(envelope([f({ id: 'b', category: 'Responsive coverage', severity: 'High' })]));
+  assert.doesNotMatch(without, /<img/);
+});
+
+test('renderHtml escapes finding text so a layer name cannot inject markup', () => {
+  const html = renderHtml(envelope([
+    f({ category: 'Responsive coverage', severity: 'High', detected: '<script>alert(1)</script>' }),
+  ]));
+  assert.doesNotMatch(html, /<script>alert/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+test('renderHtml keeps Low findings out of the issue list', () => {
+  const html = renderHtml(envelope([
+    f({ id: 'a', category: 'Handoff hygiene', severity: 'Low', title: 'Fractional coordinates' }),
+  ]));
+  assert.match(html, /Low-severity roll-up/);
+  assert.doesNotMatch(html, /<h4[^>]*>Fractional coordinates/);
+});
+
+test('renderHtml states a withheld count even when a category\'s cap overflow is entirely Blockers', () => {
+  // Same bug class as renderMarkdown originally had: building the "All
+  // issues" category list from only the shown non-blocking findings misses
+  // a category whose overflow was entirely Blockers. 6 Blockers in one
+  // category: cap shows 5 (rendered in "Blocking issues"), withholds 1 -
+  // that withheld Blocker must be stated somewhere in the HTML.
+  const many = Array.from({ length: 6 }, (_, i) => f({ id: `B-${i}`, category: 'States', severity: 'Blocker' }));
+  const html = renderHtml(envelope(many));
+  assert.match(html, /1 further States issue\(s\) withheld/i);
 });
