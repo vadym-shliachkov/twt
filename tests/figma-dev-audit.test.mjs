@@ -246,3 +246,56 @@ test('CM004 flags default layer names as Low', () => {
   assert.equal(byRule(out, 'CM004')[0].severity, 'Low');
   assert.equal(byRule(out, 'CM004')[0].category, 'Handoff hygiene');
 });
+
+test('AS001 flags image fills with no export settings', () => {
+  const out = ev2(twoTierFacts([
+    { id: '3:1', name: 'Photo', hasImageFill: true, exportSettings: [] },
+    { id: '3:2', name: 'Photo ok', hasImageFill: true,
+      exportSettings: [{ format: 'PNG', constraintType: 'SCALE', constraintValue: 2 }] },
+  ]));
+  assert.deepEqual(byRule(out, 'AS001').map((f) => f.nodeIds[0]), ['3:1']);
+});
+
+test('AS002 flags vectors exported as raster', () => {
+  const out = ev2(twoTierFacts([
+    { id: '3:3', name: 'Logo', type: 'VECTOR',
+      exportSettings: [{ format: 'PNG', constraintType: 'SCALE', constraintValue: 1 }] },
+    { id: '3:4', name: 'Icon', type: 'VECTOR',
+      exportSettings: [{ format: 'SVG', constraintType: 'SCALE', constraintValue: 1 }] },
+  ]));
+  assert.deepEqual(byRule(out, 'AS002').map((f) => f.nodeIds[0]), ['3:3']);
+});
+
+test('FX001 flags blur effects as implementation cost', () => {
+  const out = ev2(twoTierFacts([
+    { id: '3:5', name: 'Glass panel', effects: [{ type: 'BACKGROUND_BLUR', radius: 24, spread: null, blendMode: null }] },
+    { id: '3:6', name: 'Card', effects: [{ type: 'DROP_SHADOW', radius: 8, spread: 0, blendMode: 'NORMAL' }] },
+  ]));
+  assert.deepEqual(byRule(out, 'FX001').map((f) => f.nodeIds[0]), ['3:5']);
+  assert.equal(byRule(out, 'FX001')[0].category, 'Effects & implementation cost');
+});
+
+test('FX002 flags blend modes and masks as High', () => {
+  const out = ev2(twoTierFacts([
+    { id: '3:7', name: 'Overlay', blendMode: 'MULTIPLY' },
+    { id: '3:8', name: 'Masked art', type: 'VECTOR', isMask: true },
+    { id: '3:9', name: 'Plain', blendMode: 'PASS_THROUGH' },
+  ]));
+  assert.deepEqual(byRule(out, 'FX002').map((f) => f.nodeIds[0]).sort(), ['3:7', '3:8']);
+  assert.equal(byRule(out, 'FX002')[0].severity, 'High');
+});
+
+test('HY001 flags hidden layers that still carry export settings', () => {
+  const out = ev2(twoTierFacts([
+    { id: '3:10', name: 'Old hero', visible: false,
+      exportSettings: [{ format: 'PNG', constraintType: 'SCALE', constraintValue: 2 }] },
+    { id: '3:11', name: 'Old note', visible: false, exportSettings: [] },
+  ]));
+  assert.deepEqual(byRule(out, 'HY001').map((f) => f.nodeIds[0]), ['3:10']);
+});
+
+test('HY002 flags fractional geometry as Low', () => {
+  const out = ev2(twoTierFacts([{ id: '3:12', name: 'Nudged', fractional: true }]));
+  assert.equal(byRule(out, 'HY002').length, 1);
+  assert.equal(byRule(out, 'HY002')[0].severity, 'Low');
+});
