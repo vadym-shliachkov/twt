@@ -14,6 +14,7 @@ const TOOLS = [
   'check-validation-report', 'diff-tokens', 'export-doctype',
   'export-document', 'export-html', 'export-presentation',
   'export-source-create', 'export-theme-create', 'export-transform',
+  'figma-dev-audit',
   'gen-tokens-from-candidates', 'house-style', 'pdf-render', 'scan-manifest',
   'score-rubric', 'split-blocks', 'theme', 'wiki-facts-merge', 'wiki-sources-mark',
 ];
