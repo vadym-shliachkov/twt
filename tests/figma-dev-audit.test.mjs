@@ -2,16 +2,23 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluate, finding, CATEGORIES, SEVERITIES, OWNERS } from '../tools/figma-dev-audit.mjs';
 
+// This fixture mirrors the frozen Task 1 facts contract field-for-field.
+// Tasks 3-6 all build their rule tests on it, so a field that drifts from
+// what collectFacts() actually emits produces rules that pass their tests
+// and do nothing on a real file.
 export const facts = (nodes, extra = {}) => ({
-  file: { name: 'T', url: 'https://figma.com/design/K/T', pages: ['P'], fonts: [], variableCollections: [] },
+  file: { name: 'T', url: 'https://figma.com/design/K/T', pages: ['P'], fonts: [], componentNames: [] },
   frames: [{ id: '1:2', name: 'F', page: 'P', width: 1440, height: 900 }],
   nodes: nodes.map((n) => ({
     id: '1:9', name: 'n', type: 'FRAME', page: 'P', frame: 'F', parentId: '1:2', depth: 1,
     x: 0, y: 0, width: 10, height: 10, visible: true, opacity: 1,
     layoutMode: null, layoutSizingHorizontal: null, layoutSizingVertical: null,
-    layoutPositioning: 'AUTO', constraints: null, textAutoResize: null, charCount: null,
+    layoutPositioning: 'AUTO', constraints: null,
+    itemSpacing: null, paddingLeft: null, paddingRight: null, paddingTop: null, paddingBottom: null,
+    textAutoResize: null, charCount: null,
     fontFamily: null, fontStyle: null, fontSize: null,
-    isInstance: false, mainComponentId: null, mainComponentName: null, detached: false,
+    isInstance: false, mainComponentId: null, mainComponentName: null,
+    nameMatchesComponent: false,
     overrideCount: 0, componentPropertyCount: 0, variantProperties: null,
     fills: [], strokes: [], effects: [], blendMode: 'PASS_THROUGH', isMask: false,
     exportSettings: [], hasImageFill: false, outOfBounds: false, fractional: false,
@@ -41,6 +48,14 @@ test('finding() rejects an owner outside the closed vocabulary', () => {
     () => finding({ rule: 'X', title: 't', category: CATEGORIES[0], severity: 'High',
                     confidence: 'High', owner: 'Team lead', nodeIds: ['1:9'], detected: 'd' }),
     /owner/i,
+  );
+});
+
+test('finding() rejects an unknown category', () => {
+  assert.throws(
+    () => finding({ rule: 'X', title: 't', category: 'Vibes', severity: 'High',
+                    confidence: 'High', owner: 'Designer', nodeIds: ['1:9'], detected: 'd' }),
+    /category/i,
   );
 });
 
