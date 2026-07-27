@@ -147,6 +147,7 @@ flowchart TB
     twt_elementor_block_creator -.-> twt_develop
     twt_content_approval_checklist -.-> twt_develop
     twt_assets_produce -.-> twt_develop
+    twt_figma_dev_audit -.-> twt_develop
     twt_elementor_theme_creator --> twt_elementor_block_creator
     twt_design_system_define -.-> twt_elementor_block_creator
     twt_ia_define -.-> twt_eval_smoke
@@ -207,6 +208,7 @@ flowchart TB
     twt_develop -.-> twt_site
     twt_site_dev -.-> twt_site
     twt_content_approval_checklist -.-> twt_site
+    twt_figma_dev_audit -.-> twt_site
     twt_qa -.-> twt_site
     twt_design_system_define -.-> twt_site_dev
     twt_component_define -.-> twt_site_dev
@@ -215,6 +217,7 @@ flowchart TB
     twt_html_site_creator -.-> twt_site_dev
     twt_html_block_creator -.-> twt_site_dev
     twt_content_approval_checklist -.-> twt_site_dev
+    twt_figma_dev_audit -.-> twt_site_dev
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
@@ -1219,7 +1222,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
 
 **Feeds into:**
 - Hard consumers: none
@@ -1236,6 +1239,7 @@ flowchart TB
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 | Path | Notes |
@@ -1588,7 +1592,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-develop, twt-site, twt-site-dev
 
 **Reads:**
 - $ARGUMENTS (figma URL, --platform, --scope)
@@ -2371,7 +2375,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa
 
 **Feeds into:**
 - Hard consumers: none
@@ -2385,6 +2389,7 @@ flowchart TB
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 | Path | Notes |
@@ -2409,7 +2414,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
 
 **Feeds into:**
 - Hard consumers: none
@@ -2420,6 +2425,7 @@ flowchart TB
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 | Path | Notes |
@@ -2745,7 +2751,7 @@ flowchart TB
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
-| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce |
+| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit |
 | /twt-direction-define | none | none |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
@@ -2783,8 +2789,8 @@ flowchart TB
 | /twt-seo-define | none | twt-ia-define, twt-positioning-define, twt-curation-define, twt-content-fetch |
 | /twt-seo-validate | twt-seo-define | none |
 | /twt-setup | none | none |
-| /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa |
-| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp |
+| /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa |
+| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |

@@ -15,6 +15,7 @@ dependencies:
     - twt-elementor-block-creator
     - twt-content-approval-checklist
     - twt-assets-produce
+    - twt-figma-dev-audit
 reads:
   - .twt-artifacts/design/design-brief.md
   - .twt-artifacts/design/mockup/index.html
@@ -26,6 +27,7 @@ reads:
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/assets/manifest.md
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
+  - .twt-artifacts/figma-dev-audit/readiness-report.md
 writes:
   - site/assets/css/sections.css            # html target — merged section-CSS deltas (Step 4c)
   - site/assets/css/general.css             # html target — merged deltas
@@ -100,6 +102,20 @@ After the child returns, verify `.twt-artifacts/content-approval/content-approva
 Read `.twt-artifacts/design/assets/manifest.md`. If it exists and has rows whose `status` is missing, `planned`, or `missing-provided`, dispatch `/twt-assets-produce` (Agent tool) **with `subagent-collect`** so the pool (`.twt-artifacts/design/assets/img|video|icons|meta/`) is as full as it can get before pages are built; aggregate its `decisions.md` upward per rule 13. If the dispatch fails or the manifest is absent, note it and continue — builders already emit manifest-correct paths for missing files.
 
 Then **sync the pool into the build target**: copy the pool's populated subdirectories into the build's asset root — html target → `site/assets/img|video|icons|meta/`, elementor target → the theme's `assets/img|video|icons|meta/` (per its `conventions.md`). One simple `cp -r "<pool-subdir>" "<build-assets-dir>"` per subdirectory (Bash) — no loops or chains; skip subdirectories that don't exist. Never overwrite a newer file already in the build with an older pool copy — when in doubt, report instead of clobbering. Rows still `pending-stock`/`pending-video`/`missing-provided` after the sync go into the Step 5 report as expected QA gaps.
+
+## Step 3b — Developer readiness check (advisory)
+
+Run before the first build dispatch (Step 4): a blocker in the Figma file is cheaper to catch before any page is promoted than after.
+
+**Skip silently** unless a Figma URL is present in `$ARGUMENTS` or recorded in the design artifacts (Grep `.twt-artifacts/design/design-brief.md` and `.twt-artifacts/design/design-system/tokens.md` for a `figma.com` link) — no prompt, no warning, no log entry.
+
+If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists: **standalone interactive**, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. **Collect mode (dispatched by an orchestrator) or an unattended `auto` run**, reuse and log it without asking.
+
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`).
+
+When it returns, state the Blocker and High counts and the report path. **Standalone interactive**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **Collect mode or an unattended `auto` run, always continue** — record the counts, the report path, and the decision to continue for the Step 5 report, and move on. An unattended run must never halt on this.
+
+The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothing the rest of this run depends on.
 
 ## Step 4 — Promote pages (pilot first, gate, then parallel batch)
 

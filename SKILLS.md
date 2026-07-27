@@ -935,7 +935,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
 
 **Reads:**
 - .twt-artifacts/design/design-brief.md
@@ -948,6 +948,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/assets/manifest.md
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 - site/assets/css/sections.css            # html target — merged section-CSS deltas (Step 4c)
@@ -2339,7 +2340,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-qa
+- Soft: twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa
 
 **Reads:**
 - site-instruction.md
@@ -2349,6 +2350,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 - .twt-artifacts/site-log.md
@@ -2392,13 +2394,14 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
 - .twt-artifacts/site-dev-log.md

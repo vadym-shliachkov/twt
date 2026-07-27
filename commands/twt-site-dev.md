@@ -17,12 +17,14 @@ dependencies:
     - twt-html-site-creator
     - twt-html-block-creator
     - twt-content-approval-checklist
+    - twt-figma-dev-audit
     - figma-mcp
 reads:
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/elementor-theme/conventions.md
   - .twt-artifacts/html-site/conventions.md
+  - .twt-artifacts/figma-dev-audit/readiness-report.md
 writes:
   - .twt-artifacts/site-dev-log.md
   - .twt-artifacts/design/design-system/component/components.md
@@ -84,6 +86,20 @@ Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") 
 - **You decide** — I pick the best-fit target from the project context (existing `conventions.md` or hints; defaults to Static HTML/CSS)
 
 Record the choice as `<target>` and continue.
+
+## Step 2·pre — Developer readiness check (advisory)
+
+Run before the design system is derived: a blocker in the Figma file invalidates the spine that Step 2 builds from it.
+
+**Skip silently** if Step 0 did not obtain a Figma URL — no prompt, no warning, no log entry.
+
+If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. In auto mode, reuse and log it.
+
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL obtained in Step 0 and the chosen `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`).
+
+When it returns, state the Blocker and High counts and the report path. **Interactively**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **In auto mode, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
+
+The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothing the rest of this run depends on.
 
 ## Step 2 — Design system from Figma
 

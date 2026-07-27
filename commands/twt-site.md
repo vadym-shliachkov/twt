@@ -17,6 +17,7 @@ dependencies:
     - twt-develop
     - twt-site-dev
     - twt-content-approval-checklist
+    - twt-figma-dev-audit
     - twt-qa
 reads:
   - site-instruction.md
@@ -26,6 +27,7 @@ reads:
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/qa/qa-report.md
   - .twt-artifacts/qa/gaps.md
+  - .twt-artifacts/figma-dev-audit/readiness-report.md
 writes:
   - .twt-artifacts/site-log.md
   - .twt-artifacts/pre-design/phase-review.md
@@ -201,6 +203,16 @@ Treat the **Content approval checklist** as an **automatic** sub-step whenever `
 - **Development is NOT selected but both Pre-design and Design ran** → build the workbook anyway as a deliverable of the run, so the user can begin content approval straight after design. Here it is **informational, not gating** — if it can't materialize, report it and continue; never treat it as fatal (there's nothing downstream to block).
 
 **Visual-direction surfacing (interactive only, before Design).** When the Design phase is in the set, no Figma/exported design was provided, and this is **not** auto mode: after `/twt-design` returns, read `.twt-artifacts/design/decisions.md` for the open "Confirm site visual direction" decision and present it to the user via the **AskUserQuestion** tool (Approve / Adjust dials / Override / You decide — per `/twt-design` Step 1b). On a redesign, frame the presented options against `<redesign-posture>`: with **Fresh direction**, every proposed option must be a departure from the current site's look — if the proposals read like the existing site restyled, reject them yourself and re-dispatch for genuinely distinct directions before presenting. Then re-dispatch `/twt-design --only design-system … ` in refinement mode with the resolved direction so the confirmed `design-read.md` propagates before components/layouts/mockups bind to it. This is the rule-13 surfacing point — without it the visual direction silently stays inferred. **Auto mode skips this** (the proposed read is model-decided and logged in Step 5).
+
+**Developer readiness check (advisory) — sub-step before Development.** Run once Development is confirmed in the phase set (`<development-selected>` from Step 1) and the build target is resolved (Step 2), whether Development routes through `/twt-develop` or Figma-express `/twt-site-dev` — this is exactly the design-already-done shortcut's entry point into Development, and a blocker in the Figma file is cheaper to catch before either dispatch than after. **Skip silently** if no Figma URL was ever captured (Step 0b Q3 or `site-instruction.md`) — no prompt, no warning, no log entry.
+
+If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. In auto mode, reuse and log it.
+
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and the build target resolved at Step 2 as the platform hint (Elementor → `--platform wordpress`, Static HTML → `--platform web`).
+
+When it returns, state the Blocker and High counts and the report path. **Interactively**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **In auto mode, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
+
+The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothing the rest of this run depends on.
 
 **Pilot-page surfacing (interactive only, during Development via `/twt-develop`).** A full multi-page build is the most expensive part of the run, so check one page before committing to all. When Development builds via `/twt-develop` (not Figma express) and this is **not** auto mode: `/twt-develop` (dispatched with `subagent-collect`) builds only the **pilot page** and returns an open "Pilot page built — approve to build the rest" decision in `.twt-artifacts/<html-site|elementor-theme>/decisions.md` with the pilot's path and the list of remaining pages. Read it and present the gate to the user via the **AskUserQuestion** tool (single-select, header "Pilot"): **Build the remaining N pages** / **Add one more pilot page** / **Adjust the pilot** / **Stop here**. On approve, re-dispatch `/twt-develop --target <target> pilot-approved` (with `subagent-collect`) to promote the rest; on adjust/add, forward the feedback and re-dispatch, then re-surface; on stop, leave the remaining pages unbuilt and record it. Log each gate Q&A to the Timeline. **Auto mode skips this** — dispatch `/twt-develop auto …` so it builds all pages in one pass.
 
