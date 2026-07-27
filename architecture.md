@@ -46,6 +46,7 @@ flowchart TB
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
     twt_figma_design_system["/twt-figma-design-system"]:::skill
+    twt_figma_dev_audit["/twt-figma-dev-audit"]:::skill
     twt_figma_mockup["/twt-figma-mockup"]:::skill
     twt_html_block_creator["/twt-html-block-creator"]:::skill
     twt_html_site_creator["/twt-html-site-creator"]:::skill
@@ -157,6 +158,7 @@ flowchart TB
     twt_export_presentation -.-> twt_export
     twt_export_template_create -.-> twt_export
     twt_brand_define -.-> twt_export_template_create
+    twt_design_system_audit -.-> twt_figma_dev_audit
     twt_figma_design_system -.-> twt_figma_mockup
     twt_html_site_creator --> twt_html_block_creator
     twt_design_system_define -.-> twt_html_block_creator
@@ -350,6 +352,7 @@ flowchart TB
 
 ### qa
 
+- /twt-figma-dev-audit - Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
 - /twt-qa - Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
 - /twt-qa-a11y - Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 - /twt-qa-content - Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
@@ -1114,7 +1117,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-figma-dev-audit
 
 **Reads:**
 - $ARGUMENTS (figma URL, site URL, tokens path, --brand)
@@ -1570,6 +1573,35 @@ flowchart TB
 | .twt-artifacts/figma-export/figma-map.md |  |
 | .twt-artifacts/figma-export/design-system-report.md |  |
 | .twt-artifacts/figma-export/decisions.md |  |
+
+### /twt-figma-dev-audit
+
+**Category:** qa
+**Version:** 1.0.0
+
+**Inputs:**
+- A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp, twt-design-system-audit
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS (figma URL, --platform, --scope)
+- .twt-artifacts/design/design-system-audit/audit-report.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/figma-dev-audit/facts.json |  |
+| .twt-artifacts/figma-dev-audit/findings.json |  |
+| .twt-artifacts/figma-dev-audit/readiness-report.md |  |
+| .twt-artifacts/figma-dev-audit/readiness-report.html |  |
+| .twt-artifacts/figma-dev-audit/shots/ |  |
 
 ### /twt-figma-mockup
 
@@ -2724,6 +2756,7 @@ flowchart TB
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
 | /twt-figma-design-system | none | figma-mcp |
+| /twt-figma-dev-audit | none | figma-mcp, twt-design-system-audit |
 | /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
 | /twt-html-site-creator | none | none |
@@ -2773,6 +2806,7 @@ flowchart TB
   design/
   elementor-theme/
   export/
+  figma-dev-audit/
   figma-export/
   html-site/
   intake/

@@ -40,6 +40,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
+| [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
@@ -1416,6 +1417,49 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 - A second run after editing a token **updates** the existing variable instead of creating a duplicate
 - `design-system-report.md` lists created / updated / skipped / orphaned items and the Figma file URL
 - Aborts with an actionable message when inputs or the Figma MCP are missing
+
+---
+
+## /twt-figma-dev-audit
+
+**Category:** qa
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Answer one question about a Figma file before anyone estimates or builds from it: **can a developer build this without stopping to ask questions?** Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.
+
+**Inputs:**
+- A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp, twt-design-system-audit
+
+**Reads:**
+- $ARGUMENTS (figma URL, --platform, --scope)
+- .twt-artifacts/design/design-system-audit/audit-report.md
+
+**Writes:**
+- .twt-artifacts/figma-dev-audit/facts.json
+- .twt-artifacts/figma-dev-audit/findings.json
+- .twt-artifacts/figma-dev-audit/readiness-report.md
+- .twt-artifacts/figma-dev-audit/readiness-report.html
+- .twt-artifacts/figma-dev-audit/shots/
+
+**Non-goals:**
+- Not a visual-design audit. Never judge whether the design is attractive, on-brand, or well-composed.
+- **Not a design-system audit.** `/twt-design-system-audit` answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.
+- Read-only on the Figma file. Never edits the design; writes nothing outside `.twt-artifacts/figma-dev-audit/`.
+- Not a content or full-accessibility audit (`/twt-qa-content`, `/twt-qa-a11y` own those on built output). Accessibility appears here only as build risk visible in the file.
+- Does not re-implement scanning, rule evaluation, or report rendering in the model - those are the bundled scripts.
+- v1 covers Web and WordPress. React, iOS and Android are out of scope.
+
+**Success criteria:**
+- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/`.
+- Every finding carries all ten schema fields, a working `?node-id=` link, and an owner from the closed vocabulary.
+- **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
+- No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
+- The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.
 
 ---
 
