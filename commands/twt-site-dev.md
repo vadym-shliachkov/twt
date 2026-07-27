@@ -1,8 +1,8 @@
 ---
 name: twt-site-dev
 category: site-dev
-description: (v1.5.8) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
-version: 1.5.8
+description: (v1.5.9) Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace
+version: 1.5.9
 accepts_arguments: true
 inputs:
   - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -93,11 +93,11 @@ Run before the design system is derived: a blocker in the Figma file invalidates
 
 **Skip silently** if Step 0 did not obtain a Figma URL — no prompt, no warning, no log entry.
 
-If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. In auto mode, reuse and log it.
+If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists: **standalone interactive**, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. **Collect mode (dispatched by an orchestrator, e.g. `/twt-site` under Express) or an unattended `auto` run**, reuse and log it without asking.
 
 Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL obtained in Step 0 and the chosen `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`).
 
-When it returns, state the Blocker and High counts and the report path. **Interactively**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **In auto mode, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
+When it returns, state the Blocker and High counts and the report path. **Standalone interactive**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **Collect mode or an unattended `auto` run, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
 
 The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothing the rest of this run depends on.
 

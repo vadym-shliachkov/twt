@@ -1109,7 +1109,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.6.1
+**Version:** 1.6.2
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -1215,7 +1215,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.8
+**Version:** 1.3.9
 
 **Inputs:**
 - Optional --target html|elementor (else menu); optional page scope
@@ -2366,7 +2366,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.2
+**Version:** 1.13.3
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2406,7 +2406,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.8
+**Version:** 1.5.9
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
