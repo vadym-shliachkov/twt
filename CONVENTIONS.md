@@ -136,6 +136,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - Scores are **evaluative** (judgment + evidence), never presence-only. "Field exists" is not a criterion; "palette meets WCAG AA on key pairings" is.
 - After the Scorecard: a **`## Decisions to confirm`** section listing inferred rules / judgment calls the user must approve before they bind (empty if none), then **`## Findings`** using severity tiers **BLOCKER / WARNING / SUGGESTION**, each with **Where / Problem / Recommendation** (Problem states *why*, with evidence), then a one-paragraph **`## Summary`** tying band to top findings.
 - The exact skeleton lives in `templates/validation-report.md`.
+- **Exception - audit reports.** `/twt-figma-dev-audit` writes a `readiness-report.md`, not a `validation-report.md`, and uses a four-tier severity scale (**Blocker / High / Medium / Low**) with a per-finding **Confidence** (High / Medium; Low is never a finding and becomes a `Decisions required` entry). A client-facing handoff report needs the High/Medium distinction that the three-tier scale collapses. The Scorecard requirement above binds `validation-report.md` files only.
 
 ## 13. Surface-up decisions (interactive skills under orchestration)
 
