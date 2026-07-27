@@ -25,7 +25,6 @@ const node = (o) => ({
 function fakeFigma(pages) {
   return {
     root: { name: 'Test File', type: 'DOCUMENT', children: pages },
-    variables: { getLocalVariableCollectionsAsync: async () => [] },
     loadAllPagesAsync: async () => {},
   };
 }
@@ -55,6 +54,34 @@ test('collectFacts flags fractional geometry and out-of-bounds nodes', () => {
   assert.equal(by('1:4').outOfBounds, true);
   assert.equal(by('1:5').fractional, true);
   assert.equal(by('1:3').fractional, false);
+});
+
+test('outOfBounds compares canvas coordinates via absoluteBoundingBox, not parent-relative x/y', () => {
+  // A frame is not necessarily at canvas origin - e.g. a Tablet frame placed
+  // to the right of a Desktop frame on the same page. A child's x/y are
+  // relative to its immediate parent (the frame), so comparing them
+  // directly against the frame's canvas box would falsely flag every child
+  // in a non-origin frame as out of bounds. absoluteBoundingBox puts both
+  // sides of the comparison in canvas space.
+  const inside = node({
+    id: '1:3', name: 'inside', x: 10, y: 10, width: 50, height: 50,
+    absoluteBoundingBox: { x: 1510, y: 10, width: 50, height: 50 },
+  });
+  const escapes = node({
+    id: '1:4', name: 'escapes', x: 10, y: 10, width: 50, height: 50,
+    absoluteBoundingBox: { x: 100, y: 10, width: 50, height: 50 },
+  });
+  const frame = node({
+    id: '1:2', name: 'Tablet', x: 1500, y: 0, width: 1000, height: 500,
+    absoluteBoundingBox: { x: 1500, y: 0, width: 1000, height: 500 },
+    children: [inside, escapes],
+  });
+  const page = node({ id: '1:1', name: 'P', type: 'PAGE', children: [frame] });
+  const facts = loadScan()(fakeFigma([page]));
+  const by = (id) => facts.nodes.find((n) => n.id === id);
+
+  assert.equal(by('1:3').outOfBounds, false, 'fully inside the frame in canvas space');
+  assert.equal(by('1:4').outOfBounds, true, 'genuinely escapes the frame in canvas space');
 });
 
 test('collectFacts captures layout, text and instance facts', () => {

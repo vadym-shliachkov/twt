@@ -82,16 +82,29 @@ function isFractional(node) {
   return false;
 }
 
+// x/y on SceneNode are relative to the *immediate* parent, not the canvas,
+// so they are only directly comparable to another node's x/y when both
+// share the same parent. absoluteBoundingBox puts a node's box in canvas
+// space, which is what a top-level frame and any of its descendants (at
+// any depth, under any nested parent) can be safely compared in. Fall back
+// to the local box only when absoluteBoundingBox is unavailable (e.g. a
+// duck-typed fixture that does not set it) - that fallback is only valid
+// for a frame at canvas origin, but it is better than throwing.
+function boxOf(node) {
+  return node.absoluteBoundingBox || { x: node.x, y: node.y, width: node.width, height: node.height };
+}
+
 // A node is out of bounds when its box escapes its owning top-level frame.
 // 0.5px tolerance absorbs Figma's sub-pixel rounding.
 function escapesFrame(node, frameBox) {
   if (!frameBox) return false;
   var t = 0.5;
+  var box = boxOf(node);
   return (
-    node.x < frameBox.x - t ||
-    node.y < frameBox.y - t ||
-    node.x + node.width > frameBox.x + frameBox.width + t ||
-    node.y + node.height > frameBox.y + frameBox.height + t
+    box.x < frameBox.x - t ||
+    box.y < frameBox.y - t ||
+    box.x + box.width > frameBox.x + frameBox.width + t ||
+    box.y + box.height > frameBox.y + frameBox.height + t
   );
 }
 
@@ -99,7 +112,7 @@ function collectFacts(root) {
   var componentNames = collectComponentNames(root, {});
   var facts = {
     file: {
-      name: root.name || '', url: '', pages: [], fonts: [], variableCollections: [],
+      name: root.name || '', url: '', pages: [], fonts: [],
       componentNames: Object.keys(componentNames),
     },
     frames: [],
@@ -112,7 +125,7 @@ function collectFacts(root) {
     facts.file.pages.push(page.name);
 
     (page.children || []).forEach(function (frame) {
-      var frameBox = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
+      var frameBox = boxOf(frame);
       facts.frames.push({
         id: frame.id, name: frame.name, page: page.name,
         width: frame.width, height: frame.height,
