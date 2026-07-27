@@ -82,29 +82,44 @@ function isFractional(node) {
   return false;
 }
 
-// x/y on SceneNode are relative to the *immediate* parent, not the canvas,
-// so they are only directly comparable to another node's x/y when both
-// share the same parent. absoluteBoundingBox puts a node's box in canvas
-// space, which is what a top-level frame and any of its descendants (at
-// any depth, under any nested parent) can be safely compared in. Fall back
-// to the local box only when absoluteBoundingBox is unavailable (e.g. a
-// duck-typed fixture that does not set it) - that fallback is only valid
-// for a frame at canvas origin, but it is better than throwing.
-function boxOf(node) {
-  return node.absoluteBoundingBox || { x: node.x, y: node.y, width: node.width, height: node.height };
-}
-
 // A node is out of bounds when its box escapes its owning top-level frame.
 // 0.5px tolerance absorbs Figma's sub-pixel rounding.
-function escapesFrame(node, frameBox) {
-  if (!frameBox) return false;
+//
+// x/y on SceneNode are relative to the *immediate* parent, not the canvas,
+// so they are only directly comparable when both boxes are in the same
+// space. absoluteBoundingBox puts a box in canvas space, which works at any
+// depth - but only if BOTH sides use it. Choosing the space independently
+// per side (e.g. canvas box for the node, local box for the frame, because
+// only one of them happened to expose absoluteBoundingBox) reintroduces the
+// exact bug this function exists to avoid, just for a narrower case. So the
+// space is decided once, jointly, for the whole comparison: canvas space
+// when both node and frame expose absoluteBoundingBox, local space
+// otherwise - never mixed.
+//
+// In local space the frame is its own origin: a direct child's x/y already
+// describes its position relative to the frame's own top-left corner, so
+// the frame's box in that space is {0, 0, width, height} - never
+// frame.x/frame.y, which is the frame's position in ITS OWN parent (the
+// page), not the origin its children are measured from. This local
+// fallback is only strictly correct for direct children of the frame;
+// a deeper descendant's x/y is relative to its own immediate parent, which
+// this fallback has no way to see.
+function escapesFrame(node, frame) {
+  if (!frame) return false;
   var t = 0.5;
-  var box = boxOf(node);
+  var nodeBox, frameBox;
+  if (node.absoluteBoundingBox && frame.absoluteBoundingBox) {
+    nodeBox = node.absoluteBoundingBox;
+    frameBox = frame.absoluteBoundingBox;
+  } else {
+    nodeBox = { x: node.x, y: node.y, width: node.width, height: node.height };
+    frameBox = { x: 0, y: 0, width: frame.width, height: frame.height };
+  }
   return (
-    box.x < frameBox.x - t ||
-    box.y < frameBox.y - t ||
-    box.x + box.width > frameBox.x + frameBox.width + t ||
-    box.y + box.height > frameBox.y + frameBox.height + t
+    nodeBox.x < frameBox.x - t ||
+    nodeBox.y < frameBox.y - t ||
+    nodeBox.x + nodeBox.width > frameBox.x + frameBox.width + t ||
+    nodeBox.y + nodeBox.height > frameBox.y + frameBox.height + t
   );
 }
 
@@ -125,7 +140,6 @@ function collectFacts(root) {
     facts.file.pages.push(page.name);
 
     (page.children || []).forEach(function (frame) {
-      var frameBox = boxOf(frame);
       facts.frames.push({
         id: frame.id, name: frame.name, page: page.name,
         width: frame.width, height: frame.height,
@@ -178,7 +192,7 @@ function collectFacts(root) {
           exportSettings: exportsOf(node),
           hasImageFill: Array.isArray(node.fills)
             && node.fills.some(function (f) { return f.type === 'IMAGE'; }),
-          outOfBounds: node !== frame && escapesFrame(node, frameBox),
+          outOfBounds: node !== frame && escapesFrame(node, frame),
           fractional: isFractional(node),
         });
 

@@ -84,6 +84,27 @@ test('outOfBounds compares canvas coordinates via absoluteBoundingBox, not paren
   assert.equal(by('1:4').outOfBounds, true, 'genuinely escapes the frame in canvas space');
 });
 
+test('outOfBounds never mixes coordinate spaces when only one side has absoluteBoundingBox', () => {
+  // The frame is at a non-zero canvas x and exposes absoluteBoundingBox; the
+  // child does not. Comparing the child's local box against the frame's
+  // canvas box would be a mixed-space comparison - wrongly flagging a child
+  // that is fully inside the frame. The space must be decided jointly: since
+  // one side lacks absoluteBoundingBox, BOTH sides must fall back to local
+  // coordinates, under which this child (frame-relative x:10) is inside a
+  // frame whose local x defaults to 0.
+  const inside = node({ id: '1:3', name: 'inside', x: 10, y: 10, width: 50, height: 50 });
+  const frame = node({
+    id: '1:2', name: 'Tablet', x: 1500, y: 0, width: 1000, height: 500,
+    absoluteBoundingBox: { x: 1500, y: 0, width: 1000, height: 500 },
+    children: [inside],
+  });
+  const page = node({ id: '1:1', name: 'P', type: 'PAGE', children: [frame] });
+  const facts = loadScan()(fakeFigma([page]));
+  const by = (id) => facts.nodes.find((n) => n.id === id);
+
+  assert.equal(by('1:3').outOfBounds, false, 'child without absoluteBoundingBox must not be compared against the frame\'s canvas box');
+});
+
 test('collectFacts captures layout, text and instance facts', () => {
   const text = node({
     id: '1:6', name: 'Title', type: 'TEXT', textAutoResize: 'NONE',
