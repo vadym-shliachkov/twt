@@ -299,3 +299,55 @@ test('HY002 flags fractional geometry as Low', () => {
   assert.equal(byRule(out, 'HY002').length, 1);
   assert.equal(byRule(out, 'HY002')[0].severity, 'Low');
 });
+
+test('FN001 emits a licensing decision per non-system font family, never a finding', () => {
+  const f = twoTierFacts([]);
+  f.file.fonts = [
+    { family: 'Inter', style: 'Regular' },
+    { family: 'Inter', style: 'Bold' },
+    { family: 'Neue Haas Grotesk', style: 'Medium' },
+    { family: 'Arial', style: 'Regular' },
+  ];
+  const out = ev2(f);
+
+  assert.equal(byRule(out, 'FN001').length, 0, 'licensing is never a finding');
+  const fams = out.decisions.map((d) => d.question);
+  assert.equal(out.decisions.length, 2, 'one decision each for Inter and Neue Haas Grotesk, none for Arial');
+  assert.ok(fams.some((q) => /Neue Haas Grotesk/.test(q)));
+  assert.ok(!fams.some((q) => /Arial/.test(q)), 'system fonts need no licence question');
+  assert.equal(out.decisions[0].owner, 'Client');
+});
+
+test('FN002 flags an oversized type inventory', () => {
+  const f = twoTierFacts([]);
+  f.file.fonts = [
+    { family: 'A', style: 'R' }, { family: 'B', style: 'R' },
+    { family: 'C', style: 'R' }, { family: 'D', style: 'R' },
+  ];
+  const out = ev2(f);
+  assert.equal(byRule(out, 'FN002').length, 1);
+  assert.equal(byRule(out, 'FN002')[0].severity, 'Medium');
+});
+
+test('A11Y001 flags low-contrast body text and respects the large-text threshold', () => {
+  const bg = { id: '4:1', name: 'Panel', parentId: '1:2',
+    fills: [{ type: 'SOLID', hex: '#ffffff', opacity: 1, boundVariable: false }] };
+  const small = { id: '4:2', name: 'Caption', type: 'TEXT', parentId: '4:1', fontSize: 14,
+    fills: [{ type: 'SOLID', hex: '#aaaaaa', opacity: 1, boundVariable: false }] };
+  const large = { id: '4:3', name: 'Display', type: 'TEXT', parentId: '4:1', fontSize: 48,
+    fills: [{ type: 'SOLID', hex: '#767676', opacity: 1, boundVariable: false }] };
+  const out = ev2(twoTierFacts([bg, small, large]));
+
+  const hits = byRule(out, 'A11Y001').map((f) => f.nodeIds[0]);
+  assert.ok(hits.includes('4:2'), '#aaaaaa on white is below 4.5 at 14px');
+  assert.ok(!hits.includes('4:3'), '#767676 on white clears 3.0 at 48px');
+});
+
+test('A11Y002 flags undersized touch targets', () => {
+  const out = ev2(twoTierFacts([
+    { id: '4:4', name: 'Close button', width: 24, height: 24 },
+    { id: '4:5', name: 'Menu icon', width: 48, height: 48 },
+    { id: '4:6', name: 'Hero', width: 20, height: 20 },
+  ]));
+  assert.deepEqual(byRule(out, 'A11Y002').map((f) => f.nodeIds[0]), ['4:4']);
+});
