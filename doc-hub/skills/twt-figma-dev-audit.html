@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Answer one question about a Figma file before anyone estimates or builds from it: **can a developer build this without stopping to ask questions?** Sc">
+  <title>/twt-figma-dev-audit | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong class="breadcrumb-command">/twt-figma-dev-audit</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">QA · qa</p>
+          <h1>/twt-figma-dev-audit</h1>
+          <p class="lede">Answer one question about a Figma file before anyone estimates or builds from it: <strong>can a developer build this without stopping to ask questions?</strong> Scan the file through the Figma...</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
+    <strong>High</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Answer one question about a Figma file before anyone estimates or builds from it: <strong>can a developer build this without stopping to ask questions?</strong> Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope &lt;page or frame name&gt;; optional notes</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/figma-dev-audit/facts.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/figma-dev-audit/findings.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/figma-dev-audit/readiness-report.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/figma-dev-audit/readiness-report.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/figma-dev-audit/shots/</code><span class="file-desc">A folder of related files.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Not a visual-design audit. Never judge whether the design is attractive, on-brand, or well-composed.</li><li><strong>Not a design-system audit.</strong> <code>/twt-design-system-audit</code> answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.</li><li>Read-only on the Figma file. Never edits the design; writes nothing outside <code>.twt-artifacts/figma-dev-audit/</code>.</li><li>Not a content or full-accessibility audit (<code>/twt-qa-content</code>, <code>/twt-qa-a11y</code> own those on built output). Accessibility appears here only as build risk visible in the file.</li><li>Does not re-implement scanning, rule evaluation, or report rendering in the model - those are the bundled scripts.</li><li>v1 covers Web and WordPress. React, iOS and Android are out of scope.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>facts.json</code>, <code>findings.json</code>, <code>readiness-report.md</code> and <code>readiness-report.html</code> all exist under <code>.twt-artifacts/figma-dev-audit/</code>.</li><li>Every finding carries all ten schema fields, a working <code>?node-id=</code> link, and an owner from the closed vocabulary.</li><li><strong>No finding carries <code>Confidence: Low</code></strong> - unverifiable concerns appear only under <code>Decisions required</code>.</li><li>No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.</li><li>The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
