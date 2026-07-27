@@ -107,6 +107,7 @@ test('exported vocabularies are exactly the spec vocabularies', () => {
 });
 
 import { evaluate as ev2 } from '../tools/figma-dev-audit.mjs';
+import { screenKey } from '../tools/figma-dev-audit/rules/layout.mjs';
 
 const byRule = (out, rule) => out.findings.filter((f) => f.rule === rule);
 
@@ -192,4 +193,13 @@ test('RS003 flags a desktop screen with no mobile counterpart', () => {
   const hits = byRule(out, 'RS003');
   assert.equal(hits.length, 1);
   assert.match(hits[0].detected, /Pricing/);
+});
+
+test('screenKey never collapses a separator-plus-tier name to an empty key', () => {
+  assert.equal(screenKey('Home / Desktop'), 'home');
+  assert.equal(screenKey('Desktop'), 'desktop');
+  assert.notEqual(screenKey('/Desktop'), '');
+  assert.notEqual(screenKey('-Mobile'), '');
+  assert.notEqual(screenKey('/Desktop'), screenKey('-Mobile'),
+    'two unrelated tier-only names must not share a key');
 });

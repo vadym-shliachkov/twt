@@ -13,11 +13,17 @@ const LONG_TEXT = 20;
 export const tierOf = (w) => (w < 768 ? 'mobile' : w < 1024 ? 'tablet' : 'desktop');
 
 // "Home / Desktop", "Home - mobile", "Home@1440" all reduce to "home".
-export const screenKey = (name) =>
-  String(name)
+export const screenKey = (name) => {
+  const raw = String(name).trim().toLowerCase();
+  const stripped = raw
     .replace(/[/\-–—@]\s*(desktop|mobile|tablet|tab|sm|md|lg|xl|\d{3,4})\s*$/i, '')
-    .trim()
-    .toLowerCase();
+    .trim();
+  // A name that is nothing but a separator and a tier token ("/Desktop",
+  // "-Mobile", "@1440") strips to "". Every such frame would then collapse
+  // into one key, and RS003 would read that as full tier coverage and
+  // suppress a real finding. Fall back to the unstripped name.
+  return stripped || raw;
+};
 
 export const layoutRules = [
   {
