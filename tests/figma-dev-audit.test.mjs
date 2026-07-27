@@ -203,3 +203,46 @@ test('screenKey never collapses a separator-plus-tier name to an empty key', () 
   assert.notEqual(screenKey('/Desktop'), screenKey('-Mobile'),
     'two unrelated tier-only names must not share a key');
 });
+
+test('CM001 flags likely-detached instances at Medium confidence', () => {
+  // The Plugin API leaves no detachment marker, so this rule interprets a
+  // name collision. It is inference, and its confidence must say so.
+  const out = ev2(twoTierFacts([
+    { id: '2:1', name: 'Button/Primary', type: 'FRAME', nameMatchesComponent: true },
+    { id: '2:2', name: 'Button/Primary', isInstance: true, mainComponentId: '9:1' },
+  ]));
+  const hits = byRule(out, 'CM001');
+  assert.deepEqual(hits.map((f) => f.nodeIds[0]), ['2:1']);
+  assert.equal(hits[0].severity, 'High');
+  assert.equal(hits[0].confidence, 'Medium', 'inference, not measurement');
+  assert.match(hits[0].detected, /detach/i);
+});
+
+test('CM002 flags instances carrying a heavy override load', () => {
+  const out = ev2(twoTierFacts([
+    { id: '2:3', name: 'Card', isInstance: true, overrideCount: 11 },
+    { id: '2:4', name: 'Card', isInstance: true, overrideCount: 2 },
+  ]));
+  assert.deepEqual(byRule(out, 'CM002').map((f) => f.nodeIds[0]), ['2:3']);
+  assert.match(byRule(out, 'CM002')[0].detected, /11/);
+});
+
+test('CM003 flags interactive components with no variants or properties', () => {
+  const out = ev2(twoTierFacts([
+    { id: '2:5', name: 'Button/Primary', type: 'COMPONENT', componentPropertyCount: 0, variantProperties: null },
+    { id: '2:6', name: 'Button/Secondary', type: 'COMPONENT', componentPropertyCount: 0, variantProperties: { State: 'Hover' } },
+    { id: '2:7', name: 'Hero illustration', type: 'COMPONENT', componentPropertyCount: 0, variantProperties: null },
+  ]));
+  assert.deepEqual(byRule(out, 'CM003').map((f) => f.nodeIds[0]), ['2:5']);
+});
+
+test('CM004 flags default layer names as Low', () => {
+  const out = ev2(twoTierFacts([
+    { id: '2:8', name: 'Frame 123' },
+    { id: '2:9', name: 'Copy 7' },
+    { id: '2:10', name: 'Hero' },
+  ]));
+  assert.deepEqual(byRule(out, 'CM004').map((f) => f.nodeIds[0]).sort(), ['2:8', '2:9']);
+  assert.equal(byRule(out, 'CM004')[0].severity, 'Low');
+  assert.equal(byRule(out, 'CM004')[0].category, 'Handoff hygiene');
+});
