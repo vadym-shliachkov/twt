@@ -17,6 +17,37 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { strict as assert } from 'node:assert';
+import { validateFinding, SEVERITIES } from './figma-dev-audit.mjs';
+
+// Layer 3 (the model pass) writes findings.json DIRECTLY - it never goes
+// through finding(), so none of the engine's guards apply to what it wrote.
+// This renderer is the last reader before a client sees the report, so it
+// defends the boundary it does not control, twice over:
+//
+//   validateFinding()  rejects the file outright (Confidence: Low, an owner
+//                      outside the vocabulary, an invented category)
+//   the defaults below keep a merely INCOMPLETE finding renderable instead
+//                      of throwing "Cannot read properties of undefined"
+//
+// Both are needed: validation catches the bad file, the defaults keep a
+// partially-good one useful.
+const locOf = (f) => {
+  const l = f.location ?? {};
+  return { page: l.page ?? '', frame: l.frame ?? '', layers: l.layers ?? [] };
+};
+
+// A model-authored `severity: "Blocker"` whose `blocking` field disagreed used
+// to count as a Blocker in the Summary and read "Not ready" in the matrix
+// while "Blocking issues" said "None." - the most misleading state this
+// report can be in.
+//
+// Severity is the authority and blocking follows from it, because every other
+// number on the page (the Summary counts, all six matrix rows) is already
+// derived from severity alone. Deriving this one from `f.blocking ?? ...`
+// would only cover a MISSING field and leave the identical contradiction
+// reachable through an explicit `"blocking": false` - the same broken report,
+// one keystroke away. A non-Blocker may still opt in by setting the flag.
+const isBlocking = (f) => f.severity === 'Blocker' || f.blocking === true;
 
 export const ROW_CATEGORIES = {
   responsive: ['Responsive coverage', 'Auto Layout & sizing'],
@@ -46,21 +77,30 @@ export function readiness(findings) {
   return out;
 }
 
-// Caller (the CLI, via findings.json) always hands us findings pre-sorted by
-// the engine as (severity, then category) - see figma-dev-audit.mjs's
-// `findings.sort`. That ordering is what lets a flat per-category counter
-// double as a severity-priority cap: within one category, every Blocker is
-// encountered before any High, before any Medium, before any Low. If this
-// function is ever called on an unsorted array, higher-severity findings
-// could get pushed into `withheld` by earlier lower-severity ones - so this
-// is not just a size limit, it is a priority queue that trusts its input.
+// This is not just a size limit, it is a severity priority queue: a flat
+// per-category counter only keeps the right findings if, within a category,
+// every Blocker is encountered before any High, before any Medium.
+//
+// It used to TRUST its caller for that ordering, on the grounds that the
+// engine pre-sorts. But Layer 3 appends model-authored findings to the end of
+// findings.json without re-sorting, so a model-authored High landing after
+// five rule Mediums in one category was the one withheld while the Mediums
+// rendered. The precondition is therefore removed rather than documented:
+// sort here, defensively. A stable sort over four known values costs nothing
+// and leaves an already-sorted array untouched.
 export function applyCaps(findings) {
   const shown = [];
   const withheld = {};
   const lows = {};
   const seen = {};
 
-  for (const f of findings) {
+  const rank = (f) => {
+    const i = SEVERITIES.indexOf(f.severity);
+    return i < 0 ? SEVERITIES.length : i;   // unknown severity sorts last
+  };
+  const ordered = [...findings].sort((a, b) => rank(a) - rank(b));
+
+  for (const f of ordered) {
     if (f.severity === 'Low') {
       if (!lows[f.category]) lows[f.category] = { count: 0, examples: [] };
       lows[f.category].count += 1;
@@ -74,18 +114,26 @@ export function applyCaps(findings) {
   return { shown, withheld, lows };
 }
 
-const block = (f) => [
-  `#### ${f.title}`,
-  '',
-  `- **Category:** ${f.category}`,
-  `- **Severity:** ${f.severity}  ·  **Confidence:** ${f.confidence}`,
-  `- **Location:** ${f.location.page} / ${f.location.frame}${f.location.layers.length ? ` / ${f.location.layers.join(', ')}` : ''} — [open in Figma](${f.link})`,
-  `- **Detected:** ${f.detected}`,
-  `- **Development impact:** ${f.impact || '_not yet assessed_'}`,
-  `- **Recommended action:** ${f.action || '_not yet assessed_'}`,
-  `- **Owner:** ${f.owner}  ·  **Blocking:** ${f.blocking ? 'Yes' : 'No'}`,
-  '',
-].join('\n');
+const block = (f) => {
+  const loc = locOf(f);
+  return [
+    `#### ${f.title}`,
+    '',
+    `- **Category:** ${f.category}`,
+    `- **Severity:** ${f.severity}  ·  **Confidence:** ${f.confidence}`,
+    // A file-level finding (FN002 counts fonts across the whole file) has no
+    // page, no frame and no layers. Printing " / " with a link to nowhere
+    // reads as a broken report; the link line below carries what there is.
+    loc.page
+      ? `- **Location:** ${loc.page} / ${loc.frame}${loc.layers.length ? ` / ${loc.layers.join(', ')}` : ''} — [open in Figma](${f.link})`
+      : `- **Location:** whole file${f.link ? ` — [open in Figma](${f.link})` : ''}`,
+    `- **Detected:** ${f.detected}`,
+    `- **Development impact:** ${f.impact || '_not yet assessed_'}`,
+    `- **Recommended action:** ${f.action || '_not yet assessed_'}`,
+    `- **Owner:** ${f.owner}  ·  **Blocking:** ${isBlocking(f) ? 'Yes' : 'No'}`,
+    '',
+  ].join('\n');
+};
 
 export function renderMarkdown(data) {
   const { meta, findings, decisions } = data;
@@ -96,6 +144,9 @@ export function renderMarkdown(data) {
 
   L.push(`# Developer readiness — ${meta.file}`, '');
   L.push(`Platform: **${meta.platform}** · Scanned: ${meta.scannedAt} · ${meta.frameCount} frames, ${meta.nodeCount} nodes`, '');
+  // A scoped report covers part of the file. Saying so in the header is the
+  // only thing standing between it and being read as a whole-file verdict.
+  if (meta.scope) L.push(`**Scope: \`${meta.scope}\`** — only pages and frames matching this name were scanned; the rest of the file is not covered by this report.`, '');
   L.push(meta.dsAuditReport
     ? `Related: design-system findings live in \`${meta.dsAuditReport}\` and are not repeated here.`
     : 'There is no design-system audit on record — token, colour and spacing-consistency findings are out of scope for this report. Run `/twt-design-system-audit` for those.');
@@ -118,7 +169,7 @@ export function renderMarkdown(data) {
   L.push('', '_Handoff hygiene is excluded from this matrix — it measures handoff quality, not build readiness._', '');
 
   L.push('## Blocking issues', '');
-  const blockers = shown.filter((f) => f.blocking);
+  const blockers = shown.filter(isBlocking);
   L.push(blockers.length ? blockers.map(block).join('\n') : '_None._');
   L.push('');
 
@@ -130,7 +181,7 @@ export function renderMarkdown(data) {
   L.push('');
 
   L.push('## All issues', '');
-  const shownNonBlocking = shown.filter((f) => !f.blocking);
+  const shownNonBlocking = shown.filter((f) => !isBlocking(f));
   // Categories to render: every category with a shown non-blocking finding,
   // PLUS every category with a withheld count - even if every shown finding
   // in that category was a Blocker (already printed above) or the cap was
@@ -161,7 +212,8 @@ export function renderMarkdown(data) {
     L.push('## Low-severity roll-up', '');
     L.push('| Category | Count | Examples |', '|---|---|---|');
     for (const [cat, v] of Object.entries(lows)) {
-      const ex = v.examples.map((f) => `[${f.location.layers[0] || f.nodeIds[0]}](${f.link})`).join(', ');
+      const ex = v.examples
+        .map((f) => `[${locOf(f).layers[0] || f.nodeIds?.[0] || f.title}](${f.link || ''})`).join(', ');
       L.push(`| ${cat} | ${v.count} | ${ex} |`);
     }
     L.push('', '_Complete list in `findings.json`._', '');
@@ -204,28 +256,42 @@ border-radius:6px;padding:1rem;margin:0 0 1rem}
 a{color:inherit}.none{color:var(--mut);font-style:italic}
 `;
 
-const issueHtml = (f) => `
+// f.shot is model-written, so it is checked rather than trusted: only a
+// relative path inside the report's own shots/ directory renders. Anything
+// else (an absolute path, a remote URL, a traversal) is dropped - this page
+// is handed to clients and must make no external request.
+const shotSrc = (f) => (typeof f.shot === 'string' && f.shot.startsWith('shots/') && !f.shot.includes('..')
+  ? f.shot : null);
+
+const issueHtml = (f) => {
+  const loc = locOf(f);
+  const shot = shotSrc(f);
+  const where = loc.page
+    ? `${esc(loc.page)} / ${esc(loc.frame)}${loc.layers.length ? ' / ' + esc(loc.layers.join(', ')) : ''}`
+    : 'whole file';
+  return `
 <div class="issue ${slug(f.severity)}">
   <h4>${esc(f.title)}</h4>
   <dl>
     <dt>Category</dt><dd>${esc(f.category)}</dd>
     <dt>Severity</dt><dd>${esc(f.severity)} &middot; Confidence ${esc(f.confidence)}</dd>
-    <dt>Location</dt><dd><a href="${esc(f.link)}">${esc(f.location.page)} / ${esc(f.location.frame)}${f.location.layers.length ? ' / ' + esc(f.location.layers.join(', ')) : ''}</a></dd>
+    <dt>Location</dt><dd>${f.link ? `<a href="${esc(f.link)}">${where}</a>` : where}</dd>
     <dt>Detected</dt><dd>${esc(f.detected)}</dd>
     <dt>Impact</dt><dd>${esc(f.impact || 'not yet assessed')}</dd>
     <dt>Action</dt><dd>${esc(f.action || 'not yet assessed')}</dd>
-    <dt>Owner</dt><dd>${esc(f.owner)} &middot; Blocking: ${f.blocking ? 'Yes' : 'No'}</dd>
+    <dt>Owner</dt><dd>${esc(f.owner)} &middot; Blocking: ${isBlocking(f) ? 'Yes' : 'No'}</dd>
   </dl>
-  ${f.shot ? `<img src="${esc(f.shot)}" alt="${esc(f.title)} in context">` : ''}
+  ${shot ? `<img src="${esc(shot)}" alt="${esc(f.title)} in context">` : ''}
 </div>`;
+};
 
 export function renderHtml(data) {
   const { meta, findings, decisions } = data;
   const { shown, withheld, lows } = applyCaps(findings);
   const rows = readiness(findings);
   const count = (s) => findings.filter((f) => f.severity === s).length;
-  const blockers = shown.filter((f) => f.blocking);
-  const rest = shown.filter((f) => !f.blocking);
+  const blockers = shown.filter(isBlocking);
+  const rest = shown.filter((f) => !isBlocking(f));
   // Union with withheld's keys - see the matching comment in renderMarkdown:
   // a category whose cap overflow is entirely Blockers has no shown
   // non-blocking finding to key off, so without this union its withheld
@@ -239,6 +305,7 @@ export function renderHtml(data) {
 <style>${CSS}</style></head><body><main>
 <h1>Developer readiness — ${esc(meta.file)}</h1>
 <p class="meta">Platform <strong>${esc(meta.platform)}</strong> &middot; scanned ${esc(meta.scannedAt)} &middot; ${meta.frameCount} frames, ${meta.nodeCount} nodes<br>
+${meta.scope ? `<strong>Scope: <code>${esc(meta.scope)}</code></strong> &mdash; only pages and frames matching this name were scanned; the rest of the file is not covered by this report.<br>` : ''}
 ${meta.dsAuditReport
   ? `Related: design-system findings live in <code>${esc(meta.dsAuditReport)}</code> and are not repeated here.`
   : 'There is no design-system audit on record — token, colour and spacing-consistency findings are out of scope for this report.'}</p>
@@ -267,7 +334,7 @@ ${cats.length ? cats.map((cat) => `<h3>${esc(cat)}</h3>${rest.filter((f) => f.ca
 
 ${Object.keys(lows).length ? `<h2>Low-severity roll-up</h2>
 <div class="scroll"><table><tr><th>Category</th><th>Count</th><th>Examples</th></tr>
-${Object.entries(lows).map(([cat, v]) => `<tr><td>${esc(cat)}</td><td>${v.count}</td><td>${v.examples.map((f) => `<a href="${esc(f.link)}">${esc(f.location.layers[0] || f.nodeIds[0])}</a>`).join(', ')}</td></tr>`).join('')}
+${Object.entries(lows).map(([cat, v]) => `<tr><td>${esc(cat)}</td><td>${v.count}</td><td>${v.examples.map((f) => `<a href="${esc(f.link || '')}">${esc(locOf(f).layers[0] || f.nodeIds?.[0] || f.title)}</a>`).join(', ')}</td></tr>`).join('')}
 </table></div><p class="meta">Complete list in <code>findings.json</code>.</p>` : ''}
 </main></body></html>`;
 }
@@ -317,6 +384,21 @@ function main() {
   } catch (e) {
     console.error(`cannot read findings file ${src}: ${e.message}`);
     process.exit(2);
+  }
+
+  // The last gate before a client reads this. Layer 3 wrote straight into
+  // findings.json without passing finding(), so "Confidence: Low is never a
+  // finding" - the property this whole feature exists to hold - is only
+  // actually enforced if it is checked HERE. Fail loudly and name the
+  // finding; do not render a report that quietly launders a guess.
+  for (const f of data.findings || []) {
+    try {
+      validateFinding(f);
+    } catch (e) {
+      console.error(`invalid finding in ${src}: ${e.message}`);
+      console.error('Confidence: Low is never a finding - move it to decisions[] as a question.');
+      process.exit(2);
+    }
   }
 
   mkdirSync(outDir, { recursive: true });

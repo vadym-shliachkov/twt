@@ -63,7 +63,7 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 Strip and remember a `subagent-collect` token first (CONVENTIONS rule 13). Then read `$ARGUMENTS` for:
 - a `figma.com` URL - the file to audit. If absent, ask (plain text, free-form): "Give me the Figma file URL to audit." Wait. In collect mode, abort with that message instead of prompting.
 - `--platform web|wordpress` - if absent, ask via **AskUserQuestion** (single-select, header "Platform"): **Web** (static site or SPA) / **WordPress** (Gutenberg / Elementor - adds CMS-specific checks) / **You decide** (inferred from the project's existing `conventions.md`, defaulting to Web). In collect mode, infer without asking and record the inference.
-- `--scope <name>` - optional page or frame name limiting the scan.
+- `--scope <name>` - optional page or frame name limiting the scan. Remember it as `<SCOPE>` (or `null`); it is threaded through Step 2 **and** Step 3, and both reports print it in their header. A scope that is parsed and then dropped produces a whole-file scan that reads as a scoped one, or the reverse - either way the reader is misled about what was covered.
 
 Create `.twt-artifacts/figma-dev-audit/` as `<OUT>`.
 
@@ -76,6 +76,14 @@ If `<OUT>/readiness-report.md` already exists, ask via **AskUserQuestion** (sing
 Load the `figma-use` skill first - it is a mandatory prerequisite for every `use_figma` call and skipping it causes hard-to-debug failures.
 
 Read `${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit/scan.js` with the Read tool and pass its **contents verbatim** as the code payload to `use_figma` against the file URL. Do not paraphrase, trim, or regenerate it - a scan that drifts between runs produces findings that drift between runs.
+
+**When `<SCOPE>` is set**, prepend exactly one line ahead of those contents and change nothing else:
+
+```
+var TWT_SCOPE = "<SCOPE>";
+```
+
+That is the only supported knob. The scan matches it case-insensitively as a substring against page names and top-level frame names (a page name pulls in every frame on it; a SECTION name pulls in every frame inside it).
 
 Write the returned JSON to `<OUT>/facts.json`.
 
@@ -91,7 +99,9 @@ One Bash call, literal paths, no env vars (CONVENTIONS — keep every Bash call 
 
 `node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit.mjs" "<OUT>/facts.json" --out "<OUT>" --platform <platform> --url "<figma-url>"`
 
-Add `--ds-audit "<DS>"` when a ds-audit report was detected. Confirm `<OUT>/findings.json` exists before continuing.
+Add `--ds-audit "<DS>"` when a ds-audit report was detected, and `--scope "<SCOPE>"` when a scope was given. Confirm `<OUT>/findings.json` exists before continuing.
+
+Pass the **full** Figma URL exactly as the user gave it, query string and all - the engine strips `?...` before building deep links, so a copied browser URL (`...?node-id=0-1&t=...`) is fine.
 
 ## Step 4 - Add judgment (this is your work)
 
@@ -99,7 +109,39 @@ Read `<OUT>/findings.json`. Two jobs, in order:
 
 **4a. Enrich every existing finding.** Each arrives with `impact: null` and `action: null`. The engine knows a text node is fixed-height; only you can say what that costs the developer and what to do about it. Write both fields for every finding. Keep `impact` concrete (what breaks, when) and `action` practical (the specific fix, not "review this").
 
-**4b. Add what rules cannot measure.** Using `facts.json` plus `get_screenshot` on representative frames, add findings for the categories no rule covers - **States**, **Forms**, **Interaction, flows & animation**, **Content flexibility & a11y risk** (the content half), and **Platform/CMS risk**. Every one you add gets `"source": "model"` and `"confidence": "Medium"`. Rules to hold to:
+**4b. Add what rules cannot measure.** Using `facts.json` plus `get_screenshot` on representative frames, add findings for the categories no rule covers - **States**, **Forms**, **Interaction, flows & animation**, **Content flexibility & a11y risk** (the content half), and **Platform/CMS risk**. Every one you add gets `"source": "model"` and `"confidence": "Medium"`.
+
+**The finding schema - every key below is required on every finding you write.** You are writing `findings.json` by hand, so nothing validates it until the renderer does, and a missing key is a broken report rather than an error message:
+
+```json
+{
+  "id": "MODEL-states-1",
+  "rule": "MODEL",
+  "title": "Data table has no empty state",
+  "category": "States",
+  "severity": "High",
+  "confidence": "Medium",
+  "nodeIds": ["1:234"],
+  "location": { "page": "Screens", "frame": "Dashboard", "layers": ["Results table"] },
+  "link": "<figma-url>?node-id=1-234",
+  "detected": "what is in the file",
+  "impact": "what it costs development",
+  "action": "the practical fix",
+  "owner": "Designer",
+  "blocking": false,
+  "shot": "shots/1-234.png"
+}
+```
+
+- `location` is **required**, and so are all three of its keys. Use `{"page": "", "frame": "", "layers": []}` for a file-level finding - never omit the object, and never omit `layers`.
+- `link` follows the rule-derived findings: the file URL with the query string stripped, then `?node-id=<id>` with **every** colon replaced by a dash (`I423:12;9:8` becomes `I423-12;9-8`).
+- **`"severity": "Blocker"` requires `"blocking": true`.** They are two fields carrying one fact, and when they disagree the Summary counts a Blocker and the matrix reads *Not ready* while **Blocking issues** says *None* - the most misleading state this report can be in.
+- `blocking` is `false` for every other severity. `shot` is optional (Step 5 sets it).
+- `category` must be one of the twelve, `owner` one of the five, `confidence` `High` or `Medium`. The renderer **refuses to run** on anything else and names the finding's `id`.
+
+**Re-sort before you write.** Append your findings, then sort the whole `findings` array by severity - `Blocker`, `High`, `Medium`, `Low` - keeping the existing order within each band. The renderer's per-category cap of 5 is a priority queue, so an unsorted High buried after five Mediums is the one that gets withheld.
+
+Rules to hold to:
 
 - **Never write `"confidence": "Low"`.** If you cannot establish it from the file, it is a `decisions[]` entry, not a finding. This is what keeps the report honest - a guess in the shape of a finding is worse than no finding.
 - **Do not invent findings to raise the count.** An empty category is a real and reportable result.
@@ -112,7 +154,16 @@ Write the enriched structure back to `<OUT>/findings.json`.
 
 ## Step 5 - Screenshots for spatial blockers
 
-For **Blocker and High** findings in spatial categories only - Responsive coverage, Auto Layout & sizing, Assets & exports, Effects & implementation cost, and the contrast findings in Content flexibility & a11y risk - call `get_screenshot` on the finding's node and save to `<OUT>/shots/<node-id>.png`. Set that finding's `shot` field to the relative path `shots/<node-id>.png`.
+For **Blocker and High** findings in spatial categories only - Responsive coverage, Auto Layout & sizing, Assets & exports, Effects & implementation cost, and the contrast findings in Content flexibility & a11y risk - call `get_screenshot` on the finding's node and save the image under `<OUT>/shots/`.
+
+**Sanitise the filename.** A Figma node id is `1:23`, and an instance descendant is `I423:12;9:8` - `:` is illegal in a Windows filename and `;` is best avoided. Replace **every** `:` and `;` with `-`:
+
+| node id | filename |
+|---|---|
+| `1:23` | `shots/1-23.png` |
+| `I423:12;9:8` | `shots/I423-12-9-8.png` |
+
+Set that finding's `shot` field to the **same** sanitised relative path (`shots/1-23.png`), so the HTML `<img src>` resolves to the file you actually wrote. The renderer only embeds a `shot` that begins with `shots/`; anything else is dropped, because this page is handed to clients and must make no external request.
 
 **Cap at 12 images.** Never screenshot naming, export-setting, or hygiene findings - an image of a badly named layer communicates nothing the text did not. Every finding already carries a `?node-id=` deep link, which navigates better than an image anyway.
 
@@ -123,6 +174,8 @@ One Bash call:
 `node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-report.mjs" "<OUT>/findings.json" --out "<OUT>"`
 
 Confirm both `readiness-report.md` and `readiness-report.html` exist.
+
+**If it exits non-zero** it has named an invalid finding by `id` - almost always one of yours from Step 4b. Fix that finding in `findings.json` (a `Confidence: Low` belongs in `decisions[]` as a question, not in `findings`) and re-run. Never hand-write the report to route around the gate: it is the last thing standing between a guess and a client reading it as a measured fact.
 
 ## Step 7 - Report
 

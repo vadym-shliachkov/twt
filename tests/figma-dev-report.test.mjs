@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readiness, applyCaps, renderMarkdown, renderHtml, ROW_CATEGORIES } from '../tools/figma-dev-report.mjs';
+
+const TOOL = fileURLToPath(new URL('../tools/figma-dev-report.mjs', import.meta.url));
 
 const f = (o) => ({
   id: o.id || 'X-1', rule: o.rule || 'X', title: o.title || 'T',
@@ -203,4 +210,146 @@ test('renderHtml states a withheld count even when a category\'s cap overflow is
   const many = Array.from({ length: 6 }, (_, i) => f({ id: `B-${i}`, category: 'States', severity: 'Blocker' }));
   const html = renderHtml(envelope(many));
   assert.match(html, /1 further States issue\(s\) withheld/i);
+});
+
+// --- The Layer 3 boundary. Everything below concerns findings the MODEL
+// wrote straight into findings.json, bypassing the engine's finding()
+// constructor entirely. This renderer is the last reader before a client,
+// so it is where the contract has to actually hold. ---
+
+test('applyCaps re-sorts by severity instead of trusting its caller', () => {
+  // The model pass appends its findings to the END of findings.json with no
+  // re-sort. A model-authored High landing after five rule Mediums in one
+  // category used to be the one withheld, while the Mediums rendered - the
+  // cap silently inverted its own priority order.
+  const mixed = [
+    ...Array.from({ length: 5 }, (_, i) => f({ id: `M-${i}`, category: 'States', severity: 'Medium' })),
+    f({ id: 'model-high', category: 'States', severity: 'High', source: 'model', confidence: 'Medium' }),
+  ];
+  const { shown, withheld } = applyCaps(mixed);
+  assert.ok(shown.some((x) => x.id === 'model-high'), 'the High is shown, whatever order it arrived in');
+  assert.equal(shown.length, 5);
+  assert.equal(withheld['States'], 1);
+  assert.equal(shown[0].severity, 'High');
+});
+
+test('applyCaps leaves an already-sorted array in its original order', () => {
+  const sorted = [
+    f({ id: 'b', category: 'States', severity: 'Blocker' }),
+    f({ id: 'h1', category: 'States', severity: 'High' }),
+    f({ id: 'h2', category: 'Forms', severity: 'High' }),
+    f({ id: 'm', category: 'States', severity: 'Medium' }),
+  ];
+  assert.deepEqual(applyCaps(sorted).shown.map((x) => x.id), ['b', 'h1', 'h2', 'm']);
+});
+
+test('a model-authored finding with no location renders instead of throwing', () => {
+  // Probed against the pre-fix renderer: no `location` threw "Cannot read
+  // properties of undefined (reading 'page')", and a `location` with no
+  // `layers` threw on `.length`. The model writes this file by hand; the
+  // renderer must survive an incomplete one rather than produce nothing.
+  const bare = { id: 'M-1', rule: 'MODEL', title: 'Missing empty state',
+    category: 'States', severity: 'High', confidence: 'Medium',
+    nodeIds: [], link: '', detected: 'd', impact: 'i', action: 'a',
+    owner: 'Designer', source: 'model' };
+  const md = renderMarkdown(envelope([bare]));
+  assert.match(md, /Missing empty state/);
+  assert.match(md, /whole file/, 'a finding with no page states so rather than printing " / "');
+  assert.doesNotMatch(md, /\[open in Figma\]\(\)/, 'no link to nowhere');
+
+  const partial = { ...bare, id: 'M-2', location: { page: 'Screens', frame: 'Home' } };
+  const md2 = renderMarkdown(envelope([partial]));
+  assert.match(md2, /Screens \/ Home/);
+  assert.doesNotThrow(() => renderHtml(envelope([bare, partial])));
+});
+
+test('a model-authored Blocker without a blocking flag still appears under Blocking issues', () => {
+  // The Summary counted it and the matrix read "Not ready", but "Blocking
+  // issues" said "None." - the single most misleading state this report can
+  // be in. Severity is the authority; blocking follows from it.
+  const modelBlocker = { id: 'M-3', rule: 'MODEL', title: 'No mobile checkout flow',
+    category: 'Forms', severity: 'Blocker', confidence: 'Medium', nodeIds: ['1:1'],
+    location: { page: 'P', frame: 'F', layers: [] }, link: 'https://figma.com/design/K/T?node-id=1-1',
+    detected: 'd', impact: 'i', action: 'a', owner: 'Designer', source: 'model' };
+  const md = renderMarkdown(envelope([modelBlocker]));
+  const blocking = md.slice(md.indexOf('## Blocking issues'), md.indexOf('## Decisions required'));
+  assert.match(blocking, /No mobile checkout flow/);
+  assert.doesNotMatch(blocking, /_None\._/);
+  assert.match(md, /\*\*Blocking:\*\* Yes/);
+
+  const html = renderHtml(envelope([modelBlocker]));
+  assert.match(html, /Blocking: Yes/);
+
+  // An explicit "blocking": false on a Blocker is the same contradiction, not
+  // a different one - the Summary and all six matrix rows count it as a
+  // Blocker either way, so this section must too.
+  const contradictory = { ...modelBlocker, id: 'M-4', blocking: false };
+  const md2 = renderMarkdown(envelope([contradictory]));
+  assert.doesNotMatch(md2.slice(md2.indexOf('## Blocking issues'), md2.indexOf('## Decisions required')), /_None\._/);
+
+  // A non-Blocker may still opt in to the section by setting the flag.
+  const opted = { ...modelBlocker, id: 'M-5', severity: 'High', blocking: true };
+  const md3 = renderMarkdown(envelope([opted]));
+  assert.doesNotMatch(md3.slice(md3.indexOf('## Blocking issues'), md3.indexOf('## Decisions required')), /_None\._/);
+});
+
+test('renderHtml embeds a screenshot only from the report\'s own shots/ directory', () => {
+  // f.shot is model-written. A remote URL would make this client-facing page
+  // issue an external request; a traversal would point outside the report.
+  const ok = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'High', shot: 'shots/1-1.png' })]));
+  assert.match(ok, /<img src="shots\/1-1\.png"/);
+
+  for (const bad of ['https://evil.example/x.png', '/etc/passwd', 'shots/../../secret.png', '../x.png']) {
+    const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'High', shot: bad })]));
+    assert.doesNotMatch(html, /<img/, `${bad} must not render`);
+  }
+});
+
+test('both renderers state the scope, so a scoped report cannot read as a whole-file one', () => {
+  const e = envelope([f({ category: 'Responsive coverage', severity: 'High' })]);
+  e.meta.scope = 'Pricing';
+  assert.match(renderMarkdown(e), /Scope: `Pricing`/);
+  assert.match(renderMarkdown(e), /the rest of the file is not covered/i);
+  assert.match(renderHtml(e), /Scope: <code>Pricing<\/code>/);
+
+  const whole = envelope([f({ category: 'Responsive coverage', severity: 'High' })]);
+  assert.doesNotMatch(renderMarkdown(whole), /Scope:/);
+});
+
+test('the CLI refuses to render a findings file containing Confidence: Low', () => {
+  // finding() rejects Confidence: Low, but the model pass never calls
+  // finding() - it writes findings.json directly, and this renderer is the
+  // last reader. Without a gate here, a guess reaches the client wearing the
+  // shape of a measured fact, which is the failure mode the whole feature
+  // exists to prevent.
+  const dir = mkdtempSync(join(tmpdir(), 'twt-fdr-'));
+  const bad = {
+    meta: { file: 'T', url: '', platform: 'web', scope: null, scannedAt: 'now',
+            dsAuditReport: null, nodeCount: 1, frameCount: 1 },
+    findings: [{ id: 'MODEL-guess', rule: 'MODEL', title: 'Probably unlicensed font',
+      category: 'Fonts', severity: 'High', confidence: 'Low', nodeIds: [],
+      location: { page: '', frame: '', layers: [] }, link: '', detected: 'd',
+      impact: 'i', action: 'a', owner: 'Client', blocking: false, source: 'model' }],
+    decisions: [],
+  };
+  const src = join(dir, 'findings.json');
+  writeFileSync(src, JSON.stringify(bad), 'utf8');
+
+  const r = spawnSync(process.execPath, [TOOL, src, '--out', dir], { encoding: 'utf8' });
+  assert.notEqual(r.status, 0, 'must exit non-zero');
+  assert.match(r.stderr, /MODEL-guess/, 'names the offending finding');
+  assert.match(r.stderr, /confidence/i);
+  assert.throws(() => readFileSync(join(dir, 'readiness-report.md'), 'utf8'),
+    'no report is written from an invalid findings file');
+});
+
+test('the CLI renders a valid findings file and writes both reports', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-fdr-'));
+  const src = join(dir, 'findings.json');
+  writeFileSync(src, JSON.stringify(envelope([f({ category: 'States', severity: 'High' })])), 'utf8');
+
+  const r = spawnSync(process.execPath, [TOOL, src, '--out', dir], { encoding: 'utf8' });
+  assert.equal(r.status, 0, `exit ${r.status}\n${r.stderr}`);
+  assert.match(readFileSync(join(dir, 'readiness-report.md'), 'utf8'), /# Developer readiness/);
+  assert.match(readFileSync(join(dir, 'readiness-report.html'), 'utf8'), /<!doctype html>/i);
 });
