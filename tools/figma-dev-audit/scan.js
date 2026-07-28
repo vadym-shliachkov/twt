@@ -123,11 +123,23 @@ function escapesFrame(node, frame) {
   );
 }
 
-function collectFacts(root) {
+// opts.scope (optional) limits the walk to the named page or top-level frame.
+// Matching is case-insensitive SUBSTRING on the name: "pricing" matches
+// "Pricing / Desktop" and "Pricing / Mobile", which is what a user scoping a
+// screen means. A scope naming a PAGE pulls in every top-level frame on it; a
+// scope naming a SECTION pulls in every frame inside it. Pages that end up
+// contributing nothing are not listed in facts.file.pages, so a scoped scan
+// can never be mistaken for a whole-file one.
+function collectFacts(root, opts) {
   var componentNames = collectComponentNames(root, {});
+  var scopeRaw = opts && opts.scope ? String(opts.scope) : null;
+  var scope = scopeRaw ? scopeRaw.toLowerCase() : null;
+  var inScopeName = function (name) {
+    return String(name || '').toLowerCase().indexOf(scope) !== -1;
+  };
   var facts = {
     file: {
-      name: root.name || '', url: '', pages: [], fonts: [],
+      name: root.name || '', url: '', scope: scopeRaw, pages: [], fonts: [],
       componentNames: Object.keys(componentNames),
     },
     frames: [],
@@ -137,14 +149,43 @@ function collectFacts(root) {
   var pages = (root.children || []).filter(function (c) { return c.type === 'PAGE'; });
 
   pages.forEach(function (page) {
-    facts.file.pages.push(page.name);
+    var pageInScope = !scope || inScopeName(page.name);
+    var contributed = false;
 
-    (page.children || []).forEach(function (frame) {
-      facts.frames.push({
-        id: frame.id, name: frame.name, page: page.name,
-        width: frame.width, height: frame.height,
-      });
+    // facts.frames means SCREENS, and only a FRAME is a screen. Collecting
+    // every top-level page child instead made component sets, sections, cover
+    // stickies and annotations into "frames" with widths - so a Components
+    // page holding a 200px Button and a 360px Card faked mobile and tablet
+    // tiers, silencing RS002 (the only Blocker rule) on a desktop-only file,
+    // and a 1440px component set fired RS003 as a false positive.
+    //
+    // SECTIONs are descended into rather than skipped: a section-organised
+    // file would otherwise yield an EMPTY facts.frames, and RS002 would go
+    // silent again via its !facts.frames.length guard. The SECTION node
+    // itself is not recorded - it is an organisational container with no
+    // layout semantics, and recording it would make its frame children look
+    // like the children of a frame with no Auto Layout (a false AL002).
+    //
+    // Non-frame page children are still WALKED into facts.nodes: components
+    // need auditing too. Only facts.frames is filtered.
+    var handleTop = function (top, inherited) {
+      var ok = inherited || !scope || inScopeName(top.name);
+      if (top.type === 'SECTION') {
+        (top.children || []).forEach(function (c) { handleTop(c, ok); });
+        return;
+      }
+      if (!ok) return;
+      contributed = true;
+      if (top.type === 'FRAME') {
+        facts.frames.push({
+          id: top.id, name: top.name, page: page.name,
+          width: top.width, height: top.height,
+        });
+      }
+      walkTop(top);
+    };
 
+    var walkTop = function (frame) {
       var walk = function (node, parentId, depth) {
         var fam = node.fontName && node.fontName.family ? node.fontName.family : null;
         var sty = node.fontName && node.fontName.style ? node.fontName.style : null;
@@ -162,7 +203,12 @@ function collectFacts(root) {
           x: node.x, y: node.y, width: node.width, height: node.height,
           visible: node.visible !== false,
           opacity: typeof node.opacity === 'number' ? node.opacity : 1,
-          layoutMode: node.layoutMode || null,
+          // The Plugin API returns the STRING 'NONE' for a frame with Auto
+          // Layout off, never null. Passing that through gave rules two
+          // shapes to test for, and the one they tested for ('falsy') was
+          // the one a frame never has - so AL002 could only ever match a
+          // GROUP. Normalise to null once, here, at the source.
+          layoutMode: node.layoutMode && node.layoutMode !== 'NONE' ? node.layoutMode : null,
           layoutSizingHorizontal: node.layoutSizingHorizontal || null,
           layoutSizingVertical: node.layoutSizingVertical || null,
           layoutPositioning: node.layoutPositioning || null,
@@ -205,7 +251,11 @@ function collectFacts(root) {
       };
 
       walk(frame, page.id, 0);
-    });
+    };
+
+    // A scope that names the PAGE puts every top-level child in scope.
+    (page.children || []).forEach(function (top) { handleTop(top, pageInScope); });
+    if (pageInScope || contributed) facts.file.pages.push(page.name);
   });
 
   return facts;
@@ -219,8 +269,16 @@ function collectFacts(root) {
 // it looks like a clean audit. Guarded with a capability check so older API
 // versions (where the call does not exist) still work.
 //
+// TWT_SCOPE is the ONE knob the caller may set, by prepending a single
+// `var TWT_SCOPE = "<name>";` line ahead of this file's contents. The file
+// body itself is still passed verbatim - a scan that drifts between runs
+// produces findings that drift between runs.
+//
 // collectFacts itself stays synchronous, so tests call it directly.
 typeof figma !== 'undefined'
   ? (figma.loadAllPagesAsync ? figma.loadAllPagesAsync() : Promise.resolve())
-      .then(function () { return JSON.stringify(collectFacts(figma.root)); })
+      .then(function () {
+        var scope = typeof TWT_SCOPE !== 'undefined' ? TWT_SCOPE : null;
+        return JSON.stringify(collectFacts(figma.root, { scope: scope }));
+      })
   : null;

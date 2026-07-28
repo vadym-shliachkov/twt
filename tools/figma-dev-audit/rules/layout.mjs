@@ -27,7 +27,7 @@ export const screenKey = (name) => {
 
 export const layoutRules = [
   {
-    id: 'AL001', category: CAT_AL,
+    id: 'AL001',
     run(facts) {
       return facts.nodes
         .filter((n) => n.type === 'TEXT' && n.textAutoResize === 'NONE' && (n.charCount || 0) >= LONG_TEXT)
@@ -40,7 +40,7 @@ export const layoutRules = [
     },
   },
   {
-    id: 'AL002', category: CAT_AL,
+    id: 'AL002',
     run(facts) {
       const kids = new Map();
       for (const n of facts.nodes) {
@@ -48,10 +48,14 @@ export const layoutRules = [
         if (!kids.has(n.parentId)) kids.set(n.parentId, []);
         kids.get(n.parentId).push(n);
       }
+      // Both shapes are tested on purpose. scan.js normalises Figma's
+      // 'NONE' to null at the source, but this rule must be correct against
+      // a facts.json produced by any version of the scan - the version that
+      // only checked falsiness silently never fired on a single frame.
       return facts.nodes
         .filter((n) => {
           const cs = kids.get(n.id) || [];
-          return !n.layoutMode && cs.length >= 3
+          return (!n.layoutMode || n.layoutMode === 'NONE') && cs.length >= 3
             && !cs.every((c) => c.layoutPositioning === 'ABSOLUTE');
         })
         .map((n) => finding({
@@ -63,7 +67,7 @@ export const layoutRules = [
     },
   },
   {
-    id: 'AL003', category: CAT_AL,
+    id: 'AL003',
     run(facts) {
       return facts.nodes
         .filter((n) => n.type === 'RECTANGLE' && /spacer|gap|spacing/i.test(n.name) && n.fills.length === 0)
@@ -76,7 +80,7 @@ export const layoutRules = [
     },
   },
   {
-    id: 'RS001', category: CAT_RS,
+    id: 'RS001',
     run(facts) {
       return facts.nodes
         .filter((n) => n.outOfBounds)
@@ -89,7 +93,7 @@ export const layoutRules = [
     },
   },
   {
-    id: 'RS002', category: CAT_RS,
+    id: 'RS002',
     run(facts) {
       const tiers = new Set((facts.frames || []).map((f) => tierOf(f.width)));
       if (tiers.size > 1 || !facts.frames?.length) return [];
@@ -102,7 +106,7 @@ export const layoutRules = [
     },
   },
   {
-    id: 'RS003', category: CAT_RS,
+    id: 'RS003',
     run(facts) {
       const byKey = new Map();
       for (const f of facts.frames || []) {
