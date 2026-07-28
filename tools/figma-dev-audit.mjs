@@ -35,21 +35,33 @@ export const CATEGORIES = [
   'Platform/CMS risk',
 ];
 
-export function finding(p) {
-  if (!SEVERITIES.includes(p.severity)) {
-    throw new Error(`bad severity "${p.severity}" (expected one of ${SEVERITIES.join(', ')})`);
+// The single implementation of the vocabulary contract, called from BOTH
+// ends of the pipeline. finding() guards what the rules construct, and
+// figma-dev-report.mjs guards what it is handed - because Layer 3 (the model
+// pass) writes findings.json directly and never goes through finding(). Two
+// copies of these checks would drift, and the one that drifted would be the
+// one guarding the layer a human wrote.
+export function validateFinding(p) {
+  const at = p?.id || p?.rule || '(unidentified finding)';
+  if (!SEVERITIES.includes(p?.severity)) {
+    throw new Error(`${at}: bad severity "${p?.severity}" (expected one of ${SEVERITIES.join(', ')})`);
   }
   // Confidence: Low is never a finding - it belongs in decisions[]. Enforced
   // here so no rule or model pass can smuggle a guess in as a detected fact.
   if (!CONFIDENCES.includes(p.confidence)) {
-    throw new Error(`bad confidence "${p.confidence}" (expected High or Medium; Low must become a decision)`);
+    throw new Error(`${at}: bad confidence "${p.confidence}" (expected High or Medium; Low must become a decision)`);
   }
   if (!OWNERS.includes(p.owner)) {
-    throw new Error(`bad owner "${p.owner}" (expected one of ${OWNERS.join(', ')})`);
+    throw new Error(`${at}: bad owner "${p.owner}" (expected one of ${OWNERS.join(', ')})`);
   }
   if (!CATEGORIES.includes(p.category)) {
-    throw new Error(`bad category "${p.category}"`);
+    throw new Error(`${at}: bad category "${p.category}"`);
   }
+  return p;
+}
+
+export function finding(p) {
+  validateFinding(p);
   return {
     id: `${p.rule}-${(p.nodeIds || [])[0] || 'file'}`,
     rule: p.rule,
@@ -69,7 +81,19 @@ export function finding(p) {
   };
 }
 
-const linkFor = (url, id) => (url ? `${url}?node-id=${String(id).replace(':', '-')}` : '');
+// The normal way a user supplies a Figma URL is to copy it from the browser,
+// which means it already carries "?node-id=0-1&t=...". Appending a second "?"
+// makes the browser read the whole tail as one parameter value, so EVERY
+// finding deep-links to the same wrong node. Strip query and hash first.
+//
+// Every colon must go, not just the first: an instance descendant's id looks
+// like "I423:12;9:8" and Figma's URL form is "I423-12;9-8". AL001, A11Y001,
+// CM004 and HY002 all commonly fire inside instances.
+const linkFor = (url, id) => (url ? `${String(url).split(/[?#]/)[0]}?node-id=${String(id).replace(/:/g, '-')}` : '');
+
+// A finding with no node (FN002 counts fonts across the whole file) gets the
+// file link, not a dangling "...?node-id=".
+const fileLink = (url) => (url ? String(url).split(/[?#]/)[0] : '');
 
 export function evaluate(facts, opts = {}) {
   const url = opts.url || facts.file?.url || '';
@@ -85,7 +109,7 @@ export function evaluate(facts, opts = {}) {
     const out = rule.run(facts, ctx) || [];
     for (const f of out) {
       const first = ctx.byId.get(f.nodeIds?.[0]);
-      f.link = f.link || linkFor(url, f.nodeIds?.[0] || '');
+      f.link = f.link || (f.nodeIds?.[0] ? linkFor(url, f.nodeIds[0]) : fileLink(url));
       if (first && !f.location.page) {
         f.location = {
           page: first.page,
@@ -106,7 +130,11 @@ export function evaluate(facts, opts = {}) {
       file: facts.file?.name || '',
       url,
       platform: ctx.platform,
-      scope: opts.scope || null,
+      // facts.file.scope is what the scan actually walked; the flag is what
+      // the caller asked for. Falling back to the facts means a report can
+      // never present a scoped scan as a whole-file one just because Step 3
+      // forgot to repeat the flag.
+      scope: opts.scope || facts.file?.scope || null,
       scannedAt: new Date().toISOString(),
       dsAuditReport: opts.dsAuditReport || null,
       nodeCount: (facts.nodes || []).length,

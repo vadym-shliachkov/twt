@@ -6,8 +6,14 @@ import { evaluate, finding, CATEGORIES, SEVERITIES, OWNERS } from '../tools/figm
 // Tasks 3-6 all build their rule tests on it, so a field that drifts from
 // what collectFacts() actually emits produces rules that pass their tests
 // and do nothing on a real file.
+// NOTE ON layoutMode BELOW: collectFacts() normalises Figma's 'NONE' string
+// to null, so null here is what the emitter really produces. It was not
+// always: the rule that reads it was written against a fixture that guessed,
+// and never fired on a real frame. tests/figma-dev-integration.test.mjs now
+// joins the emitter to the rules with no fixture in between, which is what
+// actually pins this. Keep both.
 export const facts = (nodes, extra = {}) => ({
-  file: { name: 'T', url: 'https://figma.com/design/K/T', pages: ['P'], fonts: [], componentNames: [] },
+  file: { name: 'T', url: 'https://figma.com/design/K/T', scope: null, pages: ['P'], fonts: [], componentNames: [] },
   frames: [{ id: '1:2', name: 'F', page: 'P', width: 1440, height: 900 }],
   nodes: nodes.map((n) => ({
     id: '1:9', name: 'n', type: 'FRAME', page: 'P', frame: 'F', parentId: '1:2', depth: 1,
@@ -100,6 +106,65 @@ test('evaluate() builds a node-id deep link on every finding', () => {
   }
 });
 
+test('deep links survive a Figma URL copied from the browser', () => {
+  // "?node-id=0-1&t=..." is the NORMAL form of a copied Figma URL. Appending
+  // a second "?" made the browser read the whole tail as one parameter
+  // value, so every finding in the report navigated to the same wrong node.
+  const out = evaluate(
+    facts([{ id: '1:6', type: 'TEXT', textAutoResize: 'NONE', charCount: 40 }], { frames: [
+      { id: '1:2', name: 'Home / Desktop', page: 'P', width: 1440, height: 900 },
+      { id: '1:3', name: 'Home / Mobile', page: 'P', width: 390, height: 900 },
+    ] }),
+    { platform: 'web', url: 'https://www.figma.com/design/K/T?node-id=0-1&t=xyz-0#frame' },
+  );
+  assert.equal(out.findings[0].link, 'https://www.figma.com/design/K/T?node-id=1-6');
+});
+
+test('every colon in a node id becomes a dash, not just the first', () => {
+  // Instance descendants carry ids like "I423:12;9:8". AL001, A11Y001, CM004
+  // and HY002 all commonly fire inside instances, so a single-colon replace
+  // mislinks a large share of a real report's findings.
+  const out = evaluate(
+    facts([{ id: 'I423:12;9:8', type: 'TEXT', textAutoResize: 'NONE', charCount: 40 }], { frames: [
+      { id: '1:2', name: 'Home / Desktop', page: 'P', width: 1440, height: 900 },
+      { id: '1:3', name: 'Home / Mobile', page: 'P', width: 390, height: 900 },
+    ] }),
+    { platform: 'web', url: 'https://figma.com/design/K/T' },
+  );
+  assert.equal(out.findings[0].link, 'https://figma.com/design/K/T?node-id=I423-12;9-8');
+});
+
+test('a file-level finding gets the bare file URL, not a dangling ?node-id=', () => {
+  const f = facts([], { frames: [
+    { id: '1:2', name: 'Home / Desktop', page: 'P', width: 1440, height: 900 },
+    { id: '1:3', name: 'Home / Mobile', page: 'P', width: 390, height: 900 },
+  ] });
+  f.file.fonts = [{ family: 'A', style: 'R' }, { family: 'B', style: 'R' },
+                  { family: 'C', style: 'R' }, { family: 'D', style: 'R' }];
+  const out = evaluate(f, { url: 'https://figma.com/design/K/T?node-id=0-1' });
+  const hit = out.findings.find((x) => x.rule === 'FN002');
+  assert.deepEqual(hit.nodeIds, []);
+  assert.equal(hit.link, 'https://figma.com/design/K/T');
+});
+
+test('meta.scope falls back to the scope the scan actually walked', () => {
+  const f = facts([]);
+  f.file.scope = 'Pricing';
+  assert.equal(evaluate(f, {}).meta.scope, 'Pricing');
+  assert.equal(evaluate(f, { scope: 'Home' }).meta.scope, 'Home', 'an explicit flag still wins');
+  assert.equal(evaluate(facts([]), {}).meta.scope, null);
+});
+
+test('validateFinding is the single implementation both layers call', async () => {
+  const { validateFinding } = await import('../tools/figma-dev-audit.mjs');
+  assert.throws(() => validateFinding({ id: 'M-1', severity: 'High', confidence: 'Low',
+    owner: 'Designer', category: CATEGORIES[0] }), /M-1: bad confidence/);
+  assert.throws(() => validateFinding({ id: 'M-2', severity: 'Urgent', confidence: 'High',
+    owner: 'Designer', category: CATEGORIES[0] }), /M-2: bad severity/);
+  assert.doesNotThrow(() => validateFinding({ id: 'M-3', severity: 'High', confidence: 'Medium',
+    owner: 'Developer', category: CATEGORIES[0] }));
+});
+
 test('exported vocabularies are exactly the spec vocabularies', () => {
   assert.deepEqual(SEVERITIES, ['Blocker', 'High', 'Medium', 'Low']);
   assert.deepEqual(OWNERS, ['Designer', 'Client', 'Developer', 'Content team', 'Product owner']);
@@ -137,10 +202,19 @@ test('AL001 flags a fixed-height text container holding real copy', () => {
   assert.equal(hits[0].link, 'https://figma.com/design/K/T?node-id=1-6');
 });
 
-test('AL002 flags a multi-child frame with no Auto Layout', () => {
-  const kids = ['1:10', '1:11', '1:12'].map((id) => ({ id, parentId: '1:9', type: 'FRAME' }));
-  const out = ev2(twoTierFacts([{ id: '1:9', name: 'Card row', type: 'FRAME', layoutMode: null }, ...kids]));
-  assert.equal(byRule(out, 'AL002').length, 1);
+test('AL002 flags a multi-child frame with no Auto Layout, whichever shape "no Auto Layout" arrives in', () => {
+  // scan.js normalises Figma's 'NONE' to null, but the rule must be correct
+  // against a facts.json written by any version of the scan. Asserting only
+  // the normalised shape is how this rule shipped able to match nothing but
+  // GROUPs: 'NONE' is truthy, so !n.layoutMode was false on every frame.
+  const kidsOf = (parentId, ids) => ids.map((id) => ({ id, parentId, type: 'FRAME' }));
+  const out = ev2(twoTierFacts([
+    { id: '1:9', name: 'Card row', type: 'FRAME', layoutMode: null },
+    ...kidsOf('1:9', ['1:10', '1:11', '1:12']),
+    { id: '1:40', name: 'Legacy row', type: 'FRAME', layoutMode: 'NONE' },
+    ...kidsOf('1:40', ['1:41', '1:42', '1:43']),
+  ]));
+  assert.deepEqual(byRule(out, 'AL002').map((f) => f.nodeIds[0]).sort(), ['1:40', '1:9']);
   assert.equal(byRule(out, 'AL002')[0].severity, 'Medium');
 });
 
@@ -316,6 +390,14 @@ test('FN001 emits a licensing decision per non-system font family, never a findi
   assert.ok(fams.some((q) => /Neue Haas Grotesk/.test(q)));
   assert.ok(!fams.some((q) => /Arial/.test(q)), 'system fonts need no licence question');
   assert.equal(out.decisions[0].owner, 'Client');
+
+  // A decision is a QUESTION, not a graded finding. The moment it carries a
+  // severity or a confidence it starts reading as a detected fact, which is
+  // exactly the failure this rule exists to prevent - so pin their absence.
+  for (const d of out.decisions) {
+    assert.ok(!('severity' in d), 'a decision carries no severity');
+    assert.ok(!('confidence' in d), 'a decision carries no confidence');
+  }
 });
 
 test('FN002 flags an oversized type inventory', () => {
@@ -343,6 +425,27 @@ test('A11Y001 flags low-contrast body text and respects the large-text threshold
   assert.ok(!hits.includes('4:3'), '#767676 on white clears 3.0 at 48px');
 });
 
+test('A11Y001 makes no contrast claim when node opacity is not 1', () => {
+  // solidHex reads FILL opacity. NODE opacity multiplies on top of it, so a
+  // 100%-opacity fill on a 40%-opacity node does NOT render at the ratio
+  // computed from its hex - and this rule stamps Confidence: High, a
+  // measurement claim. An unmeasured measurement is the one thing this
+  // report may never print.
+  const white = [{ type: 'SOLID', hex: '#ffffff', opacity: 1, boundVariable: false }];
+  const grey = [{ type: 'SOLID', hex: '#aaaaaa', opacity: 1, boundVariable: false }];
+  const out = ev2(twoTierFacts([
+    { id: '5:1', name: 'Panel', parentId: '1:2', fills: white },
+    { id: '5:2', name: 'Solid caption', type: 'TEXT', parentId: '5:1', fontSize: 14, fills: grey },
+    { id: '5:3', name: 'Faded caption', type: 'TEXT', parentId: '5:1', fontSize: 14, fills: grey, opacity: 0.4 },
+    // The text is fully opaque but sits on a translucent panel, so the
+    // background hex is not what renders behind it either.
+    { id: '5:4', name: 'Ghost panel', parentId: '1:2', fills: white, opacity: 0.5 },
+    { id: '5:5', name: 'Caption on ghost', type: 'TEXT', parentId: '5:4', fontSize: 14, fills: grey },
+  ]));
+  const hits = byRule(out, 'A11Y001').map((f) => f.nodeIds[0]);
+  assert.deepEqual(hits, ['5:2'], 'only the fully-opaque text on a fully-opaque background is measurable');
+});
+
 test('A11Y002 flags undersized touch targets', () => {
   const out = ev2(twoTierFacts([
     { id: '4:4', name: 'Close button', width: 24, height: 24 },
@@ -350,4 +453,24 @@ test('A11Y002 flags undersized touch targets', () => {
     { id: '4:6', name: 'Hero', width: 20, height: 20 },
   ]));
   assert.deepEqual(byRule(out, 'A11Y002').map((f) => f.nodeIds[0]), ['4:4']);
+});
+
+test('A11Y002 does not flag an icon inside an adequately sized button', () => {
+  // A 24x24 layer named "icon" inside a 48x48 button IS a correctly sized
+  // touch target - the user hits the button. Flagging the icon fires on
+  // every icon in the file, eats the accessibility category's cap of 5, and
+  // grades the row down on evidence that is simply wrong.
+  const out = ev2(twoTierFacts([
+    { id: '6:1', name: 'Menu button', width: 48, height: 48, parentId: '1:2' },
+    { id: '6:2', name: 'icon', width: 24, height: 24, parentId: '6:1' },
+    // Same icon, but its button is itself too small: both are real findings.
+    { id: '6:3', name: 'Close button', width: 32, height: 32, parentId: '1:2' },
+    { id: '6:4', name: 'icon / close', width: 16, height: 16, parentId: '6:3' },
+    // A small control whose parent is not a control at all still fires.
+    { id: '6:5', name: 'Card', width: 300, height: 200, parentId: '1:2' },
+    { id: '6:6', name: 'toggle', width: 20, height: 20, parentId: '6:5' },
+  ]));
+  const hits = byRule(out, 'A11Y002').map((f) => f.nodeIds[0]).sort();
+  assert.deepEqual(hits, ['6:3', '6:4', '6:6']);
+  assert.ok(!hits.includes('6:2'), 'the icon inside a 48x48 button is not an undersized target');
 });

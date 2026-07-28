@@ -15,7 +15,7 @@ const PLAIN_BLEND = new Set(['PASS_THROUGH', 'NORMAL', null]);
 
 export const assetRules = [
   {
-    id: 'AS001', category: CAT_AS,
+    id: 'AS001',
     run(facts) {
       return facts.nodes
         .filter((n) => n.hasImageFill && n.exportSettings.length === 0)
@@ -28,7 +28,7 @@ export const assetRules = [
     },
   },
   {
-    id: 'AS002', category: CAT_AS,
+    id: 'AS002',
     run(facts) {
       return facts.nodes
         .filter((n) => VECTORISH.has(n.type) && n.exportSettings.some((e) => RASTER.test(e.format || '')))
@@ -41,7 +41,7 @@ export const assetRules = [
     },
   },
   {
-    id: 'FX001', category: CAT_FX,
+    id: 'FX001',
     run(facts) {
       return facts.nodes
         .filter((n) => n.effects.some((e) => e.type === 'BACKGROUND_BLUR' || e.type === 'LAYER_BLUR'))
@@ -54,7 +54,7 @@ export const assetRules = [
     },
   },
   {
-    id: 'FX002', category: CAT_FX,
+    id: 'FX002',
     run(facts) {
       return facts.nodes
         .filter((n) => !PLAIN_BLEND.has(n.blendMode) || (n.isMask && n.type !== 'FRAME'))
@@ -69,7 +69,7 @@ export const assetRules = [
     },
   },
   {
-    id: 'HY001', category: CAT_HY,
+    id: 'HY001',
     run(facts) {
       return facts.nodes
         .filter((n) => !n.visible && n.exportSettings.length > 0)
@@ -82,7 +82,7 @@ export const assetRules = [
     },
   },
   {
-    id: 'HY002', category: CAT_HY,
+    id: 'HY002',
     run(facts) {
       return facts.nodes.filter((n) => n.fractional).map((n) => finding({
         rule: 'HY002', category: CAT_HY, severity: 'Low', confidence: 'High', owner: 'Designer',

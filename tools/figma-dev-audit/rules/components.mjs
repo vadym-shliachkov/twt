@@ -17,7 +17,7 @@ const DEFAULT_NAME = /^(Frame|Group|Rectangle|Component) \d+$|^Copy \d+$/;
 
 export const componentRules = [
   {
-    id: 'CM001', category: CAT,
+    id: 'CM001',
     // Confidence: Medium on purpose. The Plugin API leaves no detachment
     // marker, so this reads a name collision - a frame wearing a component's
     // name. That is strong evidence, not proof, and the report must not
@@ -32,7 +32,7 @@ export const componentRules = [
     },
   },
   {
-    id: 'CM002', category: CAT,
+    id: 'CM002',
     run(facts) {
       return facts.nodes
         .filter((n) => n.isInstance && n.overrideCount >= HEAVY_OVERRIDES)
@@ -45,7 +45,7 @@ export const componentRules = [
     },
   },
   {
-    id: 'CM003', category: CAT,
+    id: 'CM003',
     run(facts) {
       return facts.nodes
         .filter((n) => n.type === 'COMPONENT' && INTERACTIVE.test(n.name)
@@ -59,7 +59,7 @@ export const componentRules = [
     },
   },
   {
-    id: 'CM004', category: CAT_HY,
+    id: 'CM004',
     run(facts) {
       return facts.nodes.filter((n) => DEFAULT_NAME.test(n.name)).map((n) => finding({
         rule: 'CM004', category: CAT_HY, severity: 'Low', confidence: 'High', owner: 'Designer',

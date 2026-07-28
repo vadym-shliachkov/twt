@@ -36,7 +36,7 @@ const solidHex = (n) => {
 
 export const a11yFontRules = [
   {
-    id: 'FN001', category: CAT_FN,
+    id: 'FN001',
     run() { return []; },        // licensing is never a finding
     decisions(facts) {
       const fams = [...new Set((facts.file?.fonts || []).map((f) => f.family))]
@@ -50,7 +50,7 @@ export const a11yFontRules = [
     },
   },
   {
-    id: 'FN002', category: CAT_FN,
+    id: 'FN002',
     run(facts) {
       const fonts = facts.file?.fonts || [];
       const families = new Set(fonts.map((f) => f.family));
@@ -64,19 +64,32 @@ export const a11yFontRules = [
     },
   },
   {
-    id: 'A11Y001', category: CAT_A11Y,
+    id: 'A11Y001',
     run(facts, ctx) {
       const out = [];
       for (const n of facts.nodes) {
         if (n.type !== 'TEXT') continue;
         const fg = solidHex(n);
         if (!fg) continue;
+        // solidHex reads FILL opacity; NODE opacity is a second multiplier on
+        // top of it. A 100%-opacity fill on a node at 40% opacity does not
+        // render at the ratio computed from its hex, and this rule stamps
+        // Confidence: High - a measurement claim. If it is not the rendered
+        // ratio, there is no claim to make, so say nothing.
+        if (n.opacity !== 1) continue;
 
         // Nearest ancestor with a solid fill is the effective background.
+        // A translucent ancestor lets whatever is behind it through, so the
+        // background hex is no longer what renders either - same reason.
         let p = ctx.byId.get(n.parentId);
         let bg = null;
-        while (p && !bg) { bg = solidHex(p); p = ctx.byId.get(p.parentId); }
-        if (!bg) continue;
+        let faded = false;
+        while (p && !bg) {
+          if (p.opacity !== 1) { faded = true; break; }
+          bg = solidHex(p);
+          p = ctx.byId.get(p.parentId);
+        }
+        if (faded || !bg) continue;
 
         const fgc = parseColor(fg);
         const bgc = parseColor(bg);
@@ -97,10 +110,20 @@ export const a11yFontRules = [
     },
   },
   {
-    id: 'A11Y002', category: CAT_A11Y,
-    run(facts) {
+    id: 'A11Y002',
+    run(facts, ctx) {
+      // The touch target is the control the user hits, not every layer inside
+      // it. A 24x24 layer named "icon" inside a 48x48 button IS a correctly
+      // sized target - flagging it fires on every icon in the file, eats the
+      // category's cap of 5, and pushes the accessibility row to "Ready with
+      // assumptions" on evidence that is simply wrong.
+      const insideAdequateControl = (n) => {
+        const p = ctx.byId.get(n.parentId);
+        return !!p && CONTROL.test(p.name) && p.width >= MIN_TARGET && p.height >= MIN_TARGET;
+      };
       return facts.nodes
-        .filter((n) => CONTROL.test(n.name) && (n.width < MIN_TARGET || n.height < MIN_TARGET))
+        .filter((n) => CONTROL.test(n.name) && (n.width < MIN_TARGET || n.height < MIN_TARGET)
+          && !insideAdequateControl(n))
         .map((n) => finding({
           rule: 'A11Y002', category: CAT_A11Y, severity: 'Medium', confidence: 'High', owner: 'Designer',
           title: 'Touch target below 44px',
