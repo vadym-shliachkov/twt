@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.2) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.2
+description: (v1.0.3) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -166,6 +166,8 @@ For **Blocker and High** findings in spatial categories only - Responsive covera
 Set that finding's `shot` field to the **same** sanitised relative path (`shots/1-23.png`), so the HTML `<img src>` resolves to the file you actually wrote. The renderer only embeds a `shot` that begins with `shots/`; anything else is dropped, because this page is handed to clients and must make no external request.
 
 **Cap at 12 images.** Never screenshot naming, export-setting, or hygiene findings - an image of a badly named layer communicates nothing the text did not. Every finding already carries a `?node-id=` deep link, which navigates better than an image anyway.
+
+The report renders each shot as a **200x150 thumbnail cropped to the top of the capture**, linked to the untouched file. That is deliberate: `get_screenshot` returns the node's whole render bounds, so a frame that overflows its own height comes back as a capture that is half empty canvas, and at full size it reserved more page than the finding it illustrates. Do not try to compensate by framing the capture yourself - screenshot the node, and let the reader click through for detail.
 
 ## Step 6 - Render
 
