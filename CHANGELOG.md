@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-07-29 **v1.0.86** — twt-figma-dev-audit.md → 1.0.4
 - 2026-07-29 **v1.0.85** — twt-figma-dev-audit.md → 1.0.3
 - 2026-07-28 **v1.0.84** — twt-figma-dev-audit.md → 1.0.2
 - 2026-07-27 **v1.0.83** — twt-design-system-audit.md → 1.6.2, twt-site-dev.md → 1.5.9, twt-site.md → 1.13.3, twt-develop.md → 1.3.9

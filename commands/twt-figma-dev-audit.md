@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.3) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.3
+description: (v1.0.4) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -37,7 +37,7 @@ writes:
 - v1 covers Web and WordPress. React, iOS and Android are out of scope.
 
 **Success criteria:**
-- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/`.
+- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, `facts.json` is absent **and** the report is labelled a model-only audit. A report that omits the label claims a scan that did not happen.
 - Every finding carries all ten schema fields, a working `?node-id=` link, and an owner from the closed vocabulary.
 - **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
 - No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
@@ -87,9 +87,17 @@ That is the only supported knob. The scan matches it case-insensitively as a sub
 
 Write the returned JSON to `<OUT>/facts.json`.
 
+The scan **walks every node but returns only the nodes a rule could fire on**, plus counts for everything else (`facts.totals`, `facts.limits`). That is why it survives a large file: an 84,704-node file returns tens of megabytes unreduced and never comes back. Expect `facts.nodes.length` to be far smaller than `facts.totals.nodes` — that is the design, not a truncated scan.
+
 **If `use_figma` is unavailable** (no write-capable Figma MCP connection), **stop** and report:
 
 > This audit needs a write-capable Figma MCP connection to run its Plugin API scan. Open the file in the Figma desktop app with the MCP server enabled, then re-run. I will not fall back to a read-only scan, because most of these checks are invisible to it and the report would understate what is wrong.
+
+**If the scan runs but does not return** (response too large, timeout, sandbox error), retry **once** with `--scope` narrowed to the frames that matter. If it still does not return, you may continue on judgment alone — but that run is a **model-only audit** and must be labelled as one:
+
+- Do **not** hand-write a `facts.json`. No file is better than an invented one.
+- Set `"method": "model-only"` in `meta` when you write `findings.json`, and say in Step 7 that the deterministic layer did not run. The renderer prints a method warning from that field; a report that quietly omits it claims a scan that never happened.
+- **Never put a method note in `--scope`.** `scope` states which frames were covered, and the report renders it as "only pages and frames matching this were scanned". A method note in that field turns the report's coverage statement into a false one.
 
 Never continue with a degraded scan under the same report heading.
 
@@ -99,7 +107,11 @@ One Bash call, literal paths, no env vars (CONVENTIONS — keep every Bash call 
 
 `node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit.mjs" "<OUT>/facts.json" --out "<OUT>" --platform <platform> --url "<figma-url>"`
 
-Add `--ds-audit "<DS>"` when a ds-audit report was detected, and `--scope "<SCOPE>"` when a scope was given. Confirm `<OUT>/findings.json` exists before continuing.
+Add `--ds-audit "<DS>"` when a ds-audit report was detected, and `--scope "<SCOPE>"` when a scope was given.
+
+**Confirm `<OUT>/facts.json` exists before you make this call, and `<OUT>/findings.json` after it.** A missing `facts.json` means Step 2 did not complete, and every finding in the report would then be yours alone — go back to Step 2's degraded path and label the run rather than proceeding as if the engine had spoken.
+
+Read the engine's `meta` when it returns: `truncated: true` means the walk hit its node budget and part of the file was never examined (re-run scoped), and a non-empty `sampling` means a rule matched more nodes than the scan returned. Both are printed on the report; neither is a reason to stop.
 
 Pass the **full** Figma URL exactly as the user gave it, query string and all - the engine strips `?...` before building deep links, so a copied browser URL (`...?node-id=0-1&t=...`) is fine.
 
@@ -109,7 +121,9 @@ Read `<OUT>/findings.json`. Two jobs, in order:
 
 **4a. Enrich every existing finding.** Each arrives with `impact: null` and `action: null`. The engine knows a text node is fixed-height; only you can say what that costs the developer and what to do about it. Write both fields for every finding. Keep `impact` concrete (what breaks, when) and `action` practical (the specific fix, not "review this").
 
-**4b. Add what rules cannot measure.** Using `facts.json` plus `get_screenshot` on representative frames, add findings for the categories no rule covers - **States**, **Forms**, **Interaction, flows & animation**, **Content flexibility & a11y risk** (the content half), and **Platform/CMS risk**. Every one you add gets `"source": "model"` and `"confidence": "Medium"`.
+**4b. Add what rules cannot measure.** Using `facts.json` plus `get_screenshot` on representative frames, add findings for the categories no rule covers - **States**, **Forms**, **Interaction, flows & animation**, **Content flexibility & a11y risk** (the content half), and **Platform/CMS risk**. Every one you add gets `"source": "model"`.
+
+Confidence follows the **evidence**, not the authorship: `High` when `detected` cites a number or property you read out of `facts.json` (a measured frame height, a node count, an `exportSettings` array), `Medium` when it rests on reading the design. Never `Low` - that is a `decisions[]` question. An audit whose model findings are all `Medium` understates what was actually measured, and one where they are all `High` overstates it.
 
 **The finding schema - every key below is required on every finding you write.** You are writing `findings.json` by hand, so nothing validates it until the renderer does, and a missing key is a broken report rather than an error message:
 
@@ -182,6 +196,8 @@ Confirm both `readiness-report.md` and `readiness-report.html` exist.
 ## Step 7 - Report
 
 State: the file audited, the platform, total findings by severity, the count of decisions required, and each readiness row with its status. Name the **Blocker count on its own line**. Give the full path to `readiness-report.html` on its own line as the shareable artifact.
+
+If `meta.method` is not `rule-engine`, or the scan truncated, or any rule sampled, **say so in this summary too** - not only on the page. A reader who is told "24 findings, 3 blockers" and not told the deterministic layer never ran has been given a number they cannot calibrate.
 
 If `<DS>` was absent, say so explicitly and point at `/twt-design-system-audit` for token and consistency coverage - the reader must not mistake silence on tokens for a clean bill of health.
 

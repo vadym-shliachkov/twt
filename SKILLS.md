@@ -1425,7 +1425,7 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 ## /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Answer one question about a Figma file before anyone estimates or builds from it: **can a developer build this without stopping to ask questions?** Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.
@@ -1457,7 +1457,7 @@ Answer one question about a Figma file before anyone estimates or builds from it
 - v1 covers Web and WordPress. React, iOS and Android are out of scope.
 
 **Success criteria:**
-- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/`.
+- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, `facts.json` is absent **and** the report is labelled a model-only audit. A report that omits the label claims a scan that did not happen.
 - Every finding carries all ten schema fields, a working `?node-id=` link, and an owner from the closed vocabulary.
 - **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
 - No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
