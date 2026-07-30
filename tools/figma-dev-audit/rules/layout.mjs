@@ -48,21 +48,29 @@ export const layoutRules = [
         if (!kids.has(n.parentId)) kids.set(n.parentId, []);
         kids.get(n.parentId).push(n);
       }
+      // Child counts come from the scan when it provides them, and only
+      // otherwise from grouping facts.nodes on parentId. The scan returns a
+      // reduced node set on any file big enough to matter, so a node's
+      // children are frequently absent from the array - counting them here
+      // would read 0 and this rule would go silent on exactly the large,
+      // messy files it exists for. The grouped fallback keeps an older
+      // facts.json readable.
+      const count = (n) => (typeof n.childCount === 'number' ? n.childCount : (kids.get(n.id) || []).length);
+      const allAbsolute = (n) => (typeof n.absChildCount === 'number'
+        ? n.absChildCount === n.childCount
+        : (kids.get(n.id) || []).every((c) => c.layoutPositioning === 'ABSOLUTE'));
+
       // Both shapes are tested on purpose. scan.js normalises Figma's
       // 'NONE' to null at the source, but this rule must be correct against
       // a facts.json produced by any version of the scan - the version that
       // only checked falsiness silently never fired on a single frame.
       return facts.nodes
-        .filter((n) => {
-          const cs = kids.get(n.id) || [];
-          return (!n.layoutMode || n.layoutMode === 'NONE') && cs.length >= 3
-            && !cs.every((c) => c.layoutPositioning === 'ABSOLUTE');
-        })
+        .filter((n) => (!n.layoutMode || n.layoutMode === 'NONE') && count(n) >= 3 && !allAbsolute(n))
         .map((n) => finding({
           rule: 'AL002', category: CAT_AL, severity: 'Medium', confidence: 'High', owner: 'Designer',
           title: 'Multi-child frame without Auto Layout',
           nodeIds: [n.id],
-          detected: `"${n.name}" holds ${(kids.get(n.id) || []).length} children with no Auto Layout, so spacing and reflow have to be inferred rather than read.`,
+          detected: `"${n.name}" holds ${count(n)} children with no Auto Layout, so spacing and reflow have to be inferred rather than read.`,
         }));
     },
   },

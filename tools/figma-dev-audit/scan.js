@@ -123,6 +123,67 @@ function escapesFrame(node, frame) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Reduction: why this file does not return every node
+//
+// The first version pushed one ~35-field record per node for every node in the
+// file and returned the lot as one JSON string through use_figma. That is fine
+// for a 2,000-node file and impossible for a real one: a production landing
+// page measured 84,704 nodes, which serialises to roughly 75 MB. It did not
+// fail loudly - it failed by never coming back, and the audit silently
+// continued on model judgment alone with a clean-looking report at the end.
+//
+// So the walk still visits every node (the counts must be true), but only
+// nodes a rule could actually fire on are RETURNED. Everything else is
+// counted, not carried.
+//
+// The keep reasons below are named after the rule each one feeds. That is a
+// deliberate coupling to tools/figma-dev-audit/rules/*: change a rule's
+// predicate and this list has to change with it. The coupling is defended
+// mechanically, not by this comment - tests/figma-dev-scan.test.mjs runs the
+// whole rule set over an unreduced tree and over the reduced one and asserts
+// the findings are identical. A predicate that drifts fails there.
+var MAX_NODES = 300000;        // walk budget; past this the scan says so
+var MAX_PER_REASON = 100;      // samples per reason; the true count is kept
+
+var DEFAULT_NAME_RE = /^(Frame|Group|Rectangle|Component) \d+$|^Copy \d+$/;
+var INTERACTIVE_RE = /button|input|field|card|chip|tag|badge/i;
+var CONTROL_RE = /button|icon|close|menu|toggle/i;
+var SPACER_RE = /spacer|gap|spacing/i;
+var RASTER_RE = /^(PNG|JPG)$/i;
+var VECTORISH = { VECTOR: 1, BOOLEAN_OPERATION: 1, STAR: 1, POLYGON: 1, LINE: 1 };
+var PLAIN_BLEND = { PASS_THROUGH: 1, NORMAL: 1 };
+var LONG_TEXT = 20;            // AL001
+var HEAVY_OVERRIDES = 8;       // CM002
+var MIN_TARGET = 44;           // A11Y002
+
+// Every reason a node has to survive the reduction. `rec` is the finished
+// record, so this reads exactly like the rule that consumes it.
+function keepReasons(rec) {
+  var out = [];
+  if (rec.depth <= 1) out.push('context');   // frames and their sections
+  if (rec.type === 'TEXT') {
+    out.push('A11Y001');                     // contrast needs every text node
+    if (rec.textAutoResize === 'NONE' && (rec.charCount || 0) >= LONG_TEXT) out.push('AL001');
+  }
+  if (!rec.layoutMode && rec.childCount >= 3 && rec.absChildCount !== rec.childCount) out.push('AL002');
+  if (rec.type === 'RECTANGLE' && SPACER_RE.test(rec.name) && !rec.fills.length) out.push('AL003');
+  if (rec.outOfBounds) out.push('RS001');
+  if (rec.nameMatchesComponent) out.push('CM001');
+  if (rec.isInstance && rec.overrideCount >= HEAVY_OVERRIDES) out.push('CM002');
+  if (rec.type === 'COMPONENT' && INTERACTIVE_RE.test(rec.name)
+      && rec.componentPropertyCount === 0 && !rec.variantProperties) out.push('CM003');
+  if (DEFAULT_NAME_RE.test(rec.name)) out.push('CM004');
+  if (rec.hasImageFill && !rec.exportSettings.length) out.push('AS001');
+  if (VECTORISH[rec.type] && rec.exportSettings.some(function (e) { return RASTER_RE.test(e.format || ''); })) out.push('AS002');
+  if (rec.effects.some(function (e) { return e.type === 'BACKGROUND_BLUR' || e.type === 'LAYER_BLUR'; })) out.push('FX001');
+  if (!PLAIN_BLEND[rec.blendMode || 'NORMAL'] || (rec.isMask && rec.type !== 'FRAME')) out.push('FX002');
+  if (!rec.visible && rec.exportSettings.length) out.push('HY001');
+  if (rec.fractional) out.push('HY002');
+  if (CONTROL_RE.test(rec.name) && (rec.width < MIN_TARGET || rec.height < MIN_TARGET)) out.push('A11Y002');
+  return out;
+}
+
 // opts.scope (optional) limits the walk to the named page or top-level frame.
 // Matching is case-insensitive SUBSTRING on the name: "pricing" matches
 // "Pricing / Desktop" and "Pricing / Mobile", which is what a user scoping a
@@ -133,6 +194,16 @@ function escapesFrame(node, frame) {
 function collectFacts(root, opts) {
   var componentNames = collectComponentNames(root, {});
   var scopeRaw = opts && opts.scope ? String(opts.scope) : null;
+  // opts.reduce === false returns every node instead of the rule-relevant
+  // sample. The sandbox entry point never sets it - it exists so the test
+  // suite can run the whole rule set over both node sets and assert the
+  // findings are identical, which is the only thing keeping keepReasons()
+  // honest about the rules it mirrors.
+  // opts.maxNodes lowers the walk budget so the truncation path is reachable
+  // in a test without building 300,000 fixture nodes. Same rule: the sandbox
+  // entry point never sets it.
+  var reduce = !(opts && opts.reduce === false);
+  var maxNodes = opts && typeof opts.maxNodes === 'number' ? opts.maxNodes : MAX_NODES;
   var scope = scopeRaw ? scopeRaw.toLowerCase() : null;
   var inScopeName = function (name) {
     return String(name || '').toLowerCase().indexOf(scope) !== -1;
@@ -144,7 +215,16 @@ function collectFacts(root, opts) {
     },
     frames: [],
     nodes: [],
+    // Counted over every node the walk visited, whether or not it was
+    // returned. facts.nodes.length is the sample; totals.nodes is the file.
+    totals: { nodes: 0, kept: 0, byType: {} },
+    // sampled[reason] = { matched, kept }. A rule whose matched exceeds its
+    // kept produced findings from a sample, and the report has to say so
+    // rather than let a reader count the blocks and believe that is all.
+    limits: { maxNodes: maxNodes, maxPerReason: MAX_PER_REASON, truncated: false, sampled: {} },
   };
+  var totals = facts.totals;
+  var sampled = facts.limits.sampled;
   var fontKeys = {};
   var pages = (root.children || []).filter(function (c) { return c.type === 'PAGE'; });
 
@@ -186,7 +266,16 @@ function collectFacts(root, opts) {
     };
 
     var walkTop = function (frame) {
+      // Ancestors of a kept node are kept too, and only then: A11Y001 walks up
+      // the parent chain looking for the effective background fill, and the
+      // engine's byId map has to be able to follow it. The chain is exactly
+      // the DFS stack, so it costs one flush rather than a second pass.
+      var stack = [];
       var walk = function (node, parentId, depth) {
+        if (totals.nodes >= maxNodes) { facts.limits.truncated = true; return; }
+        totals.nodes += 1;
+        totals.byType[node.type] = (totals.byType[node.type] || 0) + 1;
+
         var fam = node.fontName && node.fontName.family ? node.fontName.family : null;
         var sty = node.fontName && node.fontName.style ? node.fontName.style : null;
         if (fam) {
@@ -197,7 +286,13 @@ function collectFacts(root, opts) {
           }
         }
 
-        facts.nodes.push({
+        var children = node.children || [];
+        var absKids = 0;
+        for (var ci = 0; ci < children.length; ci++) {
+          if (children[ci].layoutPositioning === 'ABSOLUTE') absKids += 1;
+        }
+
+        var rec = {
           id: node.id, name: node.name, type: node.type,
           page: page.name, frame: frame.name, parentId: parentId, depth: depth,
           x: node.x, y: node.y, width: node.width, height: node.height,
@@ -240,14 +335,35 @@ function collectFacts(root, opts) {
             && node.fills.some(function (f) { return f.type === 'IMAGE'; }),
           outOfBounds: node !== frame && escapesFrame(node, frame),
           fractional: isFractional(node),
-        });
+          // AL002 used to count a node's children by grouping facts.nodes on
+          // parentId. Under reduction those children may not be in the array,
+          // so the count is taken here, where the tree still is.
+          childCount: children.length,
+          absChildCount: absKids,
+        };
+
+        var reasons = keepReasons(rec);
+        var keep = !reduce;
+        for (var ri = 0; ri < reasons.length; ri++) {
+          var s = sampled[reasons[ri]] || (sampled[reasons[ri]] = { matched: 0, kept: 0 });
+          s.matched += 1;
+          if (reasons[ri] === 'context' || s.kept < MAX_PER_REASON) keep = true;
+        }
+        if (keep) {
+          for (var rj = 0; rj < reasons.length; rj++) sampled[reasons[rj]].kept += 1;
+          for (var si = 0; si < stack.length; si++) {
+            if (!stack[si].pushed) { facts.nodes.push(stack[si].rec); stack[si].pushed = true; }
+          }
+          facts.nodes.push(rec);
+        }
+        stack.push({ rec: rec, pushed: keep });
 
         // Record the hidden node (it may still export) but do not walk into it:
         // its subtree is not part of the delivered design.
-        if (node.visible === false) return;
-        (node.children || []).forEach(function (child) {
-          walk(child, node.id, depth + 1);
-        });
+        if (node.visible !== false) {
+          for (var k = 0; k < children.length; k++) walk(children[k], node.id, depth + 1);
+        }
+        stack.pop();
       };
 
       walk(frame, page.id, 0);
@@ -258,6 +374,7 @@ function collectFacts(root, opts) {
     if (pageInScope || contributed) facts.file.pages.push(page.name);
   });
 
+  totals.kept = facts.nodes.length;
   return facts;
 }
 

@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readiness, applyCaps, renderMarkdown, renderHtml, ROW_CATEGORIES } from '../tools/figma-dev-report.mjs';
+import { readiness, applyCaps, renderMarkdown, renderHtml, verdict, provenance, ROW_CATEGORIES, ROW_LABELS } from '../tools/figma-dev-report.mjs';
 
 const TOOL = fileURLToPath(new URL('../tools/figma-dev-report.mjs', import.meta.url));
 
@@ -308,9 +308,10 @@ test('renderHtml embeds a screenshot only from the report\'s own shots/ director
 test('both renderers state the scope, so a scoped report cannot read as a whole-file one', () => {
   const e = envelope([f({ category: 'Responsive coverage', severity: 'High' })]);
   e.meta.scope = 'Pricing';
-  assert.match(renderMarkdown(e), /Scope: `Pricing`/);
+  assert.match(renderMarkdown(e), /\*\*Scope:\*\* `Pricing`/);
   assert.match(renderMarkdown(e), /the rest of the file is not covered/i);
-  assert.match(renderHtml(e), /Scope: <code>Pricing<\/code>/);
+  assert.match(renderHtml(e), /<strong>Scope:<\/strong> <code>Pricing<\/code>/);
+  assert.match(renderHtml(e), /the rest of the file is not covered/i);
 
   const whole = envelope([f({ category: 'Responsive coverage', severity: 'High' })]);
   assert.doesNotMatch(renderMarkdown(whole), /Scope:/);
@@ -352,4 +353,173 @@ test('the CLI renders a valid findings file and writes both reports', () => {
   assert.equal(r.status, 0, `exit ${r.status}\n${r.stderr}`);
   assert.match(readFileSync(join(dir, 'readiness-report.md'), 'utf8'), /# Developer readiness/);
   assert.match(readFileSync(join(dir, 'readiness-report.html'), 'utf8'), /<!doctype html>/i);
+});
+
+// --- Presentation contract. A report nobody can read is a report nobody acts
+// on, and all three of these came back as user feedback on a real 24-finding
+// run against an 84,704-node file. ---
+
+test('every outbound link in the HTML opens in a new tab', () => {
+  // The reader's place in a 24-finding review is the report. Navigating the
+  // tab away to Figma and expecting them back via the Back button loses the
+  // scroll position they spent the review building.
+  const e = envelope([f({ category: 'Responsive coverage', severity: 'High', shot: 'shots/1-1.png' })],
+    [{ id: 'D1', question: 'q', why: 'w', owner: 'Client' }]);
+  e.findings.push(f({ id: 'L-1', category: 'Handoff hygiene', severity: 'Low' }));
+  const html = renderHtml(e);
+  const anchors = html.match(/<a\s[^>]*>/g) || [];
+  assert.ok(anchors.length >= 3, `expected several links, got ${anchors.length}`);
+  for (const a of anchors) {
+    assert.match(a, /target="_blank"/, `link without target=_blank: ${a}`);
+    assert.match(a, /rel="noopener"/, `link without rel=noopener: ${a}`);
+  }
+});
+
+test('a screenshot renders as a bounded thumbnail linking to the full-size file', () => {
+  // get_screenshot returns the node's whole render bounds; on a frame that
+  // overflows its own height that is mostly empty canvas, and an uncapped
+  // <img> reserved 900px of page for ~350px of content.
+  const html = renderHtml(envelope([
+    f({ category: 'Responsive coverage', severity: 'High', shot: 'shots/1-1.png' }),
+  ]));
+  assert.match(html, /<a href="shots\/1-1\.png"[^>]*><img src="shots\/1-1\.png"/,
+    'the thumbnail is wrapped in a link to the untouched capture');
+  assert.match(html, /\.shot a\{[^}]*height:150px/, 'the preview area is a fixed window, not the image size');
+  assert.match(html, /\.shot img\{[^}]*object-fit:cover;object-position:top center/,
+    'the window shows the top of the capture, where the content is');
+});
+
+test('an issue card ranks impact and action above the evidence that supports them', () => {
+  // Every field used to be one bullet in a flat list, so "Category: Fonts"
+  // carried the same weight as the paragraph saying the build cannot start.
+  const html = renderHtml(envelope([f({
+    category: 'Fonts', severity: 'High',
+    title: 'TITLE_X', impact: 'IMPACT_X', action: 'ACTION_X', detected: 'DETECTED_X',
+    owner: 'Designer', confidence: 'High',
+  })]));
+  const at = (s) => html.indexOf(s);
+  assert.ok(at('TITLE_X') < at('IMPACT_X'), 'title first');
+  assert.ok(at('IMPACT_X') < at('ACTION_X'), 'impact before action');
+  assert.ok(at('ACTION_X') < at('DETECTED_X'), 'action before the evidence');
+  assert.ok(at('DETECTED_X') < at('Confidence High'), 'confidence and owner last');
+  assert.match(html, /<span class="pill serious">High<\/span>/, 'severity is a labelled pill, never colour alone');
+
+  const md = renderMarkdown(envelope([f({
+    category: 'Fonts', severity: 'High',
+    title: 'TITLE_X', impact: 'IMPACT_X', action: 'ACTION_X', detected: 'DETECTED_X',
+  })]));
+  assert.ok(md.indexOf('IMPACT_X') < md.indexOf('DETECTED_X'), 'markdown ranks the same way');
+});
+
+test('verdict states the outcome in one line, derived from the same counts as the matrix', () => {
+  const none = verdict([]);
+  assert.equal(none.status, 'Ready');
+
+  const soft = verdict([f({ category: 'States', severity: 'High' })]);
+  assert.equal(soft.status, 'Ready with assumptions');
+  assert.match(soft.line, /No blockers/);
+  assert.match(soft.line, new RegExp(ROW_LABELS.states));
+
+  const hard = verdict([f({ category: 'Responsive coverage', severity: 'Blocker' })]);
+  assert.equal(hard.status, 'Not ready');
+  assert.match(hard.line, /1 blocker\b/);
+  assert.match(hard.line, new RegExp(ROW_LABELS.responsive));
+
+  // Handoff hygiene is outside the matrix, so it can never move the verdict -
+  // the same rule the matrix already follows.
+  assert.equal(verdict([f({ category: 'Handoff hygiene', severity: 'Blocker' })]).status, 'Ready');
+
+  const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'Blocker' })]));
+  assert.match(html, /class="verdict not-ready"/);
+  assert.match(renderMarkdown(envelope([])), /## Verdict: Ready/);
+});
+
+test('the readiness matrix names each area instead of printing its internal key', () => {
+  const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'High' })]));
+  for (const label of Object.values(ROW_LABELS)) {
+    assert.ok(html.includes(label.replace(/&/g, '&amp;')), `${label} rendered`);
+  }
+  assert.match(html, /id="row-responsive"/, 'the key survives as an anchor');
+  assert.match(renderMarkdown(envelope([])), /\| Responsive & Auto Layout \|/);
+});
+
+test('a long prose scope note is not set in monospace', () => {
+  // The scope field is sometimes a short expression ("Pricing") and sometimes
+  // a paragraph of method notes. Setting the paragraph in <code> made the most
+  // important caveat on the page the hardest line to read.
+  const e = envelope([]);
+  e.meta.scope = 'D_Landing Page_V5 (198:3) and M_Landing Page (159:3) only. '
+    + 'File-wide structural counts cover all 23 top-level items.';
+  const html = renderHtml(e);
+  assert.match(html, /<strong>Scope:<\/strong>/);
+  assert.doesNotMatch(html, /<code>D_Landing/);
+  assert.doesNotMatch(renderMarkdown(e), /`D_Landing/, 'the markdown copy is not fenced either');
+  assert.ok(html.includes('File-wide structural counts'), 'the note is still stated in full');
+
+  // A scope ending in a full stop must not run into the em-dash clause that
+  // follows it, and trimming must not eat a trailing letter.
+  e.meta.scope = 'Cards';
+  assert.match(renderHtml(e), /<code>Cards<\/code>/);
+  e.meta.scope = 'Pricing.';
+  assert.match(renderHtml(e), /<code>Pricing<\/code> &mdash;/);
+});
+
+// --- Provenance. A report produced without the rule engine used to be
+// indistinguishable from one produced with it. That is the failure this
+// section exists to make impossible. ---
+
+const measured = (findings, decisions = []) => {
+  const e = envelope(findings, decisions);
+  e.meta.method = 'rule-engine';
+  e.meta.truncated = false;
+  e.meta.sampling = {};
+  return e;
+};
+
+test('a report with no rule-engine provenance says so in both renderers', () => {
+  // The real case: findings.json hand-written after the scan failed to
+  // return, rendered into a page that looked exactly like a measured audit.
+  const e = envelope([f({ category: 'States', severity: 'High', source: 'model' })]);
+  const notices = provenance(e);
+  assert.equal(notices.length, 1);
+  assert.equal(notices[0].level, 'warning');
+  assert.match(notices[0].text, /model judgment/i);
+
+  assert.match(renderHtml(e), /class="callout warning"/);
+  assert.match(renderHtml(e), /Method warning/);
+  assert.match(renderMarkdown(e), /> \*\*Method warning:\*\*/);
+});
+
+test('a report the engine did produce carries no method warning', () => {
+  const e = measured([f({ category: 'States', severity: 'High', source: 'rule' })]);
+  assert.deepEqual(provenance(e), []);
+  assert.doesNotMatch(renderHtml(e), /Method warning/);
+  assert.doesNotMatch(renderMarkdown(e), /Method warning/);
+});
+
+test('meta claiming the engine ran while no finding came from a rule is still flagged', () => {
+  // Copying `"method": "rule-engine"` onto a hand-written findings.json must
+  // not buy a clean-looking report.
+  const e = measured([f({ category: 'States', severity: 'High', source: 'model' })]);
+  const notices = provenance(e);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0].text, /No finding in this report came from the rule engine/);
+
+  // An empty file is not the same claim - there is nothing to be suspicious of.
+  assert.deepEqual(provenance(measured([])), []);
+});
+
+test('truncation and sampling are disclosed, with the true counts', () => {
+  const e = measured([f({ category: 'Handoff hygiene', severity: 'Low', source: 'rule' })]);
+  e.meta.truncated = true;
+  e.meta.sampling = { HY002: { matched: 12431, kept: 100 } };
+  const notices = provenance(e);
+  assert.equal(notices.length, 2);
+  assert.equal(notices[0].level, 'warning');
+  assert.match(notices[0].text, /node budget/);
+  assert.equal(notices[1].level, 'note');
+  assert.match(notices[1].text, /HY002 matched 12,431 nodes, 100 sampled/);
+
+  assert.match(renderHtml(e), /12,431/);
+  assert.match(renderMarkdown(e), /Method note/);
 });

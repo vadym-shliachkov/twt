@@ -89,11 +89,11 @@ export function finding(p) {
 // Every colon must go, not just the first: an instance descendant's id looks
 // like "I423:12;9:8" and Figma's URL form is "I423-12;9-8". AL001, A11Y001,
 // CM004 and HY002 all commonly fire inside instances.
-const linkFor = (url, id) => (url ? `${String(url).split(/[?#]/)[0]}?node-id=${String(id).replace(/:/g, '-')}` : '');
+export const linkFor = (url, id) => (url ? `${String(url).split(/[?#]/)[0]}?node-id=${String(id).replace(/:/g, '-')}` : '');
 
 // A finding with no node (FN002 counts fonts across the whole file) gets the
 // file link, not a dangling "...?node-id=".
-const fileLink = (url) => (url ? String(url).split(/[?#]/)[0] : '');
+export const fileLink = (url) => (url ? String(url).split(/[?#]/)[0] : '');
 
 export function evaluate(facts, opts = {}) {
   const url = opts.url || facts.file?.url || '';
@@ -137,8 +137,22 @@ export function evaluate(facts, opts = {}) {
       scope: opts.scope || facts.file?.scope || null,
       scannedAt: new Date().toISOString(),
       dsAuditReport: opts.dsAuditReport || null,
-      nodeCount: (facts.nodes || []).length,
+      // The file's size, not the sample's. The scan returns only nodes a rule
+      // could fire on; reporting facts.nodes.length here would tell a reader
+      // an 84,704-node file has 3,000 nodes in it.
+      nodeCount: facts.totals?.nodes ?? (facts.nodes || []).length,
       frameCount: (facts.frames || []).length,
+      // How this report was produced. Written here and nowhere else: a
+      // findings.json that reaches the renderer without it did not come from
+      // this engine, and the renderer says so rather than presenting model
+      // judgment in the shape of a measured scan.
+      method: 'rule-engine',
+      sampleCount: (facts.nodes || []).length,
+      truncated: facts.limits?.truncated === true,
+      // Only the reasons that actually sampled - a rule that returned
+      // everything it matched has nothing to disclose.
+      sampling: Object.fromEntries(Object.entries(facts.limits?.sampled || {})
+        .filter(([, s]) => s.matched > s.kept)),
     },
     findings,
     decisions,
