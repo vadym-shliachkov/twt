@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.5) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.5
+description: (v1.0.6) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.6
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -14,11 +14,12 @@ dependencies:
 reads:
   - $ARGUMENTS (figma URL, --platform, --scope)
   - .twt-artifacts/design/design-system-audit/audit-report.md
+  - the project's existing theme or codebase (optional — read-only, and every claim drawn from it must name the file it came from)
 writes:
   - .twt-artifacts/figma-dev-audit/facts.json
   - .twt-artifacts/figma-dev-audit/findings.json
-  - .twt-artifacts/figma-dev-audit/readiness-report.md
-  - .twt-artifacts/figma-dev-audit/readiness-report.html
+  - .twt-artifacts/figma-dev-audit/readiness-report.md (readiness-report-provisional.md on a model-only run)
+  - .twt-artifacts/figma-dev-audit/readiness-report.html (readiness-report-provisional.html on a model-only run)
   - .twt-artifacts/figma-dev-audit/shots/
 ---
 
@@ -37,7 +38,7 @@ writes:
 - v1 covers Web and WordPress. React, iOS and Android are out of scope.
 
 **Success criteria:**
-- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, `facts.json` is absent **and** the report is labelled a model-only audit. A report that omits the label claims a scan that did not happen.
+- `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, the run followed **Step 2b** and produced a counts-only `facts.json` plus `readiness-report-provisional.{md,html}`. A degraded run that renders under the measured run's filename claims a scan that did not happen.
 - `figma-dev-lint.mjs` exits 0 on `<OUT>` — every finding carries its full schema, a link to a node it cites, a non-empty `impact` and `action`, and an owner from the closed vocabulary.
 - **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
 - No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
@@ -69,7 +70,9 @@ Create `.twt-artifacts/figma-dev-audit/` as `<OUT>`.
 
 Detect an existing ds-audit report at `.twt-artifacts/design/design-system-audit/audit-report.md` (Glob/Read, never a shell command - CONVENTIONS rule 15) and remember its path as `<DS>` or `null`.
 
-If `<OUT>/readiness-report.md` already exists, ask via **AskUserQuestion** (single-select, header "Existing report"): **Re-run the audit** / **Reuse the existing report** (recommended when the file has not changed) / **You decide**. In collect mode, reuse and say so.
+If `<OUT>/readiness-report.md` **or** `<OUT>/readiness-report-provisional.md` already exists, ask via **AskUserQuestion** (single-select, header "Existing report"): **Re-run the audit** / **Reuse the existing report** (recommended when the file has not changed) / **You decide**. In collect mode, reuse and say so. If only the *provisional* report exists, recommend re-running — the previous attempt never got a scan.
+
+**Optional codebase context.** If the project already has a theme or codebase (`wp-content/themes/`, `site/`, `package.json`, a gulpfile, an existing `conventions.md`), you may read it to sharpen Platform/CMS findings — that is where the difference between "add a repeater" and "this theme strips `srcset`" lives, and it is often the most useful content in the report. Two rules: it is **read-only**, and **every claim drawn from it names the file it came from** in `detected` (`"the theme's gulpfile builds dist/svg/sprite.svg from assets/img/svg/*.svg"`). A stack assumption stated without provenance reads as measured from Figma, which it was not. If there is no codebase, say nothing about the stack beyond what `--platform` implies.
 
 ## Step 2 - Scan the file
 
@@ -93,13 +96,52 @@ The scan **walks every node but returns only the nodes a rule could fire on**, p
 
 > This audit needs a write-capable Figma MCP connection to run its Plugin API scan. Open the file in the Figma desktop app with the MCP server enabled, then re-run. I will not fall back to a read-only scan, because most of these checks are invisible to it and the report would understate what is wrong.
 
-**If the scan runs but does not return** (response too large, timeout, sandbox error), retry **once** with `--scope` narrowed to the frames that matter. If it still does not return, you may continue on judgment alone — but that run is a **model-only audit** and must be labelled as one:
+**If the scan runs but does not return** (response too large, timeout, sandbox error), retry **once** with `--scope` narrowed to the frames that matter. If it still does not return, go to **Step 2b**. Never continue with a degraded scan under the measured run's heading.
 
-- Do **not** hand-write a `facts.json`. No file is better than an invented one.
-- Set `"method": "model-only"` in `meta` when you write `findings.json`, and say in Step 7 that the deterministic layer did not run. The renderer prints a method warning from that field; a report that quietly omits it claims a scan that never happened.
-- **Never put a method note in `--scope`.** `scope` states which frames were covered, and the report renders it as "only pages and frames matching this were scanned". A method note in that field turns the report's coverage statement into a false one.
+## Step 2b - The model-only path (only when Step 2 could not return)
 
-Never continue with a degraded scan under the same report heading.
+A model-only audit is legitimate and worth reading. Looking like a measured one is not. This path is what makes the difference structural rather than a caveat the reader has to reach.
+
+**Probe for counts first.** Before giving up on numbers, run the small metadata probe — `get_metadata` on the file, or a `use_figma` call that returns *only* aggregates (node-type histogram, top-level frame list with name/id/width/height, font family/style pairs). That payload is kilobytes, not megabytes, and it comes back on files where the full scan does not. Write it to `<OUT>/facts.json` in the reduced shape:
+
+```json
+{
+  "file": { "name": "...", "url": "...", "scope": null },
+  "totals": { "nodes": 84704, "VECTOR": 73556, "GROUP": 9583, "FRAME": 834 },
+  "frames": [{ "id": "198:3", "name": "D_Landing Page_V5", "width": 1440, "height": 3627 }],
+  "nodes": [],
+  "limits": { "probe": true, "truncated": true }
+}
+```
+
+`nodes: []` is honest — no node-level walk happened, so no rule can fire and the engine is still skipped. But **every number the report prints now has a file behind it.** This is the difference between "84,704 nodes" as a citation and as an assertion. Do not run Step 3 against a probe file; `limits.probe` marks it as counts-only.
+
+**Never hand-write node-level facts.** Invented `nodes[]` entries are worse than none: they are indistinguishable from measured ones and they make the lint's location checks pass on fiction.
+
+**If even the probe fails**, write no `facts.json` — and then no finding may carry `"confidence": "High"`, because there is nothing on disk to check any number against. Step 4c enforces this and will fail the run.
+
+**Then write `findings.json` yourself**, with this envelope — Step 3 normally produces it, and on this path nobody else will:
+
+```json
+{
+  "meta": {
+    "file": "<file name>", "url": "<full figma url>", "platform": "web|wordpress",
+    "scope": null, "scannedAt": "<real ISO timestamp of this run>",
+    "dsAuditReport": "<DS path or null>",
+    "nodeCount": 84704, "frameCount": 15,
+    "method": "model-only", "sampleCount": 0, "truncated": true, "sampling": {}
+  },
+  "findings": [],
+  "decisions": []
+}
+```
+
+Three fields people get wrong here:
+- **`scannedAt` is the real time of this run.** A rounded or invented timestamp is a fabricated audit-trail field in a report whose whole problem is provenance.
+- **`scope` is `null`** unless a single substring really was passed to a scan that really ran. It is not a place for method notes, a list of frames, or a coverage caveat — the report renders it as *"only pages and frames matching this were scanned"*, so anything else makes that sentence false. Step 4c rejects a scope containing a list or prose.
+- **`nodeCount`/`frameCount` come from the probe**, not from memory. If there was no probe, use `0` rather than a number you cannot cite.
+
+Then continue at Step 4. The renderer detects `method !== "rule-engine"` and writes **`readiness-report-provisional.md` / `.html`**, titled *"Provisional developer readiness"*, with the method stated in the header line. Say so in Step 7 as well.
 
 ## Step 3 - Run the rule engine
 
@@ -109,7 +151,7 @@ One Bash call, literal paths, no env vars (CONVENTIONS — keep every Bash call 
 
 Add `--ds-audit "<DS>"` when a ds-audit report was detected, and `--scope "<SCOPE>"` when a scope was given.
 
-**Confirm `<OUT>/facts.json` exists before you make this call, and `<OUT>/findings.json` after it.** A missing `facts.json` means Step 2 did not complete, and every finding in the report would then be yours alone — go back to Step 2's degraded path and label the run rather than proceeding as if the engine had spoken.
+**Confirm `<OUT>/facts.json` exists before you make this call, and `<OUT>/findings.json` after it.** A missing `facts.json` means Step 2 did not complete, and every finding in the report would then be yours alone — go to **Step 2b** rather than proceeding as if the engine had spoken. Skip this step entirely when `facts.json` carries `limits.probe: true`: that file holds aggregates only, `nodes` is empty, and no rule can fire on it — running the engine would produce an empty `findings.json` stamped `method: "rule-engine"`, which is the one state this pipeline must never reach.
 
 Read the engine's `meta` when it returns: `truncated: true` means the walk hit its node budget and part of the file was never examined (re-run scoped), and a non-empty `sampling` means a rule matched more nodes than the scan returned. Both are printed on the report; neither is a reason to stop.
 
@@ -124,6 +166,21 @@ Read `<OUT>/findings.json`. Two jobs, in order:
 **4b. Add what rules cannot measure.** Using `facts.json` plus `get_screenshot` on representative frames, add findings for the categories no rule covers - **States**, **Forms**, **Interaction, flows & animation**, **Content flexibility & a11y risk** (the content half), and **Platform/CMS risk**. Every one you add gets `"source": "model"`.
 
 Confidence follows the **evidence**, not the authorship: `High` when `detected` cites a number or property you read out of `facts.json` (a measured frame height, a node count, an `exportSettings` array), `Medium` when it rests on reading the design. Never `Low` - that is a `decisions[]` question. An audit whose model findings are all `Medium` understates what was actually measured, and one where they are all `High` overstates it.
+
+**Severity is development impact, not issue size.** The four labels are otherwise just a vocabulary, and a vocabulary with no rubric inflates — every real gap starts to look High. One test, applied to each finding: **what does a developer do when they reach this?**
+
+| Severity | The developer… | Test |
+|---|---|---|
+| **Blocker** | …stops and cannot proceed on this piece until someone else answers | Is there a question here only the designer, client or PO can answer, and is the work undefined until they do? |
+| **High** | …proceeds, but will build it wrong or build it twice | Is there a real rework risk — a decision not made, so any choice may be reversed at review? |
+| **Medium** | …proceeds with a known compromise or measurable extra time | Is the path clear, but more expensive than the design implies? |
+| **Low** | …notices and works around it | Hygiene. No schedule effect. Renders in the roll-up only. |
+
+Calibrating against the two most common inflations:
+- **"The file has no components"** is not by itself a Blocker. A developer can build a page from loose geometry — it costs reuse and invites drift, which is *High*. It becomes a Blocker only if the file genuinely cannot tell you whether two elements are the same element, so the build is undefined rather than tedious.
+- **"Missing form states"** is High when sensible defaults exist and will merely be re-reviewed; Blocker when the states carry brand or copy nobody has written, so shipping means inventing client-facing content.
+- **Blockers are rare.** On a landing page expect 0–2. If you have written more than three, re-apply the test to each — the count should reflect how many times the build actually halts, not how much is wrong.
+- A **Handoff hygiene** finding that truly halts the build is usually miscategorised. "Which of five artboards is canonical?" is a question for `decisions[]` and a *Components & code mapping* finding — hygiene is excluded from the readiness verdict, so a Blocker filed there lands in an excluded row and reads as an inconsistency between the Summary and the matrix.
 
 **Write judgment only.** Nine fields, all of them things only you can decide:
 
@@ -152,7 +209,9 @@ Rules to hold to:
 - **Do not invent findings to raise the count.** An empty category is a real and reportable result.
 - **Combine findings that share one cause** into a single entry with several `nodeIds`, rather than repeating one problem per layer.
 - **Complex components raise severity by one level** within States, Forms, Interaction and Content flexibility. A missing empty state on a data table, autocomplete, filter set, date picker, dropdown, modal, drawer, carousel, tabs, accordion, uploader, chart or map costs materially more than the same gap on a testimonial block.
-- **Say nothing about tokens, colour consistency, spacing scale, radius scale or duplicate components.** Those belong to `/twt-design-system-audit`. If `<DS>` exists, the report already cites it.
+- **Say nothing about tokens, colour consistency, spacing scale, radius scale or duplicate components.** Those belong to `/twt-design-system-audit`. If `<DS>` exists, the report already cites it. Step 4c warns when a finding reads like one.
+- **Font licensing is never a finding.** Whether a licence was bought is a commercial fact held outside the design file, so any claim about it is a guess wearing a measurement's clothes. The rule engine's `FN001` deliberately emits nothing and files the question under `decisions[]` instead — do the same, and do not write both. What you *may* report is what the file does show: how many families and weights are in use, and the load cost that implies. Step 4c rejects a finding that mentions licensing.
+- **Stay inside the a11y boundary.** Report what the file shows and what it costs the build — no visible labels, a control under 44px, a text/background pair you actually measured. Do **not** assert a contrast ratio you did not compute (there is no ratio at all on a model-only run), and do not make legal claims: ADA, EAA and WCAG-conformance exposure are the client's counsel's call, not an inference from an artboard. "Placeholder-only fields give screen-reader users no field identification once typing starts, and the developer must add labels that were never designed" is the finding. "…which is ADA exposure" is not.
 - **For WordPress**, additionally judge: sections that resist Gutenberg blocks, editable vs non-editable ambiguity, layouts dependent on fixed content length, card grids that cannot take a dynamic count, missing empty-field behaviour, deep nesting, and likely custom-block/ACF/JS requirements.
 
 Write the enriched structure back to `<OUT>/findings.json`.
@@ -167,8 +226,11 @@ One Bash call:
 
 - `impact` or `action` still empty - the report would print *"not yet assessed"* where the reason to care belongs. That is Step 4a undone; go back and write them.
 - a `Blocker` whose `blocking` flag disagrees, a `location` missing a key, a link to a node the finding does not cite, a `shot` that resolves to no file, a decision with no `why` or an owner outside the vocabulary.
+- **`meta.scope` that is a list, a sentence, or over 80 characters** - the scan matches one substring, and both renderers print the field as *"only pages and frames matching this were scanned"*. Set it to the single substring that was scanned, or `null`.
+- **`confidence: "High"` on a run with no `facts.json`** - nothing on disk can check the number, so the claim is unreproducible. Go back to Step 2b and write the counts-only probe file, or drop those findings to `Medium`.
+- **a finding mentioning font licensing** - move it to `decisions[]` as a question for the Client.
 
-Warnings do not stop the run but are worth reading: a node cited that `facts.json` never returned (expected on a reduced scan, and it means the location could not be verified), a model finding claiming `High` confidence with no measured number in its evidence, and a category holding more than five findings.
+Warnings do not stop the run but are worth reading: a node cited that `facts.json` never returned (expected on a reduced scan, and it means the location could not be verified), a model finding claiming `High` confidence with no measured number in its evidence, a finding that reads as design-system territory (tokens, scales, palette, duplicate components), and a category holding more than five findings.
 
 Fix and re-run until it exits 0. Never edit `findings.json` to silence a check you have not understood - each one names a specific way the report misleads its reader.
 
@@ -199,15 +261,17 @@ Then render:
 
 `node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-report.mjs" "<OUT>/findings.json" --out "<OUT>"`
 
-Confirm both `readiness-report.md` and `readiness-report.html` exist.
+Confirm both rendered files exist. The renderer chooses their names from `meta.method`: a rule-engine run writes `readiness-report.{md,html}`, a model-only run writes **`readiness-report-provisional.{md,html}`** and prints which it did. Report the path it actually wrote — never rename the provisional pair to the measured pair's name, and if a stale `readiness-report.md` from an earlier attempt is sitting beside a new provisional one, say so in Step 7 rather than leaving the reader to pick.
 
 **If it exits non-zero** it has named an invalid finding by `id` - almost always one of yours from Step 4b. Fix that finding in `findings.json` (a `Confidence: Low` belongs in `decisions[]` as a question, not in `findings`) and re-run. Never hand-write the report to route around the gate: it is the last thing standing between a guess and a client reading it as a measured fact.
 
 ## Step 7 - Report
 
-State: the file audited, the platform, total findings by severity, the count of decisions required, and each readiness row with its status. Name the **Blocker count on its own line**. Give the full path to `readiness-report.html` on its own line as the shareable artifact.
+State: the file audited, the platform, total findings by severity, the count of decisions required, and each readiness row with its status. Name the **Blocker count on its own line**. Give the full path to the rendered `.html` on its own line as the shareable artifact — `readiness-report-provisional.html` if that is what was written.
 
-If `meta.method` is not `rule-engine`, or the scan truncated, or any rule sampled, **say so in this summary too** - not only on the page. A reader who is told "24 findings, 3 blockers" and not told the deterministic layer never ran has been given a number they cannot calibrate.
+When blockers sit in categories the matrix excludes, the Summary count is higher than the matrix column sums to. The report reconciles this in its own excluded row; **say the same in your summary** rather than quoting only the total, or the first person to add up the column finds a discrepancy the summary never mentioned.
+
+If `meta.method` is not `rule-engine`, or the scan truncated, or any rule sampled, **say so in this summary too** - not only on the page. A reader who is told "24 findings, 3 blockers" and not told the deterministic layer never ran has been given a number they cannot calibrate. On a model-only run, name it as a **provisional** audit and say what would make it measured: re-running Step 2 against the file in the Figma desktop app, scoped to the frames that matter.
 
 If `<DS>` was absent, say so explicitly and point at `/twt-design-system-audit` for token and consistency coverage - the reader must not mistake silence on tokens for a clean bill of health.
 

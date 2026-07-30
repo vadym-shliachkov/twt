@@ -1581,7 +1581,7 @@ flowchart TB
 ### /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -1597,14 +1597,15 @@ flowchart TB
 **Reads:**
 - $ARGUMENTS (figma URL, --platform, --scope)
 - .twt-artifacts/design/design-system-audit/audit-report.md
+- the project's existing theme or codebase (optional — read-only, and every claim drawn from it must name the file it came from)
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/figma-dev-audit/facts.json |  |
 | .twt-artifacts/figma-dev-audit/findings.json |  |
-| .twt-artifacts/figma-dev-audit/readiness-report.md |  |
-| .twt-artifacts/figma-dev-audit/readiness-report.html |  |
+| .twt-artifacts/figma-dev-audit/readiness-report.md (readiness-report-provisional.md on a model-only run) |  |
+| .twt-artifacts/figma-dev-audit/readiness-report.html (readiness-report-provisional.html on a model-only run) |  |
 | .twt-artifacts/figma-dev-audit/shots/ |  |
 
 ### /twt-figma-mockup
