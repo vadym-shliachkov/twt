@@ -340,19 +340,10 @@ test('the CLI refuses to render a findings file containing Confidence: Low', () 
   assert.notEqual(r.status, 0, 'must exit non-zero');
   assert.match(r.stderr, /MODEL-guess/, 'names the offending finding');
   assert.match(r.stderr, /confidence/i);
-  assert.throws(() => readFileSync(join(dir, 'readiness-report.md'), 'utf8'),
-    'no report is written from an invalid findings file');
-});
-
-test('the CLI renders a valid findings file and writes both reports', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'twt-fdr-'));
-  const src = join(dir, 'findings.json');
-  writeFileSync(src, JSON.stringify(envelope([f({ category: 'States', severity: 'High' })])), 'utf8');
-
-  const r = spawnSync(process.execPath, [TOOL, src, '--out', dir], { encoding: 'utf8' });
-  assert.equal(r.status, 0, `exit ${r.status}\n${r.stderr}`);
-  assert.match(readFileSync(join(dir, 'readiness-report.md'), 'utf8'), /# Developer readiness/);
-  assert.match(readFileSync(join(dir, 'readiness-report.html'), 'utf8'), /<!doctype html>/i);
+  for (const name of ['readiness-report.md', 'readiness-report-provisional.md']) {
+    assert.throws(() => readFileSync(join(dir, name), 'utf8'),
+      'no report is written from an invalid findings file');
+  }
 });
 
 // --- Presentation contract. A report nobody can read is a report nobody acts
@@ -425,9 +416,35 @@ test('verdict states the outcome in one line, derived from the same counts as th
   assert.match(hard.line, /1 blocker\b/);
   assert.match(hard.line, new RegExp(ROW_LABELS.responsive));
 
-  // Handoff hygiene is outside the matrix, so it can never move the verdict -
-  // the same rule the matrix already follows.
-  assert.equal(verdict([f({ category: 'Handoff hygiene', severity: 'Blocker' })]).status, 'Ready');
+  // Handoff hygiene has no matrix ROW - but a Blocker is a Blocker, and this
+  // assertion used to demand the opposite: a file with a blocking issue
+  // rendering "Ready - the file can be handed to development as it stands",
+  // while the Summary counted the blocker one heading above. Excluding a
+  // category from the readiness ROWS must not exclude its blockers from the
+  // VERDICT; the report says where it sits instead.
+  const stranded = verdict([f({ category: 'Handoff hygiene', severity: 'Blocker' })]);
+  assert.equal(stranded.status, 'Not ready');
+  assert.match(stranded.line, /1 blocker outside the readiness matrix, in Handoff hygiene/);
+
+  // Non-blocking hygiene findings still never move the verdict.
+  assert.equal(verdict([f({ category: 'Handoff hygiene', severity: 'High' })]).status, 'Ready');
+
+  // The verdict's blocker numbers must add up to the Summary's Blocker tile.
+  // The old line printed the FILE's total and then listed the "Not ready"
+  // rows, which are a different set: a row goes Not ready on three Highs and
+  // no blocker at all. "3 blockers - 3 areas cannot be built as designed"
+  // named an area holding zero of them.
+  const mixed = [
+    f({ id: 'a', category: 'Handoff hygiene', severity: 'Blocker' }),
+    f({ id: 'b', category: 'Components & code mapping', severity: 'Blocker' }),
+    ...Array.from({ length: 3 }, (_, i) => f({ id: `c${i}`, category: 'Responsive coverage', severity: 'High' })),
+  ];
+  const vm = verdict(mixed);
+  assert.equal(vm.status, 'Not ready');
+  assert.match(vm.line, /1 blocker in Components & code mapping/);
+  assert.match(vm.line, /1 blocker outside the readiness matrix/);
+  assert.match(vm.line, /Also: Responsive & Auto Layout carries three or more high-severity/);
+  assert.doesNotMatch(vm.line, /2 blockers/, 'the two blockers are in different places and are never summed');
 
   const html = renderHtml(envelope([f({ category: 'Responsive coverage', severity: 'Blocker' })]));
   assert.match(html, /class="verdict not-ready"/);
@@ -522,4 +539,71 @@ test('truncation and sampling are disclosed, with the true counts', () => {
 
   assert.match(renderHtml(e), /12,431/);
   assert.match(renderMarkdown(e), /Method note/);
+});
+
+test('the CLI renders a measured findings file under the measured filenames', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-fdr-'));
+  const src = join(dir, 'findings.json');
+  writeFileSync(src, JSON.stringify(measured([f({ category: 'States', severity: 'High', source: 'rule' })])), 'utf8');
+
+  const r = spawnSync(process.execPath, [TOOL, src, '--out', dir], { encoding: 'utf8' });
+  assert.equal(r.status, 0, `exit ${r.status}\n${r.stderr}`);
+  assert.match(readFileSync(join(dir, 'readiness-report.md'), 'utf8'), /^# Developer readiness/);
+  assert.match(readFileSync(join(dir, 'readiness-report.html'), 'utf8'), /<!doctype html>/i);
+  assert.throws(() => readFileSync(join(dir, 'readiness-report-provisional.md'), 'utf8'));
+});
+
+test('a model-only run is degraded in the filename, the title and the header', () => {
+  // A callout under the verdict does not survive the ways this document
+  // actually travels - forwarded as an attachment, screenshotted from the top,
+  // skimmed for the verdict, filed under its filename. The three labels that
+  // do survive all of that carry it instead.
+  const dir = mkdtempSync(join(tmpdir(), 'twt-fdr-'));
+  const src = join(dir, 'findings.json');
+  const e = envelope([f({ category: 'States', severity: 'High', source: 'model' })]);
+  e.meta.method = 'model-only';
+  writeFileSync(src, JSON.stringify(e), 'utf8');
+
+  const r = spawnSync(process.execPath, [TOOL, src, '--out', dir], { encoding: 'utf8' });
+  assert.equal(r.status, 0, `exit ${r.status}\n${r.stderr}`);
+  assert.match(r.stdout, /PROVISIONAL/, 'the CLI says which kind of report it wrote');
+
+  assert.throws(() => readFileSync(join(dir, 'readiness-report.md'), 'utf8'),
+    'a model-only run must never occupy the measured run\'s filename');
+
+  const md = readFileSync(join(dir, 'readiness-report-provisional.md'), 'utf8');
+  assert.match(md, /^# Provisional developer readiness/);
+  assert.match(md, /Method: \*\*model-only\*\* — no deterministic scan backs this report/);
+
+  const html = readFileSync(join(dir, 'readiness-report-provisional.html'), 'utf8');
+  assert.match(html, /<title>Provisional developer readiness/);
+  assert.match(html, /method <strong>model-only<\/strong>/);
+});
+
+test('the matrix Blocker column reconciles with the Summary count', () => {
+  // 3 blockers in the Summary above six rows summing to 2, with nothing on the
+  // page explaining the third, is an error any client finds by adding up a
+  // column. The unrowed categories get their own row so the arithmetic closes.
+  const e = measured([
+    f({ id: 'a', category: 'Handoff hygiene', severity: 'Blocker', source: 'rule' }),
+    f({ id: 'b', category: 'Components & code mapping', severity: 'Blocker', source: 'rule' }),
+    f({ id: 'c', category: 'Forms', severity: 'Blocker', source: 'rule' }),
+  ]);
+  const md = renderMarkdown(e);
+  assert.match(md, /\| Blockers \| 3 \|/);
+  assert.match(md, /\| Handoff hygiene _\(excluded\)_ \| Not assessed \| 1 \|/);
+
+  const rows = [...md.matchAll(/^\| (?!Area)(?!---).+? \| (?:\*\*)?[\w ]+(?:\*\*)? \| (\d+) \| \d+ \| \d+ \| \d+ \|$/gm)];
+  assert.equal(rows.length, 7, 'six readiness rows plus the excluded row');
+  assert.equal(rows.reduce((s, m) => s + Number(m[1]), 0), 3);
+
+  const html = renderHtml(e);
+  assert.match(html, /<tr id="row-excluded">/);
+  assert.match(html, /Its 1 blocker\(s\) are still counted in the Summary above/);
+});
+
+test('an audit with no unrowed findings prints no excluded row', () => {
+  const md = renderMarkdown(measured([f({ category: 'States', severity: 'High', source: 'rule' })]));
+  assert.doesNotMatch(md, /_\(excluded\)_/);
+  assert.match(md, /Handoff hygiene is excluded from the readiness verdict/);
 });

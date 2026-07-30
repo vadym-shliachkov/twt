@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { validateFinding, SEVERITIES } from './figma-dev-audit.mjs';
+import { validateFinding, SEVERITIES, CATEGORIES } from './figma-dev-audit.mjs';
 
 // Layer 3 (the model pass) writes findings.json DIRECTLY - it never goes
 // through finding(), so none of the engine's guards apply to what it wrote.
@@ -75,6 +75,27 @@ export const ROW_LABELS = {
 const PER_CATEGORY_CAP = 5;
 const ROLLUP_EXAMPLES = 2;
 
+// Categories carried by no readiness row (today: Handoff hygiene). Derived
+// from ROW_CATEGORIES rather than listed again, so adding a thirteenth
+// category cannot silently create a second unrowed one nobody accounts for.
+const ROWED = new Set(Object.values(ROW_CATEGORIES).flat());
+export const UNROWED_CATEGORIES = CATEGORIES.filter((c) => !ROWED.has(c));
+
+// The Summary counts every finding; the matrix counts only the rowed ones. So
+// a Blocker in an unrowed category made "Blockers | 3" sit above six rows
+// summing to 2, with nothing on the page explaining the missing one - a client
+// adding up the column finds an error the report never admits to. This is the
+// reconciliation: it is printed as its own matrix row and named in the verdict.
+export function unrowed(findings) {
+  const mine = findings.filter((f) => UNROWED_CATEGORIES.includes(f.category));
+  const n = (s) => mine.filter((f) => f.severity === s).length;
+  return {
+    categories: [...new Set(mine.map((f) => f.category))],
+    total: mine.length,
+    blocker: n('Blocker'), high: n('High'), medium: n('Medium'), low: n('Low'),
+  };
+}
+
 export function readiness(findings) {
   const out = {};
   for (const [row, cats] of Object.entries(ROW_CATEGORIES)) {
@@ -89,24 +110,42 @@ export function readiness(findings) {
   return out;
 }
 
-// The one sentence a reader takes away if they read nothing else. Every number
-// in it is already on the page - this only stops the reader having to assemble
-// the verdict themselves out of a 6-row matrix and a count table.
+// The one sentence a reader takes away if they read nothing else.
+//
+// It used to open with the file's TOTAL blocker count and then list the
+// "Not ready" areas, which are two unrelated sets: a row goes Not ready on
+// `high >= 3` with no blocker at all, and a blocker in an unrowed category is
+// in no row. On a real run that produced "3 blockers across the file — 3 areas
+// cannot be built as designed: Responsive & Auto Layout, ..." where Responsive
+// held zero blockers and one of the three blockers was in none of the three
+// areas named. Every number was individually true and the sentence was false.
+//
+// So the three causes are now stated separately and never summed into one
+// count: blockers inside rows, blockers outside them, and volume-driven rows.
+// The blocker numbers in this line add up to the Summary's Blocker tile.
 export function verdict(findings) {
   const rows = readiness(findings);
-  const notReady = Object.entries(rows).filter(([, v]) => v.status === 'Not ready');
+  const blocked = Object.entries(rows).filter(([, v]) => v.blocker >= 1);
+  const volume = Object.entries(rows).filter(([, v]) => v.blocker === 0 && v.status === 'Not ready');
   const assumed = Object.entries(rows).filter(([, v]) => v.status === 'Ready with assumptions');
-  const blockers = findings.filter((f) => f.severity === 'Blocker').length;
+  const out = unrowed(findings);
   const n = (c, s) => `${c} ${s}${c === 1 ? '' : 's'}`;
+  const names = (list) => list.map(([k]) => ROW_LABELS[k]).join(', ');
 
-  if (notReady.length) {
-    return {
-      status: 'Not ready',
-      line: `${blockers ? n(blockers, 'blocker') : 'Severity volume'} across the file — `
-        + `${n(notReady.length, 'area')} cannot be built as designed: `
-        + `${notReady.map(([k]) => ROW_LABELS[k]).join(', ')}.`,
-    };
+  const parts = [];
+  if (blocked.length) {
+    parts.push(`${n(blocked.reduce((s, [, v]) => s + v.blocker, 0), 'blocker')} in `
+      + `${names(blocked)} — that work cannot be built as designed.`);
   }
+  if (out.blocker) {
+    parts.push(`${n(out.blocker, 'blocker')} outside the readiness matrix, in ${out.categories.join(', ')}.`);
+  }
+  if (volume.length) {
+    parts.push(`${parts.length ? 'Also: ' : 'No blockers, but '}${names(volume)} `
+      + `carr${volume.length === 1 ? 'ies' : 'y'} three or more high-severity issues.`);
+  }
+  if (parts.length) return { status: 'Not ready', line: parts.join(' ') };
+
   if (assumed.length) {
     return {
       status: 'Ready with assumptions',
@@ -128,6 +167,20 @@ export function verdict(findings) {
 //
 // A degraded run is legitimate and still worth reading. Looking undegraded is
 // not. So this never blocks rendering - it makes the method impossible to miss.
+// A model-only run is legitimate and worth reading. Looking like a measured
+// one is not - and a single callout under the verdict does not survive the
+// ways this document actually travels: forwarded as an attachment, screenshotted
+// from the top, skimmed for the verdict line, filed under its filename.
+//
+// So the degradation is carried by the three things that survive all of that -
+// the FILENAME, the TITLE and the header line - not by a paragraph the reader
+// has to still be reading to reach. Everything else about the page is unchanged;
+// a provisional report is not a lesser report, it is a differently-sourced one,
+// and it must be impossible to file as the other kind.
+export const isProvisional = (meta) => (meta || {}).method !== 'rule-engine';
+export const titleOf = (meta) => `${isProvisional(meta) ? 'Provisional developer readiness' : 'Developer readiness'} — ${meta.file}`;
+export const basenameFor = (meta) => (isProvisional(meta) ? 'readiness-report-provisional' : 'readiness-report');
+
 export function provenance(data) {
   const meta = data.meta || {};
   const findings = data.findings || [];
@@ -236,8 +289,9 @@ export function renderMarkdown(data) {
   const count = (s) => findings.filter((f) => f.severity === s).length;
   const L = [];
 
-  L.push(`# Developer readiness — ${meta.file}`, '');
-  L.push(`Platform: **${meta.platform}** · Scanned: ${meta.scannedAt} · ${meta.frameCount} frames, ${meta.nodeCount} nodes`, '');
+  L.push(`# ${titleOf(meta)}`, '');
+  L.push(`Platform: **${meta.platform}** · Scanned: ${meta.scannedAt} · ${meta.frameCount} frames, ${meta.nodeCount} nodes`
+    + (isProvisional(meta) ? ` · Method: **${meta.method || 'unrecorded'}** — no deterministic scan backs this report` : ''), '');
   // A scoped report covers part of the file. Saying so in the header is the
   // only thing standing between it and being read as a whole-file verdict.
   // Backticks around a short scope expression read as code; around a
@@ -272,7 +326,16 @@ export function renderMarkdown(data) {
   for (const [row, r] of Object.entries(rows)) {
     L.push(`| ${ROW_LABELS[row]} | **${r.status}** | ${r.blocker} | ${r.high} | ${r.medium} | ${r.low} |`);
   }
-  L.push('', '_Handoff hygiene is excluded from this matrix — it measures handoff quality, not build readiness._', '');
+  // Rendered as a row rather than a footnote so the columns reconcile with the
+  // Summary. Status is "Not assessed", never a readiness word - these findings
+  // are excluded from the verdict's row logic by design.
+  const un = unrowed(findings);
+  if (un.total) {
+    L.push(`| ${un.categories.join(', ')} _(excluded)_ | Not assessed | ${un.blocker} | ${un.high} | ${un.medium} | ${un.low} |`);
+  }
+  L.push('', `_Handoff hygiene is excluded from the readiness verdict — it measures handoff quality, not build readiness.`
+    + `${un.blocker ? ` Its ${un.blocker} blocker(s) are still counted in the Summary above and must still be resolved.` : ''}`
+    + ` Its row is shown so the columns reconcile with the Summary._`, '');
 
   L.push('## Blocking issues', '');
   const blockers = shown.filter(isBlocking);
@@ -516,6 +579,7 @@ export function renderHtml(data) {
   const { meta, findings, decisions } = data;
   const { shown, withheld, lows } = applyCaps(findings);
   const rows = readiness(findings);
+  const un = unrowed(findings);
   const count = (s) => findings.filter((f) => f.severity === s).length;
   const blockers = shown.filter(isBlocking);
   const rest = shown.filter((f) => !isBlocking(f));
@@ -541,10 +605,11 @@ export function renderHtml(data) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Developer readiness — ${esc(meta.file)}</title>
+<title>${esc(titleOf(meta))}</title>
 <style>${CSS}</style></head><body><main>
-<h1>Developer readiness — ${esc(meta.file)}</h1>
-<p class="head">Platform <strong>${esc(meta.platform)}</strong> &middot; scanned ${esc(meta.scannedAt)} &middot; ${meta.frameCount} frames, ${meta.nodeCount} nodes</p>
+<h1>${esc(titleOf(meta))}</h1>
+<p class="head">Platform <strong>${esc(meta.platform)}</strong> &middot; scanned ${esc(meta.scannedAt)} &middot; ${meta.frameCount} frames, ${meta.nodeCount} nodes${
+  isProvisional(meta) ? ` &middot; method <strong>${esc(meta.method || 'unrecorded')}</strong> — no deterministic scan backs this report` : ''}</p>
 
 <div class="verdict ${slug(v.status)}">
   <span class="vt">${esc(v.status)}</span>
@@ -569,8 +634,9 @@ ${meta.scope ? `<p class="callout"><strong>Scope:</strong> ${scopeText} &mdash; 
 <h2>Development readiness</h2>
 <div class="scroll"><table><thead><tr><th>Area</th><th>Status</th><th class="num">Blocker</th><th class="num">High</th><th class="num">Medium</th><th class="num">Low</th></tr></thead><tbody>
 ${Object.entries(rows).map(([row, r]) => `<tr id="row-${esc(row)}"><td>${esc(ROW_LABELS[row])}</td><td class="status ${slug(r.status)}"><span class="pill ${STATUS_TONE[r.status]}">${esc(r.status)}</span></td>${num(r.blocker)}${num(r.high)}${num(r.medium)}${num(r.low)}</tr>`).join('')}
+${un.total ? `<tr id="row-excluded"><td>${esc(un.categories.join(', '))} (excluded)</td><td><span class="pill">Not assessed</span></td>${num(un.blocker)}${num(un.high)}${num(un.medium)}${num(un.low)}</tr>` : ''}
 </tbody></table></div>
-<p class="callout">Handoff hygiene is excluded from this matrix — it measures handoff quality, not build readiness. Its findings still appear below.</p>
+<p class="callout">Handoff hygiene is excluded from the readiness verdict — it measures handoff quality, not build readiness.${un.blocker ? ` Its ${un.blocker} blocker(s) are still counted in the Summary above and must still be resolved.` : ''} Its row is shown so the columns reconcile with the Summary.</p>
 
 <h2>Blocking issues</h2>
 ${blockers.length ? blockers.map(issueHtml).join('') : '<p class="none">None.</p>'}
@@ -611,13 +677,62 @@ function runSelfTest() {
   assert.equal(lowOnly.shown.length, 0);
   assert.equal(lowOnly.lows['Handoff hygiene'].count, 1);
 
-  const html = renderHtml({
-    meta: { file: 'T', url: '', platform: 'web', scannedAt: 'now', dsAuditReport: null,
-            nodeCount: 1, frameCount: 1 },
-    findings: [], decisions: [],
-  });
+  // The real run this guards: 3 blockers in the Summary, 2 in the matrix, one
+  // stranded in an unrowed category, and a "Not ready" row holding no blocker
+  // at all. The verdict must name all three causes and never sum them.
+  const mixed = [
+    { category: 'Handoff hygiene', severity: 'Blocker' },
+    { category: 'Components & code mapping', severity: 'Blocker' },
+    { category: 'Forms', severity: 'Blocker' },
+    ...Array.from({ length: 5 }, () => ({ category: 'Responsive coverage', severity: 'High' })),
+  ];
+  const un = unrowed(mixed);
+  assert.equal(un.blocker, 1);
+  assert.deepEqual(un.categories, ['Handoff hygiene']);
+  const vm = verdict(mixed);
+  assert.equal(vm.status, 'Not ready');
+  // 2 in rows + 1 outside = the Summary's 3. The old line said "3 blockers ...
+  // 3 areas cannot be built", naming an area with zero blockers among them.
+  assert.match(vm.line, /2 blockers in Components & code mapping, States, forms & interaction/);
+  assert.match(vm.line, /1 blocker outside the readiness matrix, in Handoff hygiene/);
+  assert.match(vm.line, /Also: Responsive & Auto Layout carries three or more high-severity/);
+  assert.doesNotMatch(vm.line, /3 blockers/);
+
+  // Volume alone, no blocker anywhere: still Not ready, but never phrased as
+  // "cannot be built as designed" - nothing here is blocked.
+  const volumeOnly = verdict(Array.from({ length: 3 }, () => ({ category: 'States', severity: 'High' })));
+  assert.equal(volumeOnly.status, 'Not ready');
+  assert.match(volumeOnly.line, /^No blockers, but States, forms & interaction carries three/);
+
+  const baseMeta = { file: 'T', url: '', platform: 'web', scannedAt: 'now', dsAuditReport: null,
+                     nodeCount: 1, frameCount: 1, method: 'rule-engine' };
+  const html = renderHtml({ meta: baseMeta, findings: [], decisions: [] });
   assert.match(html, /<!doctype html>/i);
   assert.doesNotMatch(html, /<script\s+src=/i);
+  assert.match(html, /<h1>Developer readiness/);
+  assert.equal(basenameFor(baseMeta), 'readiness-report');
+
+  // A model-only run must be unmistakable in the filename, the title and the
+  // header - not only in a callout the reader has to still be reading to reach.
+  const provMeta = { ...baseMeta, method: 'model-only' };
+  assert.equal(basenameFor(provMeta), 'readiness-report-provisional');
+  assert.equal(titleOf(provMeta), 'Provisional developer readiness — T');
+  const provHtml = renderHtml({ meta: provMeta, findings: [], decisions: [] });
+  assert.match(provHtml, /<title>Provisional developer readiness/);
+  assert.match(provHtml, /no deterministic scan backs this report/);
+  assert.match(renderMarkdown({ meta: provMeta, findings: [], decisions: [] }),
+    /^# Provisional developer readiness/);
+
+  // The excluded row exists so the Blocker column reconciles with the Summary.
+  const md = renderMarkdown({ meta: baseMeta, findings: mixed.map((f, i) => ({
+    ...f, id: `m${i}`, confidence: 'High', owner: 'Designer', title: 't', detected: 'd',
+    impact: 'i', action: 'a', nodeIds: [], location: { page: '', frame: '', layers: [] },
+  })), decisions: [] });
+  assert.match(md, /\| Handoff hygiene _\(excluded\)_ \| Not assessed \| 1 \|/);
+  const matrixBlockers = [...md.matchAll(/^\| .+? \| (?:\*\*)?[\w ]+(?:\*\*)? \| (\d+) \|/gm)]
+    .reduce((s, m) => s + Number(m[1]), 0);
+  assert.equal(matrixBlockers, 3, 'matrix Blocker column must sum to the Summary count');
+
   console.log('figma-dev-report self-test: OK');
 }
 
@@ -657,9 +772,16 @@ function main() {
   }
 
   mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'readiness-report.md'), renderMarkdown(data), 'utf8');
-  writeFileSync(join(outDir, 'readiness-report.html'), renderHtml(data), 'utf8');
-  console.log(`wrote ${join(outDir, 'readiness-report.md')} and readiness-report.html`);
+  // The filename is the one label that survives the document being forwarded,
+  // renamed in a chat, or filed in a folder next to a real one.
+  const base = basenameFor(data.meta);
+  writeFileSync(join(outDir, `${base}.md`), renderMarkdown(data), 'utf8');
+  writeFileSync(join(outDir, `${base}.html`), renderHtml(data), 'utf8');
+  console.log(`wrote ${join(outDir, `${base}.md`)} and ${base}.html`);
+  if (isProvisional(data.meta)) {
+    console.log(`method is "${data.meta?.method ?? 'absent'}" — written as a PROVISIONAL report. `
+      + 'Re-run Step 2 with a working scan to produce readiness-report.md.');
+  }
 }
 
 if (process.argv[1]?.endsWith('figma-dev-report.mjs')) main();

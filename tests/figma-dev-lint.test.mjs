@@ -161,9 +161,15 @@ test('lint flags a model finding claiming High confidence with no measured numbe
   assert.match(problems.map((p) => p.msg).join(' '), /confidence follows the evidence/);
 });
 
-test('lint warns when the report will carry a method warning', () => {
+test('lint warns when the run will render as a provisional report', () => {
+  // The warning names the consequence, not the flag: what the author needs to
+  // know is that this run produces readiness-report-provisional.md under a
+  // different title, not that a field is set to a different string.
   const data = envelope([], [], { method: 'model-only' });
-  assert.match(lint(data).find((p) => p.where === 'meta').msg, /method warning/);
+  const at = lint(data).find((p) => p.where === 'meta');
+  assert.equal(at.level, 'warning');
+  assert.match(at.msg, /readiness-report-provisional\.md/);
+  assert.match(at.msg, /Provisional developer readiness/);
 });
 
 // --- the seam: the engine's own output must satisfy the linter ---------------
@@ -216,4 +222,86 @@ test('the CLI reports a missing findings.json rather than writing one', () => {
   const r = spawnSync(process.execPath, [TOOL, dir, '--fix'], { encoding: 'utf8' });
   assert.equal(r.status, 2);
   assert.match(r.stderr, /cannot read/);
+});
+
+// --- the three gates a real run walked straight through ----------------------
+
+// The model writes judgment and Step 4c derives the rest, so every gate below
+// is checked on a normalised envelope - the same shape lint() sees in a run.
+const ready = (findings, decisions = [], meta = {}) => {
+  const data = envelope(findings, decisions, meta);
+  normalise(data);
+  return data;
+};
+const msgs = (problems) => problems.map((p) => p.msg).join(' | ');
+
+test('lint rejects a meta.scope that is a list or a method note', () => {
+  // What a real run wrote, and what both renderers then printed it as:
+  // "only pages and frames matching this were scanned". The scan matches ONE
+  // case-insensitive substring, so four comma-separated frame names match
+  // nothing and the coverage sentence is simply false. The skill says "never
+  // put a method note in --scope" twice, in bold; prose did not hold it down.
+  const listed = ready([], [], {
+    scope: 'D_Landing Page_V5 (198:3), M_Landing Page (159:3), Thankyou Pop Up (64:11356).',
+  });
+  assert.match(msgs(errors(lint(listed))), /it lists several names/);
+
+  const prose = ready([], [], {
+    scope: 'Landing page. File-wide structural counts cover all 23 top-level items.',
+  });
+  assert.match(msgs(errors(lint(prose))), /it contains prose/);
+
+  // A real scope, and no scope at all, both pass.
+  assert.deepEqual(errors(lint(ready([], [], { scope: 'Pricing' }))), []);
+  assert.deepEqual(errors(lint(ready([], [], { scope: null }))), []);
+});
+
+test('lint rejects High confidence when no facts.json exists to check it against', () => {
+  // 24 findings citing "84,704 nodes" and "73,556 vectors" with no facts.json
+  // on disk: every number unreproducible, and the only signal was one callout.
+  // Confidence follows the evidence, and with no evidence file there is none.
+  const high = ready([judged({ confidence: 'High' })], [], { method: 'model-only' });
+  assert.match(msgs(errors(lint(high, { facts: null }))), /nothing in this report can be reproduced/);
+
+  // Step 2b's counts-only probe file is the way to keep High legitimately.
+  assert.deepEqual(errors(lint(high, { facts: { totals: { nodes: 84704 }, nodes: [] } })), []);
+
+  // Medium needs no evidence file.
+  const medium = ready([judged({ confidence: 'Medium' })], [], { method: 'model-only' });
+  assert.deepEqual(errors(lint(medium, { facts: null })), []);
+
+  // And a measured run is unaffected.
+  assert.deepEqual(errors(lint(ready([judged({ confidence: 'High' })]), { facts: null })), []);
+});
+
+test('lint rejects a font-licensing finding wherever it is filed', () => {
+  // FN001 returns [] for licensing because it is a commercial fact held
+  // outside the file - "the single rule that keeps the report honest". That
+  // invariant lived only in a comment inside a rule file the model-only path
+  // never executes, so a run produced a High finding claiming two fonts had
+  // no licence AND the same question as a decision.
+  const asFont = ready([judged({
+    category: 'Fonts', title: 'Two typefaces with no web licence or fallback decided',
+  })]);
+  assert.match(msgs(errors(lint(asFont))), /font-licensing claim/);
+
+  // Re-filing it under another category does not launder it.
+  const asHygiene = ready([judged({
+    category: 'Handoff hygiene', title: 'Font inventory',
+    detected: 'Akzidenz-Grotesk Next requires a paid webfont licence',
+  })]);
+  assert.match(msgs(errors(lint(asHygiene))), /font-licensing claim/);
+
+  // The load-cost finding the file CAN support is untouched.
+  const inventory = ready([judged({
+    category: 'Fonts', title: 'Large type inventory',
+    detected: 'The file uses 4 font families across 8 family/style pairs.',
+  })]);
+  assert.deepEqual(errors(lint(inventory)), []);
+});
+
+test('lint warns when a finding strays into design-system territory', () => {
+  const data = ready([judged({ title: 'Spacing scale is inconsistent across sections' })]);
+  assert.deepEqual(errors(lint(data)), [], 'a warning, not an error - the call is the author\'s');
+  assert.match(msgs(lint(data)), /twt-design-system-audit/);
 });

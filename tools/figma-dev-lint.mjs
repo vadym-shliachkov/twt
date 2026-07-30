@@ -33,6 +33,34 @@ import {
 
 const isText = (v) => typeof v === 'string' && v.trim().length > 0;
 
+// The scan matches ONE case-insensitive substring against page and top-level
+// frame names, and both renderers print `scope` as "only pages and frames
+// matching this were scanned". A comma-separated list of four frames matches
+// nothing; a sentence of method notes turns that coverage statement into a
+// false one. The skill says "never put a method note in --scope" twice, in
+// bold, and a real run did it anyway - prose does not hold a field down.
+const SCOPE_MAX = 80;
+// Shape before length: "it lists several names" tells the author what to do,
+// "it is 87 characters" only tells them to trim, and trimming a four-frame
+// list to 80 characters leaves it just as unmatchable.
+const scopeProblem = (s) => {
+  if (/\n/.test(s)) return 'it spans multiple lines';
+  if (/,\s/.test(s)) return 'it lists several names — the scan matches one substring, so a list matches nothing';
+  if (/\.\s+\S/.test(s)) return 'it contains prose — method notes belong in meta.method, not in the coverage statement';
+  if (s.length > SCOPE_MAX) return `it is ${s.length} characters (max ${SCOPE_MAX})`;
+  return null;
+};
+
+// Font licensing is not in the Figma file. FN001 returns [] for exactly this
+// reason ("the single rule that keeps the report honest") - but that invariant
+// lived only in a comment inside a rule file, which the model-only path never
+// executes and no reader of the skill ever sees. Enforced here instead.
+const LICENSING = /licen[cs]|licencing|licensing/i;
+
+// Owned by /twt-design-system-audit. Two reports contradicting each other in
+// front of one client is the failure this boundary exists to prevent.
+const DS_TOPIC = /\btokens?\b|design token|spacing scale|radius scale|colour palette|color palette|duplicate components?/i;
+
 // Every link this finding is allowed to carry: one of its own nodes, or the
 // bare file link for a file-level finding that cites none.
 const acceptableLinks = (url, f) => ((f.nodeIds || []).length
@@ -145,9 +173,30 @@ export function lint(data, { facts = null, outDir = null } = {}) {
   const byId = new Map((facts?.nodes || []).map((n) => [n.id, n]));
 
   if (!isText(url)) err('meta', 'meta.url is missing — every deep link in the report depends on it');
-  if (data.meta?.method !== 'rule-engine') {
-    warn('meta', `method is "${data.meta?.method ?? 'absent'}" — the report will carry a method warning `
-      + 'saying the deterministic engine did not produce it. Correct if the engine did run.');
+  const modelOnly = data.meta?.method !== 'rule-engine';
+  if (modelOnly) {
+    warn('meta', `method is "${data.meta?.method ?? 'absent'}" — the report renders as `
+      + 'readiness-report-provisional.md, titled "Provisional developer readiness". Correct if the engine did run.');
+  }
+
+  const scope = data.meta?.scope;
+  if (isText(scope)) {
+    const why = scopeProblem(scope.trim());
+    if (why) {
+      err('meta', `meta.scope is not a scan scope: ${why}. It must be the single page or frame `
+        + 'substring the scan was given (or null for a whole-file run) — the report prints it as '
+        + '"only pages and frames matching this were scanned", so anything else makes that statement false.');
+    }
+  }
+
+  // A number nobody can check is not evidence. On a run with no facts.json on
+  // disk there is nothing to check ANY number against, so High confidence has
+  // no basis - the digit heuristic below only tests that a digit was typed.
+  // Step 2b's counts-only facts.json is the way to keep High legitimately.
+  if (modelOnly && !facts && (data.findings || []).some((f) => f.confidence === 'High')) {
+    err('meta', 'High-confidence findings on a run with no facts.json — nothing in this report can be '
+      + 'reproduced or checked. Write the counts-only facts.json from the metadata probe (Step 2b), '
+      + 'or drop those findings to Medium.');
   }
 
   const perCategory = {};
@@ -199,6 +248,21 @@ export function lint(data, { facts = null, outDir = null } = {}) {
         + 'confidence follows the evidence, not the authorship');
     }
 
+    // Topic boundaries, checked on what the reader sees rather than on the
+    // category alone: a licensing claim is just as wrong dressed as Handoff
+    // hygiene, and a token finding is out of scope wherever it is filed.
+    const claim = `${f.title} ${f.detected}`;
+    if (LICENSING.test(claim)) {
+      err(at, 'this finding makes a font-licensing claim. Licensing is not recorded in the Figma file, '
+        + 'so it can only ever be a guess — FN001 returns no finding for it by design. Move it to '
+        + 'decisions[] as a question for the Client.');
+    }
+    if (DS_TOPIC.test(claim)) {
+      warn(at, 'this reads as a design-system finding (tokens, scales, palette, duplicate components) — '
+        + 'that is /twt-design-system-audit\'s territory, and two reports disagreeing in front of one '
+        + 'client is what the boundary exists to prevent');
+    }
+
     if (CATEGORIES.includes(f.category)) {
       perCategory[f.category] = (perCategory[f.category] || 0) + 1;
     }
@@ -237,6 +301,30 @@ function runSelfTest() {
   assert.equal(f.source, 'model');
   assert.equal(f.id, 'MODEL-I423:12;9:8');
   assert.deepEqual(lint(bad), []);
+
+  const errorsOf = (d, opts) => lint(d, opts).filter((p) => p.level === 'error').map((p) => p.msg);
+  const clone = () => JSON.parse(JSON.stringify(bad));
+
+  // The scope a real run wrote: four frame names plus a sentence of method
+  // notes, rendered as "only pages and frames matching this were scanned".
+  const scoped = clone();
+  scoped.meta.scope = 'D_Landing Page_V5 (198:3), M_Landing Page (159:3). File-wide counts cover all 23 items.';
+  assert.match(errorsOf(scoped).join('\n'), /meta\.scope is not a scan scope: it lists several names/);
+  const okScope = clone();
+  okScope.meta.scope = 'Pricing';
+  assert.deepEqual(errorsOf(okScope), []);
+
+  // High confidence with no facts.json on disk: nothing to check the number against.
+  const noFacts = clone();
+  noFacts.meta.method = 'model-only';
+  assert.match(errorsOf(noFacts, { facts: null }).join('\n'), /nothing in this report can be reproduced/);
+  assert.deepEqual(errorsOf(noFacts, { facts: { nodes: [] } }), []);
+
+  // Licensing is never a finding - FN001 returns [] for this reason.
+  const licence = clone();
+  licence.findings[0].title = 'Two typefaces with no web licence decided';
+  assert.match(errorsOf(licence).join('\n'), /font-licensing claim/);
+
   console.log('figma-dev-lint self-test: OK');
 }
 
