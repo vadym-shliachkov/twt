@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.4) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.4
+description: (v1.0.5) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.5
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -33,12 +33,12 @@ writes:
 - **Not a design-system audit.** `/twt-design-system-audit` answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.
 - Read-only on the Figma file. Never edits the design; writes nothing outside `.twt-artifacts/figma-dev-audit/`.
 - Not a content or full-accessibility audit (`/twt-qa-content`, `/twt-qa-a11y` own those on built output). Accessibility appears here only as build risk visible in the file.
-- Does not re-implement scanning, rule evaluation, or report rendering in the model - those are the bundled scripts.
+- Does not re-implement scanning, rule evaluation, schema derivation, or report rendering in the model - those are the bundled scripts. The model writes judgment; the scripts write everything derivable from it.
 - v1 covers Web and WordPress. React, iOS and Android are out of scope.
 
 **Success criteria:**
 - `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, `facts.json` is absent **and** the report is labelled a model-only audit. A report that omits the label claims a scan that did not happen.
-- Every finding carries all ten schema fields, a working `?node-id=` link, and an owner from the closed vocabulary.
+- `figma-dev-lint.mjs` exits 0 on `<OUT>` — every finding carries its full schema, a link to a node it cites, a non-empty `impact` and `action`, and an owner from the closed vocabulary.
 - **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
 - No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
 - The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.
@@ -125,35 +125,26 @@ Read `<OUT>/findings.json`. Two jobs, in order:
 
 Confidence follows the **evidence**, not the authorship: `High` when `detected` cites a number or property you read out of `facts.json` (a measured frame height, a node count, an `exportSettings` array), `Medium` when it rests on reading the design. Never `Low` - that is a `decisions[]` question. An audit whose model findings are all `Medium` understates what was actually measured, and one where they are all `High` overstates it.
 
-**The finding schema - every key below is required on every finding you write.** You are writing `findings.json` by hand, so nothing validates it until the renderer does, and a missing key is a broken report rather than an error message:
+**Write judgment only.** Nine fields, all of them things only you can decide:
 
 ```json
 {
-  "id": "MODEL-states-1",
-  "rule": "MODEL",
   "title": "Data table has no empty state",
   "category": "States",
   "severity": "High",
   "confidence": "Medium",
   "nodeIds": ["1:234"],
-  "location": { "page": "Screens", "frame": "Dashboard", "layers": ["Results table"] },
-  "link": "<figma-url>?node-id=1-234",
   "detected": "what is in the file",
   "impact": "what it costs development",
   "action": "the practical fix",
-  "owner": "Designer",
-  "blocking": false,
-  "shot": "shots/1-234.png"
+  "owner": "Designer"
 }
 ```
 
-- `location` is **required**, and so are all three of its keys. Use `{"page": "", "frame": "", "layers": []}` for a file-level finding - never omit the object, and never omit `layers`.
-- `link` follows the rule-derived findings: the file URL with the query string stripped, then `?node-id=<id>` with **every** colon replaced by a dash (`I423:12;9:8` becomes `I423-12;9-8`).
-- **`"severity": "Blocker"` requires `"blocking": true`.** They are two fields carrying one fact, and when they disagree the Summary counts a Blocker and the matrix reads *Not ready* while **Blocking issues** says *None* - the most misleading state this report can be in.
-- `blocking` is `false` for every other severity. `shot` is optional (Step 5 sets it).
-- `category` must be one of the twelve, `owner` one of the five, `confidence` `High` or `Medium`. The renderer **refuses to run** on anything else and names the finding's `id`.
+**Do not hand-write `id`, `rule`, `link`, `location`, `blocking`, `source`, or the array order.** Step 4c derives every one of them from the fields above plus `facts.json` — that is six fewer things to get silently wrong per finding, and the deep-link colon rule (`I423:12;9:8` → `I423-12;9-8`) stops being yours to remember. If you already know a better link target than the first node, set `link` to it; anything pointing at a node the finding does not cite is rebuilt.
 
-**Re-sort before you write.** Append your findings, then sort the whole `findings` array by severity - `Blocker`, `High`, `Medium`, `Low` - keeping the existing order within each band. The renderer's per-category cap of 5 is a priority queue, so an unsorted High buried after five Mediums is the one that gets withheld.
+- `nodeIds` leads with the node the finding is *about*. `location` and the link both derive from it.
+- `category` must be one of the twelve, `owner` one of the five, `confidence` `High` or `Medium`. `shot` is optional and Step 5 sets it.
 
 Rules to hold to:
 
@@ -165,6 +156,21 @@ Rules to hold to:
 - **For WordPress**, additionally judge: sections that resist Gutenberg blocks, editable vs non-editable ambiguity, layouts dependent on fixed content length, card grids that cannot take a dynamic count, missing empty-field behaviour, deep nesting, and likely custom-block/ACF/JS requirements.
 
 Write the enriched structure back to `<OUT>/findings.json`.
+
+## Step 4c - Derive and check
+
+One Bash call:
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-lint.mjs" "<OUT>" --fix`
+
+`--fix` fills in the six derived fields and re-sorts the array by severity (the renderer's per-category cap is a priority queue, so an unsorted High buried behind five Mediums is the one that gets withheld). It then checks everything it cannot derive and **exits 1** naming each finding:
+
+- `impact` or `action` still empty - the report would print *"not yet assessed"* where the reason to care belongs. That is Step 4a undone; go back and write them.
+- a `Blocker` whose `blocking` flag disagrees, a `location` missing a key, a link to a node the finding does not cite, a `shot` that resolves to no file, a decision with no `why` or an owner outside the vocabulary.
+
+Warnings do not stop the run but are worth reading: a node cited that `facts.json` never returned (expected on a reduced scan, and it means the location could not be verified), a model finding claiming `High` confidence with no measured number in its evidence, and a category holding more than five findings.
+
+Fix and re-run until it exits 0. Never edit `findings.json` to silence a check you have not understood - each one names a specific way the report misleads its reader.
 
 ## Step 5 - Screenshots for spatial blockers
 
@@ -185,7 +191,11 @@ The report renders each shot as a **200x150 thumbnail cropped to the top of the 
 
 ## Step 6 - Render
 
-One Bash call:
+Two Bash calls. The first is Step 4c again, without `--fix`, now that Step 5 has set the `shot` fields — a screenshot saved under a name no finding points at is one the report silently drops:
+
+`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-lint.mjs" "<OUT>"`
+
+Then render:
 
 `node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-report.mjs" "<OUT>/findings.json" --out "<OUT>"`
 

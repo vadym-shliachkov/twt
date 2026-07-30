@@ -1425,7 +1425,7 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 ## /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** yes
 
 Answer one question about a Figma file before anyone estimates or builds from it: **can a developer build this without stopping to ask questions?** Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.
@@ -1453,12 +1453,12 @@ Answer one question about a Figma file before anyone estimates or builds from it
 - **Not a design-system audit.** `/twt-design-system-audit` answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.
 - Read-only on the Figma file. Never edits the design; writes nothing outside `.twt-artifacts/figma-dev-audit/`.
 - Not a content or full-accessibility audit (`/twt-qa-content`, `/twt-qa-a11y` own those on built output). Accessibility appears here only as build risk visible in the file.
-- Does not re-implement scanning, rule evaluation, or report rendering in the model - those are the bundled scripts.
+- Does not re-implement scanning, rule evaluation, schema derivation, or report rendering in the model - those are the bundled scripts. The model writes judgment; the scripts write everything derivable from it.
 - v1 covers Web and WordPress. React, iOS and Android are out of scope.
 
 **Success criteria:**
 - `facts.json`, `findings.json`, `readiness-report.md` and `readiness-report.html` all exist under `.twt-artifacts/figma-dev-audit/` — or, if the scan could not return, `facts.json` is absent **and** the report is labelled a model-only audit. A report that omits the label claims a scan that did not happen.
-- Every finding carries all ten schema fields, a working `?node-id=` link, and an owner from the closed vocabulary.
+- `figma-dev-lint.mjs` exits 0 on `<OUT>` — every finding carries its full schema, a link to a node it cites, a non-empty `impact` and `action`, and an owner from the closed vocabulary.
 - **No finding carries `Confidence: Low`** - unverifiable concerns appear only under `Decisions required`.
 - No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.
 - The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.

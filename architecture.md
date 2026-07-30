@@ -1581,7 +1581,7 @@ flowchart TB
 ### /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
