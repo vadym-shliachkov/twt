@@ -25,9 +25,10 @@
 // model decides the verdict. Findings are capped (CAP) per kind to bound output.
 'use strict';
 
-import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { join, relative, dirname, basename } from 'node:path';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { colorTokensFromCss, buildContrastMatrix } from './lib/contrast.mjs';
+import { listFiles, locate as locateSources, locateElementorCss as locateThemeCss, rel as relTo } from './lib/sources.mjs';
 
 const CAP = 40; // max findings emitted per kind (counts are always exact)
 
@@ -43,45 +44,13 @@ const ART = join(projectDir, '.twt-artifacts');
 // ---- source location ---------------------------------------------------------
 // Prefer a built site/; fall back to the design mockup. Mirrors the QA skills'
 // "site/*.html if site/ exists, otherwise mockup/pages/*.html" rule.
-function listFiles(dir, ext) {
-  const out = [];
-  if (!existsSync(dir)) return out;
-  for (const e of readdirSync(dir, { withFileTypes: true })) {
-    const p = join(dir, e.name);
-    if (e.isDirectory()) out.push(...listFiles(p, ext));
-    else if (e.name.toLowerCase().endsWith(ext)) out.push(p);
-  }
-  return out;
-}
-// Hello-Elementor child theme CSS: the token-only files the elementor audit cares
-// about (widgets.css / design-system.css), found anywhere under the theme dir.
-function locateElementorCss() {
-  const themesRoot = join(projectDir, 'wp-content', 'themes');
-  if (!existsSync(themesRoot)) return { html: [], css: [], base: null };
-  let themeDir = null;
-  for (const e of readdirSync(themesRoot, { withFileTypes: true })) {
-    if (e.isDirectory() && e.name.startsWith('hello-elementor-')) { themeDir = join(themesRoot, e.name); break; }
-  }
-  if (!themeDir) return { html: [], css: [], base: null };
-  const all = listFiles(themeDir, '.css');
-  const named = all.filter((f) => /(?:^|[\\/])(widgets|design-system)\.css$/i.test(f));
-  return { html: [], css: named.length ? named : all, base: themeDir };
-}
-function locate() {
-  const siteDir = join(projectDir, 'site');
-  if (existsSync(siteDir)) {
-    return { html: listFiles(siteDir, '.html'), css: listFiles(siteDir, '.css'), base: siteDir };
-  }
-  const mockDir = join(ART, 'design', 'mockup');
-  if (existsSync(mockDir)) {
-    return { html: listFiles(join(mockDir, 'pages'), '.html').concat(listFiles(mockDir, '.html')),
-             css: listFiles(mockDir, '.css'), base: mockDir };
-  }
-  return { html: [], css: [], base: null };
-}
+// Shared with launch-scan.mjs via tools/lib/sources.mjs — these are thin
+// project-bound wrappers so every existing call site below keeps working.
+const locate = () => locateSources(projectDir);
+const locateElementorCss = () => locateThemeCss(projectDir);
 
 // ---- tiny utilities ----------------------------------------------------------
-const rel = (p) => (p ? relative(projectDir, p).replace(/\\/g, '/') : p);
+const rel = (p) => relTo(projectDir, p);
 const read = (p) => { try { return readFileSync(p, 'utf8'); } catch { return ''; } };
 function lineOf(text, idx) { let n = 1; for (let i = 0; i < idx && i < text.length; i++) if (text[i] === '\n') n++; return n; }
 // Strip /* ... */ comments but keep length/offsets stable (replace with spaces).
