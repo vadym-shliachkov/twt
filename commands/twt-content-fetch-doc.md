@@ -3,6 +3,7 @@ name: twt-content-fetch-doc
 category: content
 description: (v1.0.0) Extract a Word/Google Doc's content and save as clean Markdown
 version: 1.0.0
+model: sonnet
 accepts_arguments: true
 inputs:
   - Path to a .docx file, or an exported .md/.txt, or a Google Doc share URL

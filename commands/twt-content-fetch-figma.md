@@ -3,6 +3,7 @@ name: twt-content-fetch-figma
 category: content
 description: (v1.0.1) Extract a Figma file's visible text content and save as clean Markdown
 version: 1.0.1
+model: sonnet
 accepts_arguments: true
 inputs:
   - A Figma file or frame URL (figma.com/design/… or figma.com/file/…, with or without a node-id)

@@ -3,6 +3,7 @@ name: twt-qa-a11y
 category: qa
 description: (v1.1.3) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 version: 1.1.3
+model: sonnet
 accepts_arguments: true
 inputs:
   - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups

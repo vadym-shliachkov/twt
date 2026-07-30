@@ -3,6 +3,7 @@ name: twt-html-site-creator
 category: html
 description: (v1.2.1) Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md)
 version: 1.2.1
+model: sonnet
 accepts_arguments: false
 inputs:
   - project name (asked); short slug (auto-derived, user confirms); output root (default ./site)

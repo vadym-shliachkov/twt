@@ -3,6 +3,7 @@ name: twt-content-fetch-site
 category: content
 description: (v1.2.2) Fetch a website's content via the bundled crawler and save as clean Markdown
 version: 1.2.2
+model: sonnet
 accepts_arguments: true
 inputs:
   - URL (homepage or full crawl up to 50 pages)

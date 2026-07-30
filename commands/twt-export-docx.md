@@ -3,6 +3,8 @@ name: twt-export-docx
 category: export
 description: (v1.1.2) Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling
 version: 1.1.2
+model: sonnet
+effort: low
 accepts_arguments: true
 inputs:
   - Markdown file path

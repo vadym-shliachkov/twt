@@ -3,6 +3,7 @@ name: twt-elementor-theme-creator
 category: elementor
 description: (v1.2.1) Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script
 version: 1.2.1
+model: sonnet
 accepts_arguments: false
 inputs:
   - project name

@@ -3,6 +3,7 @@ name: twt-content-approval-implement
 category: content
 description: (v1.1.4) Apply ready approved XLSX content into the built site or development artifacts
 version: 1.1.4
+model: sonnet
 accepts_arguments: true
 inputs:
   - Optional path to content-approval-checklist.xlsx; optional --target html|elementor

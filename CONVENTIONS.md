@@ -51,6 +51,23 @@ writes:
 
 All listed fields are required. Use `[]` for empty lists.
 
+### 3.1a Optional runtime fields (`model:`, `effort:`)
+
+Claude Code honours `model:` and `effort:` in a skill's frontmatter (same field set for `commands/*.md` and `skills/*/SKILL.md`). Placed on the line after `version:`, they run that skill on a cheaper model than the session's. Two properties govern where this is allowed:
+
+- **A subagent inherits the dispatcher's model** unless the dispatch names one. So **a skill that dispatches another skill must never declare a lower model** — the downgrade cascades into everything beneath it. `/twt-eval-smoke` is the sharpest case: it dispatches the skills under test, so a cheap model there stops the eval from measuring a real run. The Step 0 setup-gate dispatch of `/twt-setup` doesn't count as dispatching (it is itself Haiku-tier work).
+- **The override is turn-scoped, not skill-scoped** — it holds for the rest of the current turn, then the session model resumes. Acceptable for terminal, one-shot tools; a reason not to mark anything the user is likely to invoke mid-conversation.
+
+Which tier a skill belongs to:
+
+| Tier | Rule | Skills |
+|------|------|--------|
+| `model: haiku` + `effort: low` | Parse args → run a bundled script → relay its output; nothing the model authors reaches an artifact | `twt-setup`, `twt-status`, `twt-search-site`, `twt-block-preview`, `twt-marketplace-docs` |
+| `model: sonnet` | Bounded transformation, or rubric scoring against script-supplied evidence — format discipline matters, taste does not | the five `twt-qa-*` audits, the four `twt-content-fetch-*` sub-skills, the three `twt-export-{pdf,docx,presentation}` (also `effort: low`), `twt-html-site-creator`, `twt-elementor-theme-creator`, `twt-content-approval-implement`, `twt-assets-produce`, `twt-wiki-query` |
+| no field (session model) | Every dispatcher; every `*-define` and `*-validate` (a weaker critic returns false PASSes, and the critique *is* the product); authoring/taste work — `twt-text-analysis`, `twt-project-intake`, `twt-figma-dev-audit`, `twt-figma-design-system`, `twt-export-template-create` | — |
+
+Note that an override is absolute, not a ceiling: `model: sonnet` also *raises* a session deliberately running on Haiku. Where a leaf almost always runs as a subagent, name the model at the dispatch site too (`/twt-qa` Step 2, `/twt-content-fetch` Step 3) — belt and braces, since frontmatter and dispatch reach it by different paths.
+
 ### 3.2 Intent block (required, fixed structure)
 
 ```markdown

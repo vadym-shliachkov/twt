@@ -3,6 +3,8 @@ name: twt-status
 category: status
 description: (v1.1.0) Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
 version: 1.1.0
+model: haiku
+effort: low
 accepts_arguments: true
 inputs:
   - Optional: a phase (pre-design|design|develop|qa) or artifact path to scope the check; else the whole pipeline

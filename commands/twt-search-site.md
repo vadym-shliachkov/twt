@@ -3,6 +3,8 @@ name: twt-search-site
 category: search
 description: (v1.1.1) Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
 version: 1.1.1
+model: haiku
+effort: low
 accepts_arguments: true
 inputs:
   - Search string (first argument; wrap in quotes if it contains spaces)

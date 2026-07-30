@@ -3,6 +3,7 @@ name: twt-qa-elementor
 category: qa
 description: (v1.1.2) Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
 version: 1.1.2
+model: sonnet
 accepts_arguments: true
 inputs:
   - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
