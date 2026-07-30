@@ -64,12 +64,25 @@ NCOLS = len(HEADERS)
 READY_COL = get_column_letter(NCOLS)  # F
 WIDTHS = [24, 22, 46, 46, 46, 14]
 
-# Palette (matches analysis-to-xlsx.py)
+# Palette (matches analysis-to-xlsx.py). Readiness fills carry an explicit FF
+# alpha: openpyxl pads a bare 6-digit hex to "00RRGGBB" (transparent), which
+# some Excel builds honour and drop the fill entirely.
 HEADER_FILL = "222741"
 BANNER_FILL = "2F3561"
 ZEBRA_FILL = "F4F5FA"
-GREEN_FILL = "D7EBD8"
-PINK_FILL = "F7D4D2"
+GREEN_FILL = "FFD7EBD8"
+PINK_FILL = "FFF7D4D2"
+
+
+def dxf_fill(argb):
+    """Solid fill for a conditional-formatting differential format.
+
+    A dxf is not a cell style: Excel resolves a solid patternFill in a dxf from
+    bgColor, while cellXfs resolve it from fgColor. Setting both keeps the fill
+    visible no matter which one the reader honours.
+    """
+    return PatternFill("solid", fgColor=argb, bgColor=argb)
+
 
 THIN = Side(style="thin", color="D9DCEC")
 THICK = Side(style="thick", color=BANNER_FILL)
@@ -162,17 +175,21 @@ def build(spec_path, out_path):
             r += 1
 
         # Ready-cell fill by literal value, via conditional formatting so it
-        # re-evaluates when a reviewer edits the cell. Excel string comparison
-        # is case-insensitive, and =TRUE covers boolean entry; blank banner /
-        # spacer cells match neither rule.
+        # re-evaluates when a reviewer edits the cell.
+        #
+        # The cell can legitimately hold either the TEXT "false" (what this
+        # script writes) or the BOOLEAN TRUE/FALSE — Excel coerces the picked
+        # dropdown item when a reviewer sets a row ready, so a text-only
+        # comparison silently stops matching exactly when it matters. `&""`
+        # coerces both shapes to a string ("TRUE" for the boolean) and Excel's
+        # `=` on strings is case-insensitive, so one clause covers every
+        # representation. Blank banner / spacer cells match neither rule.
         if r > 2:
             rng = f"{READY_COL}2:{READY_COL}{r - 1}"
             ws.conditional_formatting.add(rng, FormulaRule(
-                formula=[f'OR(${READY_COL}2="true",${READY_COL}2=TRUE)'],
-                fill=PatternFill("solid", fgColor=GREEN_FILL)))
+                formula=[f'${READY_COL}2&""="true"'], fill=dxf_fill(GREEN_FILL)))
             ws.conditional_formatting.add(rng, FormulaRule(
-                formula=[f'OR(${READY_COL}2="false",${READY_COL}2=FALSE)'],
-                fill=PatternFill("solid", fgColor=PINK_FILL)))
+                formula=[f'${READY_COL}2&""="false"'], fill=dxf_fill(PINK_FILL)))
 
         summary.append({"worksheet": ws.title, "blocks": len(blocks), "rows": nrows})
 
