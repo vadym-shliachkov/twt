@@ -1,8 +1,8 @@
 ---
 name: twt-wiki-query
 category: wiki
-description: (v1.0.5) Ask the project a question and get an answer cited to the wiki and its sources
-version: 1.0.5
+description: (v1.0.6) Ask the project a question and get an answer cited to the wiki and its sources
+version: 1.0.6
 model: sonnet
 accepts_arguments: true
 inputs:

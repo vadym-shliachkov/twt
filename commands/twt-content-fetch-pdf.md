@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-pdf
 category: content
-description: (v1.0.0) Extract a PDF's text content and save as clean Markdown
-version: 1.0.0
+description: (v1.0.1) Extract a PDF's text content and save as clean Markdown
+version: 1.0.1
 model: sonnet
 accepts_arguments: true
 inputs:

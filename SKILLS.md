@@ -76,7 +76,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 ## /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Close the asset loop the manifest opens: for every row in `.twt-artifacts/design/assets/manifest.md`, either ingest the provided file, generate a brand-tokened placeholder (including the favicon/OG meta set and the design system's icon SVGs), or produce a concrete human to-do (stock briefs, missing files) — so mockups render, Development has real files to copy, and QA's MISSING-ASSET findings become an actionable checklist instead of noise.
@@ -161,7 +161,7 @@ One-call audience workflow: define → validate in one pass (§9 — no iteratio
 ## /twt-block-preview
 
 **Category:** design-system
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Take a playwright-powered screenshot of any HTML file or live URL — either the whole page or a specific CSS-selector element. Also runs as a batch block-capture step for a design-system audit directory, producing `visuals.json` consumed by `ds-audit-report.mjs`.
@@ -408,7 +408,7 @@ Create the content approval workbook that proves every page, shared header/foote
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
@@ -447,7 +447,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
@@ -480,7 +480,7 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 ## /twt-content-fetch-doc
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Pull a Word or Google Doc's content into the working directory as clean, frontmatter-tagged Markdown, matching the shape produced by the site and PDF fetchers so downstream skills consume one uniform format.
@@ -514,7 +514,7 @@ Pull a Word or Google Doc's content into the working directory as clean, frontma
 ## /twt-content-fetch-figma
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Pull a Figma design's **visible text content** — headings, body copy, button/CTA labels, nav items, microcopy, list items, and any captured link/media labels — into the working directory as clean, frontmatter-tagged Markdown, the same shape the other `content-fetch` skills produce. This lets a Figma file feed brand, positioning, IA, curation, and the content-approval checklist exactly like fetched site or PDF content.
@@ -549,7 +549,7 @@ Pull a Figma design's **visible text content** — headings, body copy, button/C
 ## /twt-content-fetch-pdf
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Pull a PDF's readable content into the working directory as clean, frontmatter-tagged Markdown so it can feed brand, positioning, IA, and curation skills the same way fetched site content does.
@@ -583,7 +583,7 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 ## /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 Pull a website's pages into the local working directory as clean, frontmatter-tagged Markdown — for use as reference material in copy migrations, content audits, or as input to other skills.
@@ -1070,7 +1070,7 @@ Build an Elementor widget or full-page template that follows the project's exist
 ## /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** no
 
 Scaffold a Hello Elementor child theme and write the canonical project conventions file (`conventions.md`) that downstream `/twt-elementor-*` skills depend on. Run once per WordPress project.
@@ -1208,7 +1208,7 @@ Orchestrate export creation across document and presentation formats. The skill 
 ## /twt-export-docx
 
 **Category:** export
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished DOCX using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1250,7 +1250,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1294,7 +1294,7 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 ## /twt-export-presentation
 
 **Category:** export
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** yes
 
 Convert a Markdown slide deck into PPTX or PDF using the marketplace's deterministic presentation export script and default presentation template. The skill keeps model work light: it gathers choices, runs the script, reads render notes, and reports results.
@@ -1557,7 +1557,7 @@ Build a static HTML page or a single section into the scaffolded `site/`, inlini
 ## /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.2.1
+**Version:** 1.2.2
 **Accepts arguments:** no
 
 Scaffold a dependency-free static HTML/CSS site once per project and write the canonical `conventions.md` that `/twt-html-block-creator` loads. Chrome (header/footer/nav) lives once in `partials/`; `tokens.css` is mirrored from the design-system spine. Run once per static-site project.
@@ -1760,7 +1760,7 @@ Read-only critique of the page layouts — section order & hierarchy, component-
 ## /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** no
 
 Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill. Stamps `(vX.Y.Z)` into each skill's committed `description:` field from its `version:` frontmatter. Ensures docs never drift from skills.
@@ -2012,7 +2012,7 @@ Convert messy project notes, links, Figma references, document paths, and constr
 ## /twt-qa
 
 **Category:** qa
-**Version:** 1.0.6
+**Version:** 1.0.7
 **Accepts arguments:** yes
 
 One-call QA: pick the mode (local files, or live crawl if a URL is given), run the applicable audits, then aggregate a `qa-report.md` (with a PASS/FAIL verdict) and synthesize a client-ready `gaps.md` punch-list of outstanding content and links.
@@ -2050,7 +2050,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 ## /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.3
+**Version:** 1.1.4
 **Accepts arguments:** yes
 
 Read-only accessibility audit of the built HTML (local) or the rendered pages (live, best-effort) — image alt text, heading order, landmarks, form labels, and WCAG AA contrast for declared color pairs.
@@ -2084,7 +2084,7 @@ Read-only accessibility audit of the built HTML (local) or the rendered pages (l
 ## /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.2
+**Version:** 1.2.3
 **Accepts arguments:** yes
 
 Read-only audit of content & information-architecture fidelity — every sitemap page exists, each page's sections match the Phase-1 outlines, and the content is real (no lorem/placeholder, no empty slots). Works on local HTML files or, given a URL, on the rendered site (the only way to see Elementor content).
@@ -2122,7 +2122,7 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 ## /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Read-only audit of design & token fidelity on the **source** files — CSS is token-only (no hex/px/font literals), every custom property used is defined in `tokens.css`, and each page's section structure includes the components its layout requires.
@@ -2159,7 +2159,7 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 ## /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS, every widget registered in `$map`, WPML coverage for translatable fields, PHP syntax, and CSS scoping. Does NOT audit content (Elementor content lives in the WordPress DB, not in files — use live `/twt-qa <url>` for that).
@@ -2193,7 +2193,7 @@ Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS
 ## /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 **Accepts arguments:** yes
 
 Read-only audit of link integrity (internal links/anchors resolve, nav consistent) and — in local mode — declared responsive tiers (960/720/600/480) and fixed-width risks. Detects dead and placeholder links for the gaps punch-list.
@@ -2228,7 +2228,7 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 ## /twt-search-site
 
 **Category:** search
-**Version:** 1.1.1
+**Version:** 1.1.2
 **Accepts arguments:** yes
 
 Find every occurrence of a specific string across a website's pages and produce a report listing the exact page URLs where it appears, with up to 100 characters of surrounding text before and after each match for context. Standalone utility — not part of the four-phase pipeline.
@@ -2295,7 +2295,7 @@ One-call SEO workflow: define → validate in one pass (§9 — no iteration loo
 ## /twt-setup
 
 **Category:** meta
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** no
 
 Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. Without a permission allowlist the user is prompted for each one. This command merges a curated, additive allowlist into the current project's `.claude/settings.json` so those routine calls are auto-approved and prompts appear only for genuinely novel or risky operations. The scope-guard hook continues to gate any file operation that would escape the project directory.
@@ -2463,7 +2463,7 @@ One-call spec workflow: define (interview into the north-star `specification.md`
 ## /twt-status
 
 **Category:** status
-**Version:** 1.1.0
+**Version:** 1.1.1
 **Accepts arguments:** yes
 
 In the iterative design loop, editing an upstream artifact silently invalidates everything derived from it — `brand-brief.md` changes and `positioning.md` is now stale, but nothing says so. This skill compares each artifact's modification time against the inputs it was derived from, flags the stale ones, and reports the minimal upstream-first set of skills to re-run. Read-only: it never re-runs or edits anything.
@@ -2620,7 +2620,7 @@ Bring an external source into the wiki's evidence layer: copy or register it und
 ## /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
 Answer a question about the project from its durable memory — including the questions no artifact can answer, like *why is the CTA orange* or *what did we rule out and why*.

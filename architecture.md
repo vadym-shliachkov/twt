@@ -404,7 +404,7 @@ flowchart TB
 ### /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
@@ -522,7 +522,7 @@ flowchart TB
 ### /twt-block-preview
 
 **Category:** design-system
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags
@@ -763,7 +763,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
@@ -793,7 +793,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -817,7 +817,7 @@ flowchart TB
 ### /twt-content-fetch-doc
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Path to a .docx file, or an exported .md/.txt, or a Google Doc share URL
@@ -842,7 +842,7 @@ flowchart TB
 ### /twt-content-fetch-figma
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - A Figma file or frame URL (figma.com/design/… or figma.com/file/…, with or without a node-id)
@@ -867,7 +867,7 @@ flowchart TB
 ### /twt-content-fetch-pdf
 
 **Category:** content
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Path to a local PDF file (or folder of PDFs)
@@ -892,7 +892,7 @@ flowchart TB
 ### /twt-content-fetch-site
 
 **Category:** content
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - URL (homepage or full crawl up to 50 pages)
@@ -1323,7 +1323,7 @@ flowchart TB
 ### /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - project name
@@ -1430,7 +1430,7 @@ flowchart TB
 ### /twt-export-docx
 
 **Category:** export
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Markdown file path
@@ -1459,7 +1459,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Markdown file path
@@ -1489,7 +1489,7 @@ flowchart TB
 ### /twt-export-presentation
 
 **Category:** export
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Markdown deck path, optional --format pptx|pdf, optional --aspect 16:9|4:3
@@ -1674,7 +1674,7 @@ flowchart TB
 ### /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - project name (asked); short slug (auto-derived, user confirms); output root (default ./site)
@@ -1825,7 +1825,7 @@ flowchart TB
 ### /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - (none)
@@ -2069,7 +2069,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -2098,7 +2098,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2124,7 +2124,7 @@ flowchart TB
 ### /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2153,7 +2153,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -2182,7 +2182,7 @@ flowchart TB
 ### /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
@@ -2208,7 +2208,7 @@ flowchart TB
 ### /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2235,7 +2235,7 @@ flowchart TB
 ### /twt-search-site
 
 **Category:** search
-**Version:** 1.1.1
+**Version:** 1.1.2
 
 **Inputs:**
 - Search string (first argument; wrap in quotes if it contains spaces)
@@ -2342,7 +2342,7 @@ flowchart TB
 ### /twt-setup
 
 **Category:** meta
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - (none)
@@ -2515,7 +2515,7 @@ flowchart TB
 ### /twt-status
 
 **Category:** status
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 **Inputs:**
 - Optional: a phase (pre-design|design|develop|qa) or artifact path to scope the check; else the whole pipeline
@@ -2671,7 +2671,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - The question to ask; otherwise interactive

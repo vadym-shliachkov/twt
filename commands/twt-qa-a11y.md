@@ -1,8 +1,8 @@
 ---
 name: twt-qa-a11y
 category: qa
-description: (v1.1.3) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
-version: 1.1.3
+description: (v1.1.4) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
+version: 1.1.4
 model: sonnet
 accepts_arguments: true
 inputs:

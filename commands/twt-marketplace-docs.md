@@ -1,8 +1,8 @@
 ---
 name: twt-marketplace-docs
 category: meta
-description: (v1.0.3) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
-version: 1.0.3
+description: (v1.0.4) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
+version: 1.0.4
 model: haiku
 effort: low
 accepts_arguments: false

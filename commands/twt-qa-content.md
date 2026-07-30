@@ -1,8 +1,8 @@
 ---
 name: twt-qa-content
 category: qa
-description: (v1.2.2) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
-version: 1.2.2
+description: (v1.2.3) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
+version: 1.2.3
 model: sonnet
 accepts_arguments: true
 inputs:

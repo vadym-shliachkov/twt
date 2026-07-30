@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-doc
 category: content
-description: (v1.0.0) Extract a Word/Google Doc's content and save as clean Markdown
-version: 1.0.0
+description: (v1.0.1) Extract a Word/Google Doc's content and save as clean Markdown
+version: 1.0.1
 model: sonnet
 accepts_arguments: true
 inputs:

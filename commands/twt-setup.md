@@ -1,8 +1,8 @@
 ---
 name: twt-setup
 category: meta
-description: (v1.0.3) One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
-version: 1.0.3
+description: (v1.0.4) One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
+version: 1.0.4
 model: haiku
 effort: low
 accepts_arguments: false

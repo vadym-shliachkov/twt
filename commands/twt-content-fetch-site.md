@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-site
 category: content
-description: (v1.2.2) Fetch a website's content via the bundled crawler and save as clean Markdown
-version: 1.2.2
+description: (v1.2.3) Fetch a website's content via the bundled crawler and save as clean Markdown
+version: 1.2.3
 model: sonnet
 accepts_arguments: true
 inputs:

@@ -1,8 +1,8 @@
 ---
 name: twt-content-fetch-figma
 category: content
-description: (v1.0.1) Extract a Figma file's visible text content and save as clean Markdown
-version: 1.0.1
+description: (v1.0.2) Extract a Figma file's visible text content and save as clean Markdown
+version: 1.0.2
 model: sonnet
 accepts_arguments: true
 inputs:
