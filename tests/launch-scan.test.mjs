@@ -566,3 +566,144 @@ test('analytics: a real GA4 id is still not caught as a YOUR- placeholder', () =
   run([dir]);
   assert.equal(facts(dir).checks.analytics.counts.placeholder_ids, 0);
 });
+
+// ---- conversion (category 6) ------------------------------------------------
+
+test('conversion: a form posting to # or empty is a dead action', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<form action="#"><input name="e"><button type="submit">Go</button></form>'),
+    'b.html': HEAD('<title>B</title>', '<form action=""><input name="e"><button type="submit">Go</button></form>'),
+    'c.html': HEAD('<title>C</title>', '<form><input name="e"><button type="submit">Go</button></form>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.conversion.counts;
+  assert.equal(c.forms, 3);
+  assert.equal(c.dead_actions, 3, 'missing action is as dead as # or empty');
+});
+
+test('conversion: a real action endpoint is not flagged', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<form action="/api/contact" method="post"><label for="e">Email</label><input id="e" name="e"><button type="submit">Go</button></form>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.conversion.counts;
+  assert.equal(c.dead_actions, 0);
+  assert.equal(c.unlabeled_controls, 0);
+  assert.equal(c.no_submit, 0);
+});
+
+test('conversion: a localhost form action is a nonprod action', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<form action="http://localhost:3000/send"><input name="e"><button type="submit">Go</button></form>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.conversion.counts.nonprod_actions, 1);
+});
+
+test('conversion: an input with no label and a form with no submit are counted', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<form action="/x"><input name="e"><input name="f" aria-label="F"></form>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.conversion.counts;
+  assert.equal(c.unlabeled_controls, 1, 'aria-label counts as labeled');
+  assert.equal(c.no_submit, 1);
+});
+
+test('conversion: malformed mailto and tel links are counted', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<a href="mailto:">a</a><a href="mailto:hi@acme.com">b</a><a href="tel:">c</a><a href="tel:+15551234567">d</a>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.conversion.counts;
+  assert.equal(c.bad_mailto, 1);
+  assert.equal(c.bad_tel, 1);
+});
+
+test('conversion: a wrapping <label> with no for/id still counts as labeled (valid HTML)', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<form action="/x"><label>Email <input name="e"></label><button type="submit">Go</button></form>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.conversion.counts;
+  assert.equal(c.unlabeled_controls, 0, 'a wrapping <label> without for/id is valid, common markup and must not be flagged');
+});
+
+// ---- errors (category 7) ----------------------------------------------------
+
+test('errors: no 404 page is reported', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const e = facts(dir).checks.errors;
+  assert.equal(e.counts.error_page, false);
+  assert.ok(e.findings.some((x) => x.kind === 'missing_error_page'));
+});
+
+test('errors: a 404.html satisfies error_page', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>'), '404.html': HEAD('<title>Not found</title>') });
+  run([dir]);
+  assert.equal(facts(dir).checks.errors.counts.error_page, true);
+});
+
+test('errors: a theme 404.php satisfies error_page', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  put(join(dir, 'wp-content', 'themes', 'hello-elementor-acme', '404.php'), '<?php // not found');
+  run([dir]);
+  assert.equal(facts(dir).checks.errors.counts.error_page, true);
+});
+
+test('errors: a target=_blank link without rel=noopener is unsafe', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<a href="https://x.com" target="_blank">x</a><a href="https://y.com" target="_blank" rel="noopener noreferrer">y</a>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.errors.counts;
+  assert.equal(c.external_links, 2);
+  assert.equal(c.unsafe_external, 1);
+});
+
+// ---- performance (category 8) -----------------------------------------------
+
+test('performance: an oversized image is counted with its byte weight', () => {
+  const dir = siteProject({ 'a.html': HEAD('<title>A</title>', '<img src="/img/hero.jpg" alt="h" width="1200" height="600" loading="lazy">') });
+  put(join(dir, 'site', 'img', 'hero.jpg'), 'x'.repeat(900 * 1024));
+  run([dir]);
+  const p = facts(dir).checks.performance;
+  assert.equal(p.counts.images, 1);
+  assert.equal(p.counts.heavy_images, 1);
+  assert.ok(p.findings.some((x) => x.kind === 'heavy_image' && /KB/.test(x.detail)));
+});
+
+test('performance: a small image is not flagged', () => {
+  const dir = siteProject({ 'a.html': HEAD('<title>A</title>', '<img src="/img/i.png" alt="i" width="10" height="10" loading="lazy">') });
+  put(join(dir, 'site', 'img', 'i.png'), 'x'.repeat(4 * 1024));
+  run([dir]);
+  const c = facts(dir).checks.performance.counts;
+  assert.equal(c.heavy_images, 0);
+  assert.equal(c.missing_lazy, 0);
+  assert.equal(c.missing_dimensions, 0);
+});
+
+test('performance: missing loading=lazy and missing width/height are counted', () => {
+  const dir = siteProject({ 'a.html': HEAD('<title>A</title>', '<img src="/img/i.png" alt="i">') });
+  put(join(dir, 'site', 'img', 'i.png'), 'x');
+  run([dir]);
+  const c = facts(dir).checks.performance.counts;
+  assert.equal(c.missing_lazy, 1);
+  assert.equal(c.missing_dimensions, 1);
+});
+
+test('performance: heaviest_page_bytes reflects html plus its local assets', () => {
+  const dir = siteProject({ 'a.html': HEAD('<title>A</title>', '<img src="/img/i.png" alt="i" width="1" height="1" loading="lazy">') });
+  put(join(dir, 'site', 'img', 'i.png'), 'x'.repeat(50 * 1024));
+  run([dir]);
+  assert.ok(facts(dir).checks.performance.counts.heaviest_page_bytes > 50 * 1024);
+});
+
+test('performance: a remote font stylesheet is counted', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.performance.counts.remote_fonts, 1);
+});
