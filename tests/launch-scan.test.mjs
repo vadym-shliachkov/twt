@@ -365,3 +365,142 @@ test('discoverability: a genuinely unlisted page is still reported as a sitemap 
   run([dir]);
   assert.equal(facts(dir).checks.discoverability.counts.sitemap_orphans, 1);
 });
+
+// ---- legal (category 4) -----------------------------------------------------
+
+test('legal: no privacy, terms, or cookie page at all', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const c = facts(dir).checks.legal.counts;
+  assert.equal(c.privacy_page, false);
+  assert.equal(c.terms_page, false);
+  assert.equal(c.cookie_page, false);
+});
+
+test('legal: pages are detected by filename and by title', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>'),
+    'privacy-policy.html': HEAD('<title>Privacy Policy</title>'),
+    'small-print.html': HEAD('<title>Terms of Service</title>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.legal.counts;
+  assert.equal(c.privacy_page, true, 'matched on the filename');
+  assert.equal(c.terms_page, true, 'matched on the title');
+});
+
+test('legal: a legal page linked from nowhere else is flagged', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>'),
+    'privacy.html': HEAD('<title>Privacy</title>'),
+  });
+  run([dir]);
+  const l = facts(dir).checks.legal;
+  assert.equal(l.counts.privacy_page, true);
+  assert.equal(l.counts.privacy_linked, false);
+  assert.ok(l.findings.some((x) => x.kind === 'privacy_not_linked'));
+});
+
+test('legal: a footer link satisfies privacy_linked', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>', '<footer><a href="privacy.html">Privacy</a></footer>'),
+    'privacy.html': HEAD('<title>Privacy</title>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.legal.counts.privacy_linked, true);
+});
+
+test('legal: a page linking only to itself does not count as linked', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>'),
+    'privacy.html': HEAD('<title>Privacy</title>', '<a href="privacy.html">this page</a>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.legal.counts.privacy_linked, false);
+});
+
+test('legal: a consent banner is detected by its markers', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>', '<div id="cookie-consent">Accept cookies?</div>') });
+  run([dir]);
+  assert.equal(facts(dir).checks.legal.counts.cookie_banner, true);
+});
+
+// ---- analytics (category 5) -------------------------------------------------
+
+test('analytics: no tracker is reported as none, never invented', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const c = facts(dir).checks.analytics.counts;
+  assert.equal(c.trackers, 0);
+  assert.equal(c.placeholder_ids, 0);
+  assert.equal(c.tracker_before_consent, 0);
+});
+
+test('analytics: a placeholder GA4 id is found', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><script src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>'),
+  });
+  run([dir]);
+  const a = facts(dir).checks.analytics;
+  assert.equal(a.counts.trackers, 1);
+  assert.equal(a.counts.placeholder_ids, 1);
+  assert.ok(a.findings.some((x) => x.kind === 'placeholder_id' && /G-XXXXXXXXXX/i.test(x.detail)));
+});
+
+test('analytics: a legacy UA- id counts as a placeholder-class problem', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title><script>ga("create","UA-000000-1");</script>') });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.placeholder_ids, 1);
+});
+
+test('analytics: a real GA4 id is a tracker but not a placeholder', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><script src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.analytics.counts;
+  assert.equal(c.trackers, 1);
+  assert.equal(c.placeholder_ids, 0);
+});
+
+test('analytics: the same container twice on one page is a duplicate tag', () => {
+  const tag = '<script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC1234"></script>';
+  const dir = siteProject({ 'index.html': HEAD(`<title>A</title>${tag}${tag}`) });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.duplicate_tags, 1);
+});
+
+test('analytics: a tracker with no consent gate anywhere is tracker_before_consent', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><script src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>'),
+  });
+  run([dir]);
+  const a = facts(dir).checks.analytics;
+  assert.equal(a.counts.tracker_before_consent, 1);
+  assert.ok(a.findings.some((x) => x.kind === 'tracker_before_consent' && /no consent gate/.test(x.detail)));
+});
+
+test('analytics: a tracker after a consent gate is not flagged', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>',
+      '<div id="cookie-consent">Accept?</div><script src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.tracker_before_consent, 0);
+});
+
+test('analytics: a tracker before an existing consent gate names the gate line', () => {
+  const dir = siteProject({
+    'index.html': [
+      '<html lang="en"><head><title>A</title>',
+      '<script src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>',
+      '</head><body>',
+      '<div id="cookie-consent">Accept?</div>',
+      '</body></html>',
+    ].join('\n'),
+  });
+  run([dir]);
+  const a = facts(dir).checks.analytics;
+  assert.equal(a.counts.tracker_before_consent, 1);
+  assert.ok(a.findings.some((x) => /before the consent gate at line 4/.test(x.detail)));
+});

@@ -16,9 +16,11 @@ import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
 import * as content from './launch-audit/scan/content.mjs';
 import * as discoverability from './launch-audit/scan/discoverability.mjs';
 import * as social from './launch-audit/scan/social.mjs';
+import * as legal from './launch-audit/scan/legal.mjs';
+import * as analytics from './launch-audit/scan/analytics.mjs';
 import * as hygiene from './launch-audit/scan/hygiene.mjs';
 
-const MODULES = { content, discoverability, social, hygiene };   // Tasks 5–7 extend this map
+const MODULES = { content, discoverability, social, legal, analytics, hygiene };   // Tasks 6–7 extend this map
 
 const projectDir = process.argv[2];
 if (!projectDir || projectDir.startsWith('--')) {
