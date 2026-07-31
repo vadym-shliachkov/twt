@@ -14,6 +14,7 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
 import { harvest } from './launch-audit/harvest.mjs';
+import { checkLive } from './launch-audit/live.mjs';
 import * as content from './launch-audit/scan/content.mjs';
 import * as discoverability from './launch-audit/scan/discoverability.mjs';
 import * as social from './launch-audit/scan/social.mjs';
@@ -73,6 +74,21 @@ try {
   harvestCrash = e.message;
 }
 
+// Layer C (live) only runs when the user supplied a URL, and only reports
+// what a response can actually prove — see live.mjs. checkLive() already
+// never throws (an unreachable host is a failed result, not a crash), but
+// this wraps the call anyway so a genuine bug in the module degrades the live
+// layer instead of taking the whole scan down, same independence rule as the
+// harvest layer above: a failed live layer must never flip layers.scan.
+let live = null;
+if (url) {
+  try {
+    live = await checkLive(url);
+  } catch (e) {
+    live = { status: 'failed', url, checks: {}, findings: [{ kind: 'unreachable', file: url, line: 0, detail: e.message }] };
+  }
+}
+
 const facts = {
   tool: 'launch-scan',
   version: 1,
@@ -84,11 +100,11 @@ const facts = {
   layers: {
     scan: failed.length ? 'partial' : 'ok',
     harvest: harvested ? harvested.status : 'failed',
-    live: 'skipped',
+    live: live ? live.status : 'skipped',
   },
   checks,
   harvest: harvested,
-  live: null,
+  live,
 };
 
 const outDir = join(projectDir, '.twt-artifacts', 'launch');

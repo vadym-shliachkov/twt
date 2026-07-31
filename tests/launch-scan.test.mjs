@@ -718,3 +718,24 @@ test('launch-scan: the envelope carries a harvest block and its own layer status
   assert.ok(['ok', 'partial'].includes(f.layers.harvest));
   assert.equal(f.layers.scan, 'ok', 'a partial harvest must not degrade the scan layer');
 });
+
+// ---- live wiring (layer independence) ------------------------------------------
+
+test('launch-scan: without --url the live layer is skipped, not failed', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const f = facts(dir);
+  assert.equal(f.layers.live, 'skipped');
+  assert.equal(f.live, null);
+  assert.equal(f.mode, 'local');
+});
+
+test('launch-scan: --url sets mode local+live and records the url', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir, '--url', 'http://127.0.0.1:1']);
+  const f = facts(dir);
+  assert.equal(f.mode, 'local+live');
+  assert.equal(f.url, 'http://127.0.0.1:1');
+  assert.equal(f.layers.live, 'failed', 'an unreachable host is a failed live layer, not a crash');
+  assert.equal(f.layers.scan, 'ok', 'a failed live layer must not degrade the local scan');
+});
