@@ -707,3 +707,14 @@ test('performance: a remote font stylesheet is counted', () => {
   run([dir]);
   assert.equal(facts(dir).checks.performance.counts.remote_fonts, 1);
 });
+
+// ---- harvest wiring (layer independence) --------------------------------------
+
+test('launch-scan: the envelope carries a harvest block and its own layer status', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const f = facts(dir);
+  assert.ok(f.harvest, 'harvest must be present, never null on a successful run');
+  assert.ok(['ok', 'partial'].includes(f.layers.harvest));
+  assert.equal(f.layers.scan, 'ok', 'a partial harvest must not degrade the scan layer');
+});

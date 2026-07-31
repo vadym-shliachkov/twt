@@ -13,6 +13,7 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
+import { harvest } from './launch-audit/harvest.mjs';
 import * as content from './launch-audit/scan/content.mjs';
 import * as discoverability from './launch-audit/scan/discoverability.mjs';
 import * as social from './launch-audit/scan/social.mjs';
@@ -57,6 +58,21 @@ for (const [name, mod] of Object.entries(MODULES)) {
   }
 }
 
+// Layer B (harvest) is independent of Layer A (scan): harvest() wraps every
+// probe internally (harvest.mjs's own `probe()`), so it should only ever
+// throw here on a genuine bug in the module itself — not on a missing or
+// unreadable artifact, which it already reports as status:"ok"/"partial"
+// without throwing. Track that crash separately from `failed` (the scan
+// modules' own failure list) so a harvest problem can never flip
+// layers.scan to "partial" — only layers.scan gates the report filename.
+let harvested = null;
+let harvestCrash = null;
+try {
+  harvested = harvest(ctx);
+} catch (e) {
+  harvestCrash = e.message;
+}
+
 const facts = {
   tool: 'launch-scan',
   version: 1,
@@ -65,9 +81,13 @@ const facts = {
   mode: url ? 'local+live' : 'local',
   url,
   sources: { kind, base: ctx.rel(base), html: html.map(ctx.rel), css: css.map(ctx.rel), theme: ctx.theme ? ctx.rel(ctx.theme) : null },
-  layers: { scan: failed.length ? 'partial' : 'ok', harvest: 'skipped', live: 'skipped' },
+  layers: {
+    scan: failed.length ? 'partial' : 'ok',
+    harvest: harvested ? harvested.status : 'failed',
+    live: 'skipped',
+  },
   checks,
-  harvest: null,
+  harvest: harvested,
   live: null,
 };
 
@@ -79,6 +99,8 @@ const tally = Object.entries(checks)
   .map(([k, v]) => `${k}=${v.findings.length}`).join('  ');
 console.log(`launch-scan: ${tally}  (${html.length} page${html.length === 1 ? '' : 's'} from ${facts.sources.base})`);
 if (failed.length) console.log(`layers.scan=partial — ${failed.join('; ')}`);
+if (harvestCrash) console.log(`layers.harvest=failed — ${harvestCrash}`);
+else if (harvested && harvested.notes.length) console.log(`layers.harvest=${harvested.status} — ${harvested.notes.join('; ')}`);
 console.log('```json');
 console.log(JSON.stringify(facts, null, 2));
 console.log('```');
