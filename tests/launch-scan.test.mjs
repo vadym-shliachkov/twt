@@ -504,3 +504,65 @@ test('analytics: a tracker before an existing consent gate names the gate line',
   assert.equal(a.counts.tracker_before_consent, 1);
   assert.ok(a.findings.some((x) => /before the consent gate at line 4/.test(x.detail)));
 });
+
+// ---- analytics fix round: duplicate_tags must not fire on correct installs --
+
+test('analytics: Google\'s canonical GA4 boilerplate (loader script + gtag config call) is not a duplicate', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>',
+      '<script async src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>' +
+      '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}' +
+      'gtag("js",new Date());gtag("config","G-4B8N2QRST9");</script>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.duplicate_tags, 0);
+});
+
+test('analytics: Google\'s canonical GTM boilerplate (IIFE loader + noscript iframe) is not a duplicate', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>',
+      '<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({"gtm.start":new Date().getTime(),event:"gtm.js"});' +
+      'var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!="dataLayer"?"&l="+l:"";j.async=true;' +
+      'j.src="https://www.googletagmanager.com/gtm.js?id="+i+dl;f.parentNode.insertBefore(j,f);' +
+      '})(window,document,"script","dataLayer","GTM-ABC1234");</script>' +
+      '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-ABC1234" ' +
+      'height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.duplicate_tags, 0);
+});
+
+test('analytics: three identical loader tags on one page is two duplicates', () => {
+  const tag = '<script src="https://www.googletagmanager.com/gtm.js?id=GTM-ABC1234"></script>';
+  const dir = siteProject({ 'index.html': HEAD(`<title>A</title>${tag}${tag}${tag}`) });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.duplicate_tags, 2);
+});
+
+// ---- analytics fix round: YOUR-GA-ID / YOUR-GTM-ID must be caught -----------
+
+test('analytics: a literal YOUR-GA-ID placeholder is caught', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>', '<script>gtag("config", "YOUR-GA-ID");</script>'),
+  });
+  run([dir]);
+  const a = facts(dir).checks.analytics;
+  assert.equal(a.counts.placeholder_ids, 1);
+  assert.ok(a.findings.some((x) => x.kind === 'placeholder_id' && /YOUR-GA-ID/i.test(x.detail)));
+});
+
+test('analytics: a literal YOUR-GTM-ID placeholder is caught', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>', '<script>gtag("config", "YOUR-GTM-ID");</script>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.placeholder_ids, 1);
+});
+
+test('analytics: a real GA4 id is still not caught as a YOUR- placeholder', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><script src="https://www.googletagmanager.com/gtag/js?id=G-4B8N2QRST9"></script>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.analytics.counts.placeholder_ids, 0);
+});

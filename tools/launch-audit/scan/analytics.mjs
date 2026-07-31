@@ -9,9 +9,31 @@
 // a mixed alphanumeric suffix, so an all-X, all-0, or literal-placeholder tail
 // is unambiguous. Legacy UA- ids are included deliberately: Universal Analytics
 // no longer collects data, so a UA- tag on a launching site collects nothing.
+// YOUR-GA-ID / YOUR-GTM-ID are included because they are the literal placeholder
+// Google's own gtag documentation ships in commented-out config examples — a
+// scaffolder that forgets to replace it ships a site that collects nothing.
 const PLACEHOLDER = /^(G-X+|G-0+|GTM-X+|GTM-0+|UA-0+-\d+|UA-X+-X+|YOUR-?(GA|GTM)-?ID)$/i;
 const TRACKER = /(googletagmanager\.com\/(?:gtag\/js|gtm\.js)|google-analytics\.com\/analytics\.js|plausible\.io\/js|matomo\.js|static\.hotjar\.com|cdn\.segment\.com\/analytics\.js|connect\.facebook\.net[^"']*fbevents\.js|clarity\.ms)/gi;
-const ID = /\b((?:G|GTM|UA|AW)-[A-Z0-9]+(?:-[A-Z0-9]+)?)\b/gi;
+// Prefix alternation includes YOUR- so the placeholder literals above (whose
+// id text never starts with G-/GTM-/UA-/AW-) actually get captured by this
+// regex in the first place — without it PLACEHOLDER's YOUR- branch is dead
+// code that never fires against real markup.
+const ID = /\b((?:G|GTM|UA|AW|YOUR)-[A-Z0-9]+(?:-[A-Z0-9]+)?)\b/gi;
+// Duplicate-tag detection is deliberately narrower than "this id appears twice
+// anywhere in the page". Google's own canonical GA4 snippet repeats the id
+// once in the loader <script src> and once in a gtag('config', id) call; its
+// canonical GTM snippet repeats the id once in an inline IIFE argument and
+// once in a <noscript><iframe> fallback. Both are a single, correct install —
+// counting every text occurrence of the id flagged both as duplicates, which
+// meant this check fired on the two most common analytics installations on
+// the internet and stayed quiet only on unusual ones. A tag is only counted
+// as duplicated when the SAME id loads from 2+ distinct <script src=...id=...>
+// tags, which is what an actually-pasted-twice snippet looks like.
+// Trade-off accepted: this misses a duplicated GTM IIFE paste whose id only
+// ever appears as a JS constructor argument (never inside a literal src=) —
+// that pattern is rare, and far better than false-flagging every correct
+// GA4/GTM install.
+const LOADER_ID = /<script\b[^>]*\bsrc\s*=\s*["'][^"']*[?&]id=([A-Z0-9-]+)[^"']*["'][^>]*>/gi;
 const CONSENT = /(cookie[-_ ]?(consent|banner|notice)|gdpr|cookieconsent|onetrust|klaro|cookiebot|osano|termly|consentmanager)/i;
 
 export function run(ctx) {
@@ -23,7 +45,6 @@ export function run(ctx) {
     const file = ctx.rel(f);
     const consent = CONSENT.exec(src);
     const consentAt = consent ? consent.index : -1;
-    const seen = new Set();
 
     for (const m of src.matchAll(TRACKER)) {
       counts.trackers++;
@@ -43,11 +64,16 @@ export function run(ctx) {
         counts.placeholder_ids++;
         findings.push({ kind: 'placeholder_id', file, line, detail: `${id} is a placeholder, not a real property` });
       }
-      if (seen.has(id)) {
+    }
+    const seenLoaderIds = new Set();
+    for (const m of src.matchAll(LOADER_ID)) {
+      const id = m[1].toUpperCase();
+      const line = ctx.lineOf(src, m.index);
+      if (seenLoaderIds.has(id)) {
         counts.duplicate_tags++;
-        findings.push({ kind: 'duplicate_tag', file, line, detail: `${id} appears more than once on this page` });
+        findings.push({ kind: 'duplicate_tag', file, line, detail: `${id} loads from more than one <script src> tag on this page` });
       }
-      seen.add(id);
+      seenLoaderIds.add(id);
     }
   }
   return { counts, findings };
