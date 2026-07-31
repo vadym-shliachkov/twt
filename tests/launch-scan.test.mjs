@@ -193,3 +193,136 @@ test('hygiene: does not scan node_modules or .git', () => {
   run([dir]);
   assert.equal(facts(dir).checks.hygiene.counts.committed_secret_files, 0);
 });
+
+// ---- discoverability (category 2) -------------------------------------------
+
+const HEAD = (head, body = '<h1>x</h1>') =>
+  `<html lang="en"><head>${head}</head><body>${body}</body></html>`;
+
+test('discoverability: a meta robots noindex is found and located', () => {
+  const dir = siteProject({ 'about.html': HEAD('<title>About</title><meta name="robots" content="noindex,follow">') });
+  run([dir]);
+  const d = facts(dir).checks.discoverability;
+  assert.equal(d.counts.noindex_pages, 1);
+  const f = d.findings.find((x) => x.kind === 'noindex');
+  assert.equal(f.file, 'site/about.html');
+  assert.ok(f.line >= 1);
+});
+
+test('discoverability: noindex is case-insensitive and matches crawler-specific tags', () => {
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title><META NAME="ROBOTS" CONTENT="NOINDEX">'),
+    'b.html': HEAD('<title>B</title><meta name="googlebot" content="noindex">'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.discoverability.counts.noindex_pages, 2);
+});
+
+test('discoverability: missing title, description, canonical, and lang are each counted', () => {
+  const dir = siteProject({ 'bare.html': '<html><head></head><body><h1>x</h1></body></html>' });
+  run([dir]);
+  const c = facts(dir).checks.discoverability.counts;
+  assert.equal(c.pages, 1);
+  assert.equal(c.missing_title, 1);
+  assert.equal(c.missing_description, 1);
+  assert.equal(c.missing_canonical, 1);
+  assert.equal(c.missing_lang, 1);
+});
+
+test('discoverability: over-length title and description are flagged, in-range are not', () => {
+  const dir = siteProject({
+    'long.html': HEAD(`<title>${'a'.repeat(75)}</title><meta name="description" content="${'b'.repeat(175)}">`),
+    'ok.html': HEAD('<title>Acme — Bridges</title><meta name="description" content="We build bridges that last a century, on time and on budget.">'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.discoverability.counts;
+  assert.equal(c.long_title, 1);
+  assert.equal(c.long_description, 1);
+});
+
+test('discoverability: robots.txt and sitemap.xml presence is reported as booleans', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  let c = facts(dir).checks.discoverability.counts;
+  assert.equal(c.robots_txt, false);
+  assert.equal(c.sitemap_xml, false);
+  put(join(dir, 'site', 'robots.txt'), 'User-agent: *\nAllow: /\n');
+  put(join(dir, 'site', 'sitemap.xml'), '<urlset><url><loc>https://acme.com/index.html</loc></url></urlset>');
+  run([dir]);
+  c = facts(dir).checks.discoverability.counts;
+  assert.equal(c.robots_txt, true);
+  assert.equal(c.sitemap_xml, true);
+});
+
+test('discoverability: a Disallow: / in robots.txt is its own finding', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  put(join(dir, 'site', 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+  run([dir]);
+  assert.ok(facts(dir).checks.discoverability.findings.some((x) => x.kind === 'robots_disallow_all'));
+});
+
+test('discoverability: built pages absent from sitemap.xml are counted as orphans', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>Home</title>'), 'about.html': HEAD('<title>About</title>') });
+  put(join(dir, 'site', 'sitemap.xml'), '<urlset><url><loc>https://acme.com/index.html</loc></url></urlset>');
+  run([dir]);
+  assert.equal(facts(dir).checks.discoverability.counts.sitemap_orphans, 1);
+});
+
+test('discoverability: a fully tagged page produces zero findings', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Acme — Bridges</title><meta name="description" content="We build bridges that last."><link rel="canonical" href="https://acme.com/">'),
+  });
+  put(join(dir, 'site', 'robots.txt'), 'User-agent: *\nAllow: /\n');
+  put(join(dir, 'site', 'sitemap.xml'), '<urlset><url><loc>https://acme.com/index.html</loc></url></urlset>');
+  run([dir]);
+  assert.deepEqual(facts(dir).checks.discoverability.findings, []);
+});
+
+// ---- social (category 3) ----------------------------------------------------
+
+test('social: missing og tags, favicon, and twitter card are counted', () => {
+  const dir = siteProject({ 'index.html': HEAD('<title>A</title>') });
+  run([dir]);
+  const c = facts(dir).checks.social.counts;
+  assert.equal(c.favicon, false);
+  assert.equal(c.apple_touch_icon, false);
+  assert.equal(c.missing_og_title, 1);
+  assert.equal(c.missing_og_image, 1);
+  assert.equal(c.missing_twitter_card, 1);
+});
+
+test('social: an og:image naming a nonexistent file is a distinct finding', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><meta property="og:title" content="A"><meta property="og:image" content="/img/og.png">'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.social.counts;
+  assert.equal(c.missing_og_image, 0, 'the tag is present');
+  assert.equal(c.og_image_missing_file, 1, 'but the file it names is not on disk');
+});
+
+test('social: an og:image whose file exists is not flagged', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><meta property="og:title" content="A"><meta property="og:image" content="/img/og.png">'),
+  });
+  put(join(dir, 'site', 'img', 'og.png'), 'PNG');
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.og_image_missing_file, 0);
+});
+
+test('social: an absolute-URL og:image is not checked on disk', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><meta property="og:title" content="A"><meta property="og:image" content="https://cdn.acme.com/og.png">'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.og_image_missing_file, 0);
+});
+
+test('social: a favicon link on any page sets the boolean', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><link rel="icon" href="/favicon.ico">'),
+    'about.html': HEAD('<title>B</title>'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.favicon, true);
+});

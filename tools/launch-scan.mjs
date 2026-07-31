@@ -14,9 +14,11 @@ import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
 import * as content from './launch-audit/scan/content.mjs';
+import * as discoverability from './launch-audit/scan/discoverability.mjs';
+import * as social from './launch-audit/scan/social.mjs';
 import * as hygiene from './launch-audit/scan/hygiene.mjs';
 
-const MODULES = { content, hygiene };   // Tasks 4–7 extend this map
+const MODULES = { content, discoverability, social, hygiene };   // Tasks 5–7 extend this map
 
 const projectDir = process.argv[2];
 if (!projectDir || projectDir.startsWith('--')) {
