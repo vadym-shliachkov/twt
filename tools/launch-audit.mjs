@@ -83,7 +83,45 @@ export function verdictFor(findings, layers) {
   return { verdict: 'GO', counts };
 }
 
+// Moved above the CLI block so both it and the --self-test block below can use it.
 const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { RULES, QUESTIONS } from './launch-audit/rules/index.mjs';
+
+// node tools/launch-audit.mjs <facts.json> --out <dir>
+const _factsArg = process.argv[2];
+if (_isMain && _factsArg && !_factsArg.startsWith('--')) {
+  const outIdx = process.argv.indexOf('--out');
+  const outDir = outIdx > -1 ? process.argv[outIdx + 1] : null;
+  if (!outDir) { console.error('usage: launch-audit.mjs <facts.json> --out <dir>'); process.exit(2); }
+  let facts;
+  try { facts = JSON.parse(readFileSync(_factsArg, 'utf8')); }
+  catch (e) { console.error(`cannot read facts: ${e.message}`); process.exit(2); }
+
+  const found = [];
+  for (const r of RULES) {
+    try { found.push(...r.run(facts)); }
+    catch (e) { console.error(`rule ${r.id} threw: ${e.message}`); process.exit(2); }
+  }
+  // Sort blockers first, then by category order, so the renderer never has to.
+  const order = (f) => SEVERITIES.indexOf(f.severity) * 100 + CATEGORIES.indexOf(f.category);
+  found.sort((a, b) => order(a) - order(b) || a.rule.localeCompare(b.rule));
+
+  const { verdict, counts } = verdictFor(found, facts.layers);
+  mkdirSync(outDir, { recursive: true });
+  const payload = {
+    tool: 'launch-audit', version: 1, generated: new Date().toISOString(),
+    layers: facts.layers, mode: facts.mode, url: facts.url ?? null,
+    verdict, counts, findings: found, interview: QUESTIONS,
+  };
+  writeFileSync(join(outDir, 'findings.json'), JSON.stringify(payload, null, 2), 'utf8');
+  const tally = SEVERITIES.map((s) => `${s}=${counts[s]}`).join('  ');
+  console.log(`launch-audit: ${verdict}  ${tally}  (${found.length} findings from ${RULES.length} rules)`);
+  process.exit(0);
+}
+
 if (_isMain && process.argv.includes('--self-test')) {
   assert.equal(CATEGORIES.length, 11, 'eleven categories');
   assert.equal(Object.keys(CATEGORY_TITLES).length, 11, 'every category needs a title');
