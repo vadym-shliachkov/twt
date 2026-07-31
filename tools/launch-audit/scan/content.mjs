@@ -9,24 +9,30 @@
 const LOREM = /\b(lorem ipsum|dolor sit amet|consectetur adipiscing)\b/i;
 const MARKER = /\b(TODO|FIXME|XXX|TBD|PLACEHOLDER|LOREM)\b/;
 const TAGS = /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi;
+// Two lorem-phrase matches are the same placeholder block iff everything
+// between them is punctuation/whitespace ("amet, consectetur", "amet\n\n<p>"
+// is NOT ok because it crosses a tag) — content-aware, not a length guess.
+const GAP_OK = /^[\s,.;:!?'"-]*$/;
 
 export function run(ctx) {
   const counts = { lorem_blocks: 0, placeholder_markers: 0, empty_headings: 0, empty_slots: 0 };
   const findings = [];
   for (const f of ctx.html) {
     const src = ctx.read(f);
-    // Blank script/style bodies (keeping offsets stable) so a JS "TODO" comment
-    // in a vendored library is not reported as missing page copy.
-    const prose = src.replace(TAGS, (m) => ' '.repeat(m.length));
+    // Blank script/style bodies char-by-char, leaving embedded newlines in
+    // place, so a JS "TODO" comment in a vendored library is not reported as
+    // missing page copy — while every OTHER finding's line number still maps
+    // to the real source line (blanking whole lines out would corrupt it).
+    const prose = src.replace(TAGS, (m) => m.replace(/[^\n]/g, ' '));
     const file = ctx.rel(f);
 
     // A single lorem-ipsum paragraph typically contains several of these
     // phrases back to back ("Lorem ipsum dolor sit amet, consectetur
-    // adipiscing…"); adjacent hits (separated only by punctuation/whitespace)
+    // adipiscing…"); adjacent hits separated only by whitespace/punctuation
     // are one placeholder block, not one finding per phrase.
     let loremBlock = null;
     for (const m of prose.matchAll(new RegExp(LOREM.source, 'gi'))) {
-      if (loremBlock && m.index - loremBlock.end <= 5) {
+      if (loremBlock && GAP_OK.test(prose.slice(loremBlock.end, m.index))) {
         loremBlock.end = m.index + m[0].length;
         continue;
       }

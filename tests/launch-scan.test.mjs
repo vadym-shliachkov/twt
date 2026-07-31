@@ -91,6 +91,37 @@ test('content: clean copy produces zero content findings', () => {
   assert.deepEqual(c.findings, []);
 });
 
+test('content: a multi-line <script> block does not shift later line numbers', () => {
+  const dir = siteProject({
+    'index.html': [
+      '<html lang="en"><body>',        // line 1
+      '<script>',                       // line 2
+      'function f() {',                 // line 3
+      '  return 1;',                     // line 4
+      '}',                               // line 5
+      '</script>',                       // line 6
+      '<p>TODO: real copy here</p>',     // line 7 — must still be reported as 7
+      '</body></html>',                  // line 8
+    ].join('\n'),
+  });
+  run([dir]);
+  const c = facts(dir).checks.content;
+  const marker = c.findings.find((x) => x.kind === 'placeholder_marker');
+  assert.equal(marker.line, 7);
+});
+
+test('content: "and" between lorem phrases is a real word, not punctuation — two blocks', () => {
+  const dir = siteProject({ 'a.html': '<html><body><p>Lorem ipsum and dolor sit amet</p></body></html>' });
+  run([dir]);
+  assert.equal(facts(dir).checks.content.counts.lorem_blocks, 2);
+});
+
+test('content: extra whitespace between lorem phrases is still one contiguous block', () => {
+  const dir = siteProject({ 'a.html': '<html><body><p>Lorem ipsum      dolor sit amet</p></body></html>' });
+  run([dir]);
+  assert.equal(facts(dir).checks.content.counts.lorem_blocks, 1);
+});
+
 // ---- hygiene (category 9) ---------------------------------------------------
 
 test('hygiene: a committed .env is found', () => {
@@ -106,6 +137,20 @@ test('hygiene: an inline API key in shipped HTML is found', () => {
   const dir = siteProject({ 'index.html': '<script>const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";</script>' });
   run([dir]);
   assert.equal(facts(dir).checks.hygiene.counts.inline_secrets, 1);
+});
+
+test('hygiene: the inline-secret finding redacts the key — never republishes it in full', () => {
+  const KEY = ['sk', 'live', '51H8xYzAbCdEfGhIjKlMnOpQRSTUVWXYZ0123456789'].join('_');
+  const dir = siteProject({ 'index.html': `<script>const k = "${KEY}";</script>` });
+  run([dir]);
+  const h = facts(dir).checks.hygiene;
+  const found = h.findings.find((x) => x.kind === 'inline_secret');
+  assert.ok(found, 'expected an inline_secret finding');
+  assert.match(found.detail, /redacted/i);
+  assert.ok(!found.detail.includes(KEY), 'detail must not contain the full matched key');
+  // Also guard against the raw facts.json ever carrying the live value anywhere.
+  const raw = readFileSync(join(dir, '.twt-artifacts', 'launch', 'facts.json'), 'utf8');
+  assert.ok(!raw.includes(KEY), 'facts.json must never contain the full matched key');
 });
 
 test('hygiene: console.log and debugger in shipped files are counted', () => {
