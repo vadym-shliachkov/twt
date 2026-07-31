@@ -40,8 +40,11 @@ export function run(ctx) {
       findings.push({ kind: 'missing_og_image', file, line: 1, detail: 'no og:image' });
     } else if (!/^https?:\/\//i.test(img.value)) {
       // Only a local path is checkable on disk. A CDN URL is verified by the
-      // live layer when a URL is supplied, and left alone otherwise.
-      if (!existsSync(join(ctx.base, img.value.replace(/^\//, '')))) {
+      // live layer when a URL is supplied, and left alone otherwise. Strip a
+      // cache-busting query string / fragment before resolving — the path
+      // this actually maps to on disk excludes them.
+      const localPath = img.value.replace(/^\//, '').split(/[?#]/)[0];
+      if (!existsSync(join(ctx.base, localPath))) {
         counts.og_image_missing_file++;
         findings.push({ kind: 'og_image_missing_file', file, line: ctx.lineOf(src, img.index), detail: `og:image ${img.value} resolves to no file` });
       }

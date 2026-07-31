@@ -326,3 +326,42 @@ test('social: a favicon link on any page sets the boolean', () => {
   run([dir]);
   assert.equal(facts(dir).checks.social.counts.favicon, true);
 });
+
+// ---- regression: fixture-testing findings on discoverability/social ---------
+
+test('discoverability: content="none" counts as both noindex AND nofollow (spec: none == noindex, nofollow)', () => {
+  const dir = siteProject({ 'a.html': HEAD('<title>A</title><meta name="robots" content="none">') });
+  run([dir]);
+  const c = facts(dir).checks.discoverability.counts;
+  assert.equal(c.noindex_pages, 1);
+  assert.equal(c.nofollow_pages, 1);
+});
+
+test('social: an og:image with a cache-busting query string still resolves to the file on disk', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title><meta property="og:title" content="A"><meta property="og:image" content="/img/og.png?v=2">'),
+  });
+  put(join(dir, 'site', 'img', 'og.png'), 'PNG');
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.og_image_missing_file, 0);
+});
+
+test('discoverability: pretty (extensionless) sitemap URLs match built pages without false orphans', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'about.html': HEAD('<title>About</title>'),
+  });
+  put(join(dir, 'site', 'sitemap.xml'), '<urlset><url><loc>https://acme.com/</loc></url><url><loc>https://acme.com/about/</loc></url></urlset>');
+  run([dir]);
+  assert.equal(facts(dir).checks.discoverability.counts.sitemap_orphans, 0);
+});
+
+test('discoverability: a genuinely unlisted page is still reported as a sitemap orphan (normalization must not silence the check)', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'contact.html': HEAD('<title>Contact</title>'),
+  });
+  put(join(dir, 'site', 'sitemap.xml'), '<urlset><url><loc>https://acme.com/</loc></url></urlset>');
+  run([dir]);
+  assert.equal(facts(dir).checks.discoverability.counts.sitemap_orphans, 1);
+});

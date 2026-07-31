@@ -62,14 +62,16 @@ export function run(ctx) {
     }
 
     // Any crawler-directive meta counts — robots, googlebot, bingbot.
+    // Per Google's robots-meta spec, content="none" is defined as equivalent
+    // to "noindex, nofollow" — treat it as satisfying both branches.
     for (const name of ['robots', 'googlebot', 'bingbot']) {
       const m = metaByName(src, name);
       if (!m) continue;
-      if (/\bnoindex\b/i.test(m.value)) {
+      if (/\b(noindex|none)\b/i.test(m.value)) {
         counts.noindex_pages++;
         findings.push({ kind: 'noindex', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
       }
-      if (/\bnofollow\b/i.test(m.value)) {
+      if (/\b(nofollow|none)\b/i.test(m.value)) {
         counts.nofollow_pages++;
         findings.push({ kind: 'nofollow', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
       }
@@ -93,12 +95,22 @@ export function run(ctx) {
         findings.push({ kind: 'robots_disallow_all', file: ctx.rel(at), line: ctx.lineOf(body, idx), detail: 'Disallow: / blocks the whole site' });
       }
     } else {
+      // Normalize both a sitemap <loc> and a built filename to a bare page
+      // key — strip a trailing slash, strip a .html/.htm extension, and
+      // treat what's left of a URL after its host (or an empty basename) as
+      // the site root. This lets pretty/extensionless sitemap URLs
+      // (https://acme.com/about/) match a built about.html without
+      // over-reporting every page as an orphan.
+      const pageKey = (p) => basename(p).replace(/\.html?$/i, '') || 'index';
+      const locKey = (raw) => {
+        const path = raw.replace(/^https?:\/\/[^/]+/i, '').replace(/\/$/, '');
+        return pageKey(path || 'index');
+      };
       const listed = new Set(
-        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)]
-          .map((m) => basename(m[1].replace(/\/$/, '')) || 'index.html'),
+        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => locKey(m[1])),
       );
       for (const page of ctx.html) {
-        if (listed.has(basename(page))) continue;
+        if (listed.has(pageKey(page))) continue;
         counts.sitemap_orphans++;
         findings.push({ kind: 'sitemap_orphan', file: ctx.rel(page), line: 0, detail: 'built page has no <loc> in sitemap.xml' });
       }
