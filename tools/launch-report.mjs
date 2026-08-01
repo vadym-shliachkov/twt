@@ -26,6 +26,17 @@ let doc;
 try { doc = JSON.parse(readFileSync(src, 'utf8')); }
 catch (e) { console.error(`launch-report: cannot read ${src} — ${e.message}`); process.exit(2); }
 
+// Parseable is not the same as usable. A JSON file that is valid but is not a
+// findings document — the wrong file passed by mistake, a truncated write, a
+// hand-edit that dropped the verdict — used to reach `doc.verdict.startsWith`
+// further down and die with an uncaught TypeError and a stack trace, when this
+// file's own header promises exit 2 on a findings file it cannot use. Say what
+// is wrong and exit the documented way.
+if (typeof doc?.verdict !== 'string' || (doc.findings !== undefined && !Array.isArray(doc.findings))) {
+  console.error(`launch-report: ${src} parses but is not a findings document (needs a string "verdict" and, if present, an array "findings")`);
+  process.exit(2);
+}
+
 const findings = doc.findings || [];
 const complete = doc.layers?.scan === 'ok';
 const byCat = (c) => findings.filter((f) => f.category === c);

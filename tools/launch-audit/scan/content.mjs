@@ -3,9 +3,24 @@
 // The approval half (has the client signed off?) is Layer A + the interview;
 // this module only answers "is there still placeholder text in the build".
 // BOUNDARY: /twt-qa-content owns lorem detection for the QA verdict. Here the
-// same signal is re-measured because a launch verdict must not depend on
-// whether QA happened to have run — but every finding derived from it is
-// reconciled against gaps.md in the report, never double-listed.
+// same signal is re-measured, because a launch verdict must not depend on
+// whether QA happened to have run.
+//
+// NO MECHANICAL RECONCILIATION HAPPENS, and this comment used to claim one:
+// "every finding derived from it is reconciled against gaps.md in the report,
+// never double-listed". It was never implemented — nothing in the repo so much
+// as matched /reconcil/ outside that sentence. It is also not implementable at
+// this layer: HARV002 and HARV003 CITE qa-report.md and gaps.md as counts
+// ("3 unresolved BLOCKERs", "5 open items"), and gaps.md's items are free
+// prose with no file, no line, and no schema — there is no key on which a
+// citation and a scanner finding could be matched. So one leftover lorem block
+// really can surface three times: CONT001 (here, with the file and line),
+// HARV002 (cited from qa-report.md) and HARV003 (cited from gaps.md).
+//
+// Reconciling them is therefore the model's job, and the command file now says
+// so explicitly in Step 6 rather than a code comment asserting an automation
+// that does not exist. A false promise of de-duplication is worse than an
+// honest statement of the overlap: the promise stops anyone from looking.
 const LOREM = /\b(lorem ipsum|dolor sit amet|consectetur adipiscing)\b/i;
 const MARKER = /\b(TODO|FIXME|XXX|TBD|PLACEHOLDER|LOREM)\b/;
 const TAGS = /<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi;

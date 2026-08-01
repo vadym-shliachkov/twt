@@ -16,6 +16,24 @@ import { fileURLToPath } from 'node:url';
 
 const TOOLS = dirname(dirname(fileURLToPath(import.meta.url)));   // …/tools
 
+// Node's default execFileSync maxBuffer is 1MB, and BOTH child processes below
+// print a JSON document whose size scales with the project.
+// `checklist-xlsx.py read` emits every row's prose at roughly 1.5KB/row, so a
+// ~700-row workbook overflows — and the content-approval skill expands each
+// collection (Work, Blog, …) into extra worksheets, so large real projects are
+// exactly the ones that overflow. On overflow execFileSync THROWS, the catch
+// below records reader:'failed', HARV005 raises UNVERIFIED, and a FULLY SIGNED
+// OFF workbook drops the verdict from GO to GO WITH RISKS. The failure lands
+// on the biggest projects and looks like a data problem rather than a buffer
+// limit, which is the worst possible combination.
+const CHILD_MAX_BUFFER = 10 * 1024 * 1024;
+
+// Both child processes go through here so the buffer limit cannot be fixed at
+// one call site and left standing at the other — and so a test can prove the
+// limit holds against real output rather than grepping for the option.
+export const runChild = (cmd, args) =>
+  execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: CHILD_MAX_BUFFER });
+
 const readOr = (p) => { try { return readFileSync(p, 'utf8'); } catch { return ''; } };
 const num = (re, text, dflt = 0) => { const m = re.exec(text); return m ? Number(m[1]) : dflt; };
 
@@ -151,8 +169,7 @@ export function harvest(ctx) {
   const approval = probe('approval', () => {
     if (!existsSync(wbPath)) return { present: false, path: ctx.rel(wbPath) };
     try {
-      const out = execFileSync('python', [join(TOOLS, 'checklist-xlsx.py'), 'read', '--workbook', wbPath],
-        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      const out = runChild('python', [join(TOOLS, 'checklist-xlsx.py'), 'read', '--workbook', wbPath]);
       const j = JSON.parse(/\{[\s\S]*\}/.exec(out)[0]);
       const s = j.summary || {};
       return {
@@ -175,8 +192,7 @@ export function harvest(ctx) {
   // `state`/`path` did not, which silently zeroed out `stale_paths` on every
   // real run without ever throwing.
   const staleness = probe('staleness', () => {
-    const out = execFileSync(process.execPath, [join(TOOLS, 'status-scan.mjs'), ctx.projectDir],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = runChild(process.execPath, [join(TOOLS, 'status-scan.mjs'), ctx.projectDir]);
     const block = /```json\n([\s\S]*?)\n```/.exec(out);
     if (!block) return { status: 'ok', stale: 0, stale_paths: [] };
     const j = JSON.parse(block[1]);
