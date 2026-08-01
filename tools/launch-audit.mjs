@@ -86,19 +86,33 @@ export function verdictFor(findings, layers) {
 // Moved above the CLI block so both it and the --self-test block below can use it.
 const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { RULES, QUESTIONS } from './launch-audit/rules/index.mjs';
 
-// node tools/launch-audit.mjs <facts.json> --out <dir>
+// node tools/launch-audit.mjs <facts.json> --out <dir> [--answers <answers.json>]
 const _factsArg = process.argv[2];
 if (_isMain && _factsArg && !_factsArg.startsWith('--')) {
   const outIdx = process.argv.indexOf('--out');
   const outDir = outIdx > -1 ? process.argv[outIdx + 1] : null;
-  if (!outDir) { console.error('usage: launch-audit.mjs <facts.json> --out <dir>'); process.exit(2); }
+  if (!outDir) { console.error('usage: launch-audit.mjs <facts.json> --out <dir> [--answers <answers.json>]'); process.exit(2); }
   let facts;
   try { facts = JSON.parse(readFileSync(_factsArg, 'utf8')); }
   catch (e) { console.error(`cannot read facts: ${e.message}`); process.exit(2); }
+
+  // Stored interview answers, so a question already answered on a previous run
+  // does not come back as an UNVERIFIED finding. Absent is the normal case and
+  // is silent; present-but-unreadable is NOT silent — it fails toward
+  // over-reporting (every blocking question stays unanswered) and says so,
+  // because silently treating a corrupt answers.json as "no answers" and
+  // silently treating it as "all answered" look identical from the outside.
+  const ansIdx = process.argv.indexOf('--answers');
+  const answersPath = ansIdx > -1 ? process.argv[ansIdx + 1] : join(outDir, 'answers.json');
+  facts.answers = null;
+  if (existsSync(answersPath)) {
+    try { facts.answers = JSON.parse(readFileSync(answersPath, 'utf8')); }
+    catch (e) { console.error(`launch-audit: ${answersPath} is unreadable (${e.message}) — treating every interview question as unanswered`); }
+  }
 
   const found = [];
   for (const r of RULES) {
@@ -118,7 +132,9 @@ if (_isMain && _factsArg && !_factsArg.startsWith('--')) {
   };
   writeFileSync(join(outDir, 'findings.json'), JSON.stringify(payload, null, 2), 'utf8');
   const tally = SEVERITIES.map((s) => `${s}=${counts[s]}`).join('  ');
+  const open = found.filter((f) => f.rule === 'INTV001').length;
   console.log(`launch-audit: ${verdict}  ${tally}  (${found.length} findings from ${RULES.length} rules)`);
+  if (open) console.log(`launch-audit: ${open} blocking interview question${open === 1 ? '' : 's'} unanswered — answer them in ${join(outDir, 'answers.json')} and re-run to clear them`);
   process.exit(0);
 }
 
@@ -128,5 +144,16 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.throws(() => validateFinding({ rule: 'X', category: 'content', severity: 'High', owner: 'developer', where: 'a', evidence: 'b' }));
   assert.equal(verdictFor([], { scan: 'ok' }).verdict, 'GO');
   assert.equal(verdictFor([], { scan: 'failed' }).verdict, 'NO-GO — evidence incomplete');
+  // verdictFor([]) IS 'GO' — that is correct arithmetic on an empty array, and
+  // it is exactly why the emptiness must be impossible upstream. The blocking
+  // interview questions are materialized as UNVERIFIED findings by the rules
+  // (rules/interview.mjs), on every path, so a real run never hands this
+  // function an empty array while questions stand unanswered.
+  const blocking = QUESTIONS.filter((q) => q.blocking).length;
+  const materialized = RULES.filter((r) => r.id.startsWith('INTV-')).length;
+  assert.equal(materialized, blocking, 'every blocking question must be materialized as a rule');
+  assert.ok(blocking > 0, 'a catalogue with no blocking question cannot stop a silent GO');
+  const silent = RULES.flatMap((r) => r.run({ layers: { scan: 'ok' }, checks: {}, answers: null }));
+  assert.notEqual(verdictFor(silent, { scan: 'ok' }).verdict, 'GO', 'silence must never verdict a clean GO');
   console.log('launch-audit self-test: OK');
 }

@@ -4,25 +4,27 @@
 // carries the reason in a comment. A rule that cannot explain its own tier
 // should not be a rule.
 import { finding } from '../../launch-audit.mjs';
-
-// Each scanner finding becomes one report finding, so the punch list names the
-// exact file and line rather than "3 pages have a problem".
-const per = (facts, check, kind, make) =>
-  ((facts.checks?.[check]?.findings) || [])
-    .filter((f) => f.kind === kind)
-    .map((f) => finding(make(f)));
-
-const at = (f) => `${f.file}${f.line ? `:${f.line}` : ''}`;
+import { at, per, kindsOf, collapse, evidenceFor } from './lib.mjs';
 
 export const blockingRules = [
   {
     id: 'DISC001',
     // Deindexes the whole site for weeks. The single most expensive launch
     // defect that is also trivially detectable.
-    run: (facts) => per(facts, 'discoverability', 'noindex', (f) => ({
-      rule: 'DISC001', category: 'discoverability', severity: 'LAUNCH-BLOCKER',
-      owner: 'developer', where: at(f), evidence: f.detail,
-    })),
+    //
+    // Collapsed per (file, kind), not per scanner finding: belt-and-braces
+    // `<meta name="robots" content="noindex">` alongside
+    // `<meta name="googlebot" content="noindex">` is standard practice and one
+    // decision, not two defects — and when the two tags sit on the same line
+    // the ungrouped version emitted findings with identical ids. The scanner
+    // already exempts pages that are SUPPOSED to be excluded (404, error,
+    // thank-you, search), so anything reaching here is a page the site wants
+    // indexed and has told crawlers to skip.
+    run: (facts) => collapse(kindsOf(facts, 'discoverability', 'noindex'), (f) => f.file)
+      .map((occ) => finding({
+        rule: 'DISC001', category: 'discoverability', severity: 'LAUNCH-BLOCKER',
+        owner: 'developer', where: at(occ[0]), evidence: evidenceFor(occ),
+      })),
   },
   {
     id: 'DISC002',
@@ -76,44 +78,6 @@ export const blockingRules = [
       rule: 'ANLY001', category: 'analytics', severity: 'LAUNCH-BLOCKER',
       owner: 'client-decision', where: at(f), evidence: f.detail,
     })),
-  },
-  {
-    id: 'ANLY002',
-    // A placeholder id means launch week — the week the client cares about
-    // most — collects nothing, and the data cannot be backfilled.
-    //
-    // NOT per(): the scanner's ID regex matches every occurrence of the
-    // placeholder text in the page source, and the canonical GA4/GTM snippet
-    // legitimately repeats the SAME id twice on one page (once in the loader
-    // <script src=…id=…>, once in the gtag('config', id) call, or once in the
-    // GTM IIFE argument and once in the <noscript> fallback). Two scanner
-    // findings for one id on one page are the SAME misconfiguration — mapping
-    // both straight through would double the report for the single most
-    // common analytics install shape and is exactly the noise this design
-    // exists to avoid. Group by (file, detail) — detail is just the id text
-    // plus a fixed message, so repeats of the same id on the same page always
-    // collide into one group, while a different id, or the same id on a
-    // different page, is a genuinely separate problem and stays separate.
-    run: (facts) => {
-      const raw = (facts.checks?.analytics?.findings || []).filter((f) => f.kind === 'placeholder_id');
-      const groups = new Map();
-      for (const f of raw) {
-        const key = `${f.file}::${f.detail}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(f);
-      }
-      return [...groups.values()].map((occurrences) => {
-        const lines = [...new Set(occurrences.map((o) => o.line).filter(Boolean))].sort((a, b) => a - b);
-        const first = occurrences[0];
-        const evidence = occurrences.length > 1
-          ? `${first.detail} (seen ${occurrences.length} times: line${lines.length === 1 ? '' : 's'} ${lines.join(', ')})`
-          : first.detail;
-        return finding({
-          rule: 'ANLY002', category: 'analytics', severity: 'LAUNCH-BLOCKER',
-          owner: 'client-decision', where: at(first), evidence,
-        });
-      });
-    },
   },
   {
     id: 'CONT001',

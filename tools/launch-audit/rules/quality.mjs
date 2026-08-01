@@ -1,7 +1,6 @@
 // tools/launch-audit/rules/quality.mjs — real but survivable, and cosmetic.
 import { finding } from '../../launch-audit.mjs';
-
-const at = (f) => `${f.file}${f.line ? `:${f.line}` : ''}`;
+import { at, kindsOf, collapse, evidenceFor } from './lib.mjs';
 
 // One rule definition per (check, kind) pair, so adding a scanner signal means
 // adding a row here rather than writing another near-identical closure.
@@ -19,7 +18,9 @@ const MAP = [
   ['DISC009', 'discoverability', 'sitemap_orphan', 'discoverability', 'FIX-WEEK-ONE', 'developer'],
   ['DISC010', 'discoverability', 'long_title', 'discoverability', 'NICE-TO-HAVE', 'content-owner'],
   ['DISC011', 'discoverability', 'long_description', 'discoverability', 'NICE-TO-HAVE', 'content-owner'],
-  ['DISC012', 'discoverability', 'nofollow', 'discoverability', 'FIX-WEEK-ONE', 'developer'],
+  // DISC012 is NOT in this table — it needs the same (file, kind) collapse as
+  // DISC001, for the same reason (robots + googlebot on one page is one
+  // decision). See COLLAPSED below.
   ['SOCL001', 'social', 'missing_og_image', 'social', 'FIX-WEEK-ONE', 'designer'],
   ['SOCL002', 'social', 'og_image_missing_file', 'social', 'FIX-WEEK-ONE', 'designer'],
   ['SOCL003', 'social', 'missing_favicon', 'social', 'FIX-WEEK-ONE', 'designer'],
@@ -48,6 +49,33 @@ const MAP = [
   ['PERF005', 'performance', 'unminified_css', 'performance', 'NICE-TO-HAVE', 'developer'],
 ];
 
+// Scanner signals where more than one raw finding routinely describes ONE
+// problem. Same table shape as MAP, plus the key each group collapses on.
+const COLLAPSED = [
+  // [rule, check, kind, category, severity, owner, keyOf]
+  //
+  // A page carrying `<meta name="robots" content="nofollow">` AND
+  // `<meta name="googlebot" content="nofollow">` made one decision, not two.
+  ['DISC012', 'discoverability', 'nofollow', 'discoverability', 'FIX-WEEK-ONE', 'developer', (f) => f.file],
+  // ANLY002 — RE-TIERED from LAUNCH-BLOCKER/client-decision to
+  // FIX-WEEK-ONE/developer. A placeholder analytics id costs launch-week
+  // analytics: nothing on the site breaks, nothing is exposed, no lead is
+  // lost. It sat one tier above CONV002 (a form with no submit button —
+  // literally unusable), which is not a defensible ordering. The owner is the
+  // developer because swapping in the real id is a developer edit once the
+  // client supplies it; the "who owns the analytics account" question is
+  // already the client's, and it is asked as Q-ANALYTICS-ID.
+  //
+  // Grouped by (file, detail): the scanner's ID regex matches every occurrence
+  // of the placeholder text in the page source, and the canonical GA4/GTM
+  // snippet legitimately repeats the SAME id twice on one page (loader
+  // <script src=…id=…> then gtag('config', id); or the GTM IIFE argument then
+  // the <noscript> fallback). `detail` is the id text plus a fixed message, so
+  // repeats of one id on one page always collide into one group, while a
+  // different id — or the same id on a different page — stays separate.
+  ['ANLY002', 'analytics', 'placeholder_id', 'analytics', 'FIX-WEEK-ONE', 'developer', (f) => `${f.file}::${f.detail}`],
+];
+
 // Live-layer signals, keyed off facts.live.findings rather than facts.checks.
 const LIVE_MAP = [
   ['LIVE002', 'unreachable', 'operational', 'LAUNCH-BLOCKER', 'hosting-ops'],
@@ -65,6 +93,11 @@ export const qualityRules = [
     run: (facts) => ((facts.checks?.[check]?.findings) || [])
       .filter((f) => f.kind === kind)
       .map((f) => finding({ rule, category, severity, owner, where: at(f), evidence: f.detail })),
+  })),
+  ...COLLAPSED.map(([rule, check, kind, category, severity, owner, keyOf]) => ({
+    id: rule,
+    run: (facts) => collapse(kindsOf(facts, check, kind), keyOf).map((occ) =>
+      finding({ rule, category, severity, owner, where: at(occ[0]), evidence: evidenceFor(occ) })),
   })),
   ...LIVE_MAP.map(([rule, kind, category, severity, owner]) => ({
     id: rule,

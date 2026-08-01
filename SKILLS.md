@@ -1714,7 +1714,7 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 - Does not deploy, publish, or change anything anywhere.
 - Does not fix findings. It reports; the humans resolve, then re-run.
 - Does not rebuild the site or re-run any design phase.
-- **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report.
+- **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report. (Citations and scan findings can still *overlap* on one underlying defect; nothing mechanical de-duplicates them, and Step 6 says what to do about it.)
 - Does not judge design quality (`/twt-design-system-audit` owns that) or Figma buildability (`/twt-figma-dev-audit` owns that).
 - Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.
 - Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.
@@ -1722,7 +1722,7 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 **Success criteria:**
 - `facts.json`, `findings.json`, `launch-report.md`, `launch-report.html`, and `punch-list.md` all exist under `.twt-artifacts/launch/` — **or**, if the scan could not complete, the run produced `launch-report-provisional.{md,html}` and no `launch-report.md`.
 - `launch-lint.mjs` exits 0: every finding carries a severity and owner from the closed vocabularies, a non-empty `where`, `evidence`, `impact`, and `action`, and the verdict matches the findings.
-- Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence.
+- Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence. **The rules produce these, not the interview** — `launch-audit.mjs` emits one per unanswered blocking question on every path, including `--skip-interview` and subagent dispatch; the interview *removes* them by answering.
 - No category renders more than 5 issue blocks; withheld counts are stated.
 
 ---

@@ -43,7 +43,7 @@ writes:
 - Does not deploy, publish, or change anything anywhere.
 - Does not fix findings. It reports; the humans resolve, then re-run.
 - Does not rebuild the site or re-run any design phase.
-- **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report.
+- **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report. (Citations and scan findings can still *overlap* on one underlying defect; nothing mechanical de-duplicates them, and Step 6 says what to do about it.)
 - Does not judge design quality (`/twt-design-system-audit` owns that) or Figma buildability (`/twt-figma-dev-audit` owns that).
 - Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.
 - Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.
@@ -51,7 +51,7 @@ writes:
 **Success criteria:**
 - `facts.json`, `findings.json`, `launch-report.md`, `launch-report.html`, and `punch-list.md` all exist under `.twt-artifacts/launch/` — **or**, if the scan could not complete, the run produced `launch-report-provisional.{md,html}` and no `launch-report.md`.
 - `launch-lint.mjs` exits 0: every finding carries a severity and owner from the closed vocabularies, a non-empty `where`, `evidence`, `impact`, and `action`, and the verdict matches the findings.
-- Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence.
+- Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence. **The rules produce these, not the interview** — `launch-audit.mjs` emits one per unanswered blocking question on every path, including `--skip-interview` and subagent dispatch; the interview *removes* them by answering.
 - No category renders more than 5 issue blocks; withheld counts are stated.
 
 ---
@@ -71,6 +71,8 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 Parse `$ARGUMENTS` for an `http(s)://` URL and for `--skip-interview`.
 
 Check (Glob/Read) that `site/`, `.twt-artifacts/design/mockup/`, or a `wp-content/themes/hello-elementor-*/` theme exists. If none do and no URL was given, stop: *"Nothing to audit — build the site (Phase 3) or pass a live URL."* Write nothing.
+
+All three are genuinely auditable and the scanner handles each: with no built HTML the page-scoped checks (content, discoverability, social, legal, analytics, conversion, performance) report nothing rather than reporting everything as missing, while build hygiene reads the project root and the theme, the error-page check reads the theme's `404.php`, and the live layer reads the URL. A theme-only or URL-only run is a complete scan (`layers.scan: ok`) over a narrower surface, not a partial one — say in Step 8 which layers actually had input.
 
 ## Step 2 — Run the deterministic scan
 
@@ -101,13 +103,15 @@ If `--skip-interview` is set or this is an unattended dispatch, skip the questio
 node "${CLAUDE_PLUGIN_ROOT}/tools/launch-audit.mjs" ".twt-artifacts/launch/facts.json" --out ".twt-artifacts/launch"
 ```
 
-This writes `findings.json` with every deterministic finding, the verdict, and the `interview[]` catalogue. Do not restate or re-severity these findings — they are measured.
+It reads `answers.json` from the same directory when one exists (pass `--answers <path>` to point elsewhere), and writes `findings.json` with every deterministic finding, the verdict, and the `interview[]` catalogue. Do not restate or re-severity these findings — they are measured.
 
-## Step 5 — The interview
+**It already contains one `UNVERIFIED` finding (`rule: INTV001`) per unanswered blocking interview question.** That is not the interview's output — it is a rule, so it fires on every path, including the ones Step 5 skips. Step 5 *removes* these.
 
-Skip this step entirely when `--skip-interview` is set or you are running as a subagent (AskUserQuestion is unavailable there); every blocking question then becomes an `UNVERIFIED` finding.
+## Step 5 — The interview: answering removes findings
 
-Read `.twt-artifacts/launch/answers.json` if it exists. For each question in `findings.json`'s `interview[]`:
+**Skip this step entirely when `--skip-interview` is set or you are running as a subagent** (AskUserQuestion is unavailable there). The blocking questions then simply stay in `findings.json` as `UNVERIFIED` — Step 4 already put them there, so a silent run reports honestly that nothing was verified instead of reaching a clean `GO`. Skipping this step is now safe by construction, not by remembering to compensate for it.
+
+When you do run it: read `.twt-artifacts/launch/answers.json` if it exists. For each question in `findings.json`'s `interview[]`:
 - **Re-ask** it if there is no stored answer, or the stored answer's `asked` date is older than the newest file in `facts.sources.html` (the build changed under the answer).
 - **Carry forward** an answer that is still current, and say so in the report rather than re-asking.
 
@@ -119,18 +123,22 @@ Write every answer to `.twt-artifacts/launch/answers.json`:
 { "Q-BACKUP-ROLLBACK": { "answer": "Yes — nightly snapshots, restore tested 2026-07-28", "asked": "2026-07-30" } }
 ```
 
-Then, for each question, add one finding to `findings.json`:
-- Answered, and the answer clears the risk → **no finding**.
-- Answered, and the answer reveals a problem → a finding at the severity the answer warrants, owner from the question's `owner`.
-- **Unanswered and `blocking: true` → `UNVERIFIED`**, owner from the question, `where: "interview: <question id>"`, `evidence: "not answered"`.
-- Unanswered and `blocking: false` → `NICE-TO-HAVE` or omit, at your judgment.
+Then reconcile `findings.json` against what you learned. For each question:
+- Answered, and the answer clears the risk → **delete its `INTV001` finding**.
+- Answered, and the answer reveals a problem → **replace** the `INTV001` finding with one at the severity the answer warrants, owner from the question's `owner`, and the answer itself as `evidence`.
+- Unanswered → **leave the `INTV001` finding exactly as it is.** Never delete one you did not ask.
+- A non-blocking question you asked and that revealed a problem → add a finding at your judgment (there is no `INTV001` finding to replace; non-blocking questions are not materialized).
+
+Re-running Step 4 after writing `answers.json` produces the same result mechanically, and is the cheaper path when you have not yet added judgment findings.
 
 ## Step 6 — Add judgment, then lint
 
 Now add what the rules cannot reach, and only that:
 - **`impact` and `action` prose on every finding.** The rules leave these `null` deliberately — a finding without them is a claim, not an instruction. Write the impact in terms of what the *client* loses, not what the code does.
-- **Findings a rule cannot see:** a missing legal page that this project genuinely does not need (downgrade with the reason in `evidence`); a heavy image that is a deliberate hero; a `noindex` on a page that *should* be excluded. Re-severity a rule finding only when you can name why, in `evidence`.
+- **Findings a rule cannot see:** a missing legal page that this project genuinely does not need (downgrade with the reason in `evidence`); a heavy image that is a deliberate hero. Re-severity a rule finding only when you can name why, in `evidence`.
+- **Reconcile overlapping findings — nothing mechanical does this.** `CONT001` (a lorem block, with its file and line), `HARV002` (a citation of `qa-report.md`'s blocker count) and `HARV003` (a citation of `gaps.md`'s open-item count) can all be reporting the same leftover paragraph — three `LAUNCH-BLOCKER`s under two owners for one defect. When a harvested citation and a scanner finding plainly describe the same problem, **keep the scanner finding** (it names the file and line, so it is actionable) and fold the citation into its `evidence` as a cross-reference rather than leaving both as separate items. There is no key on which the code could match them: `gaps.md` items are free prose with no file and no line, which is exactly why this is your job and not the rules'.
 - **Never invent a measurement.** If you did not read it in `facts.json`, it is an interview question, not a finding.
+- **The scanner already exempts what is supposed to be excluded.** A `noindex` on `404.html`, `error.html`, a thank-you page, or a search-results page is never reported — it is the recommended configuration, and it is counted in `checks.discoverability.counts.noindex_excluded` if you want to see it. Do not add a finding for one.
 
 Then:
 

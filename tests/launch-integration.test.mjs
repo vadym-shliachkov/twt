@@ -50,9 +50,16 @@ test('e2e: the clean fixture produces no LAUNCH-BLOCKER from the mechanical laye
 test('e2e: the dirty fixture trips every blocker class exactly once', () => {
   const { findings } = pipeline('launch-dirty');
   const rules = new Set(findings.findings.filter((f) => f.blocking).map((f) => f.rule));
-  for (const expected of ['DISC001', 'HYG001', 'CONV001', 'ANLY001', 'ANLY002', 'CONT001']) {
+  for (const expected of ['DISC001', 'HYG001', 'CONV001', 'ANLY001', 'CONT001']) {
     assert.ok(rules.has(expected), `expected blocker ${expected}`);
   }
+  // ANLY002 is deliberately NOT in that list: a placeholder analytics id costs
+  // launch-week analytics and breaks nothing, so it is FIX-WEEK-ONE. It must
+  // still FIRE — re-tiering a rule is not the same as deleting it.
+  const anly002 = findings.findings.filter((f) => f.rule === 'ANLY002');
+  assert.equal(anly002.length, 1, 'ANLY002 must still fire on the dirty fixture');
+  assert.equal(anly002[0].severity, 'FIX-WEEK-ONE');
+  assert.equal(anly002[0].owner, 'developer');
   assert.equal(findings.verdict, 'NO-GO');
 });
 

@@ -73,7 +73,7 @@ test('debug statements are NICE-TO-HAVE, not a blocker', () => {
   assert.equal(f.blocking, false);
 });
 
-test('a clean facts object produces no findings at all', () => {
+test('a clean facts object produces no MEASURED findings — only the unanswered interview', () => {
   const facts = {
     ...base,
     checks: {
@@ -82,7 +82,10 @@ test('a clean facts object produces no findings at all', () => {
       conversion: { counts: { forms: 0, dead_actions: 0, nonprod_actions: 0 }, findings: [] },
     },
   };
-  assert.deepEqual(all(facts), []);
+  const out = all(facts);
+  assert.deepEqual(out.filter((f) => f.rule !== 'INTV001'), [],
+    'a clean scan must trip no measured rule');
+  assert.ok(out.length > 0, 'and the unanswered blocking questions must still be there');
 });
 
 // ---- harvested rules --------------------------------------------------------
@@ -151,8 +154,8 @@ test('two occurrences of the SAME placeholder id on ONE page collapse into one A
   ]);
   const found = all(facts).filter((x) => x.rule === 'ANLY002');
   assert.equal(found.length, 1, 'one placeholder id referenced twice on one page is one problem, not two');
-  assert.equal(found[0].severity, 'LAUNCH-BLOCKER');
-  assert.equal(found[0].owner, 'client-decision');
+  assert.equal(found[0].severity, 'FIX-WEEK-ONE');
+  assert.equal(found[0].owner, 'developer');
   assert.match(found[0].evidence, /8/);
   assert.match(found[0].evidence, /12/);
 });
