@@ -1115,17 +1115,17 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 ## /twt-eval-smoke
 
 **Category:** meta
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 The standing behavioral eval. Unit tests and structural checkers guard the *tools* and *formats*; nothing else exercises the *prompts* — a broken dependency check or a dead contract path in a skill only surfaces in a real user run. This command seeds a deterministic fixture, dispatches a real skill against it in collect mode, and asserts the postconditions mechanically via `tools/eval-smoke.mjs`. Run it after any change to the skills it covers, or on a schedule.
 
 **Inputs:**
-- Optional scope — ia | curation | design-system | wiki | all (default all)
+- Optional scope — ia | curation | design-system | wiki | launch | all (default all)
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define
+- Soft: twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define, twt-launch-audit
 
 **Reads:**
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -1682,7 +1682,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Answer one question about a project that thinks it is finished: **if we pushed this to production today, what breaks, what is missing, and who owns each item?** Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.

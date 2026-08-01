@@ -155,6 +155,7 @@ flowchart TB
     twt_curation_define -.-> twt_eval_smoke
     twt_design_system_define -.-> twt_eval_smoke
     twt_wiki_define -.-> twt_eval_smoke
+    twt_launch_audit -.-> twt_eval_smoke
     twt_export_pdf -.-> twt_export
     twt_export_docx -.-> twt_export
     twt_export_presentation -.-> twt_export
@@ -1363,14 +1364,14 @@ flowchart TB
 ### /twt-eval-smoke
 
 **Category:** meta
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
-- Optional scope — ia | curation | design-system | wiki | all (default all)
+- Optional scope — ia | curation | design-system | wiki | launch | all (default all)
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define
+- Soft: twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define, twt-launch-audit
 
 **Feeds into:**
 - Hard consumers: none
@@ -1773,7 +1774,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
@@ -1784,7 +1785,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-eval-smoke
 
 **Reads:**
 - .twt-artifacts/qa/qa-report.md
@@ -2796,7 +2797,7 @@ flowchart TB
 | /twt-direction-define | none | none |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
-| /twt-eval-smoke | none | twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define |
+| /twt-eval-smoke | none | twt-ia-define, twt-curation-define, twt-design-system-define, twt-wiki-define, twt-launch-audit |
 | /twt-export | none | twt-export-pdf, twt-export-docx, twt-export-presentation, twt-export-template-create |
 | /twt-export-docx | none | none |
 | /twt-export-pdf | none | none |

@@ -1,11 +1,11 @@
 ---
 name: twt-eval-smoke
 category: meta
-description: (v1.0.2) Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
-version: 1.0.2
+description: (v1.0.3) Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
+version: 1.0.3
 accepts_arguments: true
 inputs:
-  - Optional scope — ia | curation | design-system | wiki | all (default all)
+  - Optional scope — ia | curation | design-system | wiki | launch | all (default all)
 dependencies:
   hard: []
   soft:
@@ -13,6 +13,7 @@ dependencies:
     - twt-curation-define
     - twt-design-system-define
     - twt-wiki-define
+    - twt-launch-audit
 reads:
   - .twt-artifacts/pre-design/positioning/positioning.md
   - .twt-artifacts/pre-design/ia/sitemap.md
@@ -45,7 +46,7 @@ writes:
 Use Glob to confirm `tools/eval-smoke.mjs` and `tools/gen-docs.mjs` exist at the project root. If not, stop: "This is a marketplace-dev eval — run it inside the twt repo."
 
 ## Step 2 — Scope
-`$ARGUMENTS`: `ia`, `curation`, `design-system`, `wiki`, or `all` (default `all`). Run each selected scope's cycle **sequentially** — the artifact scopes share the `pre-design` fixture tree, so a scope must be cleaned before the next seeds.
+`$ARGUMENTS`: `ia`, `curation`, `design-system`, `wiki`, `launch`, or `all` (default `all`). Run each selected scope's cycle **sequentially** — the artifact scopes share the `pre-design` fixture tree, so a scope must be cleaned before the next seeds.
 
 ## Step 3 — Cycle per scope
 For each scope, run the four beats. If **seed** refuses (a real tree exists), report that and skip the scope — never force it.
