@@ -16,10 +16,20 @@
 //
 // One definition, two importers. Each module still decides how to APPLY it —
 // anchored vs. anywhere-in-the-file is a real difference; the host list is not.
+//
+// The host list is the UNION of what the two copies used to match, with one
+// deliberate narrowing and one deliberate widening:
+//   * `.local` requires a label boundary, so cdn.localisation.example — a real
+//     hostname, matched by the old copy — is no longer a "non-production URL".
+//   * `localhost` accepts subdomain labels, so http://app.localhost:3000/dash
+//     matches. Wildcard *.localhost is how Vite, Traefik and pnpm dev servers
+//     address per-app dev origins, and the first cut of the boundary fix took
+//     it out along with the false positive. `localhost` itself carries the
+//     same label boundary, so localhostess.example is not a match either.
 
 // Hosts that cannot exist in production. Kept deliberately narrow: every entry
 // here is either a loopback address or a name whose label set says "not prod".
-const NONPROD_HOST = String.raw`(?:localhost|127\.0\.0\.1|0\.0\.0\.0|[a-z0-9-]*\.?(?:staging|stage|dev|test|preview)\.[a-z0-9.-]+|[a-z0-9-]+\.local(?![a-z0-9-]))`;
+const NONPROD_HOST = String.raw`(?:(?:[a-z0-9-]+\.)*localhost(?![a-z0-9-])|127\.0\.0\.1|0\.0\.0\.0|[a-z0-9-]*\.?(?:staging|stage|dev|test|preview)\.[a-z0-9.-]+|[a-z0-9-]+\.local(?![a-z0-9-]))`;
 
 // Anywhere in a file — hygiene sweeps every shipped file for these.
 export const NONPROD_URL_ANYWHERE = new RegExp(`https?://${NONPROD_HOST}(?::\\d+)?`, 'gi');
