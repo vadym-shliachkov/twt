@@ -12,6 +12,17 @@ export function run(ctx) {
   const counts = { error_page: false, external_links: 0, unsafe_external: 0 };
   const findings = [];
 
+  // No built HTML and no theme — a URL-only project. Every branch below reads
+  // one of those two, so with neither there is nothing this module can
+  // honestly measure: `missing_error_page` (ERRS001, FIX-WEEK-ONE) would be
+  // derived from zero input, and it was being emitted with `file: "."` in the
+  // same facts.json where the live layer had recorded notfound_status: 404.
+  // The same no-op guard discoverability, social and legal already carry —
+  // this module was the one sibling that never got it. Phrased on
+  // (html, theme) rather than on ctx.base, because a theme-only project has no
+  // build root and MUST still reach the 404.php check below.
+  if (ctx.html.length === 0 && !ctx.theme) return { counts, findings };
+
   // The theme branch is the ONLY branch a theme-only project can satisfy, and
   // until launch-scan.mjs stopped bailing on a missing build root it could
   // never run at all — an Elementor project never reached this module. Order

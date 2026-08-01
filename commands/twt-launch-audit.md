@@ -72,7 +72,7 @@ Parse `$ARGUMENTS` for an `http(s)://` URL and for `--skip-interview`.
 
 Check (Glob/Read) that `site/`, `.twt-artifacts/design/mockup/`, or a `wp-content/themes/hello-elementor-*/` theme exists. If none do and no URL was given, stop: *"Nothing to audit — build the site (Phase 3) or pass a live URL."* Write nothing.
 
-All three are genuinely auditable and the scanner handles each: with no built HTML the page-scoped checks (content, discoverability, social, legal, analytics, conversion, performance) report nothing rather than reporting everything as missing, while build hygiene reads the project root and the theme, the error-page check reads the theme's `404.php`, and the live layer reads the URL. A theme-only or URL-only run is a complete scan (`layers.scan: ok`) over a narrower surface, not a partial one — say in Step 8 which layers actually had input.
+All three are genuinely auditable and the scanner handles each: with no built HTML the page-scoped checks (content, discoverability, social, legal, analytics, conversion, performance) report nothing rather than reporting everything as missing, while build hygiene reads the project root and the theme, the error-page check reads the theme's `404.php` (and reports nothing at all on a URL-only run, where it would otherwise be measuring zero input), and the live layer reads the URL. A theme-only or URL-only run is a complete scan (`layers.scan: ok`) over a narrower surface, not a partial one — say in Step 8 which layers actually had input.
 
 ## Step 2 — Run the deterministic scan
 
