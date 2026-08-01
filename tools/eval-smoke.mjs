@@ -18,7 +18,7 @@
 // destroy a real project's artifacts or wiki. check exits 1 with FAIL lines;
 // seed/clean exit 1 on refusal/usage.
 import {
-  existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync,
+  existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync, cpSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -27,6 +27,9 @@ import { checkDecisions } from './check-decisions.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MARKER = '.eval-smoke';
+// fileURLToPath (not a manual .pathname regex) so this resolves correctly
+// under a repo path containing "~" (percent-encoded in a file: URL).
+const FIXTURE_LAUNCH_DIRTY = fileURLToPath(new URL('../tests/fixtures/launch-dirty', import.meta.url));
 
 function fail(msg) { console.error(`eval-smoke: ${msg}`); process.exit(1); }
 function put(p, content) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, content, 'utf8'); }
@@ -159,6 +162,30 @@ function seedWiki(projectDir) {
   console.log('  twt-wiki-define with: inbox only');
 }
 
+// launch-audit's fixture is a real project tree (site/ + a decoy .env at the
+// project root), not an artifact tree under .twt-artifacts/ like the other
+// scopes — so it needs its own seed shape: copy the fixture in, and mark
+// ownership under .twt-artifacts/launch/ (the skill's own output dir) so
+// clean can still refuse to touch a real project.
+function seedLaunch(projectDir) {
+  const launch = join(projectDir, '.twt-artifacts', 'launch');
+  const siteDir = join(projectDir, 'site');
+  const envFile = join(projectDir, '.env');
+  if (existsSync(launch) && !existsSync(join(launch, MARKER))) {
+    fail(`REFUSING to seed: ${launch} already exists and is not an eval fixture`);
+  }
+  // site/ and .env land at the project ROOT — the skill scans a real built
+  // site, not an artifact tree — and neither has a marker convention of its
+  // own, so refuse outright rather than risk clobbering a real build or a
+  // real .env.
+  if (existsSync(siteDir)) fail(`REFUSING to seed: ${siteDir} already exists — will not overwrite a real built site`);
+  if (existsSync(envFile)) fail(`REFUSING to seed: ${envFile} already exists — will not overwrite a real .env`);
+  cpSync(FIXTURE_LAUNCH_DIRTY, projectDir, { recursive: true });
+  put(join(launch, MARKER), 'seeded by eval-smoke — safe for clean to remove\n');
+  console.log('seeded: launch-audit fixture (tests/fixtures/launch-dirty → site/ + .env at project root). Dispatch:');
+  console.log('  /twt-launch-audit --skip-interview');
+}
+
 // ---- checks --------------------------------------------------------------------
 
 function checkIa(projectDir) {
@@ -245,6 +272,48 @@ function checkWiki(projectDir) {
   return problems;
 }
 
+// The dirty fixture is designed to trip a LAUNCH-BLOCKER via the mechanical
+// layers alone, so a real /twt-launch-audit run against it should reach
+// launch-scan.mjs → launch-audit.mjs → launch-lint.mjs --fix → launch-report.mjs
+// and land on NO-GO. The assertion that matters most here is the failure
+// discipline: exactly one of launch-report.md / launch-report-provisional.md
+// may exist, and which one MUST match facts.json's layers.scan — a report
+// under the measured filename asserts a scan that happened. This is the exact
+// failure that shipped in the live /twt-figma-dev-audit run on 2026-07-29,
+// where a deterministic layer was silently skipped and the report rendered
+// under the measured name anyway.
+function checkLaunch(projectDir) {
+  const problems = [];
+  const launch = join(projectDir, '.twt-artifacts', 'launch');
+
+  const factsPath = join(launch, 'facts.json');
+  if (!existsSync(factsPath)) { problems.push('missing facts.json at .twt-artifacts/launch/'); return problems; }
+  let facts;
+  try { facts = JSON.parse(readFileSync(factsPath, 'utf8')); }
+  catch (e) { problems.push(`facts.json is not valid JSON: ${e.message}`); return problems; }
+
+  const findingsPath = join(launch, 'findings.json');
+  if (!existsSync(findingsPath)) { problems.push('missing findings.json at .twt-artifacts/launch/'); return problems; }
+  let findings;
+  try { findings = JSON.parse(readFileSync(findingsPath, 'utf8')); }
+  catch (e) { problems.push(`findings.json is not valid JSON: ${e.message}`); return problems; }
+  if (!String(findings.verdict || '').startsWith('NO-GO')) {
+    problems.push(`verdict "${findings.verdict}" does not start with NO-GO — the dirty fixture must trip a blocker`);
+  }
+
+  if (!existsSync(join(launch, 'punch-list.md'))) problems.push('missing punch-list.md at .twt-artifacts/launch/');
+
+  const scanOk = facts.layers?.scan === 'ok';
+  const hasReport = existsSync(join(launch, 'launch-report.md'));
+  const hasProvisional = existsSync(join(launch, 'launch-report-provisional.md'));
+  if (scanOk && !hasReport) problems.push('layers.scan is "ok" but launch-report.md is missing');
+  if (scanOk && hasProvisional) problems.push('layers.scan is "ok" but launch-report-provisional.md exists — a stale provisional was left behind');
+  if (!scanOk && !hasProvisional) problems.push(`layers.scan is "${facts.layers?.scan}" but launch-report-provisional.md is missing`);
+  if (!scanOk && hasReport) problems.push(`layers.scan is "${facts.layers?.scan}" but launch-report.md exists — a report under the measured filename asserts a scan that did not happen`);
+
+  return problems;
+}
+
 // ---- clean --------------------------------------------------------------------
 
 function cleanTree(root, label) {
@@ -266,9 +335,10 @@ if (_isMain) {
     curation: { seed: seedCuration, check: checkCuration },
     'design-system': { seed: seedDesignSystem, check: checkDesignSystem },
     wiki: { seed: seedWiki, check: checkWiki },
+    launch: { seed: seedLaunch, check: checkLaunch },
   };
   if (!cmd || !projectDir || !SCOPES[scope]) {
-    fail('usage: node tools/eval-smoke.mjs seed|check|clean <projectDir> --scope ia|curation|design-system|wiki');
+    fail('usage: node tools/eval-smoke.mjs seed|check|clean <projectDir> --scope ia|curation|design-system|wiki|launch');
   }
   if (cmd === 'seed') {
     SCOPES[scope].seed(projectDir);
@@ -282,6 +352,16 @@ if (_isMain) {
   } else if (cmd === 'clean') {
     if (scope === 'wiki') {
       cleanTree(join(projectDir, '.project-wiki'), '.project-wiki (wiki fixture)');
+    } else if (scope === 'launch') {
+      const launch = join(projectDir, '.twt-artifacts', 'launch');
+      // site/ and .env live outside .twt-artifacts/, so cleanTree's own marker
+      // check doesn't cover them — only remove them once we've independently
+      // confirmed this tree is eval-owned.
+      if (existsSync(join(launch, MARKER))) {
+        rmSync(join(projectDir, 'site'), { recursive: true, force: true });
+        rmSync(join(projectDir, '.env'), { force: true });
+      }
+      cleanTree(launch, '.twt-artifacts/launch (fixture)');
     } else {
       // ia/curation generate under pre-design; design-system also under design/.
       cleanTree(join(projectDir, '.twt-artifacts', 'pre-design'), '.twt-artifacts/pre-design (fixture)');

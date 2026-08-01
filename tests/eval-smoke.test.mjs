@@ -102,6 +102,45 @@ test('design-system: seed → check fails → simulated tokens pass the WCAG ora
   assert.equal(existsSync(join(dir, '.twt-artifacts', 'pre-design')), false);
 });
 
+test('launch: seed → check fails (no scan yet) → real scan+audit+lint+report passes → clean removes site/.env too', () => {
+  const dir = newProject();
+  run(['seed', dir, '--scope', 'launch']);
+  assert.ok(existsSync(join(dir, 'site', 'index.html')), 'launch seed copies the dirty fixture site/ to the project root');
+  assert.ok(existsSync(join(dir, '.env')), 'launch seed copies the decoy .env to the project root');
+
+  assert.throws(() => run(['check', dir, '--scope', 'launch']), /missing facts\.json/);
+
+  // simulate what /twt-launch-audit's pipeline (scan → audit → judge → lint --fix → report) produces
+  const SCAN = fileURLToPath(new URL('../tools/launch-scan.mjs', import.meta.url));
+  const AUDIT = fileURLToPath(new URL('../tools/launch-audit.mjs', import.meta.url));
+  const LINT = fileURLToPath(new URL('../tools/launch-lint.mjs', import.meta.url));
+  const REPORT = fileURLToPath(new URL('../tools/launch-report.mjs', import.meta.url));
+  const out = join(dir, '.twt-artifacts', 'launch');
+  execFileSync(process.execPath, [SCAN, dir], { encoding: 'utf8' });
+  execFileSync(process.execPath, [AUDIT, join(out, 'facts.json'), '--out', out], { encoding: 'utf8' });
+  const findingsPath = join(out, 'findings.json');
+  const doc = JSON.parse(readFileSync(findingsPath, 'utf8'));
+  for (const f of doc.findings) { f.impact = 'Stated impact.'; f.action = 'Stated action.'; }
+  writeFileSync(findingsPath, JSON.stringify(doc, null, 2), 'utf8');
+  execFileSync(process.execPath, [LINT, out, '--fix'], { encoding: 'utf8' });
+  execFileSync(process.execPath, [REPORT, findingsPath, '--out', out], { encoding: 'utf8' });
+
+  assert.match(run(['check', dir, '--scope', 'launch']), /PASS/);
+
+  // failure discipline: a stale launch-report.md next to a scan that no longer
+  // reports "ok" must fail the check — the exact bug this scenario exists to pin.
+  const facts = JSON.parse(readFileSync(join(out, 'facts.json'), 'utf8'));
+  facts.layers.scan = 'partial';
+  writeFileSync(join(out, 'facts.json'), JSON.stringify(facts, null, 2), 'utf8');
+  assert.throws(() => run(['check', dir, '--scope', 'launch']),
+    /launch-report\.md exists — a report under the measured filename asserts a scan that did not happen/);
+
+  run(['clean', dir, '--scope', 'launch']);
+  assert.equal(existsSync(join(dir, 'site')), false, 'clean removes the seeded site/');
+  assert.equal(existsSync(join(dir, '.env')), false, 'clean removes the seeded .env');
+  assert.equal(existsSync(join(dir, '.twt-artifacts', 'launch')), false, 'clean removes the launch artifact tree');
+});
+
 test('safety: seed refuses an existing unmarked tree; clean refuses without the marker', () => {
   const dir = newProject();
   mkdirSync(join(dir, '.twt-artifacts', 'pre-design', 'brand'), { recursive: true });
