@@ -5,6 +5,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { listFiles } from '../../lib/sources.mjs';
+import { NONPROD_URL_ANYWHERE } from './lib/patterns.mjs';
 
 // Files that must never be in a repo that ships.
 const SECRET_FILES = [
@@ -15,7 +16,8 @@ const SECRET_FILES = [
 // a false positive here costs a human a look, a false negative costs a rotation.
 const INLINE_SECRET = /\b(sk_live_[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)/;
 const DEBUG = /\b(console\.(log|debug|warn|error)|debugger)\b/g;
-const NONPROD = /https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|[a-z0-9-]*\.?(staging|stage|dev|test|preview)\.[a-z0-9.-]+|[a-z0-9-]+\.local)(:\d+)?/gi;
+// The non-production host list is SHARED with conversion.mjs — see
+// scan/lib/patterns.mjs. Applied here as an anywhere-in-the-file sweep.
 const SKIP_DIRS = new Set(['node_modules', '.git', '.twt-artifacts', 'vendor', 'dist-codex']);
 
 // Shallow walk of the project root plus the built output — never the whole
@@ -64,7 +66,7 @@ export function run(ctx) {
       counts.debug_statements++;
       findings.push({ kind: 'debug_statement', file, line: ctx.lineOf(src, m.index), detail: m[0] });
     }
-    for (const m of src.matchAll(NONPROD)) {
+    for (const m of src.matchAll(NONPROD_URL_ANYWHERE)) {
       counts.nonprod_urls++;
       findings.push({ kind: 'nonprod_url', file, line: ctx.lineOf(src, m.index), detail: m[0] });
     }

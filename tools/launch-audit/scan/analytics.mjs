@@ -4,6 +4,14 @@
 // runs before the user can decline is a live compliance liability, not a todo.
 // Detection is deliberately conservative — a tracker counts as "before consent"
 // only when no consent marker appears earlier in the same document.
+//
+// The consent-marker vocabulary is SHARED with legal.mjs (scan/lib/
+// patterns.mjs). This module's private copy accepted a BARE `gdpr`, so the
+// literal word "GDPR" appearing anywhere before a tracker — a footer link, a
+// policy heading, a paragraph of body copy — suppressed ANLY001 outright: a
+// false negative on this module's headline blocker. The shared constant
+// requires a qualifier on both `gdpr` and `consent`.
+import { CONSENT_BANNER } from './lib/patterns.mjs';
 
 // Placeholder IDs the scaffolders and tutorials leave behind. A real GA4 id has
 // a mixed alphanumeric suffix, so an all-X, all-0, or literal-placeholder tail
@@ -34,7 +42,6 @@ const ID = /\b((?:G|GTM|UA|AW|YOUR)-[A-Z0-9]+(?:-[A-Z0-9]+)?)\b/gi;
 // that pattern is rare, and far better than false-flagging every correct
 // GA4/GTM install.
 const LOADER_ID = /<script\b[^>]*\bsrc\s*=\s*["'][^"']*[?&]id=([A-Z0-9-]+)[^"']*["'][^>]*>/gi;
-const CONSENT = /(cookie[-_ ]?(consent|banner|notice)|gdpr|cookieconsent|onetrust|klaro|cookiebot|osano|termly|consentmanager)/i;
 
 export function run(ctx) {
   const counts = { trackers: 0, placeholder_ids: 0, duplicate_tags: 0, tracker_before_consent: 0 };
@@ -43,7 +50,7 @@ export function run(ctx) {
   for (const f of ctx.html) {
     const src = ctx.read(f);
     const file = ctx.rel(f);
-    const consent = CONSENT.exec(src);
+    const consent = CONSENT_BANNER.exec(src);
     const consentAt = consent ? consent.index : -1;
 
     for (const m of src.matchAll(TRACKER)) {

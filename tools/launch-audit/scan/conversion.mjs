@@ -3,8 +3,18 @@
 // A form posting to "#" is the quietest launch failure there is: the page looks
 // finished, the button animates, and every lead is discarded. No existing twt
 // audit checks a form's destination.
+import { NONPROD_URL_AT_START } from './lib/patterns.mjs';
+
 const FORM = /<form\b[^>]*>[\s\S]*?<\/form>/gi;
-const NONPROD = /^https?:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]*\.?(staging|stage|dev|test|preview)\.)/i;
+// The non-production host list is SHARED with hygiene.mjs (scan/lib/
+// patterns.mjs). This module's private copy omitted 0.0.0.0 and .local, so a
+// form posting to http://0.0.0.0:8080/post — the exact "quietest launch
+// failure" the comment above describes — slipped past this LAUNCH-BLOCKER and
+// was caught only by hygiene's FIX-WEEK-ONE nonprod_url sweep. Two definitions
+// of one term, and the narrower one guarded the higher severity.
+//
+// Applied ANCHORED here, because a form `action` IS the destination: a match
+// has to cover the start of the URL, not merely appear somewhere inside it.
 
 export function run(ctx) {
   const counts = {
@@ -29,7 +39,7 @@ export function run(ctx) {
       if (!action || action === '#') {
         counts.dead_actions++;
         findings.push({ kind: 'dead_action', file, line, detail: act ? `action="${action}"` : 'no action attribute' });
-      } else if (NONPROD.test(action)) {
+      } else if (NONPROD_URL_AT_START.test(action)) {
         counts.nonprod_actions++;
         findings.push({ kind: 'nonprod_action', file, line, detail: `action="${action}"` });
       }
