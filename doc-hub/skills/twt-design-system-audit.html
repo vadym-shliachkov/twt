@@ -42,7 +42,7 @@
           <h1>/twt-design-system-audit</h1>
           <p class="lede">Score a real design system's quality and flag every page and block that drifts from it.</p>
           <div class="fact-row">
-            <span>Version 1.6.1</span>
+            <span>Version 1.6.2</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--very-high token-usage--compact" data-token-usage="very-high" aria-label="Token usage: Very high">
     <span class="token-usage__label">Token usage</span>
@@ -76,7 +76,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Read-only on the source — never edits the audited site or Figma file.</li><li>Doesn't build or fix the design system (that's <code>/twt-design-system-define</code>); it reports. <strong>Exception:</strong> when <strong>no</strong> design system exists, this audit *creates* the canonical <code>.twt-artifacts/design/design-system/</code> (via <code>/twt-design-system-define</code> in analyse-existing mode) so the design has a system to be measured against — it no longer keeps a separate <code>synthesized-design-system/</code> copy. An <strong>existing</strong> DS is audited against, never overwritten.</li><li>Not a content or full-a11y audit (those are the <code>/twt-qa-*</code> skills); contrast is reused only as one metric.</li><li>The deterministic extraction/clustering/scoring/visuals/HTML report are done by the bundled scripts — this skill adds judgment (the *why*, recommendations, the design-taste metrics), it does not re-implement parsing, screenshotting, or report HTML in the model.</li></ul>
+    <ul><li>Read-only on the source — never edits the audited site or Figma file.</li><li>Doesn't build or fix the design system (that's <code>/twt-design-system-define</code>); it reports. <strong>Exception:</strong> when <strong>no</strong> design system exists, this audit *creates* the canonical <code>.twt-artifacts/design/design-system/</code> (via <code>/twt-design-system-define</code> in analyse-existing mode) so the design has a system to be measured against — it no longer keeps a separate <code>synthesized-design-system/</code> copy. An <strong>existing</strong> DS is audited against, never overwritten.</li><li>Not a content or full-a11y audit (those are the <code>/twt-qa-*</code> skills); contrast is reused only as one metric.</li><li>The deterministic extraction/clustering/scoring/visuals/HTML report are done by the bundled scripts — this skill adds judgment (the *why*, recommendations, the design-taste metrics), it does not re-implement parsing, screenshotting, or report HTML in the model.</li><li>Not a developer-readiness audit. <code>/twt-figma-dev-audit</code> answers *can a developer build this file* (Auto Layout, constraints, states, forms, exports, effect cost, flows, CMS risk); this skill answers *is the design system coherent*. Auto Layout, component states and export settings are that skill's - reporting them here puts two contradictory reports in front of one client.</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>

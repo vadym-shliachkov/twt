@@ -80,6 +80,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
 | /twt-ia-validate | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
+| /twt-launch-audit | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
 | /twt-layout-define | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | /twt-layout-validate | layout | Read-only critique of per-page layout specs into validation-report.md |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |

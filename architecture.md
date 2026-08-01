@@ -52,6 +52,7 @@ flowchart TB
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
     twt_ia_validate["/twt-ia-validate"]:::skill
+    twt_launch_audit["/twt-launch-audit"]:::skill
     twt_layout_define["/twt-layout-define"]:::skill
     twt_layout_validate["/twt-layout-validate"]:::skill
     twt_marketplace_docs["/twt-marketplace-docs"]:::skill
@@ -167,6 +168,10 @@ flowchart TB
     twt_audience_define -.-> twt_ia_define
     twt_content_fetch -.-> twt_ia_define
     twt_ia_define --> twt_ia_validate
+    twt_qa -.-> twt_launch_audit
+    twt_content_approval_checklist -.-> twt_launch_audit
+    twt_seo -.-> twt_launch_audit
+    twt_status -.-> twt_launch_audit
     twt_audience_define -.-> twt_layout_define
     twt_positioning_define -.-> twt_positioning
     twt_positioning_validate -.-> twt_positioning
@@ -356,6 +361,7 @@ flowchart TB
 ### qa
 
 - /twt-figma-dev-audit - Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+- /twt-launch-audit - Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
 - /twt-qa - Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
 - /twt-qa-a11y - Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 - /twt-qa-content - Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
@@ -736,7 +742,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-content-approval-implement
-- Soft consumers: twt-develop, twt-site, twt-site-dev
+- Soft consumers: twt-develop, twt-launch-audit, twt-site, twt-site-dev
 
 **Reads:**
 - Figma URL or Figma design context supplied via $ARGUMENTS
@@ -1764,6 +1770,40 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/ia/validation-report.md |  |
 
+### /twt-launch-audit
+
+**Category:** qa
+**Version:** 1.0.0
+
+**Inputs:**
+- Optional http(s):// URL for the live checks; optional --skip-interview
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-qa, twt-content-approval-checklist, twt-seo, twt-status
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/qa/qa-report.md
+- .twt-artifacts/qa/gaps.md
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/launch/answers.json
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/launch/facts.json |  |
+| .twt-artifacts/launch/answers.json |  |
+| .twt-artifacts/launch/findings.json |  |
+| .twt-artifacts/launch/launch-report.md |  |
+| .twt-artifacts/launch/launch-report.html |  |
+| .twt-artifacts/launch/punch-list.md |  |
+
 ### /twt-layout-define
 
 **Category:** layout
@@ -2081,7 +2121,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-site
+- Soft consumers: twt-launch-audit, twt-site
 
 **Reads:**
 - .twt-artifacts/qa/content-report.md
@@ -2272,7 +2312,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-launch-audit
 
 **Reads:**
 - .twt-artifacts/pre-design/seo/seo-map.md
@@ -2527,7 +2567,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-launch-audit
 
 **Reads:**
 - .twt-artifacts/
@@ -2769,6 +2809,7 @@ flowchart TB
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |
 | /twt-ia-validate | twt-ia-define | none |
+| /twt-launch-audit | none | twt-qa, twt-content-approval-checklist, twt-seo, twt-status |
 | /twt-layout-define | none | twt-audience-define |
 | /twt-layout-validate | none | none |
 | /twt-marketplace-docs | none | none |
@@ -2817,6 +2858,7 @@ flowchart TB
   figma-export/
   html-site/
   intake/
+  launch/
   pre-design/
   qa/
   reports/

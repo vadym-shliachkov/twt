@@ -42,7 +42,7 @@
           <h1>/twt-figma-dev-audit</h1>
           <p class="lede">Answer one question about a Figma file before anyone estimates or builds from it: <strong>can a developer build this without stopping to ask questions?</strong> Scan the file through the Figma...</p>
           <div class="fact-row">
-            <span>Version 1.0.1</span>
+            <span>Version 1.0.6</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
     <span class="token-usage__label">Token usage</span>
@@ -64,7 +64,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li></ul>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/design/design-system-audit/audit-report.md</code><span class="file-desc">The Markdown version of the audit report.</span></li><li><code>the project's existing theme or codebase</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
@@ -72,11 +72,11 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Not a visual-design audit. Never judge whether the design is attractive, on-brand, or well-composed.</li><li><strong>Not a design-system audit.</strong> <code>/twt-design-system-audit</code> answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.</li><li>Read-only on the Figma file. Never edits the design; writes nothing outside <code>.twt-artifacts/figma-dev-audit/</code>.</li><li>Not a content or full-accessibility audit (<code>/twt-qa-content</code>, <code>/twt-qa-a11y</code> own those on built output). Accessibility appears here only as build risk visible in the file.</li><li>Does not re-implement scanning, rule evaluation, or report rendering in the model - those are the bundled scripts.</li><li>v1 covers Web and WordPress. React, iOS and Android are out of scope.</li></ul>
+    <ul><li>Not a visual-design audit. Never judge whether the design is attractive, on-brand, or well-composed.</li><li><strong>Not a design-system audit.</strong> <code>/twt-design-system-audit</code> answers *is the design system coherent*; this skill answers *can a developer build this file*. Never re-derive a token, colour, spacing, radius, or component-duplication finding - those are that skill's, and duplicating them puts two contradictory reports in front of one client.</li><li>Read-only on the Figma file. Never edits the design; writes nothing outside <code>.twt-artifacts/figma-dev-audit/</code>.</li><li>Not a content or full-accessibility audit (<code>/twt-qa-content</code>, <code>/twt-qa-a11y</code> own those on built output). Accessibility appears here only as build risk visible in the file.</li><li>Does not re-implement scanning, rule evaluation, schema derivation, or report rendering in the model - those are the bundled scripts. The model writes judgment; the scripts write everything derivable from it.</li><li>v1 covers Web and WordPress. React, iOS and Android are out of scope.</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li><code>facts.json</code>, <code>findings.json</code>, <code>readiness-report.md</code> and <code>readiness-report.html</code> all exist under <code>.twt-artifacts/figma-dev-audit/</code>.</li><li>Every finding carries all ten schema fields, a working <code>?node-id=</code> link, and an owner from the closed vocabulary.</li><li><strong>No finding carries <code>Confidence: Low</code></strong> - unverifiable concerns appear only under <code>Decisions required</code>.</li><li>No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.</li><li>The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.</li></ul>
+    <ul><li><code>facts.json</code>, <code>findings.json</code>, <code>readiness-report.md</code> and <code>readiness-report.html</code> all exist under <code>.twt-artifacts/figma-dev-audit/</code> — or, if the scan could not return, the run followed <strong>Step 2b</strong> and produced a counts-only <code>facts.json</code> plus <code>readiness-report-provisional.{md,html}</code>. A degraded run that renders under the measured run's filename claims a scan that did not happen.</li><li><code>figma-dev-lint.mjs</code> exits 0 on <code>&lt;OUT&gt;</code> — every finding carries its full schema, a link to a node it cites, a non-empty <code>impact</code> and <code>action</code>, and an owner from the closed vocabulary.</li><li><strong>No finding carries <code>Confidence: Low</code></strong> - unverifiable concerns appear only under <code>Decisions required</code>.</li><li>No category exceeds 5 issue blocks; no Low-severity finding renders as an issue block; withheld counts are stated.</li><li>The report either cites an existing ds-audit report or states that none exists - and contains zero token findings either way.</li></ul>
   </section>
       </section>
   </main>

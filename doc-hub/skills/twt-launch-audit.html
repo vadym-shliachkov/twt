@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Answer one question about a project that thinks it is finished: **if we pushed this to production today, what breaks, what is missing, and who owns ea">
+  <title>/twt-launch-audit | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong class="breadcrumb-command">/twt-launch-audit</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">QA · qa</p>
+          <h1>/twt-launch-audit</h1>
+          <p class="lede">Answer one question about a project that thinks it is finished: <strong>if we pushed this to production today, what breaks, what is missing, and who owns each item?</strong> Harvest every existing...</p>
+          <div class="fact-row">
+            <span>Version 1.0.0</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
+    <strong>High</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Answer one question about a project that thinks it is finished: <strong>if we pushed this to production today, what breaks, what is missing, and who owns each item?</strong> Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Optional http(s):// URL for the live checks; optional --skip-interview</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/qa/qa-report.md</code><span class="file-desc">The rolled-up QA verdict — pass/fail across every audit that ran.</span></li><li><code>.twt-artifacts/qa/gaps.md</code><span class="file-desc">A plain-language punch-list of everything left to fix.</span></li><li><code>.twt-artifacts/pre-design/seo/seo-map.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/assets/manifest.md</code><span class="file-desc">An inventory of the images and assets the design references.</span></li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li><li><code>.twt-artifacts/launch/answers.json</code><span class="file-desc">A JSON data file.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/launch/facts.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/launch/answers.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/launch/findings.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/launch/launch-report.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/launch/launch-report.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/launch/punch-list.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Does not deploy, publish, or change anything anywhere.</li><li>Does not fix findings. It reports; the humans resolve, then re-run.</li><li>Does not rebuild the site or re-run any design phase.</li><li><strong>Does not re-derive another audit's findings</strong> — a qa BLOCKER appears here as one citation of <code>qa-report.md</code>, never as a restatement. Two reports with two severities for one problem is worse than one report.</li><li>Does not judge design quality (<code>/twt-design-system-audit</code> owns that) or Figma buildability (<code>/twt-figma-dev-audit</code> owns that).</li><li>Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.</li><li>Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>facts.json</code>, <code>findings.json</code>, <code>launch-report.md</code>, <code>launch-report.html</code>, and <code>punch-list.md</code> all exist under <code>.twt-artifacts/launch/</code> — <strong>or</strong>, if the scan could not complete, the run produced <code>launch-report-provisional.{md,html}</code> and no <code>launch-report.md</code>.</li><li><code>launch-lint.mjs</code> exits 0: every finding carries a severity and owner from the closed vocabularies, a non-empty <code>where</code>, <code>evidence</code>, <code>impact</code>, and <code>action</code>, and the verdict matches the findings.</li><li>Every unanswered blocking interview question appears as an <code>UNVERIFIED</code> finding, so the verdict can never be a clean <code>GO</code> on silence.</li><li>No category renders more than 5 issue blocks; withheld counts are stated.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

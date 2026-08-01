@@ -46,6 +46,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
+| [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
@@ -1675,6 +1676,54 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 - Every finding has Where / Problem / Recommendation, with Problem citing evidence
 - Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
 - If BOTH `sitemap.md` and `functional-scope.md` are missing, aborts pointing to `/twt-ia-define`
+
+---
+
+## /twt-launch-audit
+
+**Category:** qa
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Answer one question about a project that thinks it is finished: **if we pushed this to production today, what breaks, what is missing, and who owns each item?** Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.
+
+**Inputs:**
+- Optional http(s):// URL for the live checks; optional --skip-interview
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-qa, twt-content-approval-checklist, twt-seo, twt-status
+
+**Reads:**
+- .twt-artifacts/qa/qa-report.md
+- .twt-artifacts/qa/gaps.md
+- .twt-artifacts/pre-design/seo/seo-map.md
+- .twt-artifacts/design/assets/manifest.md
+- .twt-artifacts/content-approval/content-approval-checklist.xlsx
+- .twt-artifacts/launch/answers.json
+
+**Writes:**
+- .twt-artifacts/launch/facts.json
+- .twt-artifacts/launch/answers.json
+- .twt-artifacts/launch/findings.json
+- .twt-artifacts/launch/launch-report.md
+- .twt-artifacts/launch/launch-report.html
+- .twt-artifacts/launch/punch-list.md
+
+**Non-goals:**
+- Does not deploy, publish, or change anything anywhere.
+- Does not fix findings. It reports; the humans resolve, then re-run.
+- Does not rebuild the site or re-run any design phase.
+- **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report.
+- Does not judge design quality (`/twt-design-system-audit` owns that) or Figma buildability (`/twt-figma-dev-audit` owns that).
+- Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.
+- Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.
+
+**Success criteria:**
+- `facts.json`, `findings.json`, `launch-report.md`, `launch-report.html`, and `punch-list.md` all exist under `.twt-artifacts/launch/` — **or**, if the scan could not complete, the run produced `launch-report-provisional.{md,html}` and no `launch-report.md`.
+- `launch-lint.mjs` exits 0: every finding carries a severity and owner from the closed vocabularies, a non-empty `where`, `evidence`, `impact`, and `action`, and the verdict matches the findings.
+- Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence.
+- No category renders more than 5 issue blocks; withheld counts are stated.
 
 ---
 
