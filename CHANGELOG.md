@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-01 **v1.0.91** — twt-eval-smoke.md → 1.0.4
 - 2026-08-01 **v1.0.90** — twt-launch-audit.md → 1.0.1, twt-eval-smoke.md → 1.0.3
 - 2026-07-30 **v1.0.89** — twt-figma-dev-audit.md → 1.0.6
 - 2026-07-30 **v1.0.88** — twt-setup.md → 1.0.4, twt-status.md → 1.1.1, twt-search-site.md → 1.1.2, twt-block-preview.md → 1.0.3, twt-marketplace-docs.md → 1.0.4, twt-qa-a11y.md → 1.1.4, twt-qa-content.md → 1.2.3, twt-qa-design.md → 1.1.3, twt-qa-elementor.md → 1.1.3, twt-qa-links.md → 1.1.3, twt-content-fetch-pdf.md → 1.0.1, twt-content-fetch-doc.md → 1.0.1, twt-content-fetch-site.md → 1.2.3, twt-content-fetch-figma.md → 1.0.2, twt-export-pdf.md → 1.1.5, twt-export-docx.md → 1.1.3, twt-export-presentation.md → 1.2.2, twt-html-site-creator.md → 1.2.2, twt-elementor-theme-creator.md → 1.2.2, twt-content-approval-implement.md → 1.1.5, twt-assets-produce.md → 1.0.3, twt-wiki-query.md → 1.0.6, twt-qa.md → 1.0.7, twt-content-fetch.md → 1.1.5
