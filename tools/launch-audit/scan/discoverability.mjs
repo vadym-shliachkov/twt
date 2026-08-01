@@ -37,7 +37,22 @@ const DESC_MAX = 160;
 // `thank-you/index.html` as "index" and exempts nothing. Found by running the
 // fixed scanner against an independently built 8-page site, where a correctly
 // noindexed `thank-you/` page was still the sole LAUNCH-BLOCKER.
-const EXCLUDED_PAGE = /^(?:404|error|thank[-_]?you|thanks|search)/i;
+//
+// ANCHORED AT BOTH ENDS, and this matters more than the exemption itself. The
+// first cut anchored only the start, so the token was a prefix match: it
+// exempted `search-engine-optimisation.html`, `404-error-handling.html`,
+// `thanks-to-our-volunteers.html`, `error-codes-explained.html`,
+// `errors-we-have-made.html` and `blog/searching-for-a-fitter.html` — real
+// content pages, silently, at every tier. That is strictly worse than the
+// false positive it replaced: a stray noindex on
+// /services/search-engine-optimisation/ is exactly the defect this module
+// exists to catch, and an unanchored exemption turns the tool's most expensive
+// check off for the page an agency cares most about ranking.
+//
+// The optional `-page` / `-results` suffix covers the two real spellings
+// (`error-page.html`, `search-results.html`) without opening the token back up
+// to arbitrary continuations.
+const EXCLUDED_PAGE = /^(?:404|error|errors|thank[-_]?you|thanks|search)(?:[-_](?:page|results?))?$/i;
 const isExcluded = (key) => EXCLUDED_PAGE.test(key.split('/').pop());
 
 export function run(ctx) {
