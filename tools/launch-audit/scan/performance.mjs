@@ -5,21 +5,20 @@
 // therefore means the <img> tag has no width/height attributes — the
 // layout-shift signal that actually matters, and readable from markup.
 import { existsSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { localPath } from './lib/html.mjs';
 
 const HEAVY_BYTES = 300 * 1024;
 const REMOTE_FONT = /<link\b[^>]*href\s*=\s*["'](https?:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|use\.typekit\.net|fast\.fonts\.net)[^"']*)["']/gi;
 const kb = (n) => `${Math.round(n / 1024)}KB`;
 
 const localSize = (ctx, src) => {
-  if (!src || /^(https?:)?\/\//i.test(src) || src.startsWith('data:')) return null;
-  const p = join(ctx.base, src.split(/[?#]/)[0].replace(/^\//, ''));
-  return existsSync(p) ? statSync(p).size : null;
+  const p = localPath(ctx.base, src);
+  return p && existsSync(p) ? statSync(p).size : null;
 };
 
 export function run(ctx) {
   const counts = {
-    images: 0, heavy_images: 0, missing_lazy: 0, missing_dimensions: 0,
+    images: 0, heavy_images: 0, missing_lazy: 0, deliberate_eager: 0, missing_dimensions: 0,
     heaviest_page_bytes: 0, unminified_css: 0, remote_fonts: 0,
   };
   const findings = [];
@@ -29,10 +28,12 @@ export function run(ctx) {
     const file = ctx.rel(f);
     let pageBytes = Buffer.byteLength(src, 'utf8');
 
+    let imgIndex = 0;
     for (const m of src.matchAll(/<img\b[^>]*>/gi)) {
       const tag = m[0];
       const line = ctx.lineOf(src, m.index);
       counts.images++;
+      const nth = imgIndex++;
       const srcAttr = /\ssrc\s*=\s*["']([^"']+)["']/i.exec(tag);
       const size = localSize(ctx, srcAttr ? srcAttr[1] : null);
       if (size !== null) {
@@ -42,9 +43,26 @@ export function run(ctx) {
           findings.push({ kind: 'heavy_image', file, line, detail: `${srcAttr[1]} is ${kb(size)} (> ${kb(HEAVY_BYTES)})` });
         }
       }
+      // Lazy-loading is NOT universally correct, and recommending it where it
+      // is wrong is worse than saying nothing. Deferring the LCP image
+      // measurably slows the page — it is a documented anti-pattern, and the
+      // three markers below are exactly how an author declares "this one is
+      // above the fold, load it now":
+      //   * fetchpriority="high" — the explicit LCP hint
+      //   * loading="eager"      — the explicit opt-out
+      //   * the first <img> in the document — the hero/logo in practice
+      // On a well-built review fixture this check produced eight of ten
+      // NICE-TO-HAVEs, every one of them advice that would make the site
+      // slower. Counted as `deliberate_eager` so the observation survives.
+      const eager = /\sfetchpriority\s*=\s*["']high["']/i.test(tag)
+        || /\sloading\s*=\s*["']eager["']/i.test(tag)
+        || nth === 0;
       if (!/\sloading\s*=\s*["']lazy["']/i.test(tag)) {
-        counts.missing_lazy++;
-        findings.push({ kind: 'missing_lazy', file, line, detail: 'img has no loading="lazy"' });
+        if (eager) counts.deliberate_eager++;
+        else {
+          counts.missing_lazy++;
+          findings.push({ kind: 'missing_lazy', file, line, detail: 'img has no loading="lazy"' });
+        }
       }
       if (!/\swidth\s*=/i.test(tag) || !/\sheight\s*=/i.test(tag)) {
         counts.missing_dimensions++;

@@ -36,13 +36,25 @@ const urlIdx = process.argv.indexOf('--url');
 const url = urlIdx > -1 ? process.argv[urlIdx + 1] || null : null;
 
 const { html, css, base, kind } = locate(projectDir);
-if (!base || html.length === 0) {
-  console.log('launch-scan: no built HTML found (looked in site/ and .twt-artifacts/design/mockup/). Build the site or pass a live URL.');
+const theme = locateTheme(projectDir);
+
+// The command file's Step 1 admits three kinds of auditable project: a built
+// site/mockup, a hello-elementor-* child theme, or a live URL. Bailing on
+// `!base` accepted only the first, so an Elementor or URL-only project passed
+// Step 1's gate and then got no facts.json at all — exit 0, no findings, and a
+// message reading "pass a live URL" printed at a run that HAD passed a live
+// URL. A committed .env holding a live Stripe key and WP_DEBUG=true in a
+// theme's functions.php both went undetected. Gate on "there is nothing any
+// layer could read", not on "there is no local HTML": hygiene reads the
+// project root and the theme, errors reads the theme's 404.php, and the eight
+// LIVE_MAP rules read the URL — none of them needs a build root.
+if (html.length === 0 && !theme && !url) {
+  console.log('launch-scan: nothing to audit — no built HTML (site/ or .twt-artifacts/design/mockup/), no hello-elementor-* theme, and no --url. Build the site or pass a live URL.');
   process.exit(0);
 }
 
 const ctx = {
-  projectDir, html, css, base, kind, theme: locateTheme(projectDir),
+  projectDir, html, css, base, kind, theme,
   read: (p) => { try { return readFileSync(p, 'utf8'); } catch { return ''; } },
   lineOf: (text, idx) => { let n = 1; for (let i = 0; i < idx && i < text.length; i++) if (text[i] === '\n') n++; return n; },
   rel: (p) => relTo(projectDir, p),
@@ -113,7 +125,14 @@ writeFileSync(join(outDir, 'facts.json'), JSON.stringify(facts, null, 2), 'utf8'
 
 const tally = Object.entries(checks)
   .map(([k, v]) => `${k}=${v.findings.length}`).join('  ');
-console.log(`launch-scan: ${tally}  (${html.length} page${html.length === 1 ? '' : 's'} from ${facts.sources.base})`);
+// Name what was actually read. A theme-only or URL-only run has no build root,
+// and printing "0 pages from null" hides which layers had anything to work on.
+const from = [
+  base ? `${html.length} page${html.length === 1 ? '' : 's'} from ${facts.sources.base}` : null,
+  theme ? `theme ${facts.sources.theme}` : null,
+  url ? `live ${url}` : null,
+].filter(Boolean).join(', ') || 'nothing';
+console.log(`launch-scan: ${tally}  (${from})`);
 if (failed.length) console.log(`layers.scan=partial — ${failed.join('; ')}`);
 if (harvestCrash) console.log(`layers.harvest=failed — ${harvestCrash}`);
 else if (harvested && harvested.notes.length) console.log(`layers.harvest=${harvested.status} — ${harvested.notes.join('; ')}`);

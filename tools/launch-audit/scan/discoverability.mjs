@@ -7,40 +7,68 @@
 // BOUNDARY: /twt-seo-define owns what the keywords, slugs and meta text SHOULD
 // say. This module only measures whether the built output carries the tags.
 import { existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, relative } from 'node:path';
+import { metaByName, titleOf, pageKey, hrefKey } from './lib/html.mjs';
 
 const TITLE_MAX = 60;
 const DESC_MAX = 160;
 
-function metaByName(src, name) {
-  const re = new RegExp(`<meta\\s[^>]*name\\s*=\\s*["']${name}["'][^>]*>`, 'i');
-  const tag = re.exec(src);
-  if (!tag) return null;
-  const c = /content\s*=\s*["']([^"']*)["']/i.exec(tag[0]);
-  return { value: c ? c[1] : '', index: tag.index };
-}
+// Pages that are SUPPOSED to be kept out of the index.
+//
+// A noindex on 404.html was the sole LAUNCH-BLOCKER — and therefore the sole
+// cause of NO-GO — on a realistic, correctly built review fixture. Excluding
+// an error page, a thank-you page, or an internal search-results page from
+// search is the recommended configuration, not a defect; Google's own guidance
+// says so, and ERRS001 in this same tool REQUIRES the 404 page to exist. A
+// rule set that demands you ship a 404 and then blocks the launch for
+// configuring it correctly is the definition of crying wolf.
+//
+// Exempted here at the scanner rather than re-tiered at the rules, and
+// deliberately not emitted as a lower-severity finding either: the observation
+// is preserved in `noindex_excluded` / `nofollow_excluded` (so facts.json
+// still records what was seen, and Step 6's model pass can read it), but it
+// never reaches the client-facing report, because printing the recommended
+// configuration as an issue at ANY tier teaches the reader to skim the
+// category — and that category contains the single most expensive launch
+// defect this tool detects.
+// Matched against the LAST SEGMENT OF THE PAGE KEY, not the raw basename: on a
+// directory-per-page build (WordPress, Next.js, Astro, Hugo — i.e. most of
+// them) every file is literally `index.html`, so a basename test sees
+// `thank-you/index.html` as "index" and exempts nothing. Found by running the
+// fixed scanner against an independently built 8-page site, where a correctly
+// noindexed `thank-you/` page was still the sole LAUNCH-BLOCKER.
+const EXCLUDED_PAGE = /^(?:404|error|thank[-_]?you|thanks|search)/i;
+const isExcluded = (key) => EXCLUDED_PAGE.test(key.split('/').pop());
 
 export function run(ctx) {
   const counts = {
     pages: 0, missing_title: 0, long_title: 0, missing_description: 0, long_description: 0,
     missing_canonical: 0, missing_lang: 0, noindex_pages: 0, nofollow_pages: 0,
+    noindex_excluded: 0, nofollow_excluded: 0, sitemap_excluded: 0,
     robots_txt: false, sitemap_xml: false, sitemap_orphans: 0,
   };
   const findings = [];
+
+  // A theme-only or URL-only project has no built HTML to read. Every finding
+  // below is a per-page or beside-the-build assertion, so with no pages there
+  // is nothing this module can honestly measure — and "no robots.txt beside a
+  // build that does not exist" is a fabricated finding, not a missing file.
+  // See launch-scan.mjs's gate: the scan still runs (hygiene and the live
+  // layer have real work), this module just no-ops.
+  if (!ctx.base || ctx.html.length === 0) return { counts, findings };
 
   for (const f of ctx.html) {
     const src = ctx.read(f);
     const file = ctx.rel(f);
     counts.pages++;
 
-    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(src);
-    const titleText = title ? title[1].trim() : '';
-    if (!titleText) {
+    const title = titleOf(src);
+    if (!title || !title.text) {
       counts.missing_title++;
       findings.push({ kind: 'missing_title', file, line: 1, detail: 'no non-empty <title>' });
-    } else if (titleText.length > TITLE_MAX) {
+    } else if (title.text.length > TITLE_MAX) {
       counts.long_title++;
-      findings.push({ kind: 'long_title', file, line: ctx.lineOf(src, title.index), detail: `${titleText.length} chars (> ${TITLE_MAX})` });
+      findings.push({ kind: 'long_title', file, line: ctx.lineOf(src, title.index), detail: `${title.text.length} chars (> ${TITLE_MAX})` });
     }
 
     const desc = metaByName(src, 'description');
@@ -64,16 +92,23 @@ export function run(ctx) {
     // Any crawler-directive meta counts — robots, googlebot, bingbot.
     // Per Google's robots-meta spec, content="none" is defined as equivalent
     // to "noindex, nofollow" — treat it as satisfying both branches.
+    const excluded = isExcluded(pageKey(relative(ctx.base, f)));
     for (const name of ['robots', 'googlebot', 'bingbot']) {
       const m = metaByName(src, name);
       if (!m) continue;
       if (/\b(noindex|none)\b/i.test(m.value)) {
-        counts.noindex_pages++;
-        findings.push({ kind: 'noindex', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
+        if (excluded) counts.noindex_excluded++;
+        else {
+          counts.noindex_pages++;
+          findings.push({ kind: 'noindex', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
+        }
       }
       if (/\b(nofollow|none)\b/i.test(m.value)) {
-        counts.nofollow_pages++;
-        findings.push({ kind: 'nofollow', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
+        if (excluded) counts.nofollow_excluded++;
+        else {
+          counts.nofollow_pages++;
+          findings.push({ kind: 'nofollow', file, line: ctx.lineOf(src, m.index), detail: `meta ${name}="${m.value}"` });
+        }
       }
     }
   }
@@ -95,22 +130,20 @@ export function run(ctx) {
         findings.push({ kind: 'robots_disallow_all', file: ctx.rel(at), line: ctx.lineOf(body, idx), detail: 'Disallow: / blocks the whole site' });
       }
     } else {
-      // Normalize both a sitemap <loc> and a built filename to a bare page
-      // key — strip a trailing slash, strip a .html/.htm extension, and
-      // treat what's left of a URL after its host (or an empty basename) as
-      // the site root. This lets pretty/extensionless sitemap URLs
-      // (https://acme.com/about/) match a built about.html without
-      // over-reporting every page as an orphan.
-      const pageKey = (p) => basename(p).replace(/\.html?$/i, '') || 'index';
-      const locKey = (raw) => {
-        const path = raw.replace(/^https?:\/\/[^/]+/i, '').replace(/\/$/, '');
-        return pageKey(path || 'index');
-      };
+      // pageKey()/hrefKey() (scan/lib/html.mjs) normalize both a sitemap
+      // <loc> and a built filename to the same bare key, so pretty /
+      // extensionless sitemap URLs (https://acme.com/about/) match a built
+      // about.html instead of reporting every page as an orphan.
       const listed = new Set(
-        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => locKey(m[1])),
+        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => hrefKey(m[1])).filter(Boolean),
       );
       for (const page of ctx.html) {
-        if (listed.has(pageKey(page))) continue;
+        const key = pageKey(relative(ctx.base, page));
+        if (listed.has(key)) continue;
+        // A 404, thank-you or search page is SUPPOSED to be absent from the
+        // sitemap — listing it is the actual mistake. Same exemption, same
+        // reason: never report the recommended configuration as a defect.
+        if (isExcluded(key)) { counts.sitemap_excluded++; continue; }
         counts.sitemap_orphans++;
         findings.push({ kind: 'sitemap_orphan', file: ctx.rel(page), line: 0, detail: 'built page has no <loc> in sitemap.xml' });
       }

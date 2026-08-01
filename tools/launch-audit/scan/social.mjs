@@ -3,15 +3,7 @@
 // A missing og:image is not cosmetic: every share of the site renders as a bare
 // grey card, and it is the launch defect a client notices first.
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-
-function metaByProp(src, name) {
-  const re = new RegExp(`<meta\\s[^>]*(?:property|name)\\s*=\\s*["']${name}["'][^>]*>`, 'i');
-  const tag = re.exec(src);
-  if (!tag) return null;
-  const c = /content\s*=\s*["']([^"']*)["']/i.exec(tag[0]);
-  return { value: c ? c[1] : '', index: tag.index };
-}
+import { metaByProp, localPath } from './lib/html.mjs';
 
 export function run(ctx) {
   const counts = {
@@ -19,6 +11,11 @@ export function run(ctx) {
     missing_og_title: 0, missing_og_image: 0, og_image_missing_file: 0, missing_twitter_card: 0,
   };
   const findings = [];
+
+  // No built HTML (a theme-only or URL-only project) means no page to carry an
+  // og tag and no build root to resolve a favicon against — see
+  // discoverability.mjs for the full rationale.
+  if (!ctx.base || ctx.html.length === 0) return { counts, findings };
 
   for (const f of ctx.html) {
     const src = ctx.read(f);
@@ -38,13 +35,13 @@ export function run(ctx) {
     if (!img || !img.value.trim()) {
       counts.missing_og_image++;
       findings.push({ kind: 'missing_og_image', file, line: 1, detail: 'no og:image' });
-    } else if (!/^https?:\/\//i.test(img.value)) {
+    } else {
       // Only a local path is checkable on disk. A CDN URL is verified by the
-      // live layer when a URL is supplied, and left alone otherwise. Strip a
-      // cache-busting query string / fragment before resolving — the path
-      // this actually maps to on disk excludes them.
-      const localPath = img.value.replace(/^\//, '').split(/[?#]/)[0];
-      if (!existsSync(join(ctx.base, localPath))) {
+      // live layer when a URL is supplied, and left alone otherwise —
+      // localPath() returns null for it (and strips a cache-busting query
+      // string / fragment from the paths it does resolve).
+      const onDisk = localPath(ctx.base, img.value);
+      if (onDisk && !existsSync(onDisk)) {
         counts.og_image_missing_file++;
         findings.push({ kind: 'og_image_missing_file', file, line: ctx.lineOf(src, img.index), detail: `og:image ${img.value} resolves to no file` });
       }

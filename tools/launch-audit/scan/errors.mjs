@@ -12,14 +12,18 @@ export function run(ctx) {
   const counts = { error_page: false, external_links: 0, unsafe_external: 0 };
   const findings = [];
 
+  // The theme branch is the ONLY branch a theme-only project can satisfy, and
+  // until launch-scan.mjs stopped bailing on a missing build root it could
+  // never run at all — an Elementor project never reached this module. Order
+  // the checks so none of them depends on a build root existing.
   const named = ctx.html.some((f) => /^(404|error)\.html?$/i.test(basename(f)));
   const themed = ctx.theme
     ? listFiles(ctx.theme, '.php').some((f) => /^404\.php$/i.test(basename(f)))
     : false;
-  const atBase = existsSync(join(ctx.base, '404.html'));
+  const atBase = Boolean(ctx.base) && existsSync(join(ctx.base, '404.html'));
   counts.error_page = named || themed || atBase;
   if (!counts.error_page) {
-    findings.push({ kind: 'missing_error_page', file: ctx.rel(ctx.base), line: 0, detail: 'no 404.html beside the build and no 404.php in the theme' });
+    findings.push({ kind: 'missing_error_page', file: ctx.rel(ctx.base) || ctx.rel(ctx.theme) || '.', line: 0, detail: 'no 404.html beside the build and no 404.php in the theme' });
   }
 
   // `external_links` counts only target="_blank" links — those are the ones

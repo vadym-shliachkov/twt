@@ -22,7 +22,7 @@ function siteProject(files) {
 test('launch-scan: no auditable build exits 0 and says so, writing no facts', () => {
   const dir = newProject();
   const out = run([dir]);
-  assert.match(out, /no built HTML found/i);
+  assert.match(out, /nothing to audit/i);
   assert.throws(() => facts(dir), /ENOENT/);
 });
 
@@ -685,12 +685,17 @@ test('performance: a small image is not flagged', () => {
 });
 
 test('performance: missing loading=lazy and missing width/height are counted', () => {
-  const dir = siteProject({ 'a.html': HEAD('<title>A</title>', '<img src="/img/i.png" alt="i">') });
+  // The FIRST image on a page is exempt from the lazy check (it is the hero in
+  // practice — see the I8 tests below), so the eager one under test is second.
+  const dir = siteProject({
+    'a.html': HEAD('<title>A</title>', '<img src="/img/h.png" alt="hero"><img src="/img/i.png" alt="i">'),
+  });
+  put(join(dir, 'site', 'img', 'h.png'), 'x');
   put(join(dir, 'site', 'img', 'i.png'), 'x');
   run([dir]);
   const c = facts(dir).checks.performance.counts;
   assert.equal(c.missing_lazy, 1);
-  assert.equal(c.missing_dimensions, 1);
+  assert.equal(c.missing_dimensions, 2);
 });
 
 test('performance: heaviest_page_bytes reflects html plus its local assets', () => {
