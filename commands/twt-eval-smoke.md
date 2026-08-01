@@ -73,6 +73,12 @@ For each scope, run the four beats. If **seed** refuses (a real tree exists), re
 3. Check: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" check "$CLAUDE_PROJECT_DIR" --scope wiki`
 4. Same PASS/FAIL handling as ia (`--scope wiki`).
 
+**launch:**
+1. Seed: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" seed "$CLAUDE_PROJECT_DIR" --scope launch`
+2. Dispatch `twt-launch-audit` (Agent tool) with exactly: `--skip-interview`
+3. Check: `node "$CLAUDE_PROJECT_DIR/tools/eval-smoke.mjs" check "$CLAUDE_PROJECT_DIR" --scope launch`. The check asserts `facts.json` + `findings.json` (verdict starting `NO-GO`) + `punch-list.md` all exist, and — the assertion this scope exists for — that exactly one of `launch-report.md` / `launch-report-provisional.md` exists, matching whether `facts.json`'s `layers.scan` is `ok`. That pairing is the exact failure that shipped in a live `/twt-figma-dev-audit` run on 2026-07-29: a deterministic layer was silently skipped and the report rendered under the measured name anyway.
+4. Same PASS/FAIL handling as ia (`--scope launch`).
+
 Do **not** repair a failing scope by re-dispatching with extra hints — a FAIL is the eval's finding, not a problem to prompt around. Fix the skill, then re-run the eval.
 
 ## Step 4 — Report
