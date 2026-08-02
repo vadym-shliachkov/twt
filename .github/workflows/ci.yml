@@ -9,9 +9,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5, not v4: the v4 actions bundle Node 20, which GitHub deprecated —
+      # every run annotated a warning about being force-run on Node 24.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # 22, not 20: `node --test` only supports glob patterns from Node 21.
           node-version: 22

@@ -50,8 +50,11 @@ export function parseIo(text) {
     if (!section) continue;
     const m = /^\s+-\s+(.+)$/.exec(line);
     if (!m) continue;
-    // strip trailing comments and whitespace; keep the raw path
-    const raw = m[1].replace(/\s+#.*$/, '').trim();
+    // strip trailing comments and a trailing parenthetical annotation
+    // (`path.md (provisional.md on a model-only run)`) — prose glued to a path
+    // silently turned the whole line into one unmatchable segment, which is how
+    // a declared writer stopped covering its readers. Keep the raw path.
+    const raw = m[1].replace(/\s+#.*$/, '').replace(/\s+\([^()]*\)\s*$/, '').trim();
     out[section].push(raw);
   }
   return out;
@@ -142,6 +145,9 @@ if (_isMain && process.argv.includes('--self-test')) {
   const io = parseIo('---\nname: x\nreads:\n  - .twt-artifacts/a/b.md\n  - references/skip.md # not in scope, still parsed\nwrites:\n  - .twt-artifacts/a/c.md  # comment stripped\n---\nbody');
   assert.deepEqual(io.reads, ['.twt-artifacts/a/b.md', 'references/skip.md']);
   assert.deepEqual(io.writes, ['.twt-artifacts/a/c.md']);
+  const paren = parseIo('---\nwrites:\n  - .twt-artifacts/a/r.md (r-provisional.md on a model-only run)\n  - .twt-artifacts/a/s.png    (standalone, no selector)\n---\n');
+  assert.deepEqual(paren.writes, ['.twt-artifacts/a/r.md', '.twt-artifacts/a/s.png'],
+    'a trailing parenthetical annotation is prose, not part of the path');
   assert.deepEqual(normalizePath('.twt-artifacts/<html-site|elementor-theme>/phase-review.md'),
     ['.twt-artifacts/html-site/phase-review.md', '.twt-artifacts/elementor-theme/phase-review.md']);
   assert.deepEqual(normalizePath('.twt-artifacts/x/<page-slug>.md'), ['.twt-artifacts/x/*.md']);
