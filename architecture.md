@@ -1774,7 +1774,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
