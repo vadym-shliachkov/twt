@@ -32,27 +32,55 @@ export function titleOf(src) {
   return m ? { text: m[1].trim(), index: m.index } : null;
 }
 
-// A reference that can be resolved on disk beside the build, or null when it
-// is not a local file reference at all (remote URL, protocol-relative //cdn,
-// data: URI, bare #fragment, mailto:, tel:, javascript:). Strips the query
-// string and fragment — the file it maps to on disk carries neither — and the
-// leading slash, because every caller resolves against the build root.
+// The path part of a reference that addresses something inside this site, or
+// null when it does not address one at all (remote URL, protocol-relative
+// //cdn, data: URI, bare #fragment, mailto:, tel:, javascript:). The query
+// string and fragment are dropped — neither the file on disk nor the page key
+// carries them — but the LEADING SLASH IS KEPT, because it is the whole
+// difference between "resolve against the build root" and "resolve against the
+// referring document's directory". Losing it here is what made localPath()
+// non-document-relative for three review rounds.
 export function localRef(ref) {
   if (typeof ref !== 'string') return null;
   const r = ref.trim();
   if (!r || r.startsWith('#')) return null;
   if (/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(r)) return null;
   if (/^(?:data|mailto|tel|javascript):/i.test(r)) return null;
-  const p = r.split(/[?#]/)[0].replace(/^\/+/, '');
-  return p || null;
+  return r.split(/[?#]/)[0] || null;
 }
 
-// localRef() resolved against the build root. null when the reference is not
-// local, or when there is no build root to resolve it against (a theme-only or
-// URL-only project — see launch-scan.mjs's gate).
-export function localPath(base, ref) {
+// Resolve a site-internal path the way a browser would: `/…` against the site
+// root, anything else against the referring document's directory, collapsing
+// `.` and `..`. `fromRel` is the referring page's path relative to the build
+// root; pass it whenever the reference was read out of a page. `..` can never
+// climb above the root — a build cannot reference its own parent.
+function resolve(path, fromRel = '') {
+  const dir = String(fromRel).replace(/\\/g, '/').replace(/[^/]*$/, '');
+  const full = path.startsWith('/') ? path.slice(1) : dir + path;
+  const out = [];
+  for (const seg of full.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') { out.pop(); continue; }
+    out.push(seg);
+  }
+  return { path: out.join('/'), trailingSlash: full.endsWith('/') };
+}
+
+// A reference resolved to a path on disk, DOCUMENT-RELATIVE: `fromRel` is the
+// referring page's path relative to the build root, so an og:image of
+// `../assets/og.png` on `guides/index.html` resolves to `assets/og.png` — the
+// file that actually exists — instead of `../assets/og.png` off the build
+// root, which exists nowhere and was reported as a missing file. The same bug
+// silently resolved NOTHING for every subdirectory page in performance.mjs's
+// image-weight check, disabling `heavy_image` there entirely.
+//
+// null when the reference is not local, or when there is no build root to
+// resolve it against (a theme-only or URL-only project — see launch-scan.mjs).
+export function localPath(base, ref, fromRel = '') {
   const p = localRef(ref);
-  return base && p ? join(base, p) : null;
+  if (!base || !p) return null;
+  const { path } = resolve(p, fromRel);
+  return path ? join(base, path) : null;
 }
 
 // Normalize a built page — given its path RELATIVE TO THE BUILD ROOT — to the
@@ -93,15 +121,9 @@ export function hrefKey(raw, fromRel = '') {
   }
   r = r.split(/[?#]/)[0];
   if (!r) return null;
-  const dir = String(fromRel).replace(/\\/g, '/').replace(/[^/]*$/, '');
-  const path = r.startsWith('/') ? r.slice(1) : dir + r;
-  const out = [];
-  for (const seg of path.split('/')) {
-    if (seg === '' || seg === '.') continue;
-    if (seg === '..') { out.pop(); continue; }
-    out.push(seg);
-  }
+  const { path, trailingSlash } = resolve(r, fromRel);
   // A trailing slash means "the directory's index page" — say so explicitly so
   // pageKey() collapses it the same way it collapses a real dir/index.html.
-  return pageKey(out.join('/') + (path.endsWith('/') ? '/index' : ''));
+  return pageKey(path + (trailingSlash ? '/index' : ''));
 }
+

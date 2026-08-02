@@ -3,6 +3,7 @@
 // A missing og:image is not cosmetic: every share of the site renders as a bare
 // grey card, and it is the launch defect a client notices first.
 import { existsSync } from 'node:fs';
+import { relative } from 'node:path';
 import { metaByProp, localPath } from './lib/html.mjs';
 
 export function run(ctx) {
@@ -40,7 +41,13 @@ export function run(ctx) {
       // live layer when a URL is supplied, and left alone otherwise —
       // localPath() returns null for it (and strips a cache-busting query
       // string / fragment from the paths it does resolve).
-      const onDisk = localPath(ctx.base, img.value);
+      //
+      // Resolved DOCUMENT-RELATIVE: an og:image of ../assets/og-cover.png on
+      // guides/index.html is a working reference, and joining it against the
+      // build root instead reported it as og_image_missing_file — a false
+      // positive on every subdirectory page that references its assets the
+      // ordinary relative way.
+      const onDisk = localPath(ctx.base, img.value, relative(ctx.base, f));
       if (onDisk && !existsSync(onDisk)) {
         counts.og_image_missing_file++;
         findings.push({ kind: 'og_image_missing_file', file, line: ctx.lineOf(src, img.index), detail: `og:image ${img.value} resolves to no file` });

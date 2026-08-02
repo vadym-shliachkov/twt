@@ -5,14 +5,21 @@
 // therefore means the <img> tag has no width/height attributes — the
 // layout-shift signal that actually matters, and readable from markup.
 import { existsSync, statSync } from 'node:fs';
+import { relative } from 'node:path';
 import { localPath } from './lib/html.mjs';
 
 const HEAVY_BYTES = 300 * 1024;
 const REMOTE_FONT = /<link\b[^>]*href\s*=\s*["'](https?:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com|use\.typekit\.net|fast\.fonts\.net)[^"']*)["']/gi;
 const kb = (n) => `${Math.round(n / 1024)}KB`;
 
-const localSize = (ctx, src) => {
-  const p = localPath(ctx.base, src);
+// Without `fromRel` every relative src on a subdirectory page resolved to a
+// path that does not exist, localSize() returned null, and `heavy_image` — the
+// check this module exists for — was silently dead on every page below the
+// root.
+//
+// `fromRel` is the referring page's path relative to the build root.
+const localSize = (ctx, src, fromRel) => {
+  const p = localPath(ctx.base, src, fromRel);
   return p && existsSync(p) ? statSync(p).size : null;
 };
 
@@ -26,6 +33,9 @@ export function run(ctx) {
   for (const f of ctx.html) {
     const src = ctx.read(f);
     const file = ctx.rel(f);
+    // Every local reference on this page resolves against THIS page's
+    // directory, not the build root — see localSize().
+    const fromRel = ctx.base ? relative(ctx.base, f) : '';
     let pageBytes = Buffer.byteLength(src, 'utf8');
 
     let imgIndex = 0;
@@ -35,7 +45,7 @@ export function run(ctx) {
       counts.images++;
       const nth = imgIndex++;
       const srcAttr = /\ssrc\s*=\s*["']([^"']+)["']/i.exec(tag);
-      const size = localSize(ctx, srcAttr ? srcAttr[1] : null);
+      const size = localSize(ctx, srcAttr ? srcAttr[1] : null, fromRel);
       if (size !== null) {
         pageBytes += size;
         if (size > HEAVY_BYTES) {
@@ -75,7 +85,7 @@ export function run(ctx) {
       findings.push({ kind: 'remote_font', file, line: ctx.lineOf(src, m.index), detail: m[1] });
     }
     for (const m of src.matchAll(/<link\b[^>]*rel\s*=\s*["']stylesheet["'][^>]*href\s*=\s*["']([^"']+)["']/gi)) {
-      const size = localSize(ctx, m[1]);
+      const size = localSize(ctx, m[1], fromRel);
       if (size !== null) pageBytes += size;
     }
     counts.heaviest_page_bytes = Math.max(counts.heaviest_page_bytes, pageBytes);
