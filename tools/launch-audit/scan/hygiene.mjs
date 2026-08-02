@@ -29,6 +29,21 @@ function shippedFiles(ctx) {
   return [...new Set(out)];
 }
 
+// SKIP_DIRS must be judged BELOW the scan root, never across the absolute path.
+// On a mockup-kind project the scan root is itself inside .twt-artifacts/, so
+// testing the whole path skipped every page the locator had just chosen — which
+// silently disabled inline_secret, a LAUNCH-BLOCKER, on one of the two supported
+// build kinds. A mockup project with a committed key reported clean.
+// The locator already vetted what to scan; this filter exists only to drop
+// vendored and generated trees found by the walk INSIDE that subject.
+function isSkipped(ctx, f) {
+  let rel = f;
+  for (const root of [ctx.base, ctx.theme]) {
+    if (root && f.startsWith(root)) { rel = f.slice(root.length); break; }
+  }
+  return rel.split(/[\\/]/).some((seg) => SKIP_DIRS.has(seg));
+}
+
 export function run(ctx) {
   const counts = {
     committed_secret_files: 0, inline_secrets: 0, debug_statements: 0,
@@ -55,7 +70,7 @@ export function run(ctx) {
   }
 
   for (const f of shippedFiles(ctx)) {
-    if (f.split(/[\\/]/).some((seg) => SKIP_DIRS.has(seg))) continue;
+    if (isSkipped(ctx, f)) continue;
     const src = ctx.read(f);
     const file = ctx.rel(f);
     for (const m of src.matchAll(new RegExp(INLINE_SECRET.source, 'g'))) {

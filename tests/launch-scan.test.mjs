@@ -194,6 +194,47 @@ test('hygiene: does not scan node_modules or .git', () => {
   assert.equal(facts(dir).checks.hygiene.counts.committed_secret_files, 0);
 });
 
+// A mockup-kind project's pages live UNDER .twt-artifacts/, which is also in
+// SKIP_DIRS. Judging the skip list against the absolute path therefore dropped
+// every page the locator had just chosen, and inline_secret — a LAUNCH-BLOCKER —
+// could never fire on one of the two supported build kinds.
+function mockupProject(files) {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-launch-'));
+  for (const [name, body] of Object.entries(files)) {
+    put(join(dir, '.twt-artifacts', 'design', 'mockup', 'pages', name), body);
+  }
+  return dir;
+}
+
+test('hygiene: scans a mockup-kind project, whose pages live under .twt-artifacts', () => {
+  const dir = mockupProject({
+    'home.html': [
+      '<html><body><h1>Acme</h1>',
+      '<script>const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";</script>',
+      '<script>console.log("debug");</script>',
+      '<a href="https://staging.acme.com/x">x</a>',
+      '</body></html>',
+    ].join('\n'),
+  });
+  run([dir]);
+  const f = facts(dir);
+  assert.equal(f.sources.kind, 'mockup', 'fixture must actually be mockup-kind');
+  const h = f.checks.hygiene;
+  assert.equal(h.counts.inline_secrets, 1, 'inline_secret is a LAUNCH-BLOCKER — it must reach mockup pages');
+  assert.equal(h.counts.debug_statements, 1);
+  assert.equal(h.counts.nonprod_urls, 1);
+  assert.match(h.findings.find((x) => x.kind === 'inline_secret').detail, /redacted/i);
+});
+
+test('hygiene: still skips a vendored dir nested INSIDE a mockup build', () => {
+  const dir = mockupProject({ 'home.html': '<html><body>ok</body></html>' });
+  put(join(dir, '.twt-artifacts', 'design', 'mockup', 'pages', 'node_modules', 'pkg', 'v.js'),
+    'const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";');
+  run([dir]);
+  assert.equal(facts(dir).checks.hygiene.counts.inline_secrets, 0,
+    'the skip list must still work below the scan root — the fix must not disable it');
+});
+
 // ---- discoverability (category 2) -------------------------------------------
 
 const HEAD = (head, body = '<h1>x</h1>') =>
