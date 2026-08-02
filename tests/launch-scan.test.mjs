@@ -134,7 +134,7 @@ test('hygiene: a committed .env is found', () => {
 });
 
 test('hygiene: an inline API key in shipped HTML is found', () => {
-  const dir = siteProject({ 'index.html': '<script>const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";</script>' });
+  const dir = siteProject({ 'index.html': '<script>const k = "sk_live_51H8RANDOMCODE123456789";</script>' });
   run([dir]);
   assert.equal(facts(dir).checks.hygiene.counts.inline_secrets, 1);
 });
@@ -142,7 +142,7 @@ test('hygiene: an inline API key in shipped HTML is found', () => {
 test('hygiene: the inline-secret finding redacts the key — never republishes it in full', () => {
   // Assembled, not written out: a literal long enough to exercise redaction also
   // matches GitHub's Stripe detector and blocks the push. Runtime value is the same.
-  const KEY = ['sk', 'live', '51H8xYzAbCdEfGhIjKlMnOpQRSTUVWXYZ0123456789'].join('_');
+  const KEY = ['sk', 'live', '51H8RANDOMCODE123456789QRSTUVWXYZ0123456789'].join('_');
   const dir = siteProject({ 'index.html': `<script>const k = "${KEY}";</script>` });
   run([dir]);
   const h = facts(dir).checks.hygiene;
@@ -212,7 +212,7 @@ test('hygiene: scans a mockup-kind project, whose pages live under .twt-artifact
   const dir = mockupProject({
     'home.html': [
       '<html><body><h1>Acme</h1>',
-      '<script>const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";</script>',
+      '<script>const k = "sk_live_51H8RANDOMCODE123456789";</script>',
       '<script>console.log("debug");</script>',
       '<a href="https://staging.acme.com/x">x</a>',
       '</body></html>',
@@ -231,7 +231,7 @@ test('hygiene: scans a mockup-kind project, whose pages live under .twt-artifact
 test('hygiene: still skips a vendored dir nested INSIDE a mockup build', () => {
   const dir = mockupProject({ 'home.html': '<html><body>ok</body></html>' });
   put(join(dir, '.twt-artifacts', 'design', 'mockup', 'pages', 'node_modules', 'pkg', 'v.js'),
-    'const k = "sk_live_51H8xYzAbCdEfGhIjKlMnOp";');
+    'const k = "sk_live_51H8RANDOMCODE123456789";');
   run([dir]);
   assert.equal(facts(dir).checks.hygiene.counts.inline_secrets, 0,
     'the skip list must still work below the scan root — the fix must not disable it');

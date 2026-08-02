@@ -159,7 +159,7 @@ test('C2: an Elementor theme with no built HTML still produces facts.json and a 
 
 test('C2: the reproduction case — a committed .env and WP_DEBUG in the theme are BOTH detected with no built site', () => {
   const dir = themeProject({ 'functions.php': '<?php\ndefine( "WP_DEBUG", true );\n' });
-  put(join(dir, '.env'), 'STRIPE_SECRET=sk_live_51H8xYzABCDEFGHIJKLMNOP\n');
+  put(join(dir, '.env'), 'STRIPE_SECRET=sk_live_51H8RANDOMCODE123456789\n');
   run([dir]);
   const h = facts(dir).checks.hygiene;
   assert.ok(h.findings.some((x) => x.kind === 'secret_file' && x.file === '.env'), 'the committed .env must be found');
@@ -168,7 +168,7 @@ test('C2: the reproduction case — a committed .env and WP_DEBUG in the theme a
 
 test('C2: the .env and WP_DEBUG facts reach the rules as LAUNCH-BLOCKERs', () => {
   const dir = themeProject({ 'functions.php': '<?php define( "WP_DEBUG", true );' });
-  put(join(dir, '.env'), 'STRIPE_SECRET=sk_live_51H8xYzABCDEFGHIJKLMNOP\n');
+  put(join(dir, '.env'), 'STRIPE_SECRET=sk_live_51H8RANDOMCODE123456789\n');
   run([dir]);
   const out = join(dir, '.twt-artifacts', 'launch');
   execFileSync(process.execPath, [AUDIT, join(out, 'facts.json'), '--out', out], { encoding: 'utf8' });

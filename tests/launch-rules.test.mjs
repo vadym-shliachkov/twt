@@ -46,7 +46,7 @@ test('a committed secret is a LAUNCH-BLOCKER and never quotes the key', () => {
     { kind: 'inline_secret', file: 'site/a.html', line: 4, detail: 'sk_live_51H8… (redacted)' },
   ])).filter((x) => x.category === 'hygiene' && x.blocking);
   assert.equal(f.length, 2);
-  assert.ok(f.every((x) => !/sk_live_51H8xYz/.test(JSON.stringify(x))), 'a full key must never reach a finding');
+  assert.ok(f.every((x) => !/sk_live_51H8RANDOM/.test(JSON.stringify(x))), 'a full key must never reach a finding');
 });
 
 test('a dead form action is a LAUNCH-BLOCKER owned by the developer', () => {
