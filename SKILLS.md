@@ -1426,7 +1426,7 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 ## /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.6
+**Version:** 1.0.7
 **Accepts arguments:** yes
 
 Answer one question about a Figma file before anyone estimates or builds from it: **can a developer build this without stopping to ask questions?** Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.
@@ -1446,8 +1446,10 @@ Answer one question about a Figma file before anyone estimates or builds from it
 **Writes:**
 - .twt-artifacts/figma-dev-audit/facts.json
 - .twt-artifacts/figma-dev-audit/findings.json
-- .twt-artifacts/figma-dev-audit/readiness-report.md (readiness-report-provisional.md on a model-only run)
-- .twt-artifacts/figma-dev-audit/readiness-report.html (readiness-report-provisional.html on a model-only run)
+- .twt-artifacts/figma-dev-audit/readiness-report.md
+- .twt-artifacts/figma-dev-audit/readiness-report.html
+- .twt-artifacts/figma-dev-audit/readiness-report-provisional.md (model-only run — never the measured filename)
+- .twt-artifacts/figma-dev-audit/readiness-report-provisional.html (model-only run — never the measured filename)
 - .twt-artifacts/figma-dev-audit/shots/
 
 **Non-goals:**

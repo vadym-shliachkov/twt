@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.6) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.6
+description: (v1.0.7) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.7
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -18,8 +18,10 @@ reads:
 writes:
   - .twt-artifacts/figma-dev-audit/facts.json
   - .twt-artifacts/figma-dev-audit/findings.json
-  - .twt-artifacts/figma-dev-audit/readiness-report.md (readiness-report-provisional.md on a model-only run)
-  - .twt-artifacts/figma-dev-audit/readiness-report.html (readiness-report-provisional.html on a model-only run)
+  - .twt-artifacts/figma-dev-audit/readiness-report.md
+  - .twt-artifacts/figma-dev-audit/readiness-report.html
+  - .twt-artifacts/figma-dev-audit/readiness-report-provisional.md (model-only run — never the measured filename)
+  - .twt-artifacts/figma-dev-audit/readiness-report-provisional.html (model-only run — never the measured filename)
   - .twt-artifacts/figma-dev-audit/shots/
 ---
 
