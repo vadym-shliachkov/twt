@@ -140,6 +140,8 @@ test('hygiene: an inline API key in shipped HTML is found', () => {
 });
 
 test('hygiene: the inline-secret finding redacts the key — never republishes it in full', () => {
+  // Assembled, not written out: a literal long enough to exercise redaction also
+  // matches GitHub's Stripe detector and blocks the push. Runtime value is the same.
   const KEY = ['sk', 'live', '51H8xYzAbCdEfGhIjKlMnOpQRSTUVWXYZ0123456789'].join('_');
   const dir = siteProject({ 'index.html': `<script>const k = "${KEY}";</script>` });
   run([dir]);
