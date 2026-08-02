@@ -568,3 +568,264 @@ test('report: a document whose findings is not an array exits 2', () => {
   writeFileSync(p, JSON.stringify({ verdict: 'GO', findings: { a: 1 } }), 'utf8');
   assert.equal(spawnSync(process.execPath, [REPORT, p, '--out', dir], { encoding: 'utf8' }).status, 2);
 });
+
+// #############################################################################
+// RESIDUAL ROUND — the fix wave's own re-review
+// #############################################################################
+//
+// The wave above fixed 13 findings and introduced two of its own. Same rule as
+// the rest of this file: every test below was verified to FAIL against the
+// pre-fix code by reverting exactly one fix and re-running. The mutation
+// evidence is recorded per test in
+// .superpowers/sdd/2026-07-30-twt-launch-audit/residual-fix-report.md.
+
+// =============================================================================
+// R1 — the excluded-page token must be a WHOLE path segment
+// =============================================================================
+//
+// The exemption was anchored only at the start, so it was a prefix match: it
+// silently exempted real content pages from the most expensive check this tool
+// has. A stray noindex on /services/search-engine-optimisation/ — a page an
+// agency ships and cares about ranking — was invisible at every tier. That is
+// strictly worse than the false positive it replaced: a false positive is
+// noisy, this is silent.
+
+const NOINDEX = '<meta name="robots" content="noindex, follow">';
+const noindexed = (title) => HEAD(`<title>${title}</title>${NOINDEX}`);
+
+test('R1: a page whose name merely STARTS with an excluded token is still checked', () => {
+  const names = [
+    '404-error-handling.html', 'search-engine-optimisation.html',
+    'blog/searching-for-a-fitter.html', 'thanks-to-our-volunteers.html',
+    'error-codes-explained.html', 'errors-we-have-made.html',
+    'research.html', 'services.html', 'search/about.html',
+  ];
+  const files = { 'index.html': HEAD('<title>Home</title>') };
+  for (const n of names) files[n] = noindexed(n);
+  const dir = siteProject(files);
+  run([dir]);
+  const d = facts(dir).checks.discoverability;
+  assert.equal(d.counts.noindex_excluded, 0, 'none of these is an error, thank-you or search page');
+  assert.equal(d.counts.noindex_pages, names.length);
+  assert.deepEqual(
+    d.findings.filter((f) => f.kind === 'noindex').map((f) => f.file).sort(),
+    names.map((n) => `site/${n}`).sort(),
+    'an unanchored exemption turns the check off for the pages that matter most',
+  );
+});
+
+test('R1: every page that IS supposed to be out of the index is still exempt', () => {
+  const names = [
+    '404.html', '404/index.html', 'error.html', 'error-page.html',
+    'thank-you.html', 'thankyou.html', 'thanks.html', 'thank-you/index.html',
+    'search.html', 'search/index.html', 'search-results.html',
+  ];
+  const files = { 'index.html': HEAD('<title>Home</title>') };
+  for (const n of names) files[n] = noindexed(n);
+  const dir = siteProject(files);
+  run([dir]);
+  const d = facts(dir).checks.discoverability;
+  assert.deepEqual(d.findings.filter((f) => f.kind === 'noindex'), [],
+    'noindexing these is the recommended configuration, and ERRS001 REQUIRES the 404 to exist');
+  assert.equal(d.counts.noindex_excluded, names.length);
+});
+
+test('R1: a content page inside a directory named search/ is not a search page', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'search/index.html': noindexed('Site search'),
+    'search/about.html': noindexed('About our search'),
+  });
+  run([dir]);
+  const d = facts(dir).checks.discoverability;
+  assert.equal(d.counts.noindex_excluded, 1, 'the exemption reads the LAST segment of the page key');
+  assert.deepEqual(d.findings.filter((f) => f.kind === 'noindex').map((f) => f.file), ['site/search/about.html']);
+});
+
+// =============================================================================
+// R2 — a site served under a PATH PREFIX
+// =============================================================================
+//
+// Making the page keys path-aware fixed directory-per-page builds and broke
+// subdirectory deploys: a correct 5-page site served at /outfitters/ produced
+// 5 false sitemap orphans, 3 false "not linked"s and 7 false "og:image
+// resolves to no file"s — every one of them correct before the wave, matched
+// by accident by the old basename-only key. launch-scan.mjs now infers the
+// prefix from the site's own evidence and only accepts it when stripping it
+// lines MORE pages up than leaving it alone.
+
+const PFX = '/outfitters';
+const chrome = (extraHead = '') =>
+  `<title>Kestrel</title><meta name="description" content="d">${extraHead}`;
+const nav = `<nav><a href="${PFX}/">Home</a><a href="${PFX}/guides/">Guides</a></nav>`;
+const foot = `<footer><a href="${PFX}/privacy/">Privacy</a><a href="${PFX}/terms/">Terms</a><a href="${PFX}/cookies/">Cookies</a></footer>`;
+const prefixedPage = (extraHead = '') => HEAD(chrome(extraHead), `${nav}<h1>x</h1>${foot}`);
+const SITEMAP = (slugs) =>
+  `<urlset>${slugs.map((s) => `<url><loc>https://acme.example${PFX}${s}</loc></url>`).join('')}</urlset>`;
+
+function prefixedSite(extra = {}) {
+  const dir = siteProject({
+    'index.html': prefixedPage(),
+    'guides/index.html': prefixedPage(),
+    'privacy/index.html': prefixedPage(),
+    'terms/index.html': prefixedPage(),
+    'cookies/index.html': prefixedPage(),
+    ...extra,
+  });
+  put(join(dir, 'site', 'sitemap.xml'), SITEMAP(['/', '/guides/', '/privacy/', '/terms/', '/cookies/']));
+  put(join(dir, 'site', 'robots.txt'), 'User-agent: *\nAllow: /\n');
+  return dir;
+}
+
+test('R2: a correct site served under a path prefix has no sitemap orphans', () => {
+  const dir = prefixedSite();
+  run([dir]);
+  const f = facts(dir);
+  assert.equal(f.sources.deploy, 'outfitters',
+    'the inferred prefix is recorded — an inference nobody can see is one nobody can challenge');
+  assert.equal(f.checks.discoverability.counts.sitemap_orphans, 0);
+  assert.deepEqual(f.checks.discoverability.findings.filter((x) => x.kind === 'sitemap_orphan'), []);
+});
+
+test('R2: its legal pages are reachable, not "exists but no other page links to it"', () => {
+  const dir = prefixedSite();
+  run([dir]);
+  const l = facts(dir).checks.legal;
+  assert.equal(l.counts.privacy_linked, true);
+  assert.equal(l.counts.terms_linked, true);
+  assert.equal(l.counts.cookie_linked, true);
+  assert.deepEqual(l.findings, []);
+});
+
+test('R2: a page genuinely absent from a prefixed sitemap is STILL an orphan', () => {
+  const dir = prefixedSite({ 'fleet/index.html': prefixedPage() });
+  run([dir]);
+  const d = facts(dir).checks.discoverability;
+  assert.equal(d.counts.sitemap_orphans, 1, 'stripping a prefix cannot invent a <loc> that was never written');
+  assert.equal(d.findings.find((x) => x.kind === 'sitemap_orphan').file, 'site/fleet/index.html');
+});
+
+test('R2: a legal page nothing links to is STILL reported on a prefixed deploy', () => {
+  // Same site, but the footer has lost its privacy link.
+  const bare = HEAD(chrome(), `${nav}<h1>x</h1><footer><a href="${PFX}/terms/">Terms</a><a href="${PFX}/cookies/">Cookies</a></footer>`);
+  const dir = siteProject({
+    'index.html': bare, 'guides/index.html': bare,
+    'privacy/index.html': bare, 'terms/index.html': bare, 'cookies/index.html': bare,
+  });
+  put(join(dir, 'site', 'sitemap.xml'), SITEMAP(['/', '/guides/', '/privacy/', '/terms/', '/cookies/']));
+  run([dir]);
+  const l = facts(dir).checks.legal;
+  assert.equal(l.counts.privacy_linked, false);
+  assert.equal(l.counts.terms_linked, true);
+  assert.deepEqual(l.findings.map((x) => x.kind), ['privacy_not_linked']);
+});
+
+test('R2: a ROOT-deployed site whose every page lives under one directory is not "corrected"', () => {
+  // The over-stripping guard. blog/ is a common leading segment on every URL
+  // here, but it is a real directory on disk — stripping it would line NOTHING
+  // up, so the inference must decline and blog/c.html must stay an orphan.
+  const p = (n) => HEAD(`<title>${n}</title>`, '<a href="/blog/">Index</a><a href="/blog/a.html">A</a><a href="/blog/b.html">B</a>');
+  const dir = siteProject({
+    'blog/index.html': p('i'), 'blog/a.html': p('a'), 'blog/b.html': p('b'), 'blog/c.html': p('c'),
+  });
+  put(join(dir, 'site', 'sitemap.xml'),
+    '<urlset><url><loc>https://acme.example/blog/</loc></url><url><loc>https://acme.example/blog/a.html</loc></url><url><loc>https://acme.example/blog/b.html</loc></url></urlset>');
+  run([dir]);
+  const f = facts(dir);
+  assert.equal(f.sources.deploy, null, 'a prefix that lines nothing up is not a deploy prefix');
+  assert.equal(f.checks.discoverability.counts.sitemap_orphans, 1);
+  assert.equal(f.checks.discoverability.findings.find((x) => x.kind === 'sitemap_orphan').file, 'site/blog/c.html');
+});
+
+test('R2: a root-relative asset ref carrying the deploy prefix resolves on disk', () => {
+  // Found by running the fixed scanner against my own subdirectory fixture:
+  // every page reported og_image_missing_file for a file that was right there.
+  const dir = prefixedSite({
+    'index.html': prefixedPage(`<meta property="og:image" content="${PFX}/assets/og-cover.png">`),
+  });
+  put(join(dir, 'site', 'assets', 'og-cover.png'), 'x');
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.og_image_missing_file, 0);
+});
+
+// =============================================================================
+// R3 — errors.mjs never got the no-op guard its three siblings got
+// =============================================================================
+
+test('R3: a URL-only run emits no missing_error_page — it was derived from zero input', () => {
+  const dir = newProject();
+  run([dir, '--url', 'http://127.0.0.1:1']);
+  const e = facts(dir).checks.errors;
+  assert.deepEqual(e.findings, [],
+    'ERRS001 with file:"." beside a live layer that measured the real 404 is evidence of nothing');
+  assert.equal(e.counts.error_page, false);
+});
+
+test('R3: a theme-only run STILL reaches the 404.php check — the guard is (no html AND no theme)', () => {
+  const without = themeProject({ 'functions.php': '<?php // clean' });
+  run([without]);
+  assert.deepEqual(facts(without).checks.errors.findings.map((x) => x.kind), ['missing_error_page'],
+    'a theme with no 404.php is a real finding — this branch is why the guard is not on ctx.base');
+
+  const with404 = themeProject({ 'functions.php': '<?php // clean', '404.php': '<?php // not found' });
+  run([with404]);
+  assert.equal(facts(with404).checks.errors.counts.error_page, true);
+  assert.deepEqual(facts(with404).checks.errors.findings, []);
+});
+
+// =============================================================================
+// R4 — localPath() must resolve against the REFERRING DOCUMENT
+// =============================================================================
+//
+// The wave centralized this helper without fixing it while fixing its sibling
+// hrefKey — the same drift, now inside the shared module. It cost one false
+// positive (og:image) and one silently dead check (heavy_image on every
+// subdirectory page), and the dead one is the more serious half.
+
+test('R4: an og:image referenced ../ from a subdirectory page is not reported missing', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'guides/index.html': HEAD('<title>G</title><meta property="og:image" content="../assets/og-cover.png">'),
+  });
+  put(join(dir, 'site', 'assets', 'og-cover.png'), 'x');
+  run([dir]);
+  assert.deepEqual(facts(dir).checks.social.findings.filter((x) => x.kind === 'og_image_missing_file'), []);
+});
+
+test('R4: an og:image that really is missing is still reported', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'guides/index.html': HEAD('<title>G</title><meta property="og:image" content="../assets/gone.png">'),
+  });
+  run([dir]);
+  assert.equal(facts(dir).checks.social.counts.og_image_missing_file, 1,
+    'resolving correctly must not mean resolving to true');
+});
+
+test('R4: heavy_image fires for a subdirectory page oversized image', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>Home</title>'),
+    'guides/index.html': HEAD('<title>G</title>', '<img src="../assets/plateau.jpg" alt="p" width="16" height="9" fetchpriority="high">'),
+  });
+  put(join(dir, 'site', 'assets', 'plateau.jpg'), 'x'.repeat(420 * 1024));
+  run([dir]);
+  const p = facts(dir).checks.performance;
+  assert.equal(p.counts.heavy_images, 1, 'this check was silently dead on every page below the build root');
+  assert.match(p.findings.find((x) => x.kind === 'heavy_image').detail, /420KB/);
+  assert.ok(p.counts.heaviest_page_bytes > 400 * 1024, 'the bytes were not being counted at all');
+});
+
+// =============================================================================
+// R6 — *.localhost is a real dev-server pattern
+// =============================================================================
+
+test('R6: http://app.localhost:3000 is a non-production URL, and cdn.localisation.example is not', () => {
+  const dir = siteProject({
+    'index.html': HEAD('<title>A</title>',
+      '<a href="http://app.localhost:3000/dash">dev</a><img src="https://cdn.localisation.example/f.png" alt="f">'),
+  });
+  run([dir]);
+  const urls = facts(dir).checks.hygiene.findings.filter((x) => x.kind === 'nonprod_url').map((x) => x.detail);
+  assert.deepEqual(urls, ['http://app.localhost:3000'],
+    'Vite/Traefik address per-app dev origins as *.localhost; localisation is an ordinary word');
+});
