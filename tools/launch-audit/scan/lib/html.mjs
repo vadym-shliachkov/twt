@@ -74,12 +74,24 @@ function resolve(path, fromRel = '') {
 // silently resolved NOTHING for every subdirectory page in performance.mjs's
 // image-weight check, disabling `heavy_image` there entirely.
 //
+// `deploy` is the path prefix the site is served under (see deployPrefix()
+// below) and is stripped from ROOT-RELATIVE references only: a site at
+// /outfitters/ writes <link rel="icon" href="/outfitters/assets/favicon.svg">
+// while the file on disk is <build root>/assets/favicon.svg. A relative
+// reference never carries the prefix, so it is left alone.
+//
 // null when the reference is not local, or when there is no build root to
 // resolve it against (a theme-only or URL-only project — see launch-scan.mjs).
-export function localPath(base, ref, fromRel = '') {
+export function localPath(base, ref, fromRel = '', deploy = '') {
   const p = localRef(ref);
   if (!base || !p) return null;
-  const { path } = resolve(p, fromRel);
+  let raw = p;
+  if (deploy && raw.startsWith('/')) {
+    const d = `/${deploy}`;
+    if (raw === d) raw = '/';
+    else if (raw.startsWith(`${d}/`)) raw = raw.slice(d.length);
+  }
+  const { path } = resolve(raw, fromRel);
   return path ? join(base, path) : null;
 }
 
@@ -127,3 +139,83 @@ export function hrefKey(raw, fromRel = '') {
   return pageKey(path + (trailingSlash ? '/index' : ''));
 }
 
+// ---------------------------------------------------------------------------
+// Sites served under a path prefix
+// ---------------------------------------------------------------------------
+//
+// Making the keys above path-aware fixed directory-per-page builds and broke
+// SUBDIRECTORY DEPLOYS. A site whose pages live at `/outfitters/about/` writes
+// `/outfitters/about/` into its own links and its sitemap <loc>s, while its
+// files on disk are `about/index.html` — so every key on one side carries a
+// prefix the other side cannot know about, and a correct 5-page site produced
+// 5 false `sitemap_orphan`s plus 3 false `*_not_linked`s. (The old
+// basename-only key matched those by accident, which is why this regressed.)
+//
+// Rather than hard-code a prefix or ask the user for one, INFER it and then
+// PROVE it: a candidate prefix is only accepted when stripping it makes MORE
+// built pages line up than leaving it alone. That is the guard against
+// over-stripping, and it is why a genuinely unlisted page stays an orphan —
+// removing a prefix cannot invent a <loc> that was never written, it can only
+// re-point ones that were. Ties go to the empty prefix, so a site already
+// served at the root is never "corrected".
+const MAX_PREFIX_DEPTH = 3;
+
+// Strip an inferred deploy prefix from a key. A key that IS the prefix is the
+// deploy root, i.e. the site's home page.
+export function stripDeploy(key, prefix) {
+  if (!prefix || typeof key !== 'string') return key;
+  if (key === prefix) return 'index';
+  if (key.startsWith(`${prefix}/`)) return pageKey(key.slice(prefix.length + 1));
+  return key;   // not under the prefix — a mixed build's relative links resolve on their own
+}
+
+// The path prefix this site appears to be served under, inferred from the keys
+// it addresses ITSELF by (sitemap <loc>s, or its own internal links) measured
+// against the keys of the pages actually built. Returns '' when the evidence
+// does not support a prefix — which is the common case and the safe default.
+export function deployPrefix(candidateKeys, pageKeys) {
+  const pages = pageKeys instanceof Set ? pageKeys : new Set(pageKeys);
+  const cands = [...new Set(candidateKeys.filter((k) => typeof k === 'string' && k))];
+  if (!pages.size || !cands.length) return '';
+
+  const score = (prefix) => {
+    const hit = new Set();
+    for (const c of cands) {
+      const k = stripDeploy(c, prefix);
+      if (pages.has(k)) hit.add(k);
+    }
+    return hit.size;
+  };
+
+  const best = score('');
+  if (best === pages.size) return '';   // everything already lines up; nothing to infer
+
+  // Candidate prefixes: the leading segment runs (to a sane depth) that a
+  // MAJORITY of the addressed keys share. A deploy prefix is by definition on
+  // nearly every URL the site emits; a run that appears on a minority of them
+  // is a content directory, not a deploy root.
+  const counts = new Map();
+  for (const c of cands) {
+    const segs = c.split('/');
+    for (let d = 1; d <= Math.min(MAX_PREFIX_DEPTH, segs.length); d++) {
+      const run = segs.slice(0, d).join('/');
+      counts.set(run, (counts.get(run) || 0) + 1);
+    }
+  }
+  let bestPrefix = '';
+  let bestScore = best;
+  for (const [prefix, n] of counts) {
+    // n >= 2: one URL is never evidence of a deploy root, and a lone link to a
+    // page that does not exist would otherwise "prove" a prefix on a two-page
+    // site. Majority: a deploy prefix is on nearly every URL the site emits.
+    if (n < 2 || n * 2 <= cands.length) continue;
+    const s = score(prefix);
+    // Strictly greater: a tie means stripping proved nothing, and the empty
+    // prefix is the claim that requires no inference.
+    if (s > bestScore || (s === bestScore && bestPrefix && prefix.length < bestPrefix.length)) {
+      bestScore = s;
+      bestPrefix = prefix;
+    }
+  }
+  return bestPrefix;
+}

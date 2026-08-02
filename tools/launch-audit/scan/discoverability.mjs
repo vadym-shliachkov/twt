@@ -8,7 +8,7 @@
 // say. This module only measures whether the built output carries the tags.
 import { existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { metaByName, titleOf, pageKey, hrefKey } from './lib/html.mjs';
+import { metaByName, titleOf, pageKey, hrefKey, stripDeploy } from './lib/html.mjs';
 
 const TITLE_MAX = 60;
 const DESC_MAX = 160;
@@ -149,11 +149,22 @@ export function run(ctx) {
       // <loc> and a built filename to the same bare key, so pretty /
       // extensionless sitemap URLs (https://acme.com/about/) match a built
       // about.html instead of reporting every page as an orphan.
+      //
+      // ctx.deploy then absorbs a subdirectory deploy: a site served at
+      // https://acme.com/outfitters/ writes that segment into every <loc>
+      // while its files on disk are about/index.html, and without this every
+      // page of a correct site was reported as an orphan. The prefix is
+      // inferred once in launch-scan.mjs and only accepted when it lines MORE
+      // pages up than leaving it alone, so a page genuinely absent from the
+      // sitemap is still an orphan.
+      const keys = ctx.html.map((page) => pageKey(relative(ctx.base, page)));
       const listed = new Set(
-        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => hrefKey(m[1])).filter(Boolean),
+        [...body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)]
+          .map((m) => hrefKey(m[1])).filter(Boolean)
+          .map((k) => stripDeploy(k, ctx.deploy)),
       );
-      for (const page of ctx.html) {
-        const key = pageKey(relative(ctx.base, page));
+      for (const [i, page] of ctx.html.entries()) {
+        const key = keys[i];
         if (listed.has(key)) continue;
         // A 404, thank-you or search page is SUPPOSED to be absent from the
         // sitemap — listing it is the actual mistake. Same exemption, same

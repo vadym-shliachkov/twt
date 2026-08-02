@@ -17,9 +17,10 @@ const kb = (n) => `${Math.round(n / 1024)}KB`;
 // check this module exists for — was silently dead on every page below the
 // root.
 //
-// `fromRel` is the referring page's path relative to the build root.
+// `fromRel` is the referring page's path relative to the build root; ctx.deploy
+// strips a subdirectory-deploy prefix off a root-relative src.
 const localSize = (ctx, src, fromRel) => {
-  const p = localPath(ctx.base, src, fromRel);
+  const p = localPath(ctx.base, src, fromRel, ctx.deploy);
   return p && existsSync(p) ? statSync(p).size : null;
 };
 

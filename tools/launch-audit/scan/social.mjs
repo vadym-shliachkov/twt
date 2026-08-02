@@ -47,7 +47,9 @@ export function run(ctx) {
       // build root instead reported it as og_image_missing_file — a false
       // positive on every subdirectory page that references its assets the
       // ordinary relative way.
-      const onDisk = localPath(ctx.base, img.value, relative(ctx.base, f));
+      // ctx.deploy strips a subdirectory-deploy prefix from a root-relative
+      // ref (/outfitters/assets/og-cover.png → assets/og-cover.png).
+      const onDisk = localPath(ctx.base, img.value, relative(ctx.base, f), ctx.deploy);
       if (onDisk && !existsSync(onDisk)) {
         counts.og_image_missing_file++;
         findings.push({ kind: 'og_image_missing_file', file, line: ctx.lineOf(src, img.index), detail: `og:image ${img.value} resolves to no file` });

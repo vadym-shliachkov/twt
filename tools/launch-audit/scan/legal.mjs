@@ -4,7 +4,7 @@
 // given document, and whether the client's lawyer approved the text, are
 // interview questions — this module never infers legal obligation from markup.
 import { basename, relative } from 'node:path';
-import { titleOf, pageKey, hrefKey } from './lib/html.mjs';
+import { titleOf, pageKey, hrefKey, stripDeploy } from './lib/html.mjs';
 import { CONSENT_BANNER } from './lib/patterns.mjs';
 
 const KINDS = {
@@ -36,9 +36,16 @@ export function run(ctx) {
     const rel = relative(ctx.base, f).replace(/\\/g, '/');
     return { file: ctx.rel(f), name: basename(f), rel, key: pageKey(rel), src, title: t ? t.text : '' };
   });
+  // A site served under a path prefix (https://acme.com/outfitters/) links its
+  // own footer as /outfitters/privacy/ while the file on disk is
+  // privacy/index.html — every key on one side carries a segment the other
+  // cannot know about, and all three legal pages read as unreachable on a
+  // correct site. ctx.deploy is that segment, inferred once in launch-scan.mjs
+  // and only accepted when stripping it lines MORE pages up than leaving it
+  // alone, so a page that genuinely nothing links to is still reported.
   const hrefs = pages.flatMap((p) =>
     [...p.src.matchAll(/href\s*=\s*["']([^"']+)["']/gi)]
-      .map((m) => ({ from: p.key, to: hrefKey(m[1], p.rel) }))
+      .map((m) => ({ from: p.key, to: stripDeploy(hrefKey(m[1], p.rel), ctx.deploy) }))
       .filter((h) => h.to !== null));
 
   for (const [kind, pat] of Object.entries(KINDS)) {

@@ -10,9 +10,10 @@
 // that throws is recorded as failed rather than silently omitted, because a
 // missing check must never look like a passing one.
 'use strict';
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
+import { pageKey, hrefKey, deployPrefix } from './launch-audit/scan/lib/html.mjs';
 import { harvest } from './launch-audit/harvest.mjs';
 import { checkLive } from './launch-audit/live.mjs';
 import * as content from './launch-audit/scan/content.mjs';
@@ -53,9 +54,50 @@ if (html.length === 0 && !theme && !url) {
   process.exit(0);
 }
 
+const read = (p) => { try { return readFileSync(p, 'utf8'); } catch { return ''; } };
+
+// A site can be served under a PATH PREFIX — https://acme.com/outfitters/ —
+// and then every URL it writes about itself (internal links, sitemap <loc>s,
+// root-relative asset refs) carries a segment that does not exist on disk,
+// where the build root IS that prefix. Three separate checks compare a URL
+// against a file (sitemap orphans, legal-page reachability, og:image/image
+// weight on disk), and making the page keys path-aware broke all three at
+// once: a correct 5-page site produced 5 false orphans, 3 false "not linked"s
+// and 7 false "og:image resolves to no file"s.
+//
+// Infer the prefix ONCE, here, from the site's own evidence, and hand it to
+// every consumer on ctx — three inferences would be three chances to drift,
+// which is the exact failure this branch has now paid for four times.
+// deployPrefix() only accepts a prefix that lines MORE pages up than leaving
+// it alone, so a genuinely unlisted or genuinely unlinked page is still
+// reported and a site served at the root is never "corrected".
+function inferDeploy() {
+  if (!base || html.length === 0) return '';
+  const keys = new Set(html.map((f) => pageKey(relative(base, f))));
+  const cands = [];
+  for (const f of html) {
+    const src = read(f);
+    const from = relative(base, f);
+    for (const m of src.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) {
+      const k = hrefKey(m[1], from);
+      if (k) cands.push(k);
+    }
+  }
+  for (const at of [join(base, 'sitemap.xml'), join(projectDir, 'sitemap.xml')]) {
+    if (!existsSync(at)) continue;
+    for (const m of read(at).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)) {
+      const k = hrefKey(m[1]);
+      if (k) cands.push(k);
+    }
+    break;
+  }
+  return deployPrefix(cands, keys);
+}
+
 const ctx = {
   projectDir, html, css, base, kind, theme,
-  read: (p) => { try { return readFileSync(p, 'utf8'); } catch { return ''; } },
+  deploy: inferDeploy(),
+  read,
   lineOf: (text, idx) => { let n = 1; for (let i = 0; i < idx && i < text.length; i++) if (text[i] === '\n') n++; return n; },
   rel: (p) => relTo(projectDir, p),
 };
@@ -108,7 +150,10 @@ const facts = {
   project: projectDir,
   mode: url ? 'local+live' : 'local',
   url,
-  sources: { kind, base: ctx.rel(base), html: html.map(ctx.rel), css: css.map(ctx.rel), theme: ctx.theme ? ctx.rel(ctx.theme) : null },
+  // `deploy` is recorded because it is INFERRED: a wrong inference would move
+  // three checks at once, and a fact nobody can see is a fact nobody can
+  // challenge. null means "served at the root", the un-inferred default.
+  sources: { kind, base: ctx.rel(base), html: html.map(ctx.rel), css: css.map(ctx.rel), theme: ctx.theme ? ctx.rel(ctx.theme) : null, deploy: ctx.deploy || null },
   layers: {
     scan: failed.length ? 'partial' : 'ok',
     harvest: harvested ? harvested.status : 'failed',
