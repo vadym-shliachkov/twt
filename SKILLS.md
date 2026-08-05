@@ -1251,7 +1251,7 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 ## /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.5
+**Version:** 1.1.6
 **Accepts arguments:** yes
 
 Convert a Markdown document into a polished PDF using the marketplace's deterministic export script and default document export style. The skill is intentionally thin so conversion, heading checks, render notes, and Pandoc invocation happen in code instead of model reasoning.
@@ -1684,7 +1684,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Answer one question about a project that thinks it is finished: **if we pushed this to production today, what breaks, what is missing, and who owns each item?** Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.
@@ -1717,6 +1717,7 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 - Does not fix findings. It reports; the humans resolve, then re-run.
 - Does not rebuild the site or re-run any design phase.
 - **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report. (Citations and scan findings can still *overlap* on one underlying defect; nothing mechanical de-duplicates them, and Step 6 says what to do about it.)
+- "Never restated" is about **severity and derivation**, not about detail: a citation may name what the cited findings are, so the reader knows what is in the referenced document. What it may not do is re-severity them, re-measure them, or present them as this audit's own findings. If a citation covers several sub-findings, list them as an enumerated set with the cited report's own labels — do not fuse them into one paragraph of prose that loses which item is which.
 - Does not judge design quality (`/twt-design-system-audit` owns that) or Figma buildability (`/twt-figma-dev-audit` owns that).
 - Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.
 - Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.

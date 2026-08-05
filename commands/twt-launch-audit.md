@@ -1,8 +1,8 @@
 ---
 name: twt-launch-audit
 category: qa
-description: (v1.0.3) Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
-version: 1.0.3
+description: (v1.0.4) Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - Optional http(s):// URL for the live checks; optional --skip-interview
@@ -44,6 +44,7 @@ writes:
 - Does not fix findings. It reports; the humans resolve, then re-run.
 - Does not rebuild the site or re-run any design phase.
 - **Does not re-derive another audit's findings** — a qa BLOCKER appears here as one citation of `qa-report.md`, never as a restatement. Two reports with two severities for one problem is worse than one report. (Citations and scan findings can still *overlap* on one underlying defect; nothing mechanical de-duplicates them, and Step 6 says what to do about it.)
+  - "Never restated" is about **severity and derivation**, not about detail: a citation may name what the cited findings are, so the reader knows what is in the referenced document. What it may not do is re-severity them, re-measure them, or present them as this audit's own findings. If a citation covers several sub-findings, list them as an enumerated set with the cited report's own labels — do not fuse them into one paragraph of prose that loses which item is which.
 - Does not judge design quality (`/twt-design-system-audit` owns that) or Figma buildability (`/twt-figma-dev-audit` owns that).
 - Makes no claim about DNS, SSL, or hosting it has not either been given a URL for or explicitly asked about.
 - Does not re-implement scanning, rule evaluation, or rendering in the model — those are the bundled scripts.
@@ -94,6 +95,8 @@ Read `facts.harvest`. Build the list of missing or stale evidence:
 If the list is non-empty and this is an interactive run, ask via **AskUserQuestion** (multi-select, header "Evidence") which to run now, listing each with its cost — e.g. *"Run /twt-qa (5 audits, ~3 min)"*, *"Run /twt-content-approval-checklist (~2 min)"*, *"Skip — accept UNVERIFIED"*, plus **You decide**. Default to running all.
 
 Dispatch each approved one via the Agent tool, wait, then **re-run Step 2** so the harvest reflects the new artifacts. Never dispatch silently: a first run on a fresh project would otherwise trigger the whole QA suite with no warning.
+
+This is enforced, not merely asked for: `launch-audit.mjs` compares `facts.generated` against the mtime of every harvested source and **exits 2** if any of them moved after the scan, naming the file and the scan command. A run that dispatches QA and then skips the re-scan cannot reach a report — it would otherwise cite reports its own evidence file records as absent.
 
 If `--skip-interview` is set or this is an unattended dispatch, skip the question and let the gaps become `UNVERIFIED`.
 
@@ -165,5 +168,7 @@ State, in this order:
 2. Every `LAUNCH-BLOCKER`, grouped by owner — this is what the human acts on.
 3. What was not verified and why (unanswered questions, skipped dispatches, a failed harvest probe).
 4. The output paths, naming `punch-list.md` as the document to send.
+
+The readiness matrix now carries a **`NOT ASSESSED`** state and a line stating what the scan actually had in front of it (pages, theme, live layer, harvested reports) — both derived from `coverage` in `findings.json`, so they are stated on every run. `CLEAR` means measured and clean; `NOT ASSESSED` means there was nothing to measure. Do not describe a `NOT ASSESSED` category as passing, and if several are unassessed, say in your summary what would have to exist for them to be judged.
 
 If the verdict is `NO-GO`, say plainly that nothing here was auto-fixed and the same command re-run after the fixes will re-verdict. If the scan was incomplete, lead with that — a provisional report is not a soft pass.

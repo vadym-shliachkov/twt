@@ -1,8 +1,8 @@
 ---
 name: twt-export-pdf
 category: export
-description: (v1.1.5) Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
-version: 1.1.5
+description: (v1.1.6) Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
+version: 1.1.6
 model: sonnet
 effort: low
 accepts_arguments: true
@@ -96,6 +96,29 @@ Read `.twt-artifacts/export/pdf/<source-slug>/render-notes.md` after the script 
 - missing Pandoc or conversion errors
 - confirmation that the source file was not edited
 
+## Step 3b — Look at the pages
+
+`render-notes.md` reports what the *conversion* did; it cannot see what the pages
+look like. A run whose notes were completely clean shipped a PDF with a heading
+stranded at the foot of one page, another page holding a single two-line field,
+and a near-empty page mid-document — every one of those invisible to a notes-only
+check.
+
+So read the PDF back with the **Read tool** (`pages: "1-6"`, then the rest in
+batches of up to 20) and check each page for:
+
+- a heading with no content under it, or a heading split across a page boundary
+- a page that is mostly empty while the document continues after it
+- one finding or item rendered in a visibly different layout from its siblings
+- an item broken across pages in a way that leaves the continuation unreadable
+
+Fix what you find in the **source markdown or the theme**, then re-export — never
+by hand-editing the generated HTML. If a defect traces to the theme's paged rules
+(`templates/themes/<slug>/css/doc.css`), say so plainly rather than working around
+it in the document.
+
+On a document over ~20 pages, read the first six pages and spot-check the rest.
+
 ## Step 4 — Report
 
 Tell the user:
@@ -107,3 +130,4 @@ Tell the user:
 - Any heading nesting warnings
 - Any conversion limitations
 - Whether the PDF was successfully produced
+- What the page-level read in Step 3b found (or that the pages were clean)

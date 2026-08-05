@@ -1466,7 +1466,7 @@ flowchart TB
 ### /twt-export-pdf
 
 **Category:** export
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
 - Markdown file path
@@ -1776,7 +1776,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
