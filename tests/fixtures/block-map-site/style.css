@@ -1,0 +1,8 @@
+:root { --brand: #2f6feb; --ink: #16181d; --space-3: 16px; --radius-2: 8px; }
+.site-head { padding: var(--space-3); }
+.hero { padding: 48px var(--space-3); }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.card, .service-box, .teaser { border-radius: var(--radius-2); padding: var(--space-3); color: var(--ink); }
+.plan, .quote { border-radius: var(--radius-2); padding: var(--space-3); }
+.btn { background: var(--brand); color: #fff; border-radius: var(--radius-2); }
+.site-foot { padding: var(--space-3); }
