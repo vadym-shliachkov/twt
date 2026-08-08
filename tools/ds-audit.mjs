@@ -25,7 +25,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
-import { URL } from 'node:url';
+import { URL, pathToFileURL } from 'node:url';
+
+// Guards the CLI-invoking IIFE at the bottom of this file so importing this
+// module (e.g. from tests, for its helper exports) does not also run the
+// CLI and call process.exit(). Same convention as launch-audit.mjs et al.
+const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 // ── args ────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -77,13 +82,13 @@ function fetchUrl(target, redirects = 0) {
   });
 }
 
-function sameHost(a, b) { try { return new URL(a).host === new URL(b).host; } catch { return false; } }
+export function sameHost(a, b) { try { return new URL(a).host === new URL(b).host; } catch { return false; } }
 
 // Canonicalize a page URL so `https://site.com` and `https://site.com/` (and
 // `/about` vs `/about/`) don't crawl as two separate pages — which doubled the
 // home page and inflated the page/cluster counts. Drops hash + query and the
 // trailing slash (except the bare root).
-function normUrl(u) {
+export function normUrl(u) {
   try {
     const x = new URL(u);
     x.hash = ''; x.search = '';
@@ -92,7 +97,7 @@ function normUrl(u) {
   } catch { return u; }
 }
 
-function extractLinks(html, base) {
+export function extractLinks(html, base) {
   const out = [];
   const re = /<a\b[^>]*\bhref=["']([^"'#]+)["']/gi;
   let m;
@@ -111,7 +116,7 @@ function extractLinks(html, base) {
 
 // Absolute hrefs of every <link rel=stylesheet> on a page (resolved against
 // the page URL) — consumed by ds-shots.mjs's embed-preview fallback.
-function stylesheetHrefs(html, base) {
+export function stylesheetHrefs(html, base) {
   const out = [];
   const linkRe = /<link\b[^>]*\brel=["']?stylesheet["']?[^>]*>/gi;
   const hrefRe = /\bhref=["']([^"']+)["']/i;
@@ -128,7 +133,7 @@ function stylesheetHrefs(html, base) {
 // metrics don't see it multiplied by the page count. `page` still carries the
 // full CSS this page loads (for per-block fingerprinting).
 const sheetCache = new Map(); // abs url → css string ('' on failure)
-async function collectCss(html, base) {
+export async function collectCss(html, base) {
   let inline = '';
   const styleRe = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
   let m;
@@ -154,7 +159,7 @@ async function collectCss(html, base) {
 
 // The site's real root font-size (for rem→px conversion). Last html/:root
 // font-size declaration wins; defaults to 16px.
-function detectRootFontPx(css) {
+export function detectRootFontPx(css) {
   let px = 16;
   const re = /(?:^|[}\s,])(?:html|:root)\b[^{}]*\{([^}]*)\}/gi;
   let m;
@@ -336,7 +341,7 @@ function normVal(v) {
   return s;
 }
 
-function looksJsRendered(html) {
+export function looksJsRendered(html) {
   const body = (html.match(/<body\b[^>]*>([\s\S]*)<\/body>/i) || [, ''])[1];
   const text = body.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
   return text.length < 200 && /<div\b[^>]*\bid=["'](root|app|__next)["']/i.test(html);
@@ -813,8 +818,10 @@ function runAnalyze() {
   emit(buildReport(blocks, css, tokensCss, {}, { dsSource: DS_SOURCE || (tokensCss ? 'provided' : 'none') }), OUT);
 }
 
-(async () => {
-  if (sub === 'site') await runSite();
-  else if (sub === 'analyze') runAnalyze();
-  else die('usage: ds-audit.mjs site <url> | analyze <blocks.json>  [--out dir] [--tokens tokens.css] [--max N] [--count-only]');
-})();
+if (_isMain) {
+  (async () => {
+    if (sub === 'site') await runSite();
+    else if (sub === 'analyze') runAnalyze();
+    else die('usage: ds-audit.mjs site <url> | analyze <blocks.json>  [--out dir] [--tokens tokens.css] [--max N] [--count-only]');
+  })();
+}
