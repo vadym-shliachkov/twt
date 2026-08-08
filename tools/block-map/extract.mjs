@@ -56,16 +56,27 @@ const SKIP = new Set(['script','style','link','meta','head','title','br','#root'
 // more other landmarks and none of its own content, which really is just a
 // generic structural wrapper that happened to pick up a semantic tag name.
 const AGGREGATABLE = new Set(['section', 'article', 'aside']);
-// "Essentially all" of a node's content living inside its landmark children
-// — a tight tolerance, not a generous one. A real heading, lede, or
-// copyright line of its own pulls this well below the threshold in every
-// case tested; see fix-round-3 report for the exact numbers per fixture.
-const AGGREGATE_RATIO = 0.95;
 
 const REPEAT_MIN = 3;
 
-function textLen(n) {
-  return (n.text || '').length + n.children.reduce((s, c) => s + textLen(c), 0);
+// Same type-matching rules atomCounts uses below, extracted so a single
+// NODE (not just its descendants) can be tested directly — see hasOwnAtoms.
+function isAtomicTag(x) {
+  const t = x.tag;
+  return /^h[1-6]$/.test(t) || t === 'p' || t === 'a' || t === 'button' || x.classes.includes('btn')
+    || t === 'img' || t === 'svg' || t === 'input' || t === 'textarea' || t === 'select'
+    || t === 'ul' || t === 'ol';
+}
+
+// Does this node carry any atom-worthy content itself, or anywhere in its
+// own subtree? Used by isLandmarkAggregate (see below) — deliberately a
+// SHAPE test (does real content exist at all), not a size/ratio test: a
+// single <h2>, one <img>, or a one-word <p>Hi</p> all make this true
+// regardless of how much text sits in a sibling landmark, which is exactly
+// what a length-based ratio could never guarantee. See fix-round-3 report,
+// "Blocker 1", for the length-dependent bug this replaces.
+function hasOwnAtoms(n) {
+  return isAtomicTag(n) || n.children.some(hasOwnAtoms);
 }
 
 export function atomCounts(n) {
@@ -133,15 +144,19 @@ export function extractBlocks(root, opts = {}) {
     // block: e.g. a whole-page <section>/<article> wrapping header + a
     // content section + footer, or a <section> that wraps exactly one other
     // <section> and adds nothing. Scoped to AGGREGATABLE tags only (see
-    // above) and gated on a content ratio, not a bare count, so a <section>
-    // carrying its own heading/lede alongside a nested <section> — or a
-    // <footer>/<header> composing nav+form/nav+list+copyright, which isn't
-    // AGGREGATABLE at all — is never excluded.
+    // above), and gated on SHAPE — does any non-landmark child carry atoms
+    // of its own — not on a text-length ratio. A ratio is length-dependent
+    // by construction: it can flip on inner-section body length alone (a
+    // <h2>+nested-<section> "aggregate" verdict changing between 100 and
+    // 150 chars of UNRELATED nested text), and it's blind to content with
+    // no text nodes at all (an <img>, an <input>, an <svg>). A <section>
+    // carrying its own heading/lede/image alongside a nested <section> — or
+    // a <footer>/<header> composing nav+form/nav+list+copyright, which
+    // isn't AGGREGATABLE at all — is never excluded, regardless of size.
     const directLandmarkKids = kids.filter((c) => LANDMARKS.has(c.tag));
-    const landmarkText = directLandmarkKids.reduce((s, c) => s + textLen(c), 0);
-    const ownText = textLen(n);
+    const nonLandmarkKidsWithOwnAtoms = kids.filter((c) => !LANDMARKS.has(c.tag) && hasOwnAtoms(c));
     const isLandmarkAggregate = AGGREGATABLE.has(n.tag) && directLandmarkKids.length >= 1
-      && ownText > 0 && landmarkText / ownText >= AGGREGATE_RATIO;
+      && nonLandmarkKidsWithOwnAtoms.length === 0;
     const isSemantic = (SEMANTIC_BLOCK.has(n.tag) || LANDMARKS.has(n.tag)) && !isLandmarkAggregate;
 
     // (b) leaf cluster: "no emitted descendants" is gated on `children`, not

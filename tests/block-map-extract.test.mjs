@@ -250,3 +250,75 @@ test('depth capping is pure truncation: capped output matches the full tree with
     }
   }
 });
+
+// --- fix-round-4 coverage (Blocker 1) -------------------------------------
+// fix-round-3's AGGREGATE_RATIO (>=95% of a landmark's own text must live in
+// its LANDMARKS-tagged children) was still content-LENGTH dependent: the
+// "an article with its own heading and lede..." test above only passed
+// because its section bodies were ~18 chars. At realistic body lengths the
+// ratio flips and deletes the article anyway, orphaning its own h1/lede.
+// Replaced with a SHAPE test (isLandmarkAggregate/hasOwnAtoms above): does
+// any non-landmark child carry atom-worthy content AT ALL, independent of
+// how much text a sibling landmark holds. These tests pin that at the
+// specific lengths the ratio broke on.
+
+const filler = (n) => 'x'.repeat(n);
+
+test('article with own h1+lede survives at a realistic (>=800 char) body length, not just a token one', () => {
+  const bodyText = filler(900);
+  const html = '<body><main><article class="post"><h1>Why static site generators won</h1><p>The lede paragraph goes here.</p>'
+    + `<section><h2>Part one</h2><p>${bodyText}</p></section>`
+    + `<section><h2>Part two</h2><p>${bodyText}</p></section>`
+    + '</article></main></body>';
+  const blocks = extractBlocks(parseHtml(html));
+  assert.equal(blocks.length, 1, 'article.post must not be deleted at a realistic body length');
+  assert.equal(blocks[0].tag, 'article');
+  assert.ok(blocks[0].classes.includes('post'), 'must be article.post itself, not a nested <section>');
+  assert.equal(blocks[0].atoms.headings, 3, 'h1 + 2 nested h2s — the h1 must not be lost at this length');
+  assert.equal(blocks[0].atoms.text, 3, 'lede + 2 nested paragraphs — the lede must not be lost at this length');
+});
+
+test('article with own h1+lede survives across a sweep of body lengths (18 to 3000 chars)', () => {
+  for (const len of [18, 200, 800, 3000]) {
+    const bodyText = filler(len);
+    const html = '<body><main><article class="post"><h1>Title</h1><p>Lede.</p>'
+      + `<section><h2>One</h2><p>${bodyText}</p></section>`
+      + `<section><h2>Two</h2><p>${bodyText}</p></section>`
+      + '</article></main></body>';
+    const blocks = extractBlocks(parseHtml(html));
+    assert.equal(blocks.length, 1, `article.post must survive at body length ${len}`);
+    assert.equal(blocks[0].tag, 'article', `the survivor must be the article itself at body length ${len}, not a nested <section>`);
+    assert.equal(blocks[0].atoms.headings, 3, `h1 must not be lost at body length ${len}`);
+  }
+});
+
+test('a section with its own <h2> survives past 150 chars of nested-section body text', () => {
+  const html = '<body><main><section class="page"><h2>Our Work</h2>'
+    + `<section class="grid"><div class="card"><h3>One</h3><p>${filler(150)}</p></div></section>`
+    + '</section></main></body>';
+  const blocks = extractBlocks(parseHtml(html));
+  assert.equal(blocks.length, 1, 'section.page must not be deleted once nested text crosses a length threshold');
+  assert.ok(blocks[0].classes.includes('page'), 'must be section.page itself, not the nested .grid (also tag <section>)');
+  assert.equal(blocks[0].atoms.headings, 2, 'the outer <h2> must survive alongside the nested <h3>');
+});
+
+test('a section whose own content is image-only (no text) is not deleted', () => {
+  const html = '<body><main><section class="page"><img src="hero.png" alt="Hero banner">'
+    + '<section class="hero"><h1>Welcome</h1><p>Intro copy.</p></section></section></main></body>';
+  const blocks = extractBlocks(parseHtml(html));
+  assert.equal(blocks.length, 1, 'section.page must not be deleted just because its own content is an <img> (a text-length ratio is blind to this)');
+  assert.ok(blocks[0].classes.includes('page'), 'must be section.page itself, not the nested .hero (also tag <section>)');
+  assert.equal(blocks[0].atoms.images, 1);
+});
+
+test('a one-word <p>Hi</p> is enough to keep its parent from being treated as a pure aggregate, regardless of nested body length', () => {
+  // A short nested body doesn't discriminate a length-ratio bug from a
+  // correct shape test (both keep the parent at, say, 9 chars of nested
+  // text) — this needs the nested section's body long enough that a ratio
+  // would flip, to prove the fix isn't just "still short enough to pass".
+  const html = '<body><main><section class="gallery"><p>Hi</p>'
+    + `<section class="grid"><div class="card"><h3>One</h3><p>${filler(100)}</p></div></section></section></main></body>`;
+  const blocks = extractBlocks(parseHtml(html));
+  assert.equal(blocks.length, 1, 'exactly one top-level block expected');
+  assert.ok(blocks[0].classes.includes('gallery'), 'section.gallery itself must survive, not just any <section> (e.g. the nested .grid)');
+});
