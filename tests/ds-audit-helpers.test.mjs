@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const MOD = fileURLToPath(new URL('../tools/ds-audit.mjs', import.meta.url));
+const MOD = fileURLToPath(new URL('../tools/lib/site-fetch.mjs', import.meta.url));
 const { normUrl, sameHost, extractLinks, stylesheetHrefs, detectRootFontPx, looksJsRendered } =
   await import(pathToFileURL(MOD));
 
