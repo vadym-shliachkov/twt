@@ -68,7 +68,15 @@ export function parseHtml(html) {
 
     if (RAW.has(tag)) {                           // skip raw text wholesale
       const close = html.toLowerCase().indexOf('</' + tag, tokRe.lastIndex);
-      const end = close === -1 ? html.length : close;
+      if (close === -1) {
+        // No closing tag before EOF: an unterminated <script>/<style>/
+        // <textarea>/<title> must not swallow the rest of the document
+        // (e.g. a truncated HTTP response). Treat it as having no raw
+        // content and resume normal tokenizing right after the opening
+        // tag — `last` is already tokRe.lastIndex from above.
+        continue;
+      }
+      const end = close;
       el.text = tag === 'title' ? html.slice(tokRe.lastIndex, end).trim() : '';
       tokRe.lastIndex = end;
       last = end;

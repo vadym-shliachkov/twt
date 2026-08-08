@@ -48,3 +48,17 @@ test('id and multiple classes are captured', () => {
   assert.equal(s.id, 'hero');
   assert.deepEqual(s.classes, ['a', 'b', 'c']);
 });
+
+test('unterminated script does not swallow the rest of the document', () => {
+  const root = parseHtml('<div><script>var a = 1;</div><p>after</p>');
+  const p = root.children.find((n) => n.tag === 'p');
+  assert.ok(p, 'expected a <p> node to survive an unterminated <script>');
+  assert.equal(p.text, 'after');
+});
+
+test('unterminated style does not swallow the rest of the document', () => {
+  const root = parseHtml('<div><style>.a { color: red;</div><p>after</p>');
+  const p = root.children.find((n) => n.tag === 'p');
+  assert.ok(p, 'expected a <p> node to survive an unterminated <style>');
+  assert.equal(p.text, 'after');
+});
