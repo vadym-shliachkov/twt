@@ -6,7 +6,7 @@ index.html, services.html, pricing.html, app.html
 ## Expected canonical blocks
 | Block | Tier | Aliases absorbed | Pages | Instances |
 |---|---|---|---|---|
-| Site header | organism | `.site-head` | 4 | 4 |
+| Site header | organism | `.site-head` | 3 | 3 |
 | Site footer | organism | `.site-foot` | 3 | 3 |
 | Hero | organism | `.hero` | 1 | 1 |
 | Card grid | organism | `.features`, `.svc`, `.related` | 3 | 3 |
