@@ -39,11 +39,39 @@ export const MAX_VARIANTS_PER_BLOCK = 8;
 const escText = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const escAttr = (s) => String(s).replace(/["<>]/g, (c) => ({ '"': '&quot;', '<': '&lt;', '>': '&gt;' }[c]));
 
-function serialize(node, budget = VARIANT_HTML_CAP) {
-  if (budget <= 0) return '';
+// IMPORTANT review finding (round 1, item 4): the budget must be enforced
+// AT NODE BOUNDARIES, during serialization — never as a post-hoc string
+// slice. The old scheme divided the cap evenly per child up front but let
+// a text-bearing node ignore it entirely, so in practice the only real cap
+// was `variantsOf`'s `.slice(0, VARIANT_HTML_CAP)` — which cuts wherever
+// the character count happens to land, mid-tag or mid-attribute, with no
+// closing tags at all. That is invalid markup, not a smaller sample, and
+// Task 10's renderer would read it back as structure.
+//
+// `state` is a single mutable `{ left: number }` threaded through the
+// whole recursive call (not a per-child divided number) so every node
+// shares one real remaining-budget counter instead of each guessing its
+// own slice up front. Once a node is decided to be INCLUDED, its own open
+// and close tags are non-negotiable — they are reserved immediately, even
+// if that pushes `state.left` negative — because dropping the close tag is
+// exactly the malformed-output bug this replaces. What actually responds
+// to the budget is (a) how much of this node's OWN text survives (may be
+// truncated, but the tag around it still closes) and (b) whether any FURTHER
+// children get started at all: the children loop checks the budget BEFORE
+// starting each child, never mid-child, so a child is either serialized
+// whole (well-formed) or not started (nothing to close). This can let the
+// total output run slightly over VARIANT_HTML_CAP (bounded by the tag
+// overhead of whichever nodes were already "in flight" when the budget hit
+// zero) — an acceptable, bounded tradeoff for guaranteeing every emitted
+// tag is closed.
+function serialize(node, state = { left: VARIANT_HTML_CAP }) {
   const attrs = Object.entries(node.attrs || {})
     .filter(([k]) => k === 'class' || k === 'id' || k === 'href' || k === 'src' || k === 'alt')
     .map(([k, v]) => ` ${k}="${escAttr(v)}"`).join('');
+  const open = `<${node.tag}${attrs}>`;
+  const close = `</${node.tag}>`;
+  state.left -= open.length + close.length;
+
   // CRITICAL FIX (review round 1): text and children are NOT mutually
   // exclusive. `parse.mjs`'s `addText` concatenates every direct text run
   // of a node into ONE `.text` string as it parses, so the original
@@ -57,9 +85,24 @@ function serialize(node, budget = VARIANT_HTML_CAP) {
   // `<p>Learn more about <a>us</a> today.</p>` deleted the link outright.
   // An approximation that keeps all the content beats a shortcut that
   // deletes some of it.
-  const inner = (node.text ? escText(node.text) : '')
-    + node.children.map((c) => serialize(c, budget / Math.max(1, node.children.length))).join('');
-  return `<${node.tag}${attrs}>${inner}</${node.tag}>`;
+  let inner = '';
+  if (node.text) {
+    const t = escText(node.text);
+    if (state.left > 0) {
+      // Truncating a text node IS allowed — unlike a child element, plain
+      // text has no closing tag of its own to strand, so cutting it short
+      // never produces invalid markup (the node's own tag pair, reserved
+      // above, still closes correctly either way).
+      const kept = t.length > state.left ? t.slice(0, state.left) : t;
+      inner += kept;
+      state.left -= kept.length;
+    }
+  }
+  for (const c of node.children) {
+    if (state.left <= 0) break; // node boundary: never start a child once the budget is gone, never truncate mid-child
+    inner += serialize(c, state);
+  }
+  return open + inner + close;
 }
 
 // IMPORTANT review finding (round 1, item 3): the bucket key must ignore
@@ -90,7 +133,11 @@ function shapeKeyOf(html) {
 function variantsOf(block) {
   const buckets = new Map();
   for (const m of block._members) {
-    const html = serialize(m.block.node).slice(0, VARIANT_HTML_CAP);
+    // No post-hoc slice here (review round 1, item 4) — serialize() now
+    // enforces VARIANT_HTML_CAP itself, at node boundaries, so its output
+    // is already well-formed and does not need (and must not get) a second,
+    // string-level truncation on top.
+    const html = serialize(m.block.node);
     const key = shapeKeyOf(html);
     if (!buckets.has(key)) buckets.set(key, { html, count: 0 });
     buckets.get(key).count++;

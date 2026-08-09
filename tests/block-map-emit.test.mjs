@@ -75,6 +75,12 @@ test('summary.json is dramatically smaller than block-map.json', () => {
 
 // --- Review-round fixes -----------------------------------------------------
 
+function runFixtureBuild() {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  emitAll(build(), out);
+  return JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
+}
+
 function runHtml(html) {
   const out = mkdtempSync(join(tmpdir(), 'bm-'));
   const pages = [{ id: 'P1', url: '/x', html, css: '', jsRendered: false }];
@@ -105,6 +111,79 @@ function syntheticBlockResult(memberNodes) {
   };
   return { pages: [{ id: 'P1', url: '/x', jsRendered: false }], blocks: [block], grayBand: [], unadjudicated: 0 };
 }
+
+// Independent, low-level well-formedness check — a stack-based tag-balance
+// walk over the SAME open/close-tag grammar parse.mjs's own tokenizer uses,
+// so it directly proves "every tag opened in this html gets a matching
+// close in the correct nested order" without depending on parse.mjs's own
+// (deliberately forgiving) recovery behavior to hide a real defect. NOTE:
+// serialize() always emits an explicit closing tag for every element it
+// writes, void HTML elements (img, br, ...) included — it is its own
+// self-consistent output format, not a real-HTML void-element renderer —
+// so this checker requires a close for every open, with no void-tag
+// exceptions.
+function assertBalanced(html) {
+  const stack = [];
+  const tokRe = /<\/([a-zA-Z][-\w]*)>|<([a-zA-Z][-\w]*)[^>]*?(\/?)>/g;
+  let m;
+  while ((m = tokRe.exec(html))) {
+    if (m[1]) {
+      const name = m[1];
+      assert.ok(stack.length && stack[stack.length - 1] === name,
+        `mismatched or missing opening tag for closing </${name}> — stack was ${JSON.stringify(stack)} in: ${html.slice(0, 200)}`);
+      stack.pop();
+    } else {
+      const tag = m[2];
+      if (m[3] !== '/') stack.push(tag);
+    }
+  }
+  assert.equal(stack.length, 0, `unclosed tag(s) remain: ${JSON.stringify(stack)} in: ${html.slice(0, 200)}`);
+}
+
+// Real round-trip through the actual parseHtml() used by the whole
+// pipeline: no element of `tag` should ever be found nested inside another
+// element of the same `tag` — real HTML forbids nested <a> anchors, and
+// serialize() never intentionally produces that shape, so if a truncated,
+// unclosed tag swallowed a later sibling as a child instead, parseHtml
+// would show it here as illegal same-tag nesting.
+function hasNestedSameTag(node, tag, inside = false) {
+  const now = inside || node.tag === tag;
+  if (node.tag === tag && inside) return true;
+  return node.children.some((c) => hasNestedSameTag(c, tag, now));
+}
+
+test('IMPORTANT 4: a huge text node beside many sibling links produces well-formed markup, not a mid-tag truncation', () => {
+  // One ~4800-char <p> (over the 4000-char VARIANT_HTML_CAP on its own)
+  // beside 19 sibling <a> links. The old budget scheme divided the cap
+  // evenly per child up front but then let a text-bearing node ignore the
+  // budget entirely, so in practice only the post-hoc `.slice(0, 4000)`
+  // ever capped anything — and it cut mid-tag, mid-attribute, with no
+  // closing tags at all.
+  const bigText = 'Lorem ipsum dolor sit amet, '.repeat(170); // ~4930 chars
+  const links = Array.from({ length: 19 }, (_, i) => n('a', { attrs: { href: `/l/${i + 1}` }, text: `Link ${i + 1}` }));
+  const wide = n('div', { classes: ['wide'], children: [n('p', { text: bigText }), ...links] });
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  emitAll(syntheticBlockResult([wide]), out);
+  const raw = readFileSync(join(out, 'block-map.json'), 'utf8');
+  let m;
+  assert.doesNotThrow(() => { m = JSON.parse(raw); }, 'block-map.json failed to parse as JSON');
+  const html = m.blocks.find((b) => b.id === 'B01').variants[0].html;
+  assertBalanced(html);
+});
+
+test('IMPORTANT 4 (general): every variant html across the 3-page fixture round-trips through parseHtml with no lost tag balance', () => {
+  const m = runFixtureBuild();
+  let checked = 0;
+  for (const b of m.blocks) {
+    for (const v of b.variants) {
+      assertBalanced(v.html);
+      const reparsed = parseHtml(v.html);
+      assert.ok(!hasNestedSameTag(reparsed, 'a'), `variant ${b.id}/${v.id} shows an <a> nested inside another <a> — a sign an unclosed tag swallowed a sibling`);
+      checked++;
+    }
+  }
+  assert.ok(checked > 5, 'sanity: fixture produced too few variants to be a meaningful sweep');
+});
 
 test('CRITICAL 1: serialize() keeps both text and children — an inline link inside prose is not dropped', () => {
   // Ordinary prose: a <p> with a real sentence containing an inline <a>.
