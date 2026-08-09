@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseHtml } from '../tools/block-map/parse.mjs';
 import { extractBlocks } from '../tools/block-map/extract.mjs';
-import { cluster, GRAY_CAP, MERGE_AT, nameFor } from '../tools/block-map/identity.mjs';
+import { cluster, GRAY_CAP, MERGE_AT, nameFor, excerpt } from '../tools/block-map/identity.mjs';
 import { fingerprint, similarity } from '../tools/block-map/fingerprint.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));
@@ -313,22 +313,40 @@ test('9-page: app.html contributes zero blocks (JS-rendered, must not emit a thi
   assert.equal(fromApp.length, 0);
 });
 
-// --- Fix round minor: the gray-band/blocks id-space cross-check ----------
+// --- Fix round 2, Step 4: the gray-band/blocks cross-check, for real -----
 //
-// identity.mjs used to carry a comment claiming this agreement was
-// "verified by a dedicated cross-check test" when no such test existed.
-// This IS that test — it actually resolves every grayBand pair's `a`/`b`
-// id against the real `blocks[].id` set, on both the 3-page and 9-page
-// fixtures (the 9-page run has a richer, longer `groups` array, a better
-// stress case for the "same index basis" invariant than 3 pages alone).
-test('gray-band ids always resolve to real block ids (cross-check)', () => {
+// round 1 added a test here claiming to be the "dedicated cross-check
+// test" identity.mjs's comment referred to, but it only asserted each
+// grayBand id was a MEMBER OF THE BLOCK-ID SET — since block ids are a
+// dense B01..BN range, almost ANY permutation of the mapping stays
+// "valid" under that check. Two mutations were shown to pass it anyway:
+// shifting grayBand's `a` id by +1, and sorting `groups` between the
+// gray-band loop and the `blocks` construction (the exact divergence the
+// surrounding code comment claims this test catches).
+//
+// The REAL invariant is not "g.a is SOME block id" but "g.a is the id of
+// the SPECIFIC block whose member produced g.aExcerpt" — i.e. the id and
+// the excerpt must refer to the same underlying instance. `excerpt()` is
+// exported so this test can independently reconstruct, from each
+// candidate block's own `_members`, what its excerpt SHOULD read as, and
+// require an exact match against what the gray-band entry actually
+// stored.
+function assertExcerptOwnedByBlock(blocks, id, wantExcerpt, label) {
+  const block = blocks.find((b) => b.id === id);
+  assert.ok(block, `${label}=${id} does not match any block id`);
+  const owningMember = block._members.find((m) => excerpt(m.block) === wantExcerpt);
+  assert.ok(owningMember,
+    `block ${id} (aliases: ${block.aliases.join(',')}) has no member whose excerpt matches ${label}Excerpt — ` +
+    `the id does not actually own this excerpt`);
+}
+
+test('gray-band ids resolve to the block that actually produced the excerpt (cross-check)', () => {
   for (const pages of [PAGES, ALL_PAGES]) {
     const { blocks, grayBand } = cluster(instancesFor(pages));
     assert.ok(grayBand.length > 0, 'sanity: this fixture must produce a non-empty gray band to test against');
-    const ids = new Set(blocks.map((b) => b.id));
     for (const g of grayBand) {
-      assert.ok(ids.has(g.a), `grayBand.a=${g.a} does not match any block id`);
-      assert.ok(ids.has(g.b), `grayBand.b=${g.b} does not match any block id`);
+      assertExcerptOwnedByBlock(blocks, g.a, g.aExcerpt, 'g.a');
+      assertExcerptOwnedByBlock(blocks, g.b, g.bExcerpt, 'g.b');
     }
   }
 });

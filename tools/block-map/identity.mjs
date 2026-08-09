@@ -174,7 +174,10 @@ function dedupeNames(blocks) {
   }
 }
 
-function excerpt(block) {
+// Exported so tests can independently reconstruct "what SHOULD this
+// member's excerpt be" and cross-check it against a gray-band entry's
+// stored aExcerpt/bExcerpt — see the gray-band id/excerpt cross-check test.
+export function excerpt(block) {
   const render = (n, budget) => {
     if (budget <= 0) return '';
     const cls = n.classes.length ? ` class="${n.classes.join(' ')}"` : '';
@@ -361,10 +364,15 @@ export function cluster(instances) {
   // here and the ids `blocks` assigns independently necessarily agree (both
   // are pure functions of `groups`' index, and `groups` is never reordered
   // or filtered between the two). Verified by
-  // tests/block-map-identity.test.mjs's "gray-band ids always resolve to
-  // real block ids (cross-check)" test — if this coupling is ever broken
-  // (e.g. a future edit sorts or filters `groups` between this loop and the
-  // `blocks` construction below), that test is what will catch it.
+  // tests/block-map-identity.test.mjs's "gray-band ids resolve to the
+  // block that actually produced the excerpt (cross-check)" test, which
+  // checks CONTENT correspondence (does the block at id g.a actually have
+  // a member whose excerpt equals g.aExcerpt), not just "is g.a some valid
+  // block id" — an earlier, weaker version of this test only checked
+  // set-membership against the dense B01..BN id range, which stays "valid"
+  // under almost any mismapping; independently proven to catch both an
+  // id-shift-by-one mutation and a `groups`-reordering mutation (the exact
+  // divergence this paragraph describes) before being trusted.
   //
   // Also note: this uses the MAXIMUM pairwise score across every member of
   // group a against every member of group b (and the excerpts come from
