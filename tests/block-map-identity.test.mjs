@@ -385,3 +385,40 @@ test('order invariance survives a TIE-DENSE construction (12x12 ladder, quantize
   assert.equal(uniqueSigs.size, 1,
     `all 5 orderings must produce the identical partition; got block counts ${JSON.stringify(counts)}`);
 });
+
+// --- Fix round 2, Step 3: .card__body no longer merges into Card ---------
+//
+// End-to-end (real 9-page fixture) pin for the fingerprint-level fix in
+// tests/block-map-fingerprint.test.mjs ("a solo molecule and a 3-up
+// repeated molecule do not auto-merge"). Before this fix, bem-card.html's
+// `.card__body` (molecule, arity 1) silently merged into the 3-page Card
+// block, inflating it to 4 pages / 12 instances and leaving no separate
+// "Card body" block at all — the exact residual documented as open at the
+// end of fix round 1.
+test('9-page: .card__body no longer merges into Card — GROUND-TRUTH split restored', () => {
+  const { blocks } = cluster(instancesFor(ALL_PAGES));
+
+  const mergedCard = blocks.find((b) => b.aliases.includes('.service-box'));
+  assert.ok(mergedCard, 'the .card/.service-box/.teaser block must still exist');
+  assert.deepEqual([...mergedCard.aliases].sort(), ['.card', '.service-box', '.teaser']);
+  assert.equal(mergedCard.reuse.pages, 3);
+  assert.equal(mergedCard.reuse.instances, 9);
+
+  const cardBody = blocks.find((b) => b.aliases.includes('.card__body'));
+  assert.ok(cardBody, '.card__body must be its own separate block, not absorbed into Card');
+  assert.equal(cardBody.name, 'Card body');
+  assert.equal(cardBody.reuse.instances, 3);
+  assert.notEqual(cardBody.id, mergedCard.id);
+});
+
+test('9-page: a solo-vs-repeated molecule pair surfaces in the gray band, not silently over-merged', () => {
+  const { grayBand } = cluster(instancesFor(ALL_PAGES));
+  const cardVsCardBody = grayBand.find((g) => {
+    // aExcerpt/bExcerpt render the actual node markup — .card__body's
+    // excerpt renders as a <div class="card__body">... tag.
+    return /class="card__body"/.test(g.aExcerpt) || /class="card__body"/.test(g.bExcerpt);
+  });
+  assert.ok(cardVsCardBody, '.card__body must appear in the gray band against a repeated-card block');
+  assert.ok(cardVsCardBody.score > 0.60 && cardVsCardBody.score < 0.95,
+    `expected a gray-band score, got ${cardVsCardBody.score}`);
+});

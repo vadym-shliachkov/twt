@@ -101,6 +101,45 @@ function tokenSim(a, b) {
   return jaccard(a.split(/[\s-_]+/).filter(Boolean), b.split(/[\s-_]+/).filter(Boolean));
 }
 
+// Second hard cap, same shape as the tier-mismatch one above, for a
+// residual the tier cap cannot reach: bem-card.html's `.card__body`
+// (molecule, arity 1 — the ONLY child of its `.card` wrapper) scored 0.98
+// against index.html's `.card` (molecule, arity 3 — one of three repeated
+// siblings) and silently merged into the wrong canonical block. Both sides
+// are tier `molecule`, so TIER_MISMATCH_CAP never fires; W.arity=0 (a
+// deliberate fix-round-2 decision, see above) means the 1-vs-3 arity gap
+// contributes nothing to the weighted sum either.
+//
+// Two alternatives were measured and rejected before this one:
+//  - An ancestor/descendant guard: `.card__body`'s actual ancestors
+//    (`.cards`, bem's own `.card`) land in DIFFERENT canonical blocks than
+//    the one it wrongly merges into — zero ancestor/descendant pairs exist
+//    among the merged members, so the guard would be a provable no-op. It
+//    is also unsound in general (recursive menus, nested comment threads,
+//    Bootstrap row-in-col-in-row all legitimately nest a block inside a
+//    same-named block), and a guard-blocked pair scores >= MERGE_AT so it
+//    would fall OUTSIDE the gray band — silent over-SPLITTING, the mirror
+//    of the union-find over-merge bug already paid to fix once.
+//  - Reactivating W.arity: no window exists. At w=0.02 the GROUND-TRUTH
+//    must-merge `.features`/`.related` pair already breaks (0.9467 <
+//    MERGE_AT); `.card__body` only clears 0.95 at w>=0.04.
+//
+// The real, measured signal: is this molecule a SINGLETON (the only child
+// of its parent, arity 1) or one of a REPEATED set (arity > 1)? That is a
+// genuine shape difference this fingerprint can see, unlike raw arity
+// (which W.arity=0 rejected for a different reason — comparing ABSOLUTE
+// arity punishes two true twins that happen to sit in differently-sized
+// galleries on their respective pages; comparing "is it 1 vs is it >1" does
+// not have that problem, since arity=1 is a structural fact about a node's
+// OWN position — a lone child — not a page-layout artifact).
+//
+// Accepted cost: a molecule appearing solo on one page and 3-up on another
+// no longer auto-merges — it lands in the gray band (measured ~0.90 for
+// that shape) instead of silently over-merging with no recourse.
+function isSoloVsRepeated(a, b) {
+  return a.tier === 'molecule' && b.tier === 'molecule' && (a.arity === 1) !== (b.arity === 1);
+}
+
 export function similarity(a, b) {
   const arity = 1 - Math.abs(a.arity - b.arity) / Math.max(a.arity, b.arity, 1);
   const weighted = Number((
@@ -111,6 +150,10 @@ export function similarity(a, b) {
     W.semantics * flagSim(a.semantics, b.semantics) +
     W.role      * tokenSim(a.roleHint, b.roleHint)
   ).toFixed(4));
-  // Hard cap, applied AFTER the weighted sum — see TIER_MISMATCH_CAP above.
-  return a.tier !== b.tier ? Math.min(weighted, TIER_MISMATCH_CAP) : weighted;
+  // Hard caps, applied AFTER the weighted sum — see TIER_MISMATCH_CAP and
+  // isSoloVsRepeated above. Either condition caps the score; a pair that
+  // hits both (can't happen here since isSoloVsRepeated requires matching
+  // tier) would still just be capped once.
+  if (a.tier !== b.tier || isSoloVsRepeated(a, b)) return Math.min(weighted, TIER_MISMATCH_CAP);
+  return weighted;
 }

@@ -93,3 +93,59 @@ test('same-tier pairs are completely unaffected by the tier discriminator (Task 
   assert.equal(Number(similarity(fingerprint(plan), fingerprint(quote)).toFixed(4)), 0.8880);
   assert.equal(similarity(fingerprint(siteHeadIndex), fingerprint(siteHeadServices)), 1);
 });
+
+// --- Fix round 2: molecule-tier singleton-vs-repeated hard cap ----------
+//
+// bem-card.html's `.card__body` (molecule, arity 1 — the only child of its
+// `.card` wrapper) scores 0.98 against index.html's `.card` (molecule,
+// arity 3 — one of three repeated siblings in a grid): same tier, so
+// Step-1's tier-mismatch cap can't separate them, and W.arity=0 (a
+// deliberate Task-6 decision) means the 1-vs-3 arity difference contributes
+// NOTHING to the score. Result: `.card__body` silently merges into the
+// `.card`/`.service-box`/`.teaser` canonical block. An ancestor/descendant
+// guard was measured and rejected (zero ancestor/descendant pairs exist
+// among the merged members — `.card__body`'s actual ancestors, `.cards` and
+// bem's own `.card`, land in DIFFERENT canonical blocks, so the guard would
+// be a provable no-op — and it's unsound in general: recursive menus,
+// nested comment threads, and Bootstrap row-in-col-in-row all legitimately
+// nest a block inside a same-named block). Reactivating W.arity is also
+// dead: at w=0.02 the GROUND-TRUTH must-merge `.features`/`.related` pair
+// already breaks (0.9467 < MERGE_AT), while `.card__body` only clears 0.95
+// at w>=0.04 — no window exists between those two bounds.
+//
+// The actual, measured signal: `.card__body` is a MOLECULE that is the
+// ONLY child of its parent (arity 1 — "a singleton"), sitting next to
+// MOLECULES that are repeated 3-up in a grid (arity 3 — "one of many").
+// That distinction, not tier, is what's real here.
+test('a solo molecule and a 3-up repeated molecule do not auto-merge (arity-shape hard cap)', () => {
+  const card = byClass(load('index.html'), 'card');
+  const bemCardBody = byClass(load('bem-card.html'), 'card__body');
+  assert.equal(card.tier, 'molecule');
+  assert.equal(bemCardBody.tier, 'molecule');
+  assert.equal(card.arity, 3, 'precondition: .card is one of 3 repeated siblings');
+  assert.equal(bemCardBody.arity, 1, 'precondition: .card__body is a singleton (only child of .card)');
+  const s = similarity(fingerprint(card), fingerprint(bemCardBody));
+  assert.ok(s < MERGE_AT, `solo-vs-repeated molecule pair scored ${s}, expected < MERGE_AT (${MERGE_AT})`);
+});
+
+test('the arity-shape cap does not touch organism pairs (by construction)', () => {
+  // .features (index.html) and .related (pricing.html) are both organisms
+  // — the cap's guard checks tier === 'molecule', so an organism pair is
+  // never affected regardless of arity. Re-pins the Task 6 target exactly.
+  const features = byClass(load('index.html'), 'features');
+  const related = byClass(load('pricing.html'), 'related');
+  assert.equal(features.tier, 'organism');
+  assert.equal(related.tier, 'organism');
+  assert.equal(Number(similarity(fingerprint(features), fingerprint(related)).toFixed(4)), 0.9600);
+});
+
+test('the arity-shape cap does not touch two solo molecules, or two repeated molecules', () => {
+  // Same-shape molecule pairs (both arity 1, or both arity>1) must be
+  // completely unaffected — the cap is specifically about a MISMATCH in
+  // "is this a singleton" between the two sides.
+  const box = byClass(load('services.html'), 'service-box'); // arity 3
+  const teaser = byClass(load('pricing.html'), 'teaser'); // arity 3
+  const card = byClass(load('index.html'), 'card'); // arity 3
+  assert.equal(Number(similarity(fingerprint(card), fingerprint(box)).toFixed(4)), 0.9600);
+  assert.equal(Number(similarity(fingerprint(card), fingerprint(teaser)).toFixed(4)), 0.9600);
+});
