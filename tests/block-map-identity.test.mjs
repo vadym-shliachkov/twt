@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseHtml } from '../tools/block-map/parse.mjs';
 import { extractBlocks } from '../tools/block-map/extract.mjs';
-import { cluster, GRAY_CAP, MERGE_AT } from '../tools/block-map/identity.mjs';
+import { cluster, GRAY_CAP, MERGE_AT, nameFor } from '../tools/block-map/identity.mjs';
 import { fingerprint, similarity } from '../tools/block-map/fingerprint.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));
@@ -177,4 +177,48 @@ test('order invariance: all 6 permutations of a synthetic same-block triangle ag
   const summarize = (blocks) => blocks.map((bl) => bl.instances.map((i) => i.page).sort().join(',')).sort().join(' | ');
   const results = perms.map((p) => summarize(cluster(p).blocks));
   assert.equal(new Set(results).size, 1, `all 6 permutations must agree, got: ${results.join(' ;; ')}`);
+});
+
+// --- Fix round: ROLE_NOUN whole-token matching, not substring ------------
+//
+// The round-1 fix moved /copy|content|text/ FIRST in ROLE_NOUN to solve the
+// `.hero__copy` -> "Hero" collision (see task-7-report.md Step 1 of the
+// original round), but that regex is a plain substring test — moving it
+// first means it now wins against far more common input: any utility class
+// that merely CONTAINS "text"/"content"/"copy" as a substring, which is
+// near-universal in Tailwind/Bootstrap/Elementor output. Fixed by matching
+// whole class TOKENS (splitting compound classes on "-", so "site-head"
+// still resolves via "head", but "text-center" contributes the tokens
+// "text"+"center" — neither of which should win over a co-occurring class
+// that matches a MORE SPECIFIC category checked earlier in ROLE_NOUN order)
+// and moving copy|content|text back to LAST (lowest priority). BEM element
+// syntax ("hero__copy") is handled separately: only the part AFTER the
+// last "__" is a primary match candidate, so "hero" (the block prefix) is
+// never a competing token for that class at all — see nameFor's BEM
+// handling below for why this keeps `.hero__copy` -> "Heading group"
+// without reintroducing the utility-class collision.
+const mem = (classes, tier = 'molecule', tag = 'div', id = '') => [{ block: { classes, id, tag, tier } }];
+
+test('nameFor: a co-occurring utility class never wins over a more specific real class', () => {
+  assert.equal(nameFor(mem(['card', 'text-center'])), 'Card');
+  assert.equal(nameFor(mem(['plan', 'text-lg'])), 'Plan');
+  assert.equal(nameFor(mem(['nav', 'content-nav'])), 'Navigation');
+  // Testimonial is the CURRENT label for the quote|testimonial|review
+  // category; Step 4 renames the singular-item case to "Quote" — that
+  // rename is out of scope here, this test only proves "copyright" no
+  // longer wins.
+  assert.equal(nameFor(mem(['quote', 'copyright'])), 'Testimonial');
+});
+
+test('nameFor: a Tailwind-styled card still reads as Card, not Heading group', () => {
+  assert.equal(nameFor(mem(['card', 'flex', 'flex-col', 'p-4', 'shadow-md', 'rounded-lg'])), 'Card');
+});
+
+test('nameFor: BEM element .hero__copy still reads as Heading group (no regression)', () => {
+  assert.equal(nameFor(mem(['hero__copy'])), 'Heading group');
+});
+
+test('nameFor: hyphen-compound semantic classes still resolve (site-head, site-foot)', () => {
+  assert.equal(nameFor(mem(['site-head'])), 'Site header');
+  assert.equal(nameFor(mem(['site-foot'])), 'Site footer');
 });

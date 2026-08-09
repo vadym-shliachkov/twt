@@ -11,29 +11,78 @@ export const SPLIT_AT = 0.60;
 export const GRAY_CAP = 60;
 const EXCERPT = 400;
 
+// Whole-TOKEN keyword lists (exact match, not regex substring). Order is
+// the tie-break when a class carries multiple tokens that separately match
+// different categories (e.g. a real class alongside an unrelated utility
+// class) — copy/content/text is deliberately LAST because those three
+// words are common English/Tailwind fragments ("copyright", "text-center",
+// "content-nav") and should only win when nothing more specific matched.
 const ROLE_NOUN = [
-  [/head|masthead|topbar/, 'Site header'],
-  [/foot/, 'Site footer'],
-  // Checked BEFORE /hero|banner|jumbo/: a BEM sub-block like `.hero__copy`
-  // contains "hero" as a mere substring of its own name, so testing the
-  // (more specific) "is this a text/heading group" pattern first is what
-  // lets it read as "Heading group" rather than "Hero" — matches
-  // GROUND-TRUTH.md, and no other fixture class collides the other way
-  // (verified: "copy"/"content"/"text" appear in no other alias).
-  [/copy|content|text/, 'Heading group'],
-  [/hero|banner|jumbo/, 'Hero'],
-  [/nav|menu/, 'Navigation'],
-  [/card|box|teaser|tile/, 'Card'],
-  [/plan|pricing|tier/, 'Plan'],
-  [/quote|testimonial|review/, 'Testimonial'],
-  [/grid|list|features|related|svc|services/, 'Card grid'],
-  [/cta|action/, 'CTA band'],
-  [/logo/, 'Logo row'],
+  [['head', 'masthead', 'topbar'], 'Site header'],
+  [['foot'], 'Site footer'],
+  [['hero', 'banner', 'jumbo'], 'Hero'],
+  [['nav', 'menu'], 'Navigation'],
+  [['card', 'box', 'teaser', 'tile'], 'Card'],
+  [['plan', 'pricing', 'tier'], 'Plan'],
+  [['quote', 'testimonial', 'review'], 'Testimonial'],
+  [['grid', 'list', 'features', 'related', 'svc', 'services'], 'Card grid'],
+  [['cta', 'action'], 'CTA band'],
+  [['logo'], 'Logo row'],
+  [['copy', 'content', 'text'], 'Heading group'],
 ];
 
-function nameFor(members) {
-  const hay = members.flatMap((m) => [...m.block.classes, m.block.id]).join(' ').toLowerCase();
-  for (const [re, noun] of ROLE_NOUN) if (re.test(hay)) return noun;
+// A class contributes candidate TOKENS at two priority levels:
+//
+//  - PRIMARY: for a BEM class ("block__element"), only the part AFTER the
+//    LAST "__" — the element — is primary. The block-prefix part is
+//    deliberately NOT a primary candidate: `.hero__copy`'s "hero" would
+//    otherwise out-rank "copy" simply because Hero sits earlier in
+//    ROLE_NOUN than the (now-last) copy/content/text category, which is
+//    exactly the substring-style collision this fix removes. For a
+//    non-BEM class, hyphen-split words ARE primary (so `.site-head`'s
+//    "head" token still resolves it to "Site header" — real compound
+//    class names, not just Tailwind-style utility classes, use hyphens).
+//  - FALLBACK: for a BEM class only, the block-prefix part (e.g. "card"
+//    from `.card__body`) — used ONLY if no primary token anywhere matched
+//    anything, to compose "<BlockNoun> <element>" (e.g. "Card body").
+function classTokens(raw) {
+  const bem = raw.lastIndexOf('__');
+  if (bem === -1) return { primary: raw.split('-').filter(Boolean), fallbackBlock: null, elementRaw: null };
+  return { primary: [raw.slice(bem + 2)], fallbackBlock: raw.slice(0, bem), elementRaw: raw.slice(bem + 2) };
+}
+
+function matchCategory(token) {
+  const norm = token.toLowerCase();
+  // Light, deliberately narrow pluralization: only strip a single trailing
+  // "s" so ".plans"/".quotes"/".cards" resolve to the same category as
+  // their singular form, without false-positiving short unrelated words.
+  const singular = norm.length > 3 && norm.endsWith('s') ? norm.slice(0, -1) : null;
+  for (const [keywords, noun] of ROLE_NOUN) {
+    if (keywords.includes(norm) || (singular && keywords.includes(singular))) return noun;
+  }
+  return null;
+}
+
+export function nameFor(members) {
+  const rawClasses = members.flatMap((m) => [...m.block.classes, m.block.id]).filter(Boolean).map((c) => c.toLowerCase());
+
+  const primaryTokens = [];
+  const fallbacks = []; // [{ blockToken, elementRaw }]
+  for (const raw of rawClasses) {
+    const { primary, fallbackBlock, elementRaw } = classTokens(raw);
+    primaryTokens.push(...primary);
+    if (fallbackBlock) fallbacks.push({ blockToken: fallbackBlock, elementRaw });
+  }
+
+  for (const token of primaryTokens) {
+    const noun = matchCategory(token);
+    if (noun) return noun;
+  }
+  for (const { blockToken, elementRaw } of fallbacks) {
+    const noun = matchCategory(blockToken);
+    if (noun) return `${noun} ${elementRaw}`; // e.g. "Card body" for .card__body
+  }
+
   const tag = members[0].block.tag;
   if (tag === 'header') return 'Site header';
   if (tag === 'footer') return 'Site footer';
