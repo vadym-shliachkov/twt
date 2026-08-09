@@ -72,3 +72,49 @@ test('summary.json is dramatically smaller than block-map.json', () => {
   const small = readFileSync(join(out, 'summary.json'), 'utf8').length;
   assert.ok(small < big / 2, `summary ${small} should be far under half of map ${big}`);
 });
+
+// --- Review-round fixes -----------------------------------------------------
+
+function runHtml(html) {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  const pages = [{ id: 'P1', url: '/x', html, css: '', jsRendered: false }];
+  const instances = pages.flatMap((p) =>
+    flatten(extractBlocks(parseHtml(p.html))).map((block) => ({ block, page: p.url, selector: block.selector })));
+  emitAll({ pages, ...cluster(instances) }, out);
+  return JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
+}
+
+test('CRITICAL 1: serialize() keeps both text and children — an inline link inside prose is not dropped', () => {
+  // Ordinary prose: a <p> with a real sentence containing an inline <a>.
+  // The old `node.text ? esc(text) : children...` branch treated text and
+  // children as mutually exclusive and silently dropped the link.
+  const html = '<body><section class="x">'
+    + '<div class="c"><h3>A</h3><p>Learn more about <a class="inline-link" href="/us">us</a> today.</p><a href="#">go</a></div>'
+    + '<div class="c"><h3>B</h3><p>b</p><a href="#">go</a></div>'
+    + '<div class="c"><h3>C</h3><p>c</p><a href="#">go</a></div>'
+    + '</section></body>';
+  const m = runHtml(html);
+  const card = m.blocks.find((b) => b.aliases.includes('.c'));
+  const withLink = card.variants.find((v) => v.html.includes('inline-link'));
+  assert.ok(withLink, 'no variant carries the inline-link markup at all');
+  assert.ok(withLink.html.includes('Learn more about'), 'text before the child was dropped');
+  assert.ok(withLink.html.includes('today.'), 'text after the child was dropped');
+  assert.ok(withLink.html.includes('>us<'), 'the child anchor itself was dropped');
+});
+
+test('CRITICAL 1: a node with text and two children keeps all three pieces of content', () => {
+  // parse.mjs's addText concatenates ALL of a node's direct text runs into
+  // one `.text` string — the original before/between/after interleaving is
+  // not recoverable at this layer (documented in emit.mjs). This test only
+  // asserts that nothing is silently lost: the node's own text plus both
+  // children's content must all survive serialization.
+  const html = '<body><section class="x"><div class="c">lead <h3>Head</h3> mid <p>para</p> trail</div></section></body>';
+  const m = runHtml(html);
+  const card = m.blocks.find((b) => b.aliases.includes('.c'));
+  const html1 = card.variants[0].html;
+  assert.ok(html1.includes('lead'), 'own leading text dropped');
+  assert.ok(html1.includes('mid'), 'own middle text dropped');
+  assert.ok(html1.includes('trail'), 'own trailing text dropped');
+  assert.ok(html1.includes('Head'), 'first child (h3) dropped');
+  assert.ok(html1.includes('para'), 'second child (p) dropped');
+});

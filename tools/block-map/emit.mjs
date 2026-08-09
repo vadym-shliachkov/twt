@@ -21,9 +21,21 @@ function serialize(node, budget = VARIANT_HTML_CAP) {
   const attrs = Object.entries(node.attrs || {})
     .filter(([k]) => k === 'class' || k === 'id' || k === 'href' || k === 'src' || k === 'alt')
     .map(([k, v]) => ` ${k}="${esc(v)}"`).join('');
-  const inner = node.text
-    ? esc(node.text)
-    : node.children.map((c) => serialize(c, budget / Math.max(1, node.children.length))).join('');
+  // CRITICAL FIX (review round 1): text and children are NOT mutually
+  // exclusive. `parse.mjs`'s `addText` concatenates every direct text run
+  // of a node into ONE `.text` string as it parses, so the original
+  // before/between/after interleaving relative to child elements is already
+  // lost by the time this node reaches us — there is no way to recover
+  // "text A, then <a>, then text B" from `{ text: "A B", children: [a] }`.
+  // Emitting text-then-children is therefore only an approximation of the
+  // source order, but it is the correct tradeoff: the old `text ? esc(text)
+  // : children...` branch treated the two as exclusive and silently
+  // DROPPED whichever one lost, which for ordinary prose like
+  // `<p>Learn more about <a>us</a> today.</p>` deleted the link outright.
+  // An approximation that keeps all the content beats a shortcut that
+  // deletes some of it.
+  const inner = (node.text ? esc(node.text) : '')
+    + node.children.map((c) => serialize(c, budget / Math.max(1, node.children.length))).join('');
   return `<${node.tag}${attrs}>${inner}</${node.tag}>`;
 }
 
