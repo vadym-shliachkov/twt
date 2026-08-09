@@ -22,6 +22,16 @@ const safeId = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '_') || 'x';
 // "card-grid") — the slug is a readability aid, not the uniqueness key.
 export const pageFile = (b) => `block-${safeId(b.id)}-${slug(b.name)}.html`;
 
+// Single source of truth for the dark-mode palette, so the accessibility
+// test in tests/block-map-report.test.mjs checks the value actually shipped
+// in CSS below rather than a copy liable to drift. #2f6feb (the light-mode
+// link colour, reused unchanged in dark mode until review round 1) measures
+// ~4.1:1 against #111317 — under WCAG AA's 4.5:1 for normal text, and the
+// matrix is mostly small (14px) links. #8ab4f8 clears AA with headroom
+// (~8.8:1) and is a well-established accessible link blue on near-black
+// backgrounds.
+export const DARK = { bg: '#111317', link: '#8ab4f8' };
+
 const CSS = `
 body{font:15px/1.5 system-ui,sans-serif;margin:0;padding:32px;color:#16181d;background:#fff}
 h1,h2{margin:0 0 12px} .sub{color:#666;margin:0 0 24px}
@@ -39,10 +49,11 @@ pre.mermaid{background:#f7f8fa;border:1px solid #e3e5e9;border-radius:8px;paddin
 pre{white-space:pre-wrap;word-break:break-word}
 a{color:#2f6feb}
 .note{color:#666;font-size:13px;margin:8px 0 0}
-@media(prefers-color-scheme:dark){body{background:#111317;color:#e8eaed}
+@media(prefers-color-scheme:dark){body{background:${DARK.bg};color:#e8eaed}
 .score,pre.mermaid,table{border-color:#2a2e36}pre.mermaid{background:#181b21}
 th,td{border-color:#2a2e36}.warn{background:#3a2c15;border-color:#7a5b22}
-.alias,.sub,.note,th{color:#9aa0aa}}
+.alias,.sub,.note,th{color:#9aa0aa}
+a{color:${DARK.link}}}
 `;
 
 // Exported so tests can pin behaviour directly (mutation-proof) instead of
@@ -123,7 +134,19 @@ export function matrixHtml(map) {
   const orphans = map.blocks.filter((b) => !seen.has(b.id)).sort(rank);
   body += orphans.map((b) => walk(b, 0)).join('');
 
-  return `<div class="scroll"><table>
+  // At a narrow viewport (the .scroll div's own overflow-x:auto keeps the
+  // PAGE from scrolling horizontally, but says nothing about whether there
+  // IS more to scroll to) only "Block | total" fit on screen with no visual
+  // hint that N more page columns exist off to the right. A deterministic
+  // text hint works at any viewport width without needing JS or CSS
+  // scroll-position tracking; 3 is a low-enough threshold to cover
+  // essentially any real multi-page site while staying quiet on a small
+  // 1-2 page fixture that already fits.
+  const hint = pages.length > 3
+    ? `<p class="note">↔ scroll to see all ${pages.length} pages</p>`
+    : '';
+
+  return `${hint}<div class="scroll"><table>
     <tr><th>Block</th><th>total</th>${pages.map((p) => `<th>${esc(p.url)}</th>`).join('')}</tr>
     ${body}</table></div>`;
 }

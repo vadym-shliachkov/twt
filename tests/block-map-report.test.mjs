@@ -5,8 +5,23 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
   renderReport, matrixHtml, warnBanner, skeletonMermaid, neighborhoodMermaid,
-  variantSection, markdownFor, blockPageHtml, pageFile, NEIGHBOR_CAP,
+  variantSection, markdownFor, blockPageHtml, pageFile, NEIGHBOR_CAP, DARK,
 } from '../tools/block-map/report.mjs';
+
+// WCAG 2.1 relative-luminance / contrast-ratio formulas, used only to check
+// the dark-mode palette actually shipped in report.mjs (via the exported
+// DARK constant) rather than a value duplicated here and liable to drift.
+function relLuminance(hex) {
+  const c = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrastRatio(hex1, hex2) {
+  const L1 = relLuminance(hex1), L2 = relLuminance(hex2);
+  const [light, dark] = L1 > L2 ? [L1, L2] : [L2, L1];
+  return (light + 0.05) / (dark + 0.05);
+}
 
 function fixtureMap(dir) {
   mkdirSync(dir, { recursive: true });
@@ -150,6 +165,20 @@ test('markdownFor escapes a pipe in a block name/alias so it cannot break the ta
   const md = markdownFor(map);
   assert.ok(md.includes('Weird \\| Name'), `pipe in the name must be escaped, got:\n${md}`);
   assert.ok(md.includes('.a\\|b'), `pipe in an alias must be escaped, got:\n${md}`);
+});
+
+// --- Review round 1, minors: matrix scroll hint + dark-mode link contrast -
+
+test('matrixHtml hints that it scrolls once there are enough page columns to overflow a narrow viewport', () => {
+  const many = { meta: {}, pages: Array.from({ length: 6 }, (_, i) => ({ id: 'P' + i, url: '/p' + i })), blocks: [] };
+  assert.ok(matrixHtml(many).includes('scroll to see all 6 pages'), 'a many-page matrix must hint that it scrolls');
+  const few = { meta: {}, pages: [{ id: 'P1', url: '/p1' }], blocks: [] };
+  assert.ok(!matrixHtml(few).includes('scroll to see all'), 'a single-page matrix does not need the hint');
+});
+
+test('dark-mode link colour clears WCAG AA (4.5:1) against the dark-mode background', () => {
+  const ratio = contrastRatio(DARK.link, DARK.bg);
+  assert.ok(ratio >= 4.5, `contrast ratio ${ratio.toFixed(2)}:1 is below AA (4.5:1) for link ${DARK.link} on background ${DARK.bg}`);
 });
 
 // --- Review round 1: pin the 5 previously-uncovered deviations ------------
