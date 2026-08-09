@@ -105,6 +105,57 @@ function matrixHtml(map) {
     ${body}</table></div>`;
 }
 
+// Escapes text going INTO a mermaid quoted node label. Mermaid's own
+// grammar treats a node label as a "..."-delimited string, and (with the
+// default htmlLabels config) renders that string's content via innerHTML —
+// so a literal `"` in a block name would prematurely close the label
+// (a BROKEN diagram, not just a display glitch) and a literal `<` would
+// let a block-name string become live markup inside the node instead of
+// visible text. HTML-entity-escaping the label text first defeats both:
+// Mermaid's own parser never sees a bare `"`, and its HTML renderer decodes
+// the entities back to the literal characters for DISPLAY only, never as
+// structure. The whole mermaid source is escaped a SECOND time below (in
+// skeletonMermaid/neighborhoodMermaid's final `esc(lines.join(...))`) to
+// safely embed it as the <pre> element's text content — that second pass
+// round-trips losslessly through the browser's own HTML-entity decode of
+// textContent, so this is deliberate two-layer escaping, not accidental
+// double work. See task-10-report.md for the character-by-character trace.
+const mermaidLabel = esc;
+
+// Only reused blocks (>= 2 instances). Pages collapse into one badge node.
+function skeletonMermaid(map) {
+  const keep = (map.blocks || []).filter((b) => b.reuse.instances >= 2);
+  if (!keep.length) return '<p>No block is reused — nothing to graph.</p>';
+  const ids = new Set(keep.map((b) => b.id));
+  const lines = [`flowchart LR`, `  pages["${map.meta.pages} pages"]`];
+  for (const b of keep) lines.push(`  ${b.id}["${mermaidLabel(b.name)}<br/>×${b.reuse.instances}"]`);
+  for (const b of keep) {
+    if (!(b.parents || []).some((p) => ids.has(p))) lines.push(`  pages --> ${b.id}`);
+    for (const p of b.parents || []) if (ids.has(p)) lines.push(`  ${p} --> ${b.id}`);
+  }
+  return `<pre class="mermaid">${esc(lines.join('\n'))}</pre>`;
+}
+
+// Beyond this many parents/children a flat one-hop fan-out stops being
+// readable as a diagram; the overflow is named in a plain-text note
+// instead of piling on more graph nodes. This is a READABILITY cap, not a
+// correctness one — a block with 40 parents and 40 children still produces
+// syntactically valid mermaid without it, but nobody can read that graph.
+const NEIGHBOR_CAP = 20;
+
+// One hop: parents above, the block itself, children below.
+function neighborhoodMermaid(block, byId) {
+  const lines = ['flowchart TD', `  ${block.id}["${mermaidLabel(block.name)}"]`];
+  const parents = (block.parents || []).map((p) => byId.get(p)).filter(Boolean);
+  const children = (block.children || []).map((c) => byId.get(c)).filter(Boolean);
+  for (const n of parents.slice(0, NEIGHBOR_CAP)) lines.push(`  ${n.id}["${mermaidLabel(n.name)}"] --> ${block.id}`);
+  for (const n of children.slice(0, NEIGHBOR_CAP)) lines.push(`  ${block.id} --> ${n.id}["${mermaidLabel(n.name)}"]`);
+  let note = '';
+  if (parents.length > NEIGHBOR_CAP) note += `<p class="note">+${parents.length - NEIGHBOR_CAP} more parent(s) not shown — see the reuse matrix.</p>`;
+  if (children.length > NEIGHBOR_CAP) note += `<p class="note">+${children.length - NEIGHBOR_CAP} more child(ren) not shown — see the reuse matrix.</p>`;
+  return `<pre class="mermaid">${esc(lines.join('\n'))}</pre>${note}`;
+}
+
 const shell = (title, body) =>
   `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
    <title>${esc(title)}</title><style>${CSS}</style></head><body>${body}</body></html>`;
@@ -127,7 +178,8 @@ export function renderReport(outDir) {
     <p class="sub">${esc(map.meta.pages)} pages · ${(map.blocks || []).length} unique blocks · engine: ${esc(map.meta.engine || 'static')}</p>
     ${warnBanner(map)}
     ${scorecard(map)}
-    <h2>Reuse matrix</h2>${matrixHtml(map)}`));
+    <h2>Reuse matrix</h2>${matrixHtml(map)}
+    <h2>Reuse skeleton</h2>${skeletonMermaid(map)}`));
 
   const blockPages = [];
 
