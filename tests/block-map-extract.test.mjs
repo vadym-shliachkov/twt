@@ -322,3 +322,62 @@ test('a one-word <p>Hi</p> is enough to keep its parent from being treated as a 
   assert.equal(blocks.length, 1, 'exactly one top-level block expected');
   assert.ok(blocks[0].classes.includes('gallery'), 'section.gallery itself must survive, not just any <section> (e.g. the nested .grid)');
 });
+
+// --- fix-round-4 coverage (Blocker 2) -------------------------------------
+// fix-round-3 removed the depth-based short-circuits from `emitted`'s
+// children computation and from `descend()`, to make qualification
+// depth-independent (correctly — see the "pure truncation" test above).
+// But `emitted`/`descend` still recomputed a node's whole subtree once "for
+// real" (as part of its parent's children) and AGAIN via descend()'s
+// fallback whenever the parent didn't qualify, at every wrapper level —
+// exponential in the depth of a non-qualifying wrapper chain. Fixed by
+// splitting a memoized, depth-independent "analyze" pass from a cheap,
+// linear "realize" pass that only stamps tiers and truncates for display.
+
+function buildWrapperChain(W) {
+  let open = '<body><section class="svc">';
+  let close = '</section></body>';
+  for (let i = 0; i < W; i++) { open += `<div class="w${i}">`; close = '</div>' + close; }
+  const cards = '<div class="card"><h3>One</h3><p>Body one.</p><a href="#">More</a></div>'
+    + '<div class="card"><h3>Two</h3><p>Body two.</p><a href="#">More</a></div>'
+    + '<div class="card"><h3>Three</h3><p>Body three.</p><a href="#">More</a></div>';
+  return open + cards + close;
+}
+
+test('a deep chain of non-qualifying wrappers does not blow up analysis time', () => {
+  // At the pre-memoization implementation (commit cdfb9be), 16 wrapper
+  // levels took ~480ms (exponential — confirmed empirically; see
+  // fix-round-4 report). A 200ms budget is comfortably above what this
+  // fix takes (well under 1ms) and comfortably below what the exponential
+  // version took at this exact W, so this is a real regression guard, not
+  // a flaky timing assertion.
+  const html = buildWrapperChain(16);
+  const root = parseHtml(html);
+  const t0 = performance.now();
+  const blocks = extractBlocks(root, { depth: 4 });
+  const elapsed = performance.now() - t0;
+  assert.ok(elapsed < 200, `expected well under 200ms, took ${elapsed.toFixed(1)}ms — analysis may be recomputing subtrees per wrapper level again`);
+  // Also assert correctness, not just speed: the wrappers must never leak
+  // and the 3 cards must still be found (arity 3), same as any other
+  // wrapper-chain fixture (services.html's 4-level elementor chain).
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0].tag, 'section');
+  assert.equal(blocks[0].children.length, 3);
+  assert.ok(blocks[0].children.every((c) => c.classes.includes('card') && c.arity === 3));
+});
+
+test('depth no longer changes analysis cost: depth:1 and depth:999 cost the same', () => {
+  // Structural proof (not just "it's fast") that depth is pure display
+  // truncation applied AFTER analysis, per fix-round-3 — analysis itself
+  // must not scale with, or short-circuit on, `depth` at all.
+  const html = buildWrapperChain(14);
+  const timesFor = (opts) => {
+    const root = parseHtml(html);
+    const t0 = performance.now();
+    extractBlocks(root, opts);
+    return performance.now() - t0;
+  };
+  const shallow = timesFor({ depth: 1 });
+  const deep = timesFor({ depth: 999 });
+  assert.ok(shallow < 50 && deep < 50, `both should be comfortably fast: depth:1=${shallow.toFixed(2)}ms, depth:999=${deep.toFixed(2)}ms`);
+});

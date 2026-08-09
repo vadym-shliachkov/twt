@@ -120,24 +120,35 @@ export function extractBlocks(root, opts = {}) {
   const depth = opts.depth ?? 4;
   const body = findBody(root) || root;
 
-  const emitted = (n, siblings, d) => {
-    if (SKIP.has(n.tag) || ATOM_TAGS.has(n.tag)) return null;
+  // --- Pass 1: analyze (depth-independent, memoized per node) -------------
+  //
+  // Whether a node qualifies as a block, its arity, and its atoms never
+  // depend on `d` (the tier it would be reported at) — only the FINAL
+  // `tier` field does. Earlier rounds recomputed a node's whole subtree
+  // once "for real" (as part of its parent's children) and, if the parent
+  // failed to qualify, AGAIN via descend()'s fallback at a different `d` —
+  // repeated at every wrapper level, which is exponential in the depth of a
+  // non-qualifying wrapper chain (confirmed: ~2x cost per wrapper level;
+  // W=14 wrappers took 127ms, W=200 didn't finish in 10 minutes — see
+  // fix-round-4 report, Blocker 2). Splitting the `d`-independent analysis
+  // from the `d`-dependent tier-stamping (pass 2, below) and memoizing pass
+  // 1 by node identity means every node is analyzed exactly once, however
+  // many non-qualifying wrapper ancestors it sits under.
+  const memo = new Map();
+  const analyze = (n, siblings) => {
+    if (memo.has(n)) return memo.get(n);
     const kids = n.children.filter((c) => !SKIP.has(c.tag));
+    const kidResults = kids.map((c) => analyze(c, kids));
+
+    if (SKIP.has(n.tag) || ATOM_TAGS.has(n.tag)) {
+      const result = { qualifies: false, tag: n.tag, classes: n.classes, id: n.id, arity: 1, atoms: null, node: n, kids: kidResults };
+      memo.set(n, result);
+      return result;
+    }
+
     const atoms = atomCounts(n);
     const hasEnoughTypes = distinctAtomTypes(atoms) >= 2;
     const arity = siblingArity(n, siblings);
-
-    // Children are always computed from the FULL tree — `depth` never gates
-    // this recursion. Qualification (isCluster's "no emitted descendants"
-    // check in particular) must be decided from what's REALLY there; if the
-    // cap hid real descendants from that decision, a wrapper sitting near
-    // the cap could masquerade as a leaf cluster and swallow whatever's
-    // really beneath it. depth is applied ONLY to the `children` field of
-    // an already-qualifying block, below, as pure display truncation.
-    const children = kids.flatMap((c) => {
-      const b = emitted(c, kids, d + 1);
-      return b ? [b] : (c.children.length ? descend(c, d + 1) : []);
-    });
 
     // A landmark that's a pure aggregate of other landmarks — none of its
     // own content, just relaying 1+ nested landmarks — is a wrapper, not a
@@ -145,26 +156,24 @@ export function extractBlocks(root, opts = {}) {
     // content section + footer, or a <section> that wraps exactly one other
     // <section> and adds nothing. Scoped to AGGREGATABLE tags only (see
     // above), and gated on SHAPE — does any non-landmark child carry atoms
-    // of its own — not on a text-length ratio. A ratio is length-dependent
-    // by construction: it can flip on inner-section body length alone (a
-    // <h2>+nested-<section> "aggregate" verdict changing between 100 and
-    // 150 chars of UNRELATED nested text), and it's blind to content with
-    // no text nodes at all (an <img>, an <input>, an <svg>). A <section>
-    // carrying its own heading/lede/image alongside a nested <section> — or
-    // a <footer>/<header> composing nav+form/nav+list+copyright, which
-    // isn't AGGREGATABLE at all — is never excluded, regardless of size.
+    // of its own — not on a text-length ratio (see fix-round-4, Blocker 1,
+    // for why a ratio doesn't work). A <section> carrying its own heading/
+    // lede/image alongside a nested <section> — or a <footer>/<header>
+    // composing nav+form/nav+list+copyright, which isn't AGGREGATABLE at
+    // all — is never excluded, regardless of size.
     const directLandmarkKids = kids.filter((c) => LANDMARKS.has(c.tag));
     const nonLandmarkKidsWithOwnAtoms = kids.filter((c) => !LANDMARKS.has(c.tag) && hasOwnAtoms(c));
     const isLandmarkAggregate = AGGREGATABLE.has(n.tag) && directLandmarkKids.length >= 1
       && nonLandmarkKidsWithOwnAtoms.length === 0;
     const isSemantic = (SEMANTIC_BLOCK.has(n.tag) || LANDMARKS.has(n.tag)) && !isLandmarkAggregate;
 
-    // (b) leaf cluster: "no emitted descendants" is gated on `children`, not
-    // the raw atom aggregate — atoms bubble up unchanged through any number
-    // of wrapper divs, so the aggregate alone can't tell a leaf cluster from
-    // a wrapper around one. `children` here is always the full, untruncated
-    // computation (see above), so this reflects what's really beneath n.
-    const isCluster = hasEnoughTypes && children.length === 0;
+    // (b) leaf cluster: "no emitted descendants" — a non-qualifying child's
+    // content bubbles up THROUGH it (wrapper pass-through), so "has emitted
+    // descendants" means "flattening kids through non-qualifying nodes
+    // yields >=1 qualifying node". `d`-independent, and computed once from
+    // the already-memoized kidResults — no re-walking of the DOM here.
+    const flatKids = flattenQualifying(kidResults);
+    const isCluster = hasEnoughTypes && flatKids.length === 0;
     // (a) repetition requires the same >=2-atom-types floor as (b) (the
     // single-atom-type veto — see ATOM_TAGS comment), but deliberately NOT
     // "no emitted descendants". That's rule (b)'s condition, not (a)'s: a
@@ -173,49 +182,43 @@ export function extractBlocks(root, opts = {}) {
     // the repeated node itself is still the real, nameable repeated block.
     const isRepeat = arity >= REPEAT_MIN && hasEnoughTypes;
 
-    const qualifies = isSemantic || isRepeat || isCluster;
-
-    if (!qualifies) return null;
-    return {
-      tag: n.tag, classes: n.classes, id: n.id,
-      tier: d === 0 ? 'organism' : 'molecule',
-      arity, atoms,
-      // Depth is a pure display truncation applied here, AFTER qualification
-      // has already been decided from the real tree above — capping on the
-      // CHILDREN's tier (d + 1), not this node's own d.
-      children: d + 1 >= depth ? [] : children,
-      node: n,
-      selector: selectorFor(n, 0),
+    const result = {
+      qualifies: isSemantic || isRepeat || isCluster,
+      tag: n.tag, classes: n.classes, id: n.id, arity, atoms, node: n, kids: kidResults,
     };
+    memo.set(n, result);
+    return result;
   };
 
-  // Recurse THROUGH a wrapper without emitting it.
+  const flattenQualifying = (results) => results.flatMap((r) => (r.qualifies ? [r] : flattenQualifying(r.kids)));
+
+  // --- Pass 2: realize (cheap, linear walk of the already-analyzed tree) --
   //
-  // NOTE the `d` is NOT incremented here. Depth counts EMITTED TIERS, not DOM
-  // levels. Elementor output buries a card under four nested wrapper divs; if
-  // wrappers spent depth budget, a depth cap of 4 would cut the card off before
-  // it was ever reached and services.html would map to nothing.
+  // Stamps `tier` from `d` and truncates `children` for display. No
+  // re-analysis happens here — this only ever reads `.kids`, the memoized
+  // pass-1 results — so this pass is O(node count), not exponential.
+  // Depth is applied here, exactly once, per fix-round-3: qualification
+  // (pass 1, above) never depends on `d`/`depth` at all.
   //
-  // NOTE this no longer caps on `depth` either (fix-round-3): qualification
-  // must see the full tree regardless of how deep a chain of non-qualifying
-  // wrappers runs. Real DOM trees are finite and acyclic (parse.mjs builds a
-  // strict tree from a linear token stream), so this remains bounded by
-  // actual document depth — there is no longer a depth-cap safety valve
-  // against pathologically deep markup, which is an accepted tradeoff of
-  // making depth a pure display concern; see fix-round-3 report.
-  const descend = (n, d) => {
-    const kids = n.children.filter((c) => !SKIP.has(c.tag));
-    return kids.flatMap((c) => {
-      const b = emitted(c, kids, d);
-      return b ? [b] : descend(c, d);
-    });
-  };
+  // NOTE the `d` passed to a non-qualifying node's kids is NOT incremented
+  // — depth counts EMITTED TIERS, not DOM levels. Elementor output buries a
+  // card under four nested wrapper divs; if wrappers spent depth budget, a
+  // depth cap of 4 would cut the card off before it was ever reached and
+  // services.html would map to nothing.
+  const realize = (results, d) => results.flatMap((r) => {
+    if (!r.qualifies) return realize(r.kids, d);
+    return [{
+      tag: r.tag, classes: r.classes, id: r.id,
+      tier: d === 0 ? 'organism' : 'molecule',
+      arity: r.arity, atoms: r.atoms, node: r.node,
+      children: d + 1 >= depth ? [] : realize(r.kids, d + 1),
+      selector: selectorFor(r.node, 0),
+    }];
+  });
 
   const top = body.children.filter((c) => !SKIP.has(c.tag));
-  return top.flatMap((c) => {
-    const b = emitted(c, top, 0);
-    return b ? [b] : descend(c, 0);
-  });
+  const topResults = top.map((c) => analyze(c, top));
+  return realize(topResults, 0);
 }
 
 function findBody(root) {
