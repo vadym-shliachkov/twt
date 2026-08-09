@@ -6,11 +6,21 @@ import { join } from 'node:path';
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 export const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// Ids are meant to be `B\d+`-shaped (identity.mjs/emit.mjs), but this
+// renderer treats block-map.json as a persisted artifact that a future
+// consumer or the model (Task 14) may have touched before this file reads
+// it back — never trust an id enough to build a filesystem path or an HTML
+// attribute from it directly. Strips everything outside the filesystem/
+// URL-safe charset before it ever reaches pageFile's output, closing both
+// a path-traversal write (join(outDir, pageFile(b)) with an id containing
+// `../`) and an attribute-breakout read (href="${pageFile(b)}" with an id
+// containing `"`), reviewed round 1.
+const safeId = (id) => String(id).replace(/[^A-Za-z0-9_-]/g, '_') || 'x';
 // The id prefix (unique per block, by construction in identity.mjs/emit.mjs)
 // guarantees the filename is unique even when two different block NAMES
 // slugify to the same string (e.g. "Card grid" and "Card-grid" both ->
 // "card-grid") — the slug is a readability aid, not the uniqueness key.
-export const pageFile = (b) => `block-${b.id}-${slug(b.name)}.html`;
+export const pageFile = (b) => `block-${safeId(b.id)}-${slug(b.name)}.html`;
 
 const CSS = `
 body{font:15px/1.5 system-ui,sans-serif;margin:0;padding:32px;color:#16181d;background:#fff}
@@ -91,7 +101,7 @@ export function matrixHtml(map) {
   const counts = (b, url) => b.instances.filter((i) => i.page === url).length;
 
   const row = (b, depth) => `<tr class="${depth ? 'kid' : ''}">
-    <td style="padding-left:${12 + depth * 16}px">${depth ? '└ ' : ''}<a href="${pageFile(b)}">${esc(b.name)}</a>
+    <td style="padding-left:${12 + depth * 16}px">${depth ? '└ ' : ''}<a href="${esc(pageFile(b))}">${esc(b.name)}</a>
       <span class="alias">${esc((b.aliases || []).join(' '))}</span></td>
     <td class="n">×${b.reuse.instances}</td>
     ${pages.map((p) => { const n = counts(b, p.url); return `<td class="n">${n ? (n > 1 ? '×' + n : '●') : ''}</td>`; }).join('')}

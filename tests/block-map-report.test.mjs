@@ -68,6 +68,30 @@ test('report renders with zero blocks without throwing', () => {
   assert.ok(readFileSync(join(dir, 'report.html'), 'utf8').includes('/app'), 'the js-rendered warning must name the page');
 });
 
+// --- Review round 1, minors: id sanitisation (attribute + path safety) ----
+//
+// block-map.json is a persisted artifact that a future consumer (or the
+// model, per Task 14) may have touched before this renderer reads it —
+// never trust an id enough to build a filesystem path or an unescaped HTML
+// attribute from it directly.
+
+test('pageFile sanitises the id so it cannot escape outDir via a path or carry a quote into a filename', () => {
+  const evil = { id: '../../evil" onmouseover=alert(1)', name: 'X' };
+  const file = pageFile(evil);
+  assert.ok(!file.includes('..'), `path traversal survived into the filename: ${file}`);
+  assert.ok(!file.includes('"'), `a quote survived into the filename: ${file}`);
+  assert.ok(!file.includes('/') && !file.includes('\\'), `a path separator survived into the filename: ${file}`);
+});
+
+test('matrixHtml escapes the href it builds from a block id, closing an attribute-breakout', () => {
+  const map = {
+    meta: { pages: 1 }, pages: [{ id: 'P1', url: '/p' }],
+    blocks: [{ id: 'x" onmouseover="alert(1)', name: 'X', tier: 'organism', aliases: [], parents: [], children: [], reuse: { pages: 1, instances: 1 }, instances: [] }],
+  };
+  const html = matrixHtml(map);
+  assert.ok(!html.includes('onmouseover='), `a raw id must never let an href attribute break out:\n${html}`);
+});
+
 // --- Review round 1: pin the 5 previously-uncovered deviations ------------
 //
 // Each of these five was a real fix over the brief's reference code, but
