@@ -54,8 +54,28 @@ function looksLikeHtml(body) {
   return /<\s*(!doctype\s+html|html[\s>]|head[\s>]|body[\s>])/i.test(head) || /<[a-zA-Z][^>]*>/.test(head);
 }
 
+// Follow any redirect on the START url (apex -> www, http -> https, etc. —
+// the single most common redirect shape on the web) so the crawl's
+// same-host baseline reflects the actual destination. Mirrors
+// tools/site-crawl.mjs's resolveStartUrl (same problem, same fix there:
+// see its "Follow any redirect on the start URL" comment) — without this,
+// a site whose homepage redirects cross-host would fail sameHost() against
+// itself on page one and fromUrl would return zero pages for what is, from
+// a user's perspective, a perfectly normal site. The body of this fetch is
+// discarded and the main loop re-fetches `start` — a second request for
+// the home page, same tradeoff site-crawl.mjs already makes, in exchange
+// for not forking two different "what is the crawl root" code paths.
+async function resolveStart(url) {
+  try {
+    const res = await fetchUrl(url);
+    if (res && res.status >= 200 && res.status < 300 && res.url) return normUrl(res.url);
+  } catch { /* unreachable start surfaces naturally when the main loop re-fetches it */ }
+  return url;
+}
+
 export async function fromUrl(startUrl, { max = 20 } = {}) {
-  const start = normUrl(startUrl);
+  const given = normUrl(startUrl);
+  const start = await resolveStart(given);
   const queue = [start], seen = new Set(), pages = [];
   while (queue.length && pages.length < max) {
     const url = queue.shift();
@@ -93,11 +113,25 @@ export async function fromFigmaExport(jsonPath) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.frames)) {
     throw new Error(`figma export at ${jsonPath} has no "frames" array — expected { frames: [{ name, html }] }`);
   }
-  return raw.frames.map((f, i) => ({
-    id: pageId(i),
-    url: 'figma://' + encodeURIComponent(f?.name ?? `frame-${i + 1}`),
-    html: f?.html || '',
-    css: f?.css || '',
-    jsRendered: false,
-  }));
+  // Task 9/10 key page identity off `Page.url` (the reuse matrix filters
+  // instances by `i.page === url` per column), so two frames sharing a
+  // name must not collide on `figma://Name` — that would silently fold two
+  // distinct frames' instances onto one matrix column. Disambiguate
+  // deterministically by first-seen order: the first frame with a given
+  // name keeps the bare url, later ones get `~2`, `~3`, ... — a pure
+  // function of input order, never of anything computed later.
+  const seenNames = new Map();
+  return raw.frames.map((f, i) => {
+    const name = f?.name ?? `frame-${i + 1}`;
+    const n = (seenNames.get(name) || 0) + 1;
+    seenNames.set(name, n);
+    const suffix = n > 1 ? `~${n}` : '';
+    return {
+      id: pageId(i),
+      url: 'figma://' + encodeURIComponent(name) + suffix,
+      html: f?.html || '',
+      css: f?.css || '',
+      jsRendered: false,
+    };
+  });
 }
