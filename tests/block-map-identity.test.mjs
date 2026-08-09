@@ -281,3 +281,23 @@ test('9-page: app.html contributes zero blocks (JS-rendered, must not emit a thi
   const fromApp = blocks.flatMap((b) => b.instances).filter((i) => i.page === '/app');
   assert.equal(fromApp.length, 0);
 });
+
+// --- Fix round minor: the gray-band/blocks id-space cross-check ----------
+//
+// identity.mjs used to carry a comment claiming this agreement was
+// "verified by a dedicated cross-check test" when no such test existed.
+// This IS that test — it actually resolves every grayBand pair's `a`/`b`
+// id against the real `blocks[].id` set, on both the 3-page and 9-page
+// fixtures (the 9-page run has a richer, longer `groups` array, a better
+// stress case for the "same index basis" invariant than 3 pages alone).
+test('gray-band ids always resolve to real block ids (cross-check)', () => {
+  for (const pages of [PAGES, ALL_PAGES]) {
+    const { blocks, grayBand } = cluster(instancesFor(pages));
+    assert.ok(grayBand.length > 0, 'sanity: this fixture must produce a non-empty gray band to test against');
+    const ids = new Set(blocks.map((b) => b.id));
+    for (const g of grayBand) {
+      assert.ok(ids.has(g.a), `grayBand.a=${g.a} does not match any block id`);
+      assert.ok(ids.has(g.b), `grayBand.b=${g.b} does not match any block id`);
+    }
+  }
+});

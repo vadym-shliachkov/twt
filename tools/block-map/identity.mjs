@@ -293,7 +293,22 @@ export function cluster(instances) {
   // that `blocks` below is built from — so the 'B'+(index+1) ids assigned
   // here and the ids `blocks` assigns independently necessarily agree (both
   // are pure functions of `groups`' index, and `groups` is never reordered
-  // or filtered between the two — verified by a dedicated cross-check test).
+  // or filtered between the two). Verified by
+  // tests/block-map-identity.test.mjs's "gray-band ids always resolve to
+  // real block ids (cross-check)" test — if this coupling is ever broken
+  // (e.g. a future edit sorts or filters `groups` between this loop and the
+  // `blocks` construction below), that test is what will catch it.
+  //
+  // Also note: this uses the MAXIMUM pairwise score across every member of
+  // group a against every member of group b (and the excerpts come from
+  // that specific closest pair), not the brief's original
+  // `similarity(groups[a].fp, groups[b].fp)` (a single fingerprint per
+  // group). That change was necessary once groups could hold >1 member
+  // pre-merge (union-find, then complete-linkage) — there is no longer one
+  // fingerprint that represents a whole group — but it does mean WHICH
+  // pairs and excerpts surface can differ from a naive single-fingerprint
+  // comparison. Disclosed here and in task-7-report.md's Step 5 minors
+  // section.
   const gray = [];
   for (let a = 0; a < groups.length; a++) {
     for (let b = a + 1; b < groups.length; b++) {
