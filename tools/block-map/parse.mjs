@@ -25,12 +25,29 @@ const NAMED_ENTITIES = {
   mdash: '—', ndash: '–', hellip: '…',
 };
 
+// String.fromCodePoint throws RangeError outside 0..0x10FFFF (and for
+// non-finite input) — a malformed or adversarial numeric entity like
+// `&#x110000;` or `&#xFFFFFFFFFF;` must not abort parsing of an entire
+// page (parser contract: "it never throws, it recovers" — see file header).
+// Out-of-range code points are left as the raw, un-decoded entity text
+// instead. Lone surrogates (e.g. `&#xD800;`) and `&#x0;` are within range
+// and decode normally — only the numeric bound is checked here.
+function isValidCodePoint(cp) {
+  return Number.isFinite(cp) && cp >= 0 && cp <= 0x10FFFF;
+}
+
 function decodeEntities(s) {
   if (s.indexOf('&') === -1) return s;
   let out = s.replace(/&(lt|gt|quot|apos|nbsp|ldquo|rdquo|lsquo|rsquo|mdash|ndash|hellip);/g,
     (m, name) => NAMED_ENTITIES[name]);
-  out = out.replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => String.fromCodePoint(parseInt(hex, 16)));
-  out = out.replace(/&#(\d+);/g, (m, dec) => String.fromCodePoint(parseInt(dec, 10)));
+  out = out.replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => {
+    const cp = parseInt(hex, 16);
+    return isValidCodePoint(cp) ? String.fromCodePoint(cp) : m;
+  });
+  out = out.replace(/&#(\d+);/g, (m, dec) => {
+    const cp = parseInt(dec, 10);
+    return isValidCodePoint(cp) ? String.fromCodePoint(cp) : m;
+  });
   out = out.replace(/&amp;/g, '&');
   return out;
 }
@@ -62,8 +79,15 @@ export function parseHtml(html) {
   let last = 0, m;
 
   const top = () => stack[stack.length - 1];
+  // Decode BEFORE collapsing/trimming whitespace, not after: `&nbsp;` (and
+  // any other whitespace-producing entity) decodes to a real space
+  // character, and that character needs to go through the SAME collapse+
+  // trim pass real whitespace does — otherwise "&nbsp;leading" keeps its
+  // leading space past trim(), and "a&nbsp;&nbsp;&nbsp;b" keeps three
+  // spaces instead of collapsing to one, because collapse/trim already
+  // ran before the entity became a space character.
   const addText = (s) => {
-    const t = decodeEntities(s.replace(/\s+/g, ' ').trim());
+    const t = decodeEntities(s).replace(/\s+/g, ' ').trim();
     if (t) top().text = (top().text ? top().text + ' ' : '') + t;
   };
 
@@ -101,7 +125,10 @@ export function parseHtml(html) {
         continue;
       }
       const end = close;
-      el.text = tag === 'title' ? html.slice(tokRe.lastIndex, end).trim() : '';
+      // Same decode-then-collapse-then-trim order as addText, above — a
+      // title bypassing decodeEntities entirely would leave literal
+      // "&ldquo;" etc. in page titles for every downstream consumer.
+      el.text = tag === 'title' ? decodeEntities(html.slice(tokRe.lastIndex, end)).replace(/\s+/g, ' ').trim() : '';
       tokRe.lastIndex = end;
       last = end;
       continue;
