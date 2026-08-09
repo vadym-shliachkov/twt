@@ -102,6 +102,43 @@ test('CRITICAL 1: serialize() keeps both text and children — an inline link in
   assert.ok(withLink.html.includes('>us<'), 'the child anchor itself was dropped');
 });
 
+test('IMPORTANT 2: an already-encoded &amp; in an href is not double-escaped', () => {
+  // parse.mjs's attrsOf() never decodes entities in attribute values (only
+  // node.text goes through decodeEntities), so a source href like
+  // `href="/x?a=1&amp;b=2"` — the spec-correct way to write a literal `&`
+  // in an href, and common on real sites — arrives here STILL encoded, as
+  // the literal string "/x?a=1&amp;b=2". Escaping `&` again on top of that
+  // corrupts the URL into "&amp;amp;".
+  const html = '<body><section class="x">'
+    + '<div class="c"><h3>A</h3><p>a</p><a class="cta" href="/x?a=1&amp;b=2">go</a></div>'
+    + '<div class="c"><h3>B</h3><p>b</p><a href="#">go</a></div>'
+    + '<div class="c"><h3>C</h3><p>c</p><a href="#">go</a></div>'
+    + '</section></body>';
+  const m = runHtml(html);
+  const card = m.blocks.find((b) => b.aliases.includes('.c'));
+  const v = card.variants.find((x) => x.html.includes('/x?a=1'));
+  assert.ok(v, 'variant carrying the crafted href was not found');
+  assert.ok(v.html.includes('href="/x?a=1&amp;b=2"'), `href was double-encoded: ${v.html}`);
+  assert.ok(!v.html.includes('&amp;amp;'), 'href was double-escaped');
+});
+
+test('IMPORTANT 2: a bare & in text content is still escaped (text IS decoded, unlike attrs)', () => {
+  // Card A gets an extra <span class="tag"> child so it is structurally
+  // distinct from B/C (different class shape) and always lands in its own
+  // variant bucket, regardless of how the bucket key treats attribute
+  // values or inter-tag text — this test cares only about text escaping.
+  const html = '<body><section class="x">'
+    + '<div class="c"><h3>A</h3><p>Widgets & Gadgets</p><span class="tag">New</span><a href="#">go</a></div>'
+    + '<div class="c"><h3>B</h3><p>b</p><a href="#">go</a></div>'
+    + '<div class="c"><h3>C</h3><p>c</p><a href="#">go</a></div>'
+    + '</section></body>';
+  const m = runHtml(html);
+  const card = m.blocks.find((b) => b.aliases.includes('.c'));
+  const v = card.variants.find((x) => x.html.includes('tag'));
+  assert.ok(v, 'variant carrying the distinguishing <span class="tag"> was not found');
+  assert.ok(v.html.includes('Widgets &amp; Gadgets'), `bare & in text was not escaped: ${v.html}`);
+});
+
 test('CRITICAL 1: a node with text and two children keeps all three pieces of content', () => {
   // parse.mjs's addText concatenates ALL of a node's direct text runs into
   // one `.text` string — the original before/between/after interleaving is

@@ -14,13 +14,27 @@ const VARIANT_HTML_CAP = 4000;
 // as the literal string `<script>alert(1)</script>`. Interpolating it raw would
 // re-emit it as LIVE MARKUP inside block-map.json's variant html — which the
 // Task 10 renderer and the future a11y consumer then read back as structure.
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Two DIFFERENT escapers, not one (review round 1, IMPORTANT 2): text and
+// attribute values arrive from parse.mjs in different states.
+//  - `node.text` is DECODED (parse.mjs's decodeEntities already turned
+//    `&amp;` into `&`) — so it must be escaped for `&`, `<`, `>` to be safe
+//    to re-embed as element content.
+//  - `node.attrs` values are RAW/undecoded — parse.mjs's attrsOf() never
+//    calls decodeEntities on them — so a source `href="/x?a=1&amp;b=2"`
+//    (the spec-correct way to write a literal `&` in an href, common on
+//    real sites) arrives here STILL encoded, as the literal characters
+//    "&amp;b=2". Escaping `&` again on top of that turns it into
+//    "&amp;amp;b=2", corrupting the URL. Attribute values only need `"`
+//    (breaks out of the attribute), `<` and `>` (technically-invalid but
+//    defensive) escaped — `&` must be left exactly as the source wrote it.
+const escText = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const escAttr = (s) => String(s).replace(/["<>]/g, (c) => ({ '"': '&quot;', '<': '&lt;', '>': '&gt;' }[c]));
 
 function serialize(node, budget = VARIANT_HTML_CAP) {
   if (budget <= 0) return '';
   const attrs = Object.entries(node.attrs || {})
     .filter(([k]) => k === 'class' || k === 'id' || k === 'href' || k === 'src' || k === 'alt')
-    .map(([k, v]) => ` ${k}="${esc(v)}"`).join('');
+    .map(([k, v]) => ` ${k}="${escAttr(v)}"`).join('');
   // CRITICAL FIX (review round 1): text and children are NOT mutually
   // exclusive. `parse.mjs`'s `addText` concatenates every direct text run
   // of a node into ONE `.text` string as it parses, so the original
@@ -34,7 +48,7 @@ function serialize(node, budget = VARIANT_HTML_CAP) {
   // `<p>Learn more about <a>us</a> today.</p>` deleted the link outright.
   // An approximation that keeps all the content beats a shortcut that
   // deletes some of it.
-  const inner = (node.text ? esc(node.text) : '')
+  const inner = (node.text ? escText(node.text) : '')
     + node.children.map((c) => serialize(c, budget / Math.max(1, node.children.length))).join('');
   return `<${node.tag}${attrs}>${inner}</${node.tag}>`;
 }
