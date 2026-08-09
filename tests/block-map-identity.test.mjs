@@ -203,11 +203,11 @@ test('nameFor: a co-occurring utility class never wins over a more specific real
   assert.equal(nameFor(mem(['card', 'text-center'])), 'Card');
   assert.equal(nameFor(mem(['plan', 'text-lg'])), 'Plan');
   assert.equal(nameFor(mem(['nav', 'content-nav'])), 'Navigation');
-  // Testimonial is the CURRENT label for the quote|testimonial|review
-  // category; Step 4 renames the singular-item case to "Quote" — that
-  // rename is out of scope here, this test only proves "copyright" no
-  // longer wins.
-  assert.equal(nameFor(mem(['quote', 'copyright'])), 'Testimonial');
+  // "Quote" is the item-level label for the quote|testimonial|review
+  // category as of Step 4 (was "Testimonial" when this test was first
+  // written in Step 3 — the label changed, but the property under test
+  // here, "copyright" never wins, still holds).
+  assert.equal(nameFor(mem(['quote', 'copyright'])), 'Quote');
 });
 
 test('nameFor: a Tailwind-styled card still reads as Card, not Heading group', () => {
@@ -221,4 +221,63 @@ test('nameFor: BEM element .hero__copy still reads as Heading group (no regressi
 test('nameFor: hyphen-compound semantic classes still resolve (site-head, site-foot)', () => {
   assert.equal(nameFor(mem(['site-head'])), 'Site header');
   assert.equal(nameFor(mem(['site-foot'])), 'Site footer');
+});
+
+// --- Fix round: reconcile names with GROUND-TRUTH, all 9 pages -----------
+//
+// Container (organism, plural) vs item (molecule, singular) now read
+// differently, matching GROUND-TRUTH's own domain vocabulary rather than a
+// bare "<Noun> grid" concatenation (which would get 2 of 4 wrong: a
+// Testimonial grid holds Quotes, a Pricing grid holds Plans — neither
+// container word is its item word + "grid").
+const ALL_PAGES = [
+  'index.html', 'services.html', 'pricing.html', 'app.html',
+  'card-with-list.html', 'bem-card.html', 'landmark-free.html',
+  'page-wrap.html', 'data-table.html',
+];
+
+test('9-page GROUND-TRUTH: container/item naming matches for every documented alias', () => {
+  const { blocks } = cluster(instancesFor(ALL_PAGES));
+  const byAlias = (alias) => blocks.find((b) => b.aliases.includes(alias));
+
+  assert.equal(byAlias('.site-head').name, 'Site header');
+  assert.equal(byAlias('.site-foot').name, 'Site footer');
+  assert.equal(byAlias('.hero').name, 'Hero');
+  assert.equal(byAlias('.hero__copy').name, 'Heading group');
+  assert.equal(byAlias('.logos').name, 'Logo row');
+  assert.equal(byAlias('.plans').name, 'Pricing grid');
+  assert.equal(byAlias('.plan').name, 'Plan');
+  assert.equal(byAlias('.quotes').name, 'Testimonial grid');
+  assert.equal(byAlias('.quote').name, 'Quote');
+  assert.equal(byAlias('.pkgs').name, 'Package grid');
+  assert.equal(byAlias('.pkg').name, 'Package');
+  assert.equal(byAlias('.feats').name, 'Feature list');
+
+  const mainBlock = blocks.find((b) => b.aliases.includes('main'));
+  assert.ok(mainBlock, 'landmark-free.html\'s bare <main> must still be its own block');
+  assert.equal(mainBlock.name, 'About content');
+
+  const tableBlock = blocks.find((b) => b.aliases.includes('table'));
+  assert.ok(tableBlock, 'data-table.html\'s bare <table> must still be its own block');
+  assert.equal(tableBlock.name, 'Data table');
+});
+
+test('9-page: block names are unique within a run', () => {
+  const { blocks } = cluster(instancesFor(ALL_PAGES));
+  const names = blocks.map((b) => b.name);
+  const dupes = names.filter((n, i) => names.indexOf(n) !== i);
+  assert.equal(dupes.length, 0, `duplicate names found: ${[...new Set(dupes)].join(', ')}`);
+  // Sanity: this fixture is KNOWN to produce same-named-different-block
+  // collisions before dedup (page-wrap's Hero/Site header/Site footer are
+  // structurally too different from the 3-page versions to merge — verified
+  // separately at similarity 0.295 and 0.5973, both well under SPLIT_AT for
+  // site-head — so without a dedup pass this assertion would catch real,
+  // reproduced duplicates, not a hypothetical).
+  assert.ok(blocks.length >= 20, `sanity: expected a rich 9-page block set, got ${blocks.length}`);
+});
+
+test('9-page: app.html contributes zero blocks (JS-rendered, must not emit a thin tree)', () => {
+  const { blocks } = cluster(instancesFor(ALL_PAGES));
+  const fromApp = blocks.flatMap((b) => b.instances).filter((i) => i.page === '/app');
+  assert.equal(fromApp.length, 0);
 });

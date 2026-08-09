@@ -24,12 +24,29 @@ const ROLE_NOUN = [
   [['nav', 'menu'], 'Navigation'],
   [['card', 'box', 'teaser', 'tile'], 'Card'],
   [['plan', 'pricing', 'tier'], 'Plan'],
-  [['quote', 'testimonial', 'review'], 'Testimonial'],
+  // Item-level label is "Quote" (GROUND-TRUTH: `.quote` -> "Quote"), NOT
+  // "Testimonial" — the container reads as "Testimonial grid" via
+  // GRID_NOUN below, but the item itself is the quotation, not "a
+  // testimonial". Renamed from the original "Testimonial" label.
+  [['quote', 'testimonial', 'review'], 'Quote'],
+  [['pkg', 'package'], 'Package'],
+  [['feat', 'feats'], 'Feature list'],
   [['grid', 'list', 'features', 'related', 'svc', 'services'], 'Card grid'],
   [['cta', 'action'], 'CTA band'],
   [['logo'], 'Logo row'],
   [['copy', 'content', 'text'], 'Heading group'],
 ];
+
+// Organism-tier wrapping for a repeatable-item noun: the CONTAINER reads
+// differently from the ITEM it holds ("a Testimonial grid holds Quotes", "a
+// Pricing grid holds Plans") — a bare "<Noun> grid" concatenation gets 2 of
+// these 4 wrong. Only applied when the matched category noun is one of
+// these keys AND the block's own tier is 'organism'; molecule-tier blocks
+// (the item itself) use the bare noun unmodified. 'Card grid' is excluded
+// on purpose — it is already its own directly-matched category label (see
+// ROLE_NOUN above), so wrapping it again would double up ("Card grid
+// grid").
+const GRID_NOUN = { Card: 'Card', Plan: 'Pricing', Quote: 'Testimonial', Package: 'Package' };
 
 // A class contributes candidate TOKENS at two priority levels:
 //
@@ -63,8 +80,30 @@ function matchCategory(token) {
   return null;
 }
 
+// Reads a short label off the block's first heading (h1-h6), for the one
+// case where NO class/id/tag signal exists at all: a bare `<main>` whose
+// only content is a heading + prose (landmark-free.html: `<main><h1>About
+// Us</h1><p>...` -> GROUND-TRUTH wants "About content"). Deliberately
+// narrow — only the FIRST WORD of the first heading, so "About Us" ->
+// "About" -> "About content". This is a tag-scoped heuristic (only used
+// for `main`, see the `tag === 'main'` fallback below), not a general
+// content-sniffing mechanism.
+function firstHeadingWord(node) {
+  if (/^h[1-6]$/.test(node.tag) && node.text) return node.text.trim().split(/\s+/)[0];
+  for (const c of node.children) {
+    const found = firstHeadingWord(c);
+    if (found) return found;
+  }
+  return null;
+}
+
+function tierWrapped(noun, tier) {
+  return tier === 'organism' && GRID_NOUN[noun] ? `${GRID_NOUN[noun]} grid` : noun;
+}
+
 export function nameFor(members) {
   const rawClasses = members.flatMap((m) => [...m.block.classes, m.block.id]).filter(Boolean).map((c) => c.toLowerCase());
+  const tier = members[0].block.tier;
 
   const primaryTokens = [];
   const fallbacks = []; // [{ blockToken, elementRaw }]
@@ -76,7 +115,7 @@ export function nameFor(members) {
 
   for (const token of primaryTokens) {
     const noun = matchCategory(token);
-    if (noun) return noun;
+    if (noun) return tierWrapped(noun, tier);
   }
   for (const { blockToken, elementRaw } of fallbacks) {
     const noun = matchCategory(blockToken);
@@ -87,7 +126,34 @@ export function nameFor(members) {
   if (tag === 'header') return 'Site header';
   if (tag === 'footer') return 'Site footer';
   if (tag === 'nav') return 'Navigation';
-  return members[0].block.tier === 'organism' ? 'Section' : 'Group';
+  if (tag === 'table') return 'Data table';
+  if (tag === 'main') {
+    const word = firstHeadingWord(members[0].block.node);
+    if (word) return `${word} content`;
+  }
+  return tier === 'organism' ? 'Section' : 'Group';
+}
+
+// Names are a best-effort heuristic — collisions are expected (two
+// structurally-different real blocks can land on the same label, e.g.
+// page-wrap.html's Hero/Site header/Site footer are real, separate
+// canonical blocks that are simply too different from the 3-page versions
+// to merge — measured similarity 0.295 / 0.5973, both clearly below
+// SPLIT_AT, not a near-miss). Deduplicated AFTER all names are computed,
+// deterministically, in `blocks` array order (which is itself already
+// order-invariant — see completeLinkageClusters) — the FIRST block to use
+// a name keeps it bare; later ones get " (2)", " (3)", etc. This never
+// changes WHICH blocks exist or what they contain, only the display label.
+function dedupeNames(blocks) {
+  const total = new Map();
+  for (const b of blocks) total.set(b.name, (total.get(b.name) || 0) + 1);
+  const seen = new Map();
+  for (const b of blocks) {
+    if (total.get(b.name) <= 1) continue;
+    const n = (seen.get(b.name) || 0) + 1;
+    seen.set(b.name, n);
+    if (n > 1) b.name = `${b.name} (${n})`;
+  }
 }
 
 function excerpt(block) {
@@ -268,6 +334,7 @@ export function cluster(instances) {
   });
 
   linkEdges(blocks);
+  dedupeNames(blocks);
   return { blocks, grayBand, unadjudicated: Math.max(0, gray.length - grayBand.length) };
 }
 
