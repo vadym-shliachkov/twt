@@ -158,15 +158,31 @@ export function nameFor(members) {
 // canonical blocks that are simply too different from the 3-page versions
 // to merge — measured similarity 0.295 / 0.5973, both clearly below
 // SPLIT_AT, not a near-miss). Deduplicated AFTER all names are computed,
-// deterministically, in `blocks` array order (which is itself already
-// order-invariant — see completeLinkageClusters) — the FIRST block to use
-// a name keeps it bare; later ones get " (2)", " (3)", etc. This never
-// changes WHICH blocks exist or what they contain, only the display label.
+// deterministically — the MOST-REUSED colliding block (by reuse.instances,
+// then reuse.pages, as a tiebreak) keeps the bare name; the rest get
+// " (2)", " (3)", etc, ordered by that same ranking. This never changes
+// WHICH blocks exist or what they contain, only the display label.
+//
+// USER-FACING FIX (flagged by Task 7, applied at Task 10 review — these
+// strings are the block-map report's matrix row labels): this used to walk
+// `blocks` in its plain array order, which is content-lexicographic (see
+// completeLinkageClusters), not reuse-ranked. On the 9-page fixture that
+// gave the bare "Card" to bem-card.html's structurally-distinct 3-instance
+// one-off while the real, dominant 9-instance/3-page canonical Card
+// (`.card`, `.service-box`, `.teaser`) carried the "(2)" suffix — backwards
+// from what a reader of the report would expect, and not even consistent:
+// "Site header"'s collision on the same fixture happened to land the bare
+// name on the dominant block already, purely because of where each
+// candidate sat in that unrelated array order. Sorting a COPY of `blocks`
+// by reuse before assigning suffixes (and mutating the shared block objects
+// through that copy) fixes the assignment without touching `blocks` itself
+// — its order, ids, and every other field are unchanged.
 function dedupeNames(blocks) {
   const total = new Map();
   for (const b of blocks) total.set(b.name, (total.get(b.name) || 0) + 1);
   const seen = new Map();
-  for (const b of blocks) {
+  const byReuse = blocks.slice().sort((a, b) => b.reuse.instances - a.reuse.instances || b.reuse.pages - a.reuse.pages);
+  for (const b of byReuse) {
     if (total.get(b.name) <= 1) continue;
     const n = (seen.get(b.name) || 0) + 1;
     seen.set(b.name, n);

@@ -269,20 +269,29 @@ const ALL_PAGES = [
 
 test('9-page GROUND-TRUTH: container/item naming matches for every documented alias', () => {
   const { blocks } = cluster(instancesFor(ALL_PAGES));
+  // page-wrap.html deliberately has near-duplicate .site-head/.site-foot/.hero
+  // blocks that do NOT merge with the 3-page canonical versions (GROUND-TRUTH
+  // assertion 9) — so more than one block can share the exact same alias, and
+  // .find() below returns whichever one sits first in `blocks`' own array
+  // order, which is unrelated to which one is the reuse-dominant "canonical"
+  // block. This test is about nameFor()'s CATEGORY-NOUN heuristic, not about
+  // which colliding block wins the bare-vs-"(2)" dedupe suffix (that's
+  // covered separately below), so strip any dedupe suffix before comparing.
   const byAlias = (alias) => blocks.find((b) => b.aliases.includes(alias));
+  const noun = (b) => b.name.replace(/ \(\d+\)$/, '');
 
-  assert.equal(byAlias('.site-head').name, 'Site header');
-  assert.equal(byAlias('.site-foot').name, 'Site footer');
-  assert.equal(byAlias('.hero').name, 'Hero');
-  assert.equal(byAlias('.hero__copy').name, 'Heading group');
-  assert.equal(byAlias('.logos').name, 'Logo row');
-  assert.equal(byAlias('.plans').name, 'Pricing grid');
-  assert.equal(byAlias('.plan').name, 'Plan');
-  assert.equal(byAlias('.quotes').name, 'Testimonial grid');
-  assert.equal(byAlias('.quote').name, 'Quote');
-  assert.equal(byAlias('.pkgs').name, 'Package grid');
-  assert.equal(byAlias('.pkg').name, 'Package');
-  assert.equal(byAlias('.feats').name, 'Feature list');
+  assert.equal(noun(byAlias('.site-head')), 'Site header');
+  assert.equal(noun(byAlias('.site-foot')), 'Site footer');
+  assert.equal(noun(byAlias('.hero')), 'Hero');
+  assert.equal(noun(byAlias('.hero__copy')), 'Heading group');
+  assert.equal(noun(byAlias('.logos')), 'Logo row');
+  assert.equal(noun(byAlias('.plans')), 'Pricing grid');
+  assert.equal(noun(byAlias('.plan')), 'Plan');
+  assert.equal(noun(byAlias('.quotes')), 'Testimonial grid');
+  assert.equal(noun(byAlias('.quote')), 'Quote');
+  assert.equal(noun(byAlias('.pkgs')), 'Package grid');
+  assert.equal(noun(byAlias('.pkg')), 'Package');
+  assert.equal(noun(byAlias('.feats')), 'Feature list');
 
   const mainBlock = blocks.find((b) => b.aliases.includes('main'));
   assert.ok(mainBlock, 'landmark-free.html\'s bare <main> must still be its own block');
@@ -305,6 +314,46 @@ test('9-page: block names are unique within a run', () => {
   // site-head — so without a dedup pass this assertion would catch real,
   // reproduced duplicates, not a hypothetical).
   assert.ok(blocks.length >= 20, `sanity: expected a rich 9-page block set, got ${blocks.length}`);
+});
+
+// Task 10 review finding (deferred to here, since these strings are the
+// block-map report's matrix row labels): dedupeNames used to walk `blocks`
+// in its existing content-lexicographic array order, so on a name
+// collision the FIRST block in that order kept the bare name regardless of
+// which one is the real, dominant, GROUND-TRUTH block. On the 9-page
+// fixture this produced "Card (2)" for the canonical 9-instance/3-page
+// Card (`.card`, `.service-box`, `.teaser`) while bem-card.html's
+// structurally-distinct 3-instance/1-page one-off `.card` kept the bare
+// "Card" — backwards from what a reader of the report would expect. Same
+// pattern hit "Card grid" (3-page canonical vs bem's 1-page one-off) and
+// "Site footer" (3-page canonical vs page-wrap's 1-page one-off), though
+// not "Site header" for this fixture's particular array order, which is
+// exactly why the array-order dependence is the bug: it's a coin flip per
+// collision, not a rule. Fixed by sorting the dedup pass itself by reuse
+// (instances desc, then pages desc) before assigning suffixes, so the most-
+// reused block always keeps the bare name — the returned `blocks` array's
+// own order, ids, partition, and every other field are untouched; only
+// which colliding block gets the "(2)" suffix changes.
+test('9-page: dedupe keeps the bare name on the MORE-reused block, not array order', () => {
+  const { blocks } = cluster(instancesFor(ALL_PAGES));
+  const canonicalCard = blocks.find((b) => b.aliases.includes('.service-box'));
+  const oneOffCard = blocks.find((b) => b.aliases.includes('.card__body') === false && b.aliases.includes('.card') && !b.aliases.includes('.service-box'));
+  assert.ok(canonicalCard, 'the 9-instance canonical Card must exist');
+  assert.ok(oneOffCard, 'bem-card.html\'s one-off Card must exist');
+  assert.equal(canonicalCard.reuse.instances, 9);
+  assert.equal(oneOffCard.reuse.instances, 3);
+  assert.equal(canonicalCard.name, 'Card', 'the dominant, 9-instance block must keep the bare name');
+  assert.equal(oneOffCard.name, 'Card (2)', 'the one-off block must carry the suffix');
+
+  const canonicalGrid = blocks.find((b) => b.aliases.includes('.related'));
+  const oneOffGrid = blocks.find((b) => b.aliases.includes('.cards'));
+  assert.equal(canonicalGrid.name, 'Card grid');
+  assert.equal(oneOffGrid.name, 'Card grid (2)');
+
+  const canonicalFooter = blocks.find((b) => b.reuse.pages === 3 && b.aliases.includes('.site-foot'));
+  const oneOffFooter = blocks.find((b) => b.reuse.pages === 1 && b.aliases.includes('.site-foot'));
+  assert.equal(canonicalFooter.name, 'Site footer');
+  assert.equal(oneOffFooter.name, 'Site footer (2)');
 });
 
 test('9-page: app.html contributes zero blocks (JS-rendered, must not emit a thin tree)', () => {
