@@ -205,25 +205,57 @@ const aliasOf = (b) => (b.classes.length ? '.' + b.classes[0] : (b.id ? '#' + b.
 // cluster's score against any other cluster D is min(clusterSim(A,D),
 // clusterSim(B,D)) — this holds because
 // min over (A∪B)×D of pointSim == min(min over A×D, min over B×D).
+//
 // Ties (multiple candidate pairs sharing the highest qualifying score) are
-// broken deterministically by the LOWEST original instance index present in
-// each cluster, compared lexicographically — never by iteration/arrival
-// order — which is what keeps the whole procedure order-invariant.
-// Numeric lexicographic comparison of two candidate cluster pairs by their
-// (sorted-ascending) repIndex tuples — the deterministic tie-break. Plain
-// string comparison would be wrong here ("9" > "10" lexicographically).
-function pairKeyLess(iA, jA, iB, jB) {
-  const [a1, a2] = [iA.repIndex, jA.repIndex].sort((x, y) => x - y);
-  const [b1, b2] = [iB.repIndex, jB.repIndex].sort((x, y) => x - y);
-  return a1 !== b1 ? a1 < b1 : a2 < b2;
+// COMMON, not an edge case: similarity() quantizes to 4 decimal places via
+// toFixed(4), so any moderately-sized site produces exact-score collisions.
+// A prior version of this function broke ties by the LOWEST ORIGINAL
+// INSTANCE INDEX present in each cluster — which is a function of where an
+// instance happened to sit in the INPUT ARRAY, not of its content. That
+// reintroduced exactly the class of bug this whole file exists to fix
+// (Trap 1): on a 12x12 grid of real `.card` variants (144 instances, the
+// same construction used to diagnose it), the top qualifying score 0.9900
+// is shared by 2 pairs, 0.9896 by 4, 0.9891 by 6 — reversing or shuffling
+// the INPUT order (same 144 instances, same content) produced 5 different
+// partitions (block counts 39/39/39/41/40) because WHICH tied pair got
+// index-priority changed with array position. See
+// "order invariance survives a TIE-DENSE construction" in
+// tests/block-map-identity.test.mjs.
+//
+// Fixed by making the tie-break CONTENT-derived: every cluster carries a
+// `sig` — the sorted array of its members' individual content signatures
+// (`sigOf`, passed in from `cluster()` below, built from each instance's
+// OWN fingerprint — a pure function of that block's actual structure, never
+// of its array position). Two clusters are compared by their sorted sig
+// arrays; a tie between two CANDIDATE PAIRS is broken by canonically
+// ordering each pair's two cluster sigs (smaller first) and comparing those
+// ordered pairs — so "which pair wins a tie" depends only on the CONTENT of
+// the instances involved, never on where any of them started in the array.
+function sigCompare(a, b) {
+  const n = Math.min(a.length, b.length);
+  for (let k = 0; k < n; k++) if (a[k] !== b[k]) return a[k] < b[k] ? -1 : 1;
+  return a.length - b.length;
+}
+function orderedSigPair(sigA, sigB) {
+  return sigCompare(sigA, sigB) <= 0 ? [sigA, sigB] : [sigB, sigA];
+}
+// True if candidate pair (sigA1, sigB1) sorts before candidate pair
+// (sigA2, sigB2), treating each pair as unordered (canonicalized via
+// orderedSigPair before comparing) — content-only, no index anywhere.
+function candidatePairLess(sigA1, sigB1, sigA2, sigB2) {
+  const [p1a, p1b] = orderedSigPair(sigA1, sigB1);
+  const [p2a, p2b] = orderedSigPair(sigA2, sigB2);
+  const c1 = sigCompare(p1a, p2a);
+  if (c1 !== 0) return c1 < 0;
+  return sigCompare(p1b, p2b) < 0;
 }
 
-function completeLinkageClusters(n, simOf) {
-  // Each live cluster: { members: [instance indices], repIndex: smallest
-  // original index it contains — the tie-break key, and also what makes
-  // group NUMBERING (assigned later from final cluster order) depend only
-  // on the smallest instance index in each cluster, not on merge order.
-  let clusters = Array.from({ length: n }, (_, i) => ({ members: [i], repIndex: i }));
+function completeLinkageClusters(n, simOf, sigOf) {
+  // Each live cluster: { members: [instance indices], sig: sorted array of
+  // its members' content signatures — the tie-break key AND what makes
+  // final group numbering (below) depend only on content, never on merge
+  // order or original array position.
+  let clusters = Array.from({ length: n }, (_, i) => ({ members: [i], sig: [sigOf(i)] }));
 
   // linkSim[a][b] = complete-linkage score between clusters a and b (both
   // are indices into the CURRENT `clusters` array; rebuilt each merge round
@@ -244,10 +276,8 @@ function completeLinkageClusters(n, simOf) {
         }
         if (s < MERGE_AT) continue; // does not qualify — never a merge candidate
         if (bestI === -1) { bestScore = s; bestI = i; bestJ = j; continue; }
-        // Numeric lexicographic tie-break (NOT string comparison — repIndex
-        // can be >= 10, and "9" < "10" as strings is false, would silently
-        // reintroduce order-dependent-looking ties on larger sites).
-        if (s > bestScore || (s === bestScore && pairKeyLess(clusters[i], clusters[j], clusters[bestI], clusters[bestJ]))) {
+        if (s > bestScore || (s === bestScore &&
+          candidatePairLess(clusters[i].sig, clusters[j].sig, clusters[bestI].sig, clusters[bestJ].sig))) {
           bestScore = s; bestI = i; bestJ = j;
         }
       }
@@ -255,16 +285,22 @@ function completeLinkageClusters(n, simOf) {
     if (bestI === -1) break; // no pair qualifies — done
     const merged = {
       members: [...clusters[bestI].members, ...clusters[bestJ].members],
-      repIndex: Math.min(clusters[bestI].repIndex, clusters[bestJ].repIndex),
+      // Re-sort the concatenation of two already-sorted arrays so `sig`
+      // always stays the true, fully-sorted list of every member's
+      // signature (needed for correct lexicographic comparison against
+      // clusters formed via a completely different merge path).
+      sig: [...clusters[bestI].sig, ...clusters[bestJ].sig].sort(),
     };
     clusters = clusters.filter((_, idx) => idx !== bestI && idx !== bestJ);
     clusters.push(merged);
   }
 
-  // Deterministic, order-invariant group numbering: sort final clusters by
-  // their smallest contained instance index (repIndex), not by merge order.
-  clusters.sort((a, b) => a.repIndex - b.repIndex);
-  return clusters.map((c) => c.members.sort((x, y) => x - y));
+  // Deterministic, order-invariant group numbering AND instance ordering:
+  // sort final clusters by their content signature, and sort each
+  // cluster's own members by content signature too — neither depends on
+  // merge order or original array position.
+  clusters.sort((a, b) => sigCompare(a.sig, b.sig));
+  return clusters.map((c) => c.members.slice().sort((x, y) => (sigOf(x) < sigOf(y) ? -1 : sigOf(x) > sigOf(y) ? 1 : 0)));
 }
 
 export function cluster(instances) {
@@ -285,7 +321,20 @@ export function cluster(instances) {
     return s;
   };
 
-  const componentMembers = completeLinkageClusters(n, simOf);
+  // Content signature for tie-breaking (see completeLinkageClusters above):
+  // a pure function of instance i's OWN fingerprint, never of its position
+  // in `instances`. fingerprint() already sorts its array-valued fields
+  // (skeleton, childFps), so JSON.stringify of it is a stable, canonical
+  // string for a given block's actual structure.
+  const sigCache = new Map();
+  const sigOf = (i) => {
+    if (sigCache.has(i)) return sigCache.get(i);
+    const s = JSON.stringify(fps[i]);
+    sigCache.set(i, s);
+    return s;
+  };
+
+  const componentMembers = completeLinkageClusters(n, simOf, sigOf);
   const groups = componentMembers.map((members) => ({ members }));
 
   // Gray band: cross-group pairs whose closest members neither merged nor

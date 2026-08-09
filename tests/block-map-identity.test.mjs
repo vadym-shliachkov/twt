@@ -301,3 +301,56 @@ test('gray-band ids always resolve to real block ids (cross-check)', () => {
     }
   }
 });
+
+// --- Fix round 2: order-invariance regression (tie-dense construction) ---
+//
+// The prior round's order-invariance tests (above, "order invariance holds
+// on the real chain reproducer" / "...synthetic same-block triangle") use
+// 3-element constructions with DISTINCT scores — structurally incapable of
+// catching a tie-break bug, because there are no ties to break. A 12x12
+// grid of `.card` variants (links 1-12 x images 1-12 — the same
+// construction independently used to diagnose the bug) reliably produces
+// `similarity()`'s 4-decimal quantization ties: the top qualifying score
+// 0.9900 is shared by 2 pairs, 0.9896 by 4, 0.9891 by 6, etc. The prior
+// `pairKeyLess` broke those ties by ORIGINAL INSTANCE INDEX — a function of
+// which position an instance happened to occupy in the input array, not of
+// its content — so which pair won a tie, and therefore which items got
+// pulled into a cluster first, depended on arrival order.
+function tieDenseInstances() {
+  const variants = [];
+  for (let links = 1; links <= 12; links++) for (let imgs = 1; imgs <= 12; imgs++) variants.push([links, imgs]);
+  return variants.map(([links, imgs]) => {
+    const linkHtml = Array.from({ length: links }, (_, k) => `<a href="#">L${k}</a>`).join('');
+    const imgHtml = Array.from({ length: imgs }, (_, k) => `<img src="${k}.png">`).join('');
+    const html = `<body><main><div class="card"><h3>Card</h3>${linkHtml}${imgHtml}</div></main></body>`;
+    const block = flatten(extractBlocks(parseHtml(html)))[0];
+    return { block, page: `/v${links}-${imgs}`, selector: block.selector };
+  });
+}
+function seededShuffle(arr, seed) {
+  const a = arr.slice();
+  let s = seed;
+  const rand = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function partitionSignature(blocks) {
+  return blocks.map((b) => b.instances.map((i) => i.page).sort().join(',')).sort().join(' | ');
+}
+
+test('order invariance survives a TIE-DENSE construction (12x12 ladder, quantized-score ties)', () => {
+  const base = tieDenseInstances();
+  const orders = {
+    natural: base,
+    reversed: base.slice().reverse(),
+    shuffle1: seededShuffle(base, 1),
+    shuffle2: seededShuffle(base, 2),
+    shuffle3: seededShuffle(base, 3),
+  };
+  const results = Object.entries(orders).map(([name, order]) => [name, cluster(order).blocks]);
+  const signatures = results.map(([name, blocks]) => [name, partitionSignature(blocks)]);
+  const counts = results.map(([name, blocks]) => [name, blocks.length]);
+  const uniqueSigs = new Set(signatures.map(([, s]) => s));
+  assert.equal(uniqueSigs.size, 1,
+    `all 5 orderings must produce the identical partition; got block counts ${JSON.stringify(counts)}`);
+});
