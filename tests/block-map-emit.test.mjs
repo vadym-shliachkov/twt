@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseHtml } from '../tools/block-map/parse.mjs';
 import { extractBlocks } from '../tools/block-map/extract.mjs';
 import { cluster } from '../tools/block-map/identity.mjs';
-import { emitAll } from '../tools/block-map/emit.mjs';
+import { emitAll, MAX_VARIANTS_PER_BLOCK } from '../tools/block-map/emit.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));
 const flatten = (bs) => bs.flatMap((b) => [b, ...flatten(b.children)]);
@@ -84,6 +84,28 @@ function runHtml(html) {
   return JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
 }
 
+// --- Synthetic clustered result, bypassing extraction/fingerprint/cluster --
+//
+// variantsOf() only ever reads `block._members[].block.node` — it never
+// depends on how those members ended up clustered together. Building a
+// fabricated "already-clustered" result lets these tests isolate bucketing
+// behavior (dedup on structure, cap + overflow) from whatever the
+// similarity/fingerprint layer would or wouldn't merge on real HTML, which
+// is a separate, already-tested concern (block-map-identity.test.mjs).
+function n(tag, { classes = [], attrs = {}, text = '', children = [] } = {}) {
+  return { tag, attrs: { ...(classes.length ? { class: classes.join(' ') } : {}), ...attrs }, classes, id: attrs.id || '', children, text };
+}
+function syntheticBlockResult(memberNodes) {
+  const members = memberNodes.map((node, i) => ({ block: { node }, page: '/x', selector: `.card:nth-of-type(${i + 1})` }));
+  const block = {
+    id: 'B01', name: 'Card', tier: 'molecule', aliases: ['.card'],
+    parents: [], children: [], reuse: { pages: 1, instances: members.length },
+    instances: members.map((m) => ({ page: m.page, selector: m.selector })),
+    _members: members,
+  };
+  return { pages: [{ id: 'P1', url: '/x', jsRendered: false }], blocks: [block], grayBand: [], unadjudicated: 0 };
+}
+
 test('CRITICAL 1: serialize() keeps both text and children — an inline link inside prose is not dropped', () => {
   // Ordinary prose: a <p> with a real sentence containing an inline <a>.
   // The old `node.text ? esc(text) : children...` branch treated text and
@@ -137,6 +159,51 @@ test('IMPORTANT 2: a bare & in text content is still escaped (text IS decoded, u
   const v = card.variants.find((x) => x.html.includes('tag'));
   assert.ok(v, 'variant carrying the distinguishing <span class="tag"> was not found');
   assert.ok(v.html.includes('Widgets &amp; Gadgets'), `bare & in text was not escaped: ${v.html}`);
+});
+
+test('IMPORTANT 3: 30 cards differing only by href dedup into one variant with count 30', () => {
+  // The default web shape: every product/blog/service card links somewhere
+  // different. The bucket key must ignore attribute VALUES (href here) and
+  // key on structure only, or this explodes into 30 buckets with zero dedup.
+  const cards = Array.from({ length: 30 }, (_, i) => n('div', {
+    classes: ['card'],
+    children: [
+      n('h3', { text: 'Card' }),
+      n('p', { text: 'desc' }),
+      n('a', { attrs: { href: `/product/${i + 1}` }, text: 'view' }),
+    ],
+  }));
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  emitAll(syntheticBlockResult(cards), out);
+  const m = JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
+  const card = m.blocks.find((b) => b.id === 'B01');
+  assert.equal(card.variants.length, 1, `expected 1 variant, got ${card.variants.length}`);
+  assert.equal(card.variants[0].count, 30);
+});
+
+test('IMPORTANT 3: more distinct shapes than the cap → capped with overflow, counts still sum to reuse.instances', () => {
+  const total = MAX_VARIANTS_PER_BLOCK + 3;
+  // Each card gets a distinct STRUCTURAL shape (a different number of
+  // repeated "dot" children) — genuinely different shapes, not just
+  // different attribute values, so every one is a legitimately separate
+  // bucket before the cap is applied.
+  const cards = Array.from({ length: total }, (_, i) => n('div', {
+    classes: ['card'],
+    children: [
+      n('h3', { text: 'Card' }),
+      ...Array.from({ length: i + 1 }, () => n('span', { classes: ['dot'] })),
+    ],
+  }));
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  emitAll(syntheticBlockResult(cards), out);
+  const m = JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
+  const card = m.blocks.find((b) => b.id === 'B01');
+  assert.ok(card.variants.length <= MAX_VARIANTS_PER_BLOCK,
+    `variants (${card.variants.length}) exceeded the cap (${MAX_VARIANTS_PER_BLOCK})`);
+  const overflow = card.variants.find((v) => v.overflow);
+  assert.ok(overflow, 'no overflow entry recorded once shapes exceeded the cap');
+  assert.equal(card.variants.reduce((s, v) => s + v.count, 0), total,
+    'variant counts must still sum to the instance count even when capped');
 });
 
 test('CRITICAL 1: a node with text and two children keeps all three pieces of content', () => {
