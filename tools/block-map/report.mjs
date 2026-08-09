@@ -160,6 +160,41 @@ const shell = (title, body) =>
   `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
    <title>${esc(title)}</title><style>${CSS}</style></head><body>${body}</body></html>`;
 
+// A block's variants can include an overflow bucket (Task 9,
+// MAX_VARIANTS_PER_BLOCK) once it has more distinct shapes than the cap —
+// its `html` is only the MOST COMMON of the folded-in shapes, and its
+// `count` is the SUM across every shape it absorbed, not a real single
+// instance count. Rendering it with the same heading as a normal variant
+// ("Variant v8 — 12 instances") would misrepresent it as one more uniform
+// shape; label it distinctly instead.
+function variantSection(v) {
+  if (v.overflow) {
+    return `<h3>+${esc(v.overflowShapes)} more shape(s) — ${v.count} instance${v.count === 1 ? '' : 's'} combined</h3>
+      <p class="note">Showing the most common of the folded-in shapes as a representative sample.</p>
+      <div class="scroll"><pre>${esc(v.html)}</pre></div>`;
+  }
+  return `<h3>Variant ${esc(v.id)} — ${v.count} instance${v.count === 1 ? '' : 's'}</h3>
+    <div class="scroll"><pre>${esc(v.html)}</pre></div>`;
+}
+
+function blockPageHtml(b, map, byId) {
+  const variants = (b.variants || []).map(variantSection).join('');
+  const instances = `<div class="scroll"><table><tr><th>Page</th><th>Selector</th></tr>
+    ${(b.instances || []).map((i) => `<tr><td>${esc(i.page)}</td><td class="alias">${esc(i.selector)}</td></tr>`).join('')}
+    </table></div>`;
+  return shell(`${b.name} — block map`, `
+    <h1>${esc(b.name)}</h1>
+    <p class="sub">${esc(b.id)} · ${esc(b.tier)} · on ${b.reuse.pages} page(s) · ${b.reuse.instances} instance(s)</p>
+    <p class="alias">aliases absorbed: ${esc((b.aliases || []).join('  '))}</p>
+    ${(b.mergedBy || []).length ? `<h2>Adjudicated merges</h2><ul>${
+      b.mergedBy.map((m) => `<li>absorbed <code>${esc(m.absorbed)}</code> — ${esc(m.reason)}</li>`).join('')
+    }</ul>` : ''}
+    <h2>Neighborhood</h2>${neighborhoodMermaid(b, byId)}
+    <h2>Variants</h2>${variants || '<p>No variants recorded.</p>'}
+    <h2>Instances</h2>${instances}
+    <p><a href="report.html">← back to the map</a></p>`);
+}
+
 function markdownFor(map) {
   const rows = (map.blocks || [])
     .slice().sort((a, b) => b.reuse.instances - a.reuse.instances)
@@ -171,6 +206,7 @@ function markdownFor(map) {
 
 export function renderReport(outDir) {
   const map = JSON.parse(readFileSync(join(outDir, 'block-map.json'), 'utf8'));
+  const byId = new Map((map.blocks || []).map((b) => [b.id, b]));
 
   const homepage = join(outDir, 'report.html');
   writeFileSync(homepage, shell('Block map', `
@@ -181,7 +217,11 @@ export function renderReport(outDir) {
     <h2>Reuse matrix</h2>${matrixHtml(map)}
     <h2>Reuse skeleton</h2>${skeletonMermaid(map)}`));
 
-  const blockPages = [];
+  const blockPages = (map.blocks || []).map((b) => {
+    const p = join(outDir, pageFile(b));
+    writeFileSync(p, blockPageHtml(b, map, byId));
+    return p;
+  });
 
   const markdown = join(outDir, 'block-map.md');
   writeFileSync(markdown, markdownFor(map));
