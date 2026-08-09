@@ -19,6 +19,21 @@ export const SEMANTIC_FLAGS = ['hasPrice', 'hasQuote', 'hasDate', 'hasNavLinks',
 // moved off skeleton in fix-round-1 stays on semantics.
 const W = { skeleton: 0.33, atoms: 0.25, children: 0.20, arity: 0.00, semantics: 0.18, role: 0.04 };
 
+// A hard discriminator, not a weighted term: an organism and a molecule can
+// share an identical inner skeleton (page-wrap.html's top-level `.hero`
+// organism vs index.html's nested `.hero__copy` molecule both wrap bare
+// h1+p+a and score 0.98 on every other dimension) but they are still
+// different GROUND-TRUTH rows at different structural levels, and must
+// never auto-merge. Folding `tier` in as just another weighted term
+// (W.tier * (a.tier===b.tier?1:0)) would only NUDGE the score down —
+// insufficient when every other dimension already agrees near-perfectly.
+// Capping the tier-mismatch case below MERGE_AT (0.95) by construction is
+// what "hard discriminator" means here; same-tier pairs are completely
+// unaffected (the cap only ever activates when tiers differ), so Task 6's
+// measured score table (all five pairs are same-tier vs same-tier) is
+// untouched — verified in tests/block-map-fingerprint.test.mjs.
+const TIER_MISMATCH_CAP = 0.90;
+
 // parse.mjs now decodes HTML entities in text nodes (fix-round-2 — see
 // task-6-report.md), so `allText()` below already sees real curly quotes,
 // not raw "&ldquo;"/"&rdquo;" sequences. No local entity handling needed
@@ -51,6 +66,7 @@ export function fingerprint(block) {
   const sem = semanticsOf(block.node);
   sem.hasFormFields = block.atoms.inputs > 0;
   return {
+    tier: block.tier,
     skeleton: skeletonOf(block.node),
     atoms: block.atoms,
     arity: block.arity,
@@ -87,7 +103,7 @@ function tokenSim(a, b) {
 
 export function similarity(a, b) {
   const arity = 1 - Math.abs(a.arity - b.arity) / Math.max(a.arity, b.arity, 1);
-  return Number((
+  const weighted = Number((
     W.skeleton  * jaccard(a.skeleton, b.skeleton) +
     W.atoms     * countSim(a.atoms, b.atoms) +
     W.children  * jaccard(a.childFps, b.childFps) +
@@ -95,4 +111,6 @@ export function similarity(a, b) {
     W.semantics * flagSim(a.semantics, b.semantics) +
     W.role      * tokenSim(a.roleHint, b.roleHint)
   ).toFixed(4));
+  // Hard cap, applied AFTER the weighted sum — see TIER_MISMATCH_CAP above.
+  return a.tier !== b.tier ? Math.min(weighted, TIER_MISMATCH_CAP) : weighted;
 }
