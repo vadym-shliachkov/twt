@@ -210,6 +210,37 @@ test('nameFor: a co-occurring utility class never wins over a more specific real
   assert.equal(nameFor(mem(['quote', 'copyright'])), 'Quote');
 });
 
+// --- Fix round 2: nameFor must be CATEGORY-major, not token-major --------
+//
+// The Step-3 fix (above) matched whole tokens instead of substrings, but
+// the matching loop was still TOKEN-major: it iterated `primaryTokens` in
+// the order classes were WRITTEN on the element and returned on the first
+// token that matched ANY category. `classTokens` hyphen-splits a class
+// with no "__", so `class="text-center card"` expands to primaryTokens
+// ["text","center","card"] IN THAT ORDER — "text" (which only the LAST,
+// lowest-priority copy/content/text category recognizes) got checked
+// before "card" ever had a chance, purely because it was written first in
+// the class attribute. Same bug family as the substring collision, just
+// one level up: class-attribute ORDER decided the name instead of
+// ROLE_NOUN priority order.
+test('nameFor: category priority wins regardless of class attribute order (both directions)', () => {
+  assert.equal(nameFor(mem(['card', 'text-center'])), 'Card');
+  assert.equal(nameFor(mem(['text-center', 'card'])), 'Card', 'utility class written FIRST must not win');
+  assert.equal(nameFor(mem(['plan', 'text-lg'])), 'Plan');
+  assert.equal(nameFor(mem(['text-lg', 'plan'])), 'Plan', 'utility class written FIRST must not win');
+  // "content-nav" hyphen-splits to ["content","nav"] — "nav" is a genuine
+  // ROLE_NOUN keyword (Navigation), positioned ABOVE Card, so Navigation
+  // legitimately wins here regardless of order — unlike "text-center" (only
+  // ever matches the lowest-priority copy/content/text bucket), this isn't
+  // a substring false-positive, it's a real, order-INDEPENDENT category
+  // priority decision. The property under test is that BOTH orderings
+  // agree — under the old token-major bug, `content-nav,card` gave "Heading
+  // group" (via the "content" token) while `card,content-nav` gave "Card";
+  // now both give the SAME answer, which is what category-major means.
+  assert.equal(nameFor(mem(['content-nav', 'card'])), 'Navigation');
+  assert.equal(nameFor(mem(['card', 'content-nav'])), 'Navigation', 'order must not change the outcome');
+});
+
 test('nameFor: a Tailwind-styled card still reads as Card, not Heading group', () => {
   assert.equal(nameFor(mem(['card', 'flex', 'flex-col', 'p-4', 'shadow-md', 'rounded-lg'])), 'Card');
 });

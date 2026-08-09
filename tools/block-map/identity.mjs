@@ -11,12 +11,23 @@ export const SPLIT_AT = 0.60;
 export const GRAY_CAP = 60;
 const EXCERPT = 400;
 
-// Whole-TOKEN keyword lists (exact match, not regex substring). Order is
-// the tie-break when a class carries multiple tokens that separately match
-// different categories (e.g. a real class alongside an unrelated utility
-// class) — copy/content/text is deliberately LAST because those three
-// words are common English/Tailwind fragments ("copyright", "text-center",
-// "content-nav") and should only win when nothing more specific matched.
+// Whole-TOKEN keyword lists (exact match, not regex substring). ROLE_NOUN's
+// ARRAY ORDER is the tie-break when a class carries multiple tokens that
+// separately match different categories (e.g. a real class alongside an
+// unrelated utility class) — copy/content/text is deliberately LAST
+// because those three words are common English/Tailwind fragments
+// ("copyright", "text-center", "content-nav") and should only win when
+// nothing more specific matched. This requires `nameFor` (below) to check
+// CATEGORIES in this order and ask "does ANY token match" — NOT check
+// tokens in class-attribute order and ask "does this token match
+// anything", which is what an earlier version actually did despite this
+// comment's claim: `class="text-center card"` hyphen-splits to tokens
+// ["text","center","card"] in THAT order, and a token-major loop returns
+// on the first token that matches anything at all — "text" matched
+// copy/content/text before "card" was ever consulted, so which class was
+// WRITTEN FIRST decided the name, not ROLE_NOUN priority. Fixed; see
+// tests/block-map-identity.test.mjs "category priority wins regardless of
+// class attribute order".
 const ROLE_NOUN = [
   [['head', 'masthead', 'topbar'], 'Site header'],
   [['foot'], 'Site footer'],
@@ -68,16 +79,14 @@ function classTokens(raw) {
   return { primary: [raw.slice(bem + 2)], fallbackBlock: raw.slice(0, bem), elementRaw: raw.slice(bem + 2) };
 }
 
-function matchCategory(token) {
+// Does this ONE token match this ONE category's keyword list? Deliberately
+// narrow pluralization: only strip a single trailing "s" so
+// ".plans"/".quotes"/".cards" resolve to the same category as their
+// singular form, without false-positiving short unrelated words.
+function tokenMatches(token, keywords) {
   const norm = token.toLowerCase();
-  // Light, deliberately narrow pluralization: only strip a single trailing
-  // "s" so ".plans"/".quotes"/".cards" resolve to the same category as
-  // their singular form, without false-positiving short unrelated words.
   const singular = norm.length > 3 && norm.endsWith('s') ? norm.slice(0, -1) : null;
-  for (const [keywords, noun] of ROLE_NOUN) {
-    if (keywords.includes(norm) || (singular && keywords.includes(singular))) return noun;
-  }
-  return null;
+  return keywords.includes(norm) || (singular && keywords.includes(singular));
 }
 
 // Reads a short label off the block's first heading (h1-h6), for the one
@@ -113,13 +122,22 @@ export function nameFor(members) {
     if (fallbackBlock) fallbacks.push({ blockToken: fallbackBlock, elementRaw });
   }
 
-  for (const token of primaryTokens) {
-    const noun = matchCategory(token);
-    if (noun) return tierWrapped(noun, tier);
+  // CATEGORY-major: iterate ROLE_NOUN in priority order and ask "does ANY
+  // primary token match this category", not the other way around. A
+  // token-major loop (iterate tokens in class-attribute order, ask "does
+  // this token match anything") would let the token WRITTEN FIRST decide
+  // the name regardless of category priority — see the ROLE_NOUN comment
+  // above for the concrete collision this caused.
+  for (const [keywords, noun] of ROLE_NOUN) {
+    if (primaryTokens.some((t) => tokenMatches(t, keywords))) return tierWrapped(noun, tier);
   }
-  for (const { blockToken, elementRaw } of fallbacks) {
-    const noun = matchCategory(blockToken);
-    if (noun) return `${noun} ${elementRaw}`; // e.g. "Card body" for .card__body
+  // Same category-major discipline for the BEM block-prefix fallback (used
+  // only when no primary token anywhere matched) — consistent, even though
+  // in practice a class list rarely carries more than one BEM fallback
+  // candidate.
+  for (const [keywords, noun] of ROLE_NOUN) {
+    const hit = fallbacks.find(({ blockToken }) => tokenMatches(blockToken, keywords));
+    if (hit) return `${noun} ${hit.elementRaw}`; // e.g. "Card body" for .card__body
   }
 
   const tag = members[0].block.tag;
