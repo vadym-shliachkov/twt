@@ -218,10 +218,16 @@ export function blockPageHtml(b, map, byId) {
     <p><a href="report.html">← back to the map</a></p>`);
 }
 
+// A literal `|` in a name, tier, or alias would otherwise be read as a new
+// table-cell delimiter by any Markdown renderer, silently shifting every
+// later column in that row (or the whole table, if it also breaks the
+// header separator's column count).
+const mdCell = (s) => String(s).replace(/\|/g, '\\|');
+
 export function markdownFor(map) {
   const rows = (map.blocks || [])
     .slice().sort((a, b) => b.reuse.instances - a.reuse.instances)
-    .map((b) => `| ${b.name} | ${b.tier} | ${(b.aliases || []).join(', ')} | ${b.reuse.pages} | ${b.reuse.instances} |`);
+    .map((b) => `| ${mdCell(b.name)} | ${mdCell(b.tier)} | ${mdCell((b.aliases || []).join(', '))} | ${b.reuse.pages} | ${b.reuse.instances} |`);
   return [`# Block map`, ``,
     `${map.meta.pages} pages · ${(map.blocks || []).length} unique blocks · engine: ${map.meta.engine || 'static'}`, ``,
     `| Block | Tier | Aliases | Pages | Instances |`, `|---|---|---|---|---|`, ...rows, ``].join('\n');

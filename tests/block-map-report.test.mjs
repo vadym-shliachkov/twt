@@ -141,6 +141,17 @@ test('skeletonMermaid entity-escapes meta.pages so it cannot break the "pages" n
   assert.ok(label[1].includes('&quot;'), `meta.pages' own quote must survive as an entity INSIDE the label, not break it early. Got: ${JSON.stringify(label[1])}`);
 });
 
+// --- Review round 1, minor: markdownFor must not let a pipe break the table
+test('markdownFor escapes a pipe in a block name/alias so it cannot break the table', () => {
+  const map = {
+    meta: { pages: 1, engine: 'static' },
+    blocks: [{ id: 'B1', name: 'Weird | Name', tier: 'organism', aliases: ['.a|b'], reuse: { pages: 1, instances: 1 } }],
+  };
+  const md = markdownFor(map);
+  assert.ok(md.includes('Weird \\| Name'), `pipe in the name must be escaped, got:\n${md}`);
+  assert.ok(md.includes('.a\\|b'), `pipe in an alias must be escaped, got:\n${md}`);
+});
+
 // --- Review round 1: pin the 5 previously-uncovered deviations ------------
 //
 // Each of these five was a real fix over the brief's reference code, but
