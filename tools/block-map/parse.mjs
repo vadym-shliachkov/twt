@@ -11,6 +11,30 @@ const RAW = new Set(['script','style','textarea','title']);
 // Tags that auto-close a previous sibling of the same name.
 const SELF_CLOSING_SIBLING = new Set(['li','p','td','th','tr','option','dt','dd']);
 
+// Producing text is the parser's job — every consumer (fingerprint's
+// semantic flags, the Task 10 report renderer, anything else that reads
+// `.text`) should see real characters, not raw markup entities. Named-entity
+// table covers the common punctuation/whitespace entities real content uses;
+// numeric entities (`&#NN;` / `&#xNN;`) are decoded generically below. `&amp;`
+// is decoded LAST so an entity like `&amp;ldquo;` doesn't get double-decoded
+// into a literal curly quote.
+const NAMED_ENTITIES = {
+  lt: '<', gt: '>', quot: '"', apos: "'",
+  nbsp: ' ',
+  ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’',
+  mdash: '—', ndash: '–', hellip: '…',
+};
+
+function decodeEntities(s) {
+  if (s.indexOf('&') === -1) return s;
+  let out = s.replace(/&(lt|gt|quot|apos|nbsp|ldquo|rdquo|lsquo|rsquo|mdash|ndash|hellip);/g,
+    (m, name) => NAMED_ENTITIES[name]);
+  out = out.replace(/&#x([0-9a-fA-F]+);/g, (m, hex) => String.fromCodePoint(parseInt(hex, 16)));
+  out = out.replace(/&#(\d+);/g, (m, dec) => String.fromCodePoint(parseInt(dec, 10)));
+  out = out.replace(/&amp;/g, '&');
+  return out;
+}
+
 function attrsOf(s) {
   const attrs = {};
   const re = /([a-zA-Z_:][-\w:.]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
@@ -39,7 +63,7 @@ export function parseHtml(html) {
 
   const top = () => stack[stack.length - 1];
   const addText = (s) => {
-    const t = s.replace(/\s+/g, ' ').trim();
+    const t = decodeEntities(s.replace(/\s+/g, ' ').trim());
     if (t) top().text = (top().text ? top().text + ' ' : '') + t;
   };
 

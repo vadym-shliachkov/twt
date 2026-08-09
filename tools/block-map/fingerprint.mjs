@@ -9,27 +9,20 @@
 
 export const SEMANTIC_FLAGS = ['hasPrice', 'hasQuote', 'hasDate', 'hasNavLinks', 'hasFormFields'];
 
-// Tuned from the brief's starting point (skeleton .30 / semantics .13): the
-// "pricing vs testimonial" split test failed at ~0.91 with those defaults
-// (the tag skeleton, atom profile, empty-children, and arity components all
-// come out IDENTICAL for `.plan` vs `.quote` — the only signal that can pull
-// them apart is semantics, plus a small assist from role that vanishes for
-// same-length differently-spelled class names). Moved 0.05 from skeleton to
-// semantics, exactly as instructed — re-verified all five tests hold
-// simultaneously (see task-6-report.md).
-const W = { skeleton: 0.25, atoms: 0.25, children: 0.20, arity: 0.08, semantics: 0.18, role: 0.04 };
+// Fix-round-2 weights (see task-6-report.md): arity measures a page
+// artifact, not identity — `.features` sits alone on its page (arity 1)
+// while `.related` sits beside two siblings (arity 3), so two twins of the
+// SAME block were scored worse against each other purely because of
+// unrelated neighbours on their respective pages. Zeroing W.arity removed
+// that noise and opened a real gap between the must-merge and
+// must-not-merge pairs found in the full 355-pair labeled sweep; the 0.05
+// moved off skeleton in fix-round-1 stays on semantics.
+const W = { skeleton: 0.33, atoms: 0.25, children: 0.20, arity: 0.00, semantics: 0.18, role: 0.04 };
 
-// parse.mjs does not decode HTML entities — text nodes retain raw sequences
-// like "&ldquo;" and "&rdquo;" verbatim (see tools/block-map/parse.mjs,
-// addText: it slices raw source and only collapses whitespace). The fixture
-// quote blocks (pricing.html .quote) rely on curly-quote entities to read as
-// quotes, so semanticsOf must recognize the entity spelling too, not just a
-// literal Unicode curly quote — otherwise hasQuote is always false and the
-// plan/quote split loses its only real signal.
-const ENTITY_QUOTES = /&l?dquo;|&r?dquo;|&#8220;|&#8221;|&quot;/gi;
-function decodeQuoteEntities(s) {
-  return s.replace(ENTITY_QUOTES, '"');
-}
+// parse.mjs now decodes HTML entities in text nodes (fix-round-2 — see
+// task-6-report.md), so `allText()` below already sees real curly quotes,
+// not raw "&ldquo;"/"&rdquo;" sequences. No local entity handling needed
+// here anymore.
 
 function allText(n) {
   return ((n.text || '') + ' ' + n.children.map(allText).join(' ')).trim();
@@ -43,14 +36,11 @@ function skeletonOf(node) {
 }
 
 function semanticsOf(node) {
-  const raw = allText(node);
-  const t = decodeQuoteEntities(raw);
+  const t = allText(node);
   const links = (function count(x) { return (x.tag === 'a' ? 1 : 0) + x.children.reduce((s, c) => s + count(c), 0); })(node);
   return {
     hasPrice: /[$€£]\s?\d|\b\d+\s?(usd|eur|gbp)\b|\/\s?(mo|yr|month|year)\b/i.test(t),
-    // Straight or curly quote wrapping >= 8 chars of content — catches both
-    // literal Unicode quotes and the decoded entity form above.
-    hasQuote: /["“‘].{8,}["”’]/.test(t),
+    hasQuote: /["“”„«»]|‘|’{2}/.test(t) && /["“”].{10,}["“”]/.test(t),
     hasDate: /\b(19|20)\d{2}\b|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}\b/i.test(t),
     hasNavLinks: links >= 3 && t.length / Math.max(1, links) < 30,
     hasFormFields: false, // set below from block.atoms — see fingerprint()

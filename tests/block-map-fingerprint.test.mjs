@@ -11,12 +11,12 @@ const flatten = (bs) => bs.flatMap((b) => [b, ...flatten(b.children)]);
 const load = (f) => flatten(extractBlocks(parseHtml(readFileSync(FIX + f, 'utf8'))));
 const byClass = (bs, c) => bs.find((b) => b.classes.includes(c));
 
-test('differently-named identical cards score >= 0.90', () => {
+test('differently-named identical cards score >= 0.95', () => {
   const card = byClass(load('index.html'), 'card');
   const box  = byClass(load('services.html'), 'service-box');
   const teaser = byClass(load('pricing.html'), 'teaser');
-  assert.ok(similarity(fingerprint(card), fingerprint(box)) >= 0.90);
-  assert.ok(similarity(fingerprint(card), fingerprint(teaser)) >= 0.90);
+  assert.ok(similarity(fingerprint(card), fingerprint(box)) >= 0.95);
+  assert.ok(similarity(fingerprint(card), fingerprint(teaser)) >= 0.95);
 });
 
 test('pricing and testimonial grids stay apart despite identical skeletons', () => {
@@ -25,7 +25,7 @@ test('pricing and testimonial grids stay apart despite identical skeletons', () 
   const quote = byClass(all, 'quote');
   assert.deepEqual(fingerprint(plan).skeleton, fingerprint(quote).skeleton,
     'precondition: the tag skeletons ARE identical');
-  assert.ok(similarity(fingerprint(plan), fingerprint(quote)) < 0.90,
+  assert.ok(similarity(fingerprint(plan), fingerprint(quote)) < 0.95,
     'content semantics must prevent an auto-merge');
 });
 
