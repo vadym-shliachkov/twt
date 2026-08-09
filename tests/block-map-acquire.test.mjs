@@ -76,6 +76,66 @@ test('fromFigmaExport disambiguates urls when two frames share a name', async ()
   assert.ok(pages[0].html.includes('one') && pages[1].html.includes('two'), 'content must not be lost or swapped');
 });
 
+// Builds a figma-export.json from a bare list of frame names (each frame's
+// html is tagged with its own index so a test can independently verify no
+// frame's content got lost or swapped along the way) and runs it through
+// fromFigmaExport.
+async function figmaPagesFor(names) {
+  const dir = mkdtempSync(join(tmpdir(), 'bm-'));
+  const p = join(dir, 'figma.json');
+  writeFileSync(p, JSON.stringify({ frames: names.map((name, i) => ({ name, html: `<body>frame-${i}</body>` })) }));
+  return fromFigmaExport(p);
+}
+
+function assertAllDistinctAndIntact(pages, names) {
+  assert.equal(pages.length, names.length, 'every frame must survive');
+  const urls = pages.map((p) => p.url);
+  assert.equal(new Set(urls).size, urls.length, `every url must be distinct, got ${JSON.stringify(urls)}`);
+  pages.forEach((p, i) => assert.equal(p.html, `<body>frame-${i}</body>`, `frame ${i}'s content must not be lost or swapped`));
+  return urls;
+}
+
+test('fromFigmaExport: a later LITERAL name colliding with an earlier GENERATED suffix still gets a unique url ([Card, Card~2, Card])', async () => {
+  // The bug this guards: naive disambiguation counts occurrences of the
+  // ORIGINAL name ("Card" seen twice -> second Card gets suffix 2) without
+  // ever checking whether "figma://Card~2" is already taken by a DIFFERENT
+  // frame whose literal name happens to be "Card~2". That collision is the
+  // exact instance-folding risk this function exists to prevent, just
+  // reached via an adversarial/coincidental name instead of a plain repeat.
+  const pages = await figmaPagesFor(['Card', 'Card~2', 'Card']);
+  const urls = assertAllDistinctAndIntact(pages, ['Card', 'Card~2', 'Card']);
+  assert.equal(urls[0], 'figma://Card');
+  assert.equal(urls[1], 'figma://Card~2');
+  assert.notEqual(urls[2], 'figma://Card~2', 'third frame must not collide with the second frame\'s literal name');
+});
+
+test('fromFigmaExport: same collision in reverse literal-name order still resolves uniquely ([Card~2, Card, Card])', async () => {
+  // A loop-increment disambiguator can behave differently depending on
+  // WHICH literal name is seen first — this pins the reverse ordering so a
+  // fix that only handles "generated name collides with a later literal"
+  // (and not "literal name collides with a later generated one") can't
+  // pass by accident.
+  const pages = await figmaPagesFor(['Card~2', 'Card', 'Card']);
+  assertAllDistinctAndIntact(pages, ['Card~2', 'Card', 'Card']);
+});
+
+test('fromFigmaExport: disambiguation skips a suffix more than once when both are already taken ([Card, Card~2, Card~3, Card])', async () => {
+  const pages = await figmaPagesFor(['Card', 'Card~2', 'Card~3', 'Card']);
+  const urls = assertAllDistinctAndIntact(pages, ['Card', 'Card~2', 'Card~3', 'Card']);
+  assert.equal(urls[0], 'figma://Card');
+  assert.equal(urls[1], 'figma://Card~2');
+  assert.equal(urls[2], 'figma://Card~3');
+  assert.equal(urls[3], 'figma://Card~4', 'the 4th frame must skip past both already-taken suffixes');
+});
+
+test('fromFigmaExport: plain repeats still disambiguate cleanly (2 and 3 identically-named frames)', async () => {
+  const two = await figmaPagesFor(['Card', 'Card']);
+  assertAllDistinctAndIntact(two, ['Card', 'Card']);
+
+  const three = await figmaPagesFor(['Card', 'Card', 'Card']);
+  assertAllDistinctAndIntact(three, ['Card', 'Card', 'Card']);
+});
+
 test('fromUrl adopts the post-redirect host when the START url redirects cross-host, and still crawls the site', async () => {
   // Simulates the apex -> www shape: fetching the given start URL itself
   // redirects to a different host before any page content is ever served.

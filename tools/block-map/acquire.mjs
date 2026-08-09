@@ -116,19 +116,30 @@ export async function fromFigmaExport(jsonPath) {
   // Task 9/10 key page identity off `Page.url` (the reuse matrix filters
   // instances by `i.page === url` per column), so two frames sharing a
   // name must not collide on `figma://Name` — that would silently fold two
-  // distinct frames' instances onto one matrix column. Disambiguate
-  // deterministically by first-seen order: the first frame with a given
-  // name keeps the bare url, later ones get `~2`, `~3`, ... — a pure
-  // function of input order, never of anything computed later.
-  const seenNames = new Map();
+  // distinct frames' instances onto one matrix column.
+  //
+  // Disambiguate against the set of urls ACTUALLY EMITTED SO FAR, not
+  // against a count of how many times the original name occurred — a
+  // count-based scheme (`seenNames.get(name)`) only guards against a
+  // GENERATED url colliding with a later occurrence of the SAME literal
+  // name; it does nothing when a generated candidate (`Card~2`) collides
+  // with a DIFFERENT frame whose literal name IS `Card~2` (e.g.
+  // `[Card, Card~2, Card]` — the count-based version emits
+  // `Card, Card~2, Card~2`, a real collision in the exact routine meant to
+  // prevent one). Looping the suffix against the live `used` set and
+  // re-checking membership after every increment closes that regardless of
+  // which literal name — real or generated-looking — was seen first;
+  // deterministic because it only ever depends on input order.
+  const used = new Set();
   return raw.frames.map((f, i) => {
     const name = f?.name ?? `frame-${i + 1}`;
-    const n = (seenNames.get(name) || 0) + 1;
-    seenNames.set(name, n);
-    const suffix = n > 1 ? `~${n}` : '';
+    const base = 'figma://' + encodeURIComponent(name);
+    let url = base;
+    for (let n = 2; used.has(url); n++) url = `${base}~${n}`;
+    used.add(url);
     return {
       id: pageId(i),
-      url: 'figma://' + encodeURIComponent(name) + suffix,
+      url,
       html: f?.html || '',
       css: f?.css || '',
       jsRendered: false,
