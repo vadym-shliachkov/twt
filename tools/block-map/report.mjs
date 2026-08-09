@@ -35,7 +35,9 @@ th,td{border-color:#2a2e36}.warn{background:#3a2c15;border-color:#7a5b22}
 .alias,.sub,.note,th{color:#9aa0aa}}
 `;
 
-function scorecard(map) {
+// Exported so tests can pin behaviour directly (mutation-proof) instead of
+// only through renderReport's end-to-end HTML/file output.
+export function scorecard(map) {
   const blocks = map.blocks || [];
   const instances = blocks.reduce((s, b) => s + b.reuse.instances, 0);
   const merged = blocks.reduce((s, b) => s + Math.max(0, (b.aliases || []).length - 1), 0);
@@ -54,7 +56,7 @@ function scorecard(map) {
 // non-empty jsRenderedPages is worth surfacing regardless of which engine
 // ran, since seeing it under playwright would itself mean something
 // unexpected happened (a per-page render failure), not a state to hide.
-function warnBanner(map) {
+export function warnBanner(map) {
   const js = map.meta.jsRenderedPages || [];
   if (!js.length) return '';
   return `<div class="warn"><strong>Incomplete map.</strong> These pages are JS-rendered and were
@@ -71,7 +73,7 @@ function warnBanner(map) {
 // that is reachable from more than one parent (shown once, under whichever
 // parent's walk reaches it first — deterministic since both roots and
 // each parent's children are rank-sorted before the walk visits them).
-function matrixHtml(map) {
+export function matrixHtml(map) {
   const pages = map.pages || [];
   const byId = new Map(map.blocks.map((b) => [b.id, b]));
   const rank = (a, b) => b.reuse.pages - a.reuse.pages || b.reuse.instances - a.reuse.instances;
@@ -123,7 +125,7 @@ function matrixHtml(map) {
 const mermaidLabel = esc;
 
 // Only reused blocks (>= 2 instances). Pages collapse into one badge node.
-function skeletonMermaid(map) {
+export function skeletonMermaid(map) {
   const keep = (map.blocks || []).filter((b) => b.reuse.instances >= 2);
   if (!keep.length) return '<p>No block is reused — nothing to graph.</p>';
   const ids = new Set(keep.map((b) => b.id));
@@ -141,10 +143,10 @@ function skeletonMermaid(map) {
 // instead of piling on more graph nodes. This is a READABILITY cap, not a
 // correctness one — a block with 40 parents and 40 children still produces
 // syntactically valid mermaid without it, but nobody can read that graph.
-const NEIGHBOR_CAP = 20;
+export const NEIGHBOR_CAP = 20;
 
 // One hop: parents above, the block itself, children below.
-function neighborhoodMermaid(block, byId) {
+export function neighborhoodMermaid(block, byId) {
   const lines = ['flowchart TD', `  ${block.id}["${mermaidLabel(block.name)}"]`];
   const parents = (block.parents || []).map((p) => byId.get(p)).filter(Boolean);
   const children = (block.children || []).map((c) => byId.get(c)).filter(Boolean);
@@ -167,7 +169,7 @@ const shell = (title, body) =>
 // instance count. Rendering it with the same heading as a normal variant
 // ("Variant v8 — 12 instances") would misrepresent it as one more uniform
 // shape; label it distinctly instead.
-function variantSection(v) {
+export function variantSection(v) {
   if (v.overflow) {
     return `<h3>+${esc(v.overflowShapes)} more shape(s) — ${v.count} instance${v.count === 1 ? '' : 's'} combined</h3>
       <p class="note">Showing the most common of the folded-in shapes as a representative sample.</p>
@@ -177,7 +179,7 @@ function variantSection(v) {
     <div class="scroll"><pre>${esc(v.html)}</pre></div>`;
 }
 
-function blockPageHtml(b, map, byId) {
+export function blockPageHtml(b, map, byId) {
   const variants = (b.variants || []).map(variantSection).join('');
   const instances = `<div class="scroll"><table><tr><th>Page</th><th>Selector</th></tr>
     ${(b.instances || []).map((i) => `<tr><td>${esc(i.page)}</td><td class="alias">${esc(i.selector)}</td></tr>`).join('')}
@@ -195,7 +197,7 @@ function blockPageHtml(b, map, byId) {
     <p><a href="report.html">← back to the map</a></p>`);
 }
 
-function markdownFor(map) {
+export function markdownFor(map) {
   const rows = (map.blocks || [])
     .slice().sort((a, b) => b.reuse.instances - a.reuse.instances)
     .map((b) => `| ${b.name} | ${b.tier} | ${(b.aliases || []).join(', ')} | ${b.reuse.pages} | ${b.reuse.instances} |`);

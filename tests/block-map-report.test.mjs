@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdtempSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { renderReport } from '../tools/block-map/report.mjs';
+import {
+  renderReport, matrixHtml, warnBanner, skeletonMermaid, neighborhoodMermaid,
+  variantSection, markdownFor, blockPageHtml, pageFile, NEIGHBOR_CAP,
+} from '../tools/block-map/report.mjs';
 
 function fixtureMap(dir) {
   mkdirSync(dir, { recursive: true });
@@ -63,4 +66,81 @@ test('report renders with zero blocks without throwing', () => {
   const { blockPages } = renderReport(dir);
   assert.equal(blockPages.length, 0);
   assert.ok(readFileSync(join(dir, 'report.html'), 'utf8').includes('/app'), 'the js-rendered warning must name the page');
+});
+
+// --- Review round 1: pin the 5 previously-uncovered deviations ------------
+//
+// Each of these five was a real fix over the brief's reference code, but
+// tests/block-map-report.test.mjs (the brief's 5 tests, copied verbatim)
+// could not see any of them — reverting the corresponding source hunk left
+// all 5 original tests green. Pinned here, mutation-verified against the
+// pre-fix behaviour before landing.
+
+test('matrixHtml renders a 3-level parent chain at the correct indentation depth', () => {
+  // card-with-list.html's real shape: Package grid (root) > Package
+  // (child) > Feature list (grandchild). The brief's reference matrixHtml
+  // only walks ONE level (roots, then roots' direct children), so the
+  // grandchild would be silently absent from the matrix entirely — not
+  // just under-indented. Depth is encoded as padding-left:${12+depth*16}px,
+  // so depth 2 must read exactly padding-left:44px.
+  const map = {
+    meta: { pages: 1 }, pages: [{ id: 'P1', url: '/p' }],
+    blocks: [
+      { id: 'ROOT', name: 'Package grid', tier: 'organism', aliases: ['.pkgs'], parents: [], children: ['MID'], reuse: { pages: 1, instances: 1 }, instances: [] },
+      { id: 'MID', name: 'Package', tier: 'molecule', aliases: ['.pkg'], parents: ['ROOT'], children: ['LEAF'], reuse: { pages: 1, instances: 3 }, instances: [] },
+      { id: 'LEAF', name: 'Feature list', tier: 'molecule', aliases: ['.feats'], parents: ['MID'], children: [], reuse: { pages: 1, instances: 3 }, instances: [] },
+    ],
+  };
+  const html = matrixHtml(map);
+  const row = html.match(/<tr[^>]*>[\s\S]*?Feature list[\s\S]*?<\/tr>/);
+  assert.ok(row, `"Feature list" (a grandchild, 2 hops from its root) is missing from the matrix entirely:\n${html}`);
+  assert.ok(row[0].includes('padding-left:44px'), `expected depth-2 indent (44px), got:\n${row[0]}`);
+});
+
+test('skeletonMermaid entity-escapes a literal double-quote inside a block name', () => {
+  // A raw `"` in a block name breaks Mermaid's OWN quoted-label grammar —
+  // not just HTML safety. The brief's reference code only HTML-escapes the
+  // whole joined mermaid source once, at the end; that escape round-trips
+  // losslessly back through the browser's one-level entity decode of the
+  // <pre>'s textContent, so Mermaid's parser still sees the bare `"` and
+  // the label breaks. Fixed by escaping each label's own text before
+  // composing it. Simulate exactly what the browser/Mermaid would see: one
+  // level of HTML-entity decode on the <pre> contents.
+  const map = {
+    meta: { pages: 1 },
+    blocks: [{ id: 'B1', name: 'He said "hi"', tier: 'organism', aliases: ['.x'], parents: [], children: [], reuse: { pages: 1, instances: 2 }, instances: [] }],
+  };
+  const html = skeletonMermaid(map);
+  const raw = html.slice(html.indexOf('>') + 1, html.lastIndexOf('<'));
+  // A real browser decodes HTML entities in ONE pass, not by re-scanning
+  // its own output — chained sequential .replace() calls would incorrectly
+  // decode &amp;quot; in two hops (-> &quot; -> ") instead of one (-> &quot;
+  // as literal text), which is a different, WRONG simulation of what the
+  // browser (and therefore Mermaid, reading .textContent) actually sees.
+  const decoded = raw.replace(/&amp;|&lt;|&gt;|&quot;/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"' }[m]));
+  const label = decoded.match(/B1\["([\s\S]*?)"\]/);
+  assert.ok(label, `mermaid source is not well-formed after a one-level entity decode:\n${decoded}`);
+  assert.ok(label[1].includes('&quot;'), `the name's own quote must survive as an entity INSIDE the label, not as a literal " that closes it early. Got label: ${JSON.stringify(label[1])}`);
+});
+
+test('variantSection renders an overflow bucket with a distinct heading, never as a normal variant', () => {
+  const html = variantSection({ id: 'v8', count: 16, html: '<div>h</div>', overflow: true, overflowShapes: 9 });
+  assert.ok(html.includes('+9 more shape'), `overflow bucket must say how many shapes were folded in:\n${html}`);
+  assert.ok(!html.includes('Variant v8'), `an overflow bucket's count is a SUM across shapes, not one instance count — must not read as a normal "Variant vN" heading:\n${html}`);
+});
+
+test('neighborhoodMermaid caps fan-out at NEIGHBOR_CAP and notes the overflow', () => {
+  const byId = new Map();
+  const parentIds = [];
+  const total = NEIGHBOR_CAP + 5;
+  for (let i = 0; i < total; i++) {
+    const id = 'PAR' + i;
+    byId.set(id, { id, name: 'Parent' });
+    parentIds.push(id);
+  }
+  const block = { id: 'X', name: 'X', parents: parentIds, children: [] };
+  const html = neighborhoodMermaid(block, byId);
+  const nodeCount = (html.match(/Parent/g) || []).length;
+  assert.equal(nodeCount, NEIGHBOR_CAP, `expected exactly NEIGHBOR_CAP (${NEIGHBOR_CAP}) parent nodes in an unreadable ${total}-parent fan-out, got ${nodeCount}`);
+  assert.ok(html.includes(`+${total - NEIGHBOR_CAP} more parent`), `must note the ${total - NEIGHBOR_CAP} parents that were capped:\n${html}`);
 });
