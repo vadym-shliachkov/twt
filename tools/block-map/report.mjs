@@ -103,7 +103,7 @@ export function matrixHtml(map) {
   const row = (b, depth) => `<tr class="${depth ? 'kid' : ''}">
     <td style="padding-left:${12 + depth * 16}px">${depth ? '└ ' : ''}<a href="${esc(pageFile(b))}">${esc(b.name)}</a>
       <span class="alias">${esc((b.aliases || []).join(' '))}</span></td>
-    <td class="n">×${b.reuse.instances}</td>
+    <td class="n">×${esc(b.reuse.instances)}</td>
     ${pages.map((p) => { const n = counts(b, p.url); return `<td class="n">${n ? (n > 1 ? '×' + n : '●') : ''}</td>`; }).join('')}
   </tr>`;
 
@@ -150,8 +150,8 @@ export function skeletonMermaid(map) {
   const keep = (map.blocks || []).filter((b) => b.reuse.instances >= 2);
   if (!keep.length) return '<p>No block is reused — nothing to graph.</p>';
   const ids = new Set(keep.map((b) => b.id));
-  const lines = [`flowchart LR`, `  pages["${map.meta.pages} pages"]`];
-  for (const b of keep) lines.push(`  ${b.id}["${mermaidLabel(b.name)}<br/>×${b.reuse.instances}"]`);
+  const lines = [`flowchart LR`, `  pages["${mermaidLabel(map.meta.pages)} pages"]`];
+  for (const b of keep) lines.push(`  ${b.id}["${mermaidLabel(b.name)}<br/>×${mermaidLabel(b.reuse.instances)}"]`);
   for (const b of keep) {
     if (!(b.parents || []).some((p) => ids.has(p))) lines.push(`  pages --> ${b.id}`);
     for (const p of b.parents || []) if (ids.has(p)) lines.push(`  ${p} --> ${b.id}`);
@@ -192,11 +192,11 @@ const shell = (title, body) =>
 // shape; label it distinctly instead.
 export function variantSection(v) {
   if (v.overflow) {
-    return `<h3>+${esc(v.overflowShapes)} more shape(s) — ${v.count} instance${v.count === 1 ? '' : 's'} combined</h3>
+    return `<h3>+${esc(v.overflowShapes)} more shape(s) — ${esc(v.count)} instance${v.count === 1 ? '' : 's'} combined</h3>
       <p class="note">Showing the most common of the folded-in shapes as a representative sample.</p>
       <div class="scroll"><pre>${esc(v.html)}</pre></div>`;
   }
-  return `<h3>Variant ${esc(v.id)} — ${v.count} instance${v.count === 1 ? '' : 's'}</h3>
+  return `<h3>Variant ${esc(v.id)} — ${esc(v.count)} instance${v.count === 1 ? '' : 's'}</h3>
     <div class="scroll"><pre>${esc(v.html)}</pre></div>`;
 }
 
@@ -207,7 +207,7 @@ export function blockPageHtml(b, map, byId) {
     </table></div>`;
   return shell(`${b.name} — block map`, `
     <h1>${esc(b.name)}</h1>
-    <p class="sub">${esc(b.id)} · ${esc(b.tier)} · on ${b.reuse.pages} page(s) · ${b.reuse.instances} instance(s)</p>
+    <p class="sub">${esc(b.id)} · ${esc(b.tier)} · on ${esc(b.reuse.pages)} page(s) · ${esc(b.reuse.instances)} instance(s)</p>
     <p class="alias">aliases absorbed: ${esc((b.aliases || []).join('  '))}</p>
     ${(b.mergedBy || []).length ? `<h2>Adjudicated merges</h2><ul>${
       b.mergedBy.map((m) => `<li>absorbed <code>${esc(m.absorbed)}</code> — ${esc(m.reason)}</li>`).join('')
@@ -234,7 +234,7 @@ export function renderReport(outDir) {
   const homepage = join(outDir, 'report.html');
   writeFileSync(homepage, shell('Block map', `
     <h1>Block map</h1>
-    <p class="sub">${esc(map.meta.pages)} pages · ${(map.blocks || []).length} unique blocks · engine: ${esc(map.meta.engine || 'static')}</p>
+    <p class="sub">${esc(map.meta.pages)} pages · ${esc((map.blocks || []).length)} unique blocks · engine: ${esc(map.meta.engine || 'static')}</p>
     ${warnBanner(map)}
     ${scorecard(map)}
     <h2>Reuse matrix</h2>${matrixHtml(map)}

@@ -92,6 +92,55 @@ test('matrixHtml escapes the href it builds from a block id, closing an attribut
   assert.ok(!html.includes('onmouseover='), `a raw id must never let an href attribute break out:\n${html}`);
 });
 
+// --- Review round 1, minors: numeric-looking fields must still be escaped -
+//
+// b.reuse.instances, b.reuse.pages, v.count, and map.meta.pages are meant
+// to be numbers, but block-map.json is parsed JSON and nothing enforces
+// that at the renderer boundary — a string value there reaching an
+// unescaped template-literal slot is a live script injection. Unreachable
+// TODAY because ids are B\d+ and counts are numbers coming out of Task 9's
+// own emitter, but this renderer's whole contract is not trusting the
+// artifact; closing it costs nothing.
+
+test('matrixHtml escapes reuse.instances', () => {
+  const evil = '<script>window.__hit=(window.__hit||0)+1</script>';
+  const map = {
+    meta: { pages: 1 }, pages: [{ id: 'P1', url: '/p' }],
+    blocks: [{ id: 'B1', name: 'X', tier: 'organism', aliases: [], parents: [], children: [], reuse: { pages: 1, instances: evil }, instances: [] }],
+  };
+  assert.ok(!matrixHtml(map).includes('<script>'), 'reuse.instances must not inject a live script into the matrix');
+});
+
+test('blockPageHtml escapes reuse.pages and reuse.instances', () => {
+  const evil = '<script>window.__hit=(window.__hit||0)+1</script>';
+  const b = { id: 'B1', name: 'X', tier: 'organism', aliases: [], mergedBy: [], variants: [], instances: [], reuse: { pages: evil, instances: evil } };
+  const html = blockPageHtml(b, { meta: {} }, new Map());
+  assert.ok(!html.includes('<script>'), `reuse.pages/instances must not inject a live script into the block page:\n${html}`);
+});
+
+test('variantSection escapes v.count, both the normal and overflow branch', () => {
+  const evil = '<script>window.__hit=(window.__hit||0)+1</script>';
+  assert.ok(!variantSection({ id: 'v1', count: evil, html: '<div></div>' }).includes('<script>'), 'normal variant: count must not inject');
+  assert.ok(!variantSection({ id: 'v2', count: evil, html: '<div></div>', overflow: true, overflowShapes: 3 }).includes('<script>'), 'overflow variant: count must not inject');
+});
+
+// meta.pages sits INSIDE a mermaid quoted label (the "pages" badge node), so
+// the discriminating test is the same shape as the block-name quote test
+// above, not a plain <script>-absence check — a script tag there is
+// already neutralised by the existing whole-source esc() pass regardless
+// of this fix, but a bare `"` in meta.pages was NOT: it would break the
+// "pages" node's own mermaid grammar the identical way an unescaped block
+// name broke a card node's grammar.
+test('skeletonMermaid entity-escapes meta.pages so it cannot break the "pages" node\'s own mermaid grammar', () => {
+  const map = { meta: { pages: 'X" onclick="fire()' }, blocks: [{ id: 'B1', name: 'Y', tier: 'organism', aliases: [], parents: [], children: [], reuse: { pages: 1, instances: 2 }, instances: [] }] };
+  const html = skeletonMermaid(map);
+  const raw = html.slice(html.indexOf('>') + 1, html.lastIndexOf('<'));
+  const decoded = raw.replace(/&amp;|&lt;|&gt;|&quot;/g, (m) => ({ '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"' }[m]));
+  const label = decoded.match(/pages\["([\s\S]*?)"\]/);
+  assert.ok(label, `pages-node mermaid source not well-formed after a one-level entity decode:\n${decoded}`);
+  assert.ok(label[1].includes('&quot;'), `meta.pages' own quote must survive as an entity INSIDE the label, not break it early. Got: ${JSON.stringify(label[1])}`);
+});
+
 // --- Review round 1: pin the 5 previously-uncovered deviations ------------
 //
 // Each of these five was a real fix over the brief's reference code, but
