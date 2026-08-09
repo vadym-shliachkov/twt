@@ -129,6 +129,34 @@ test('variantSection renders an overflow bucket with a distinct heading, never a
   assert.ok(!html.includes('Variant v8'), `an overflow bucket's count is a SUM across shapes, not one instance count — must not read as a normal "Variant vN" heading:\n${html}`);
 });
 
+// --- Review round 1, Important 2: warnBanner must not contradict itself ---
+//
+// Removing the `engine === 'playwright'` gate (so the warning always shows
+// once jsRenderedPages is non-empty, regardless of engine) was correct, but
+// the WORDING was never adapted for that case: under the playwright engine
+// the banner still said "read as static HTML ... Install Playwright and
+// re-run without --static" — false and contradictory advice on the one
+// artifact a user actually reads, right next to a "engine: playwright"
+// subtitle two lines above it.
+
+test('warnBanner under the static engine keeps the install-Playwright wording', () => {
+  const html = warnBanner({ meta: { engine: 'static', jsRenderedPages: ['/app'] } });
+  assert.ok(html.includes('/app'), 'must name the page');
+  assert.ok(html.includes('Install Playwright'), 'static engine: the install-Playwright advice is correct here');
+});
+
+test('warnBanner under the playwright engine does not contradict itself', () => {
+  const html = warnBanner({ meta: { engine: 'playwright', jsRenderedPages: ['/app'] } });
+  assert.ok(html.includes('/app'), 'must still name the page — no engine gate suppresses the warning');
+  assert.ok(!html.includes('Install Playwright'), `must not tell a playwright-engine user to install Playwright:\n${html}`);
+  assert.ok(!html.includes('--static'), `must not reference the --static flag, which is irrelevant under playwright:\n${html}`);
+});
+
+test('warnBanner stays silent when jsRenderedPages is empty, under either engine', () => {
+  assert.equal(warnBanner({ meta: { engine: 'static', jsRenderedPages: [] } }), '');
+  assert.equal(warnBanner({ meta: { engine: 'playwright', jsRenderedPages: [] } }), '');
+});
+
 test('neighborhoodMermaid caps fan-out at NEIGHBOR_CAP and notes the overflow', () => {
   const byId = new Map();
   const parentIds = [];

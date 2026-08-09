@@ -52,15 +52,26 @@ export function scorecard(map) {
   ].join('')}</div>`;
 }
 
-// Note: deliberately NOT gated on `map.meta.engine === 'playwright'` — a
+// Deliberately NOT gated on `map.meta.engine === 'playwright'` — a
 // non-empty jsRenderedPages is worth surfacing regardless of which engine
 // ran, since seeing it under playwright would itself mean something
 // unexpected happened (a per-page render failure), not a state to hide.
+// But the WORDING must branch: under the static engine, "install
+// Playwright and re-run without --static" is correct advice; under the
+// playwright engine that same advice is false and self-contradicting right
+// next to the "engine: playwright" subtitle two lines above it on the
+// report a user actually reads (review round 1, Important 2).
 export function warnBanner(map) {
   const js = map.meta.jsRenderedPages || [];
   if (!js.length) return '';
+  const list = js.map((u) => `<code>${esc(u)}</code>`).join(', ');
+  if (map.meta.engine === 'playwright') {
+    return `<div class="warn"><strong>Incomplete map.</strong> These pages were flagged as JS-rendered even under
+      the Playwright engine, so their block coverage may still be incomplete: ${list}.
+      Check the crawl log for a per-page render failure and re-run.</div>`;
+  }
   return `<div class="warn"><strong>Incomplete map.</strong> These pages are JS-rendered and were
-    read as static HTML, so their blocks are missing: ${js.map((u) => `<code>${esc(u)}</code>`).join(', ')}.
+    read as static HTML, so their blocks are missing: ${list}.
     Install Playwright and re-run without <code>--static</code> for a complete map.</div>`;
 }
 
