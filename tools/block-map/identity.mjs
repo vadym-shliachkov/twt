@@ -53,53 +53,103 @@ function excerpt(block) {
 
 const aliasOf = (b) => (b.classes.length ? '.' + b.classes[0] : (b.id ? '#' + b.id : b.tag));
 
-// --- Union-find over the pairwise similarity graph -------------------------
+// --- Agglomerative complete-linkage clustering ------------------------------
 //
-// The brief's reference loop assigns each instance to the group whose FIRST
-// member (the one that founded the group) scores highest, and that anchor
-// fingerprint is never updated afterward. That makes the result depend on
-// *arrival order*: three genuine instances of the same block, where sim(1,2)
-// = 0.94 (just under MERGE_AT) but sim(1,3) = 0.96 and sim(2,3) = 0.97, come
-// out as ONE group `[1,2,3]` when instance 3 happens to found the group
-// (order [3,1,2]) but as TWO groups `[1]` + `[2,3]` under every order where
-// 1 or 2 founds first — same instances, same pairwise scores, different
-// canonical-block count. That directly violates this file's own header
-// promise ("two runs over an unchanged site differ ONLY in the adjudicated
-// band"). Comparing a new instance against the BEST-scoring existing member
-// (rather than only the founder) narrows but does not close this gap: the
-// partition still depends on which item happens to seed a group before a
-// bridging item arrives (verified: same triangle, still order-dependent).
+// Fix-round history on this function:
 //
-// A connected-components pass over the >=MERGE_AT edge graph is the only one
-// of the three that is provably invariant under instance order — order never
-// enters the computation, only the (symmetric) edge set does. Same
-// asymptotic cost as the greedy versions (both are O(n^2) pairwise
-// similarity calls in the worst case).
+// 1) The brief's reference loop assigned each instance to the group whose
+//    FIRST member (the one that founded the group) scored highest, and that
+//    anchor fingerprint was never updated afterward — order-dependent: the
+//    same three instances of one real block produced either 1 or 2 canonical
+//    blocks purely depending on arrival order (see task-7-report.md, Trap 1).
+// 2) Replacing it with union-find (connected components over the >=MERGE_AT
+//    edge graph) fixed order-dependence — the partition is a pure function
+//    of the symmetric edge set — but introduced a WORSE, silent failure:
+//    "chaining". If A-B and B-C both clear MERGE_AT but A-C does not (a
+//    real, measured case: sim(A,B)=0.9688, sim(B,C)=0.9643, sim(A,C)=0.9375
+//    — see the "THE invariant" test), union-find still merges A, B, and C
+//    into ONE group via the B bridge, even though A and C individually
+//    would have landed in the gray band together. Worse: because the gray
+//    band only ever compares pairs ACROSS separate groups, once A and C are
+//    swallowed into the same group there is no gray-band entry for them at
+//    all — union-find doesn't just over-merge, it deletes the adjudication
+//    that would have surfaced the over-merge.
 //
-// This does not eliminate the classic single-linkage "chaining" risk: if a
-// genuinely-different pair A/C (score in the gray band, say 0.70) both sit
-// >=MERGE_AT next to a bridge item B, A and C land in the same final group
-// under ANY clustering strategy that admits on pairwise edges — that is a
-// property of transitive threshold clustering, not an artifact of this
-// implementation, and confirmed still order-independent (same result for
-// all 6 orderings of A/B/C). See task-7 report, "residual risk" section.
-function connectedComponents(n, edge) {
-  const parent = Array.from({ length: n }, (_, i) => i);
-  const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
-  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      if (edge(i, j)) union(i, j);
+// Complete-linkage (below) is order-invariant like union-find AND bounded
+// like the original greedy loop: two clusters may only merge while their
+// MINIMUM pairwise similarity (i.e. the worst-case member-to-member score,
+// checked across EVERY pair, not just adjacent ones) is >= MERGE_AT. That
+// makes the headline invariant hold BY CONSTRUCTION: for every produced
+// block, the minimum pairwise similarity across its members is >= MERGE_AT.
+// In the A/B/C example, {A,B} merges (0.9688 >= MERGE_AT), but admitting C
+// would require min(sim(A,C), sim(B,C)) = min(0.9375, 0.9643) = 0.9375 <
+// MERGE_AT — so C stays a separate group, and A/C's high-but-insufficient
+// score surfaces normally in the gray band instead of being buried.
+//
+// Standard hierarchical-clustering recurrence: once A and B merge, the new
+// cluster's score against any other cluster D is min(clusterSim(A,D),
+// clusterSim(B,D)) — this holds because
+// min over (A∪B)×D of pointSim == min(min over A×D, min over B×D).
+// Ties (multiple candidate pairs sharing the highest qualifying score) are
+// broken deterministically by the LOWEST original instance index present in
+// each cluster, compared lexicographically — never by iteration/arrival
+// order — which is what keeps the whole procedure order-invariant.
+// Numeric lexicographic comparison of two candidate cluster pairs by their
+// (sorted-ascending) repIndex tuples — the deterministic tie-break. Plain
+// string comparison would be wrong here ("9" > "10" lexicographically).
+function pairKeyLess(iA, jA, iB, jB) {
+  const [a1, a2] = [iA.repIndex, jA.repIndex].sort((x, y) => x - y);
+  const [b1, b2] = [iB.repIndex, jB.repIndex].sort((x, y) => x - y);
+  return a1 !== b1 ? a1 < b1 : a2 < b2;
+}
+
+function completeLinkageClusters(n, simOf) {
+  // Each live cluster: { members: [instance indices], repIndex: smallest
+  // original index it contains — the tie-break key, and also what makes
+  // group NUMBERING (assigned later from final cluster order) depend only
+  // on the smallest instance index in each cluster, not on merge order.
+  let clusters = Array.from({ length: n }, (_, i) => ({ members: [i], repIndex: i }));
+
+  // linkSim[a][b] = complete-linkage score between clusters a and b (both
+  // are indices into the CURRENT `clusters` array; rebuilt each merge round
+  // since indices shift — n is always small here (single-digit to low
+  // hundreds of blocks per site), so an O(k^2) rebuild per merge, up to k
+  // merges, is the same O(n^3) worst case as any other agglomerative
+  // clustering and not a practical concern at this scale).
+  while (clusters.length > 1) {
+    let bestI = -1, bestJ = -1, bestScore = -1;
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        let s = Infinity;
+        for (const a of clusters[i].members) {
+          for (const b of clusters[j].members) {
+            const v = simOf(a, b);
+            if (v < s) s = v;
+          }
+        }
+        if (s < MERGE_AT) continue; // does not qualify — never a merge candidate
+        if (bestI === -1) { bestScore = s; bestI = i; bestJ = j; continue; }
+        // Numeric lexicographic tie-break (NOT string comparison — repIndex
+        // can be >= 10, and "9" < "10" as strings is false, would silently
+        // reintroduce order-dependent-looking ties on larger sites).
+        if (s > bestScore || (s === bestScore && pairKeyLess(clusters[i], clusters[j], clusters[bestI], clusters[bestJ]))) {
+          bestScore = s; bestI = i; bestJ = j;
+        }
+      }
     }
+    if (bestI === -1) break; // no pair qualifies — done
+    const merged = {
+      members: [...clusters[bestI].members, ...clusters[bestJ].members],
+      repIndex: Math.min(clusters[bestI].repIndex, clusters[bestJ].repIndex),
+    };
+    clusters = clusters.filter((_, idx) => idx !== bestI && idx !== bestJ);
+    clusters.push(merged);
   }
-  const order = []; // first-seen order of each root, for stable, deterministic group numbering
-  const byRoot = new Map();
-  for (let i = 0; i < n; i++) {
-    const r = find(i);
-    if (!byRoot.has(r)) { byRoot.set(r, []); order.push(r); }
-    byRoot.get(r).push(i);
-  }
-  return order.map((r) => byRoot.get(r));
+
+  // Deterministic, order-invariant group numbering: sort final clusters by
+  // their smallest contained instance index (repIndex), not by merge order.
+  clusters.sort((a, b) => a.repIndex - b.repIndex);
+  return clusters.map((c) => c.members.sort((x, y) => x - y));
 }
 
 export function cluster(instances) {
@@ -120,7 +170,7 @@ export function cluster(instances) {
     return s;
   };
 
-  const componentMembers = connectedComponents(n, (i, j) => simOf(i, j) >= MERGE_AT);
+  const componentMembers = completeLinkageClusters(n, simOf);
   const groups = componentMembers.map((members) => ({ members }));
 
   // Gray band: cross-group pairs whose closest members neither merged nor
