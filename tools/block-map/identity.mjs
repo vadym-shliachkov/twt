@@ -8,7 +8,14 @@ import { fingerprint, similarity } from './fingerprint.mjs';
 
 export const MERGE_AT = 0.95;   // amended from 0.90 — see task-6 report / plan amendment
 export const SPLIT_AT = 0.60;
-export const GRAY_CAP = 60;
+// Amended 60 -> 30 — see task-13 report / plan amendment. With the sort
+// below fixed to score-descending, 30 slots adjudicate strictly more of
+// what the gray band exists for (near-merge, same-block-different-name
+// pairs) than 60 slots did under the old |score-0.75| sort, which measured
+// on a saturated site adjudicated ZERO pairs scoring >=0.90 — the sort was
+// spending its slots on the least-informative middle of the band instead
+// of the pairs actually worth a model's judgment.
+export const GRAY_CAP = 30;
 const EXCERPT = 400;
 
 // Whole-TOKEN keyword lists (exact match, not regex substring). ROLE_NOUN's
@@ -421,7 +428,17 @@ export function cluster(instances) {
       }
     }
   }
-  gray.sort((x, y) => Math.abs(x.score - 0.75) - Math.abs(y.score - 0.75));
+  // Sort by score DESCENDING — near-merge (score close to MERGE_AT, "same
+  // block, probably a different name/markup drift") first, not by
+  // proximity to the band's midpoint. Amended from |score-0.75| (task-13
+  // report / plan amendment): the midpoint sort keeps the middle of the
+  // band and sheds BOTH edges once the band is capped, which on a
+  // saturated site adjudicated zero pairs scoring >=0.90 — the exact
+  // "same block, different name" case this whole mechanism exists to
+  // resolve. Descending-by-score puts the most consequential, most
+  // actionable pairs first; a capped band under this sort now drops the
+  // lowest-signal near-split pairs (score close to SPLIT_AT) instead.
+  gray.sort((x, y) => y.score - x.score);
   const grayBand = gray.slice(0, GRAY_CAP);
 
   const blocks = groups.map((g, gi) => {

@@ -43,13 +43,20 @@ test('the site header clusters across every page', () => {
   assert.equal(header.reuse.pages, 3);
 });
 
-test('gray band is capped and sorted by ambiguity', () => {
+test('gray band is capped and sorted score-descending (near-merge first)', () => {
+  // Amended from |score-0.75| (task-13 report / plan amendment): that sort
+  // kept the middle of the band and shed both edges once capped, which on
+  // a saturated site adjudicated ZERO pairs scoring >=0.90 — the "same
+  // block, different name" case the gray band exists to resolve. Score-
+  // descending puts the most consequential (closest to MERGE_AT) pairs
+  // first, so a capped band drops the least-actionable near-split pairs
+  // instead.
   const many = instancesFor(PAGES);
   const { grayBand } = cluster(many);
   assert.ok(grayBand.length <= GRAY_CAP);
   for (let i = 1; i < grayBand.length; i++) {
-    assert.ok(Math.abs(grayBand[i - 1].score - 0.75) <= Math.abs(grayBand[i].score - 0.75) + 1e-9,
-      'most ambiguous pairs must come first');
+    assert.ok(grayBand[i - 1].score >= grayBand[i].score,
+      'highest-scoring (nearest-merge) pairs must come first');
   }
 });
 
