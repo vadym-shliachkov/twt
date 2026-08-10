@@ -4,7 +4,7 @@ import { qualityRules } from './quality.mjs';
 import { harvestedRules } from './harvested.mjs';
 import { interviewRules } from './interview.mjs';
 
-export { QUESTIONS } from './questions.mjs';
+export { QUESTIONS, resolveQuestions } from './questions.mjs';
 export { isAnswered } from './interview.mjs';
 
 // interviewRules last: they are the only rules that fire on the ABSENCE of an

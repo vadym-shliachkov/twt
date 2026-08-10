@@ -3,6 +3,7 @@
 // The highest-consequence mechanical check in the design: a committed key is
 // unrecoverable once pushed, and no other twt skill looks for one.
 import { existsSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { listFiles } from '../../lib/sources.mjs';
 import { NONPROD_URL_ANYWHERE } from './lib/patterns.mjs';
@@ -44,18 +45,50 @@ function isSkipped(ctx, f) {
   return rel.split(/[\\/]/).some((seg) => SKIP_DIRS.has(seg));
 }
 
+// 'tracked' | 'ignored' | 'untracked'.
+//
+// The counter here is called `committed_secret_files`, and it used to be filled
+// by a bare existence check — so on every WordPress project it fired on
+// wp-config.php, which MUST be in the web root for the site to boot and which
+// every sane setup gitignores. Presence on disk is not exposure; being in the
+// repository is. Asking git is the only way to tell them apart.
+//
+// No git, no repository, or git not on PATH → both probes come back non-zero
+// and the answer is 'untracked', which still reports. Failing toward reporting
+// is the right direction for the highest-consequence check in the scan.
+function gitStatusOf(projectDir, name) {
+  const git = (args) => spawnSync('git', args, { cwd: projectDir, encoding: 'utf8', windowsHide: true });
+  if (git(['ls-files', '--error-unmatch', '--', name]).status === 0) return 'tracked';
+  return git(['check-ignore', '-q', '--', name]).status === 0 ? 'ignored' : 'untracked';
+}
+
 export function run(ctx) {
   const counts = {
-    committed_secret_files: 0, inline_secrets: 0, debug_statements: 0,
-    nonprod_urls: 0, wp_debug_on: 0, source_maps: 0,
+    committed_secret_files: 0, ignored_secret_files: 0, inline_secrets: 0,
+    debug_statements: 0, nonprod_urls: 0, wp_debug_on: 0, source_maps: 0,
   };
   const findings = [];
 
   for (const name of SECRET_FILES) {
     const p = join(ctx.projectDir, name);
     if (!existsSync(p) || !statSync(p).isFile()) continue;
-    counts.committed_secret_files++;
-    findings.push({ kind: 'secret_file', file: name, line: 0, detail: `${name} is present in the project root` });
+    const git = gitStatusOf(ctx.projectDir, name);
+    if (git === 'ignored') {
+      // Present on disk because it has to be — wp-config.php, .env on a server
+      // — and excluded from the repository on purpose. Counted so the fact is
+      // visible in facts.json, not raised, because there is no action.
+      counts.ignored_secret_files++;
+    } else {
+      counts.committed_secret_files++;
+      findings.push({
+        kind: 'secret_file', file: name, line: 0,
+        detail: git === 'tracked'
+          ? `${name} is committed to the repository`
+          : `${name} is present in the project root and is not gitignored`,
+      });
+    }
+    // Independent of the repository question: WP_DEBUG on is wrong on the
+    // server whether or not the file that sets it is tracked.
     if (name === 'wp-config.php' && /define\(\s*['"]WP_DEBUG['"]\s*,\s*true/i.test(ctx.read(p))) {
       counts.wp_debug_on++;
       findings.push({ kind: 'wp_debug_on', file: name, line: 0, detail: 'WP_DEBUG is true' });

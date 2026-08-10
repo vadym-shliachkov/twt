@@ -58,15 +58,45 @@ const esc = (s) => String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt
 const mdEsc = (s) => String(s).replace(/</g, '\\<');
 
 // ---- readiness matrix --------------------------------------------------------
+// `coverage.assessed[c] === false` means the scan had nothing to read for that
+// category — no built pages, no harvested report, no live layer. Rendering that
+// as CLEAR is the one thing an audit must never do: it reports absence of
+// evidence as evidence of absence, and a reader cannot tell the two apart.
+// Absent coverage block (a hand-written or pre-upgrade findings.json) means
+// "unknown", which is not a coverage claim in either direction — those keep the
+// old behaviour rather than being downgraded on a guess.
+const coverage = doc.coverage || null;
+const assessed = (c) => !coverage || coverage.assessed?.[c] !== false;
+
 function matrixRows() {
   return CATEGORIES.map((c) => {
     const items = byCat(c);
     const b = items.filter((f) => f.severity === 'LAUNCH-BLOCKER').length;
     const w = items.filter((f) => f.severity === 'FIX-WEEK-ONE').length;
     const u = items.filter((f) => f.severity === 'UNVERIFIED').length;
-    const state = b ? 'BLOCKED' : u ? 'UNVERIFIED' : w ? 'AT RISK' : 'CLEAR';
+    const state = b ? 'BLOCKED' : u ? 'UNVERIFIED' : w ? 'AT RISK'
+      : assessed(c) ? 'CLEAR' : 'NOT ASSESSED';
     return { c, title: CATEGORY_TITLES[c], state, b, w, u, n: items.length };
   });
+}
+
+// One line under the matrix, stating what the scan actually had in front of it.
+// Step 8 of the command asks the model to say which layers had input; deriving
+// it here means it is stated on every run instead of when remembered.
+function coverageNote() {
+  if (!coverage) return '';
+  const i = coverage.inputs || {};
+  const inputs = [
+    `${i.pages ?? 0} page${i.pages === 1 ? '' : 's'} scanned`,
+    i.theme ? 'theme read' : 'no theme',
+    i.live ? 'live layer ok' : 'no live layer',
+    `${i.harvest ?? 0} upstream report${i.harvest === 1 ? '' : 's'} harvested`,
+  ].join(' · ');
+  const unassessed = CATEGORIES.filter((c) => !assessed(c));
+  const legend = unassessed.length
+    ? `**NOT ASSESSED —** the scan had no input for ${unassessed.length === 1 ? 'this category' : 'these categories'}; it is not a pass. `
+    : '';
+  return `${legend}Inputs: ${inputs}.`;
 }
 
 // ---- issue blocks ------------------------------------------------------------
@@ -131,6 +161,8 @@ const md = [
   '| # | Category | State | Blockers | Fix week one | Unverified |',
   '|---|---|---|---|---|---|',
   ...rows.map((r, i) => `| ${i + 1} | ${r.title} | ${r.state} | ${r.b} | ${r.w} | ${r.u} |`),
+  '',
+  coverageNote(),
   '',
   ...CATEGORIES.map(categorySection),
   findings.some((f) => f.severity === 'UNVERIFIED')
@@ -214,6 +246,7 @@ ${complete ? '' : `<p><strong>The deterministic scan did not complete (layers.sc
 <div class="wrap"><table><tr><th>#</th><th>Category</th><th>State</th><th>Blockers</th><th>Fix week one</th><th>Unverified</th></tr>
 ${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.title)}</td><td>${esc(r.state)}</td><td>${r.b}</td><td>${r.w}</td><td>${r.u}</td></tr>`).join('\n')}
 </table></div>
+${coverageNote() ? `<p class="withheld">${esc(coverageNote().replace(/\*\*/g, ''))}</p>` : ''}
 ${CATEGORIES.map((c) => {
     // Reuses sectionItems() — the exact same filter and cap the markdown uses
     // — so the html and md renderings of a category can never disagree on

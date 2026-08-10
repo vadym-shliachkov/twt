@@ -177,3 +177,35 @@ test('the same placeholder id on two DIFFERENT pages is two distinct ANLY002 fin
   const found = all(facts).filter((x) => x.rule === 'ANLY002');
   assert.equal(found.length, 2);
 });
+
+// ---- regression: the interview must know what it is looking at -------------
+// On a site that had been publicly serving traffic for weeks, the audit still
+// asked "Who presses the button, when, and who is available for the hour
+// after?" and rendered it as an open question — while its own finding text said
+// there was no cutover left to staff. A question about an event that already
+// happened cannot be answered, so it stays UNVERIFIED forever and reads as an
+// audit that did not look at what it was auditing.
+test('interview: a site already serving traffic is asked about monitoring, not about a cutover', () => {
+  const live = { layers: { scan: 'ok' }, checks: {}, answers: null, live: { status: 'ok', checks: { reachable: true } } };
+  const f = RULES.flatMap((r) => r.run(live)).find((x) => x.where === 'interview: Q-LAUNCH-WINDOW');
+  assert.ok(f, 'the question is still asked — it is still blocking');
+  assert.doesNotMatch(f.evidence, /presses the button/, 'the cutover wording is wrong for a live site');
+  assert.match(f.evidence, /after each of these fixes ships|watches the site/i);
+});
+
+test('interview: a site that is not live keeps the cutover wording', () => {
+  const pre = { layers: { scan: 'ok' }, checks: {}, answers: null, live: { status: 'skipped' } };
+  const f = RULES.flatMap((r) => r.run(pre)).find((x) => x.where === 'interview: Q-LAUNCH-WINDOW');
+  assert.match(f.evidence, /presses the button/);
+});
+
+test('interview: the live variant changes wording only — never the id, owner, or count', () => {
+  const shape = (facts) => RULES.flatMap((r) => r.run(facts))
+    .filter((x) => x.rule === 'INTV001')
+    .map((x) => `${x.where}|${x.owner}|${x.severity}`).sort();
+  assert.deepEqual(
+    shape({ layers: { scan: 'ok' }, checks: {}, answers: null, live: { status: 'ok', checks: { reachable: true } } }),
+    shape({ layers: { scan: 'ok' }, checks: {}, answers: null, live: { status: 'skipped' } }),
+    'one rule per blocking question, whatever the site state',
+  );
+});

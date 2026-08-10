@@ -86,9 +86,10 @@ export function verdictFor(findings, layers) {
 // Moved above the CLI block so both it and the --self-test block below can use it.
 const _isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { RULES, QUESTIONS } from './launch-audit/rules/index.mjs';
+import { RULES, QUESTIONS, resolveQuestions } from './launch-audit/rules/index.mjs';
+import { coverageFor } from './launch-audit/coverage.mjs';
 
 // node tools/launch-audit.mjs <facts.json> --out <dir> [--answers <answers.json>]
 const _factsArg = process.argv[2];
@@ -99,6 +100,31 @@ if (_isMain && _factsArg && !_factsArg.startsWith('--')) {
   let facts;
   try { facts = JSON.parse(readFileSync(_factsArg, 'utf8')); }
   catch (e) { console.error(`cannot read facts: ${e.message}`); process.exit(2); }
+
+  // Step 3 of the command fills evidence gaps by dispatching /twt-qa (and
+  // friends) and then re-running the scan, so the harvest sees what was just
+  // produced. On a real run that re-scan was skipped: the audit was computed
+  // from a facts.json saying `qa.present: false` while the QA reports it cites
+  // by name already sat on disk, and a harvest rule fired about missing QA that
+  // had existed for two minutes. Prose in a command file cannot enforce an
+  // ordering; comparing mtimes can. Fails the run rather than quietly measuring
+  // the past — a wrong audit is worse than a stopped one.
+  const moved = [];
+  if (facts.project) {
+    const scannedAt = Date.parse(facts.generated || '');
+    for (const [key, probe] of Object.entries(facts.harvest || {})) {
+      if (!probe?.path || !Number.isFinite(scannedAt)) continue;
+      const abs = join(facts.project, probe.path);
+      if (!existsSync(abs)) continue;
+      if (statSync(abs).mtimeMs > scannedAt) moved.push(`${probe.path} (${key})`);
+    }
+  }
+  if (moved.length) {
+    console.error(`launch-audit: ${_factsArg} is stale — ${moved.join(', ')} changed after the scan that produced it.`);
+    console.error('launch-audit: re-run the scan first (Step 2), then apply the rules to the fresh facts:');
+    console.error(`launch-audit:   node tools/launch-scan.mjs "${facts.project}"${facts.url ? ` --url ${facts.url}` : ''}`);
+    process.exit(2);
+  }
 
   // Stored interview answers, so a question already answered on a previous run
   // does not come back as an UNVERIFIED finding. Absent is the normal case and
@@ -128,7 +154,11 @@ if (_isMain && _factsArg && !_factsArg.startsWith('--')) {
   const payload = {
     tool: 'launch-audit', version: 1, generated: new Date().toISOString(),
     layers: facts.layers, mode: facts.mode, url: facts.url ?? null,
-    verdict, counts, findings: found, interview: QUESTIONS,
+    // Carried into findings.json because the renderer is handed this file and
+    // never sees facts.json — without it the matrix cannot tell a category that
+    // came back clean from one that had nothing to read.
+    coverage: coverageFor(facts),
+    verdict, counts, findings: found, interview: resolveQuestions(facts),
   };
   writeFileSync(join(outDir, 'findings.json'), JSON.stringify(payload, null, 2), 'utf8');
   const tally = SEVERITIES.map((s) => `${s}=${counts[s]}`).join('  ');

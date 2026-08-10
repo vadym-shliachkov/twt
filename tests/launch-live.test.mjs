@@ -186,13 +186,75 @@ test('live: robots.txt and sitemap.xml are checked at the origin root, not under
   assert.deepEqual(live.findings.filter((f) => f.kind === 'missing_sitemap_xml'), []);
 });
 
+// ---- regression: a 200 is not proof the file exists. Observed in the wild on
+// a WordPress host whose catch-all rewrites every unmatched path to the front
+// page: GET /robots.txt → 301 /robots.txt/ → 200 text/html, 42KB of homepage.
+// The original check was `r.ok && r.status === 200`, which followed the
+// redirect, saw the 200 and recorded robots_txt: true — a false PASS on a site
+// that serves neither file, i.e. the exact failure this module exists to catch.
+// Status alone can only ever prove something answered, not that it answered
+// with the file.
+test('live: a catch-all that serves the homepage for /robots.txt and /sitemap.xml is not a pass', async () => {
+  const homepage = '<!DOCTYPE html><html lang="en"><head><title>Home</title></head><body>welcome</body></html>';
+  const { s, base } = await serve((req, res) => {
+    if (req.url === '/robots.txt' || req.url === '/sitemap.xml') {
+      return res.writeHead(301, { Location: `${req.url}/` }).end();
+    }
+    res.writeHead(200, { 'content-type': 'text/html; charset=UTF-8' }).end(homepage);
+  });
+  const live = await checkLive(base);
+  await close(s);
+  assert.equal(live.checks.robots_txt, false, 'a 200 that is really the homepage is not a robots.txt');
+  assert.equal(live.checks.sitemap_xml, false, 'a 200 that is really the homepage is not a sitemap');
+  assert.ok(live.findings.some((f) => f.kind === 'missing_robots_txt'));
+  assert.ok(live.findings.some((f) => f.kind === 'missing_sitemap_xml'));
+});
+
+// ---- regression companion: the fix above must not start failing the sites it
+// was protecting. A sitemap reached through a redirect to a DIFFERENT path is
+// the normal Yoast/WordPress shape (/sitemap.xml → /sitemap_index.xml), so the
+// landing path cannot be part of the test — only the content-type and body can.
+test('live: a sitemap reached through a redirect to another path still passes', async () => {
+  const { s, base } = await serve((req, res) => {
+    if (req.url === '/sitemap.xml') return res.writeHead(301, { Location: '/sitemap_index.xml' }).end();
+    if (req.url === '/sitemap_index.xml') {
+      return res.writeHead(200, { 'content-type': 'application/xml' })
+        .end('<?xml version="1.0"?><sitemapindex><sitemap><loc>https://x.test/page-sitemap.xml</loc></sitemap></sitemapindex>');
+    }
+    if (req.url === '/robots.txt') return res.writeHead(200, { 'content-type': 'text/plain' }).end('User-agent: *\nDisallow:');
+    if (req.url.startsWith('/twt-launch-probe')) return res.writeHead(404).end('nope');
+    res.writeHead(200).end('<html></html>');
+  });
+  const live = await checkLive(base);
+  await close(s);
+  assert.equal(live.checks.sitemap_xml, true, 'a real sitemapindex behind a redirect is still a sitemap');
+  assert.equal(live.checks.robots_txt, true);
+  assert.deepEqual(live.findings.filter((f) => f.kind.startsWith('missing_')), []);
+});
+
+// ---- regression companion: a 200 with the right content-type but an empty or
+// truncated body is not a sitemap either — the body is the only thing that can
+// tell a served file from a placeholder.
+test('live: a 200 with no robots directive and no urlset in the body is reported missing', async () => {
+  const { s, base } = await serve((req, res) => {
+    if (req.url === '/robots.txt') return res.writeHead(200, { 'content-type': 'text/plain' }).end('');
+    if (req.url === '/sitemap.xml') return res.writeHead(200, { 'content-type': 'application/xml' }).end('<?xml version="1.0"?><error/>');
+    res.writeHead(200).end('<html></html>');
+  });
+  const live = await checkLive(base);
+  await close(s);
+  assert.equal(live.checks.robots_txt, false);
+  assert.equal(live.checks.sitemap_xml, false);
+});
+
 // ---- coverage: trailing slash and port on the input are handled cleanly
 // (no doubled slash, url recorded without the trailing slash).
 test('live: a trailing slash on the input URL is normalized, not doubled', async () => {
   const seen = [];
   const { s, base } = await serve((req, res) => {
     seen.push(req.url);
-    if (req.url === '/robots.txt' || req.url === '/sitemap.xml') return res.writeHead(200).end('ok');
+    if (req.url === '/robots.txt') return res.writeHead(200).end('User-agent: *\nDisallow:');
+    if (req.url === '/sitemap.xml') return res.writeHead(200).end('<urlset></urlset>');
     if (req.url.startsWith('/twt-launch-probe')) return res.writeHead(404).end('nope');
     res.writeHead(200).end('<html></html>');
   });

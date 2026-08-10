@@ -787,3 +787,54 @@ test('launch-scan: --url sets mode local+live and records the url', () => {
   assert.equal(f.layers.live, 'failed', 'an unreachable host is a failed live layer, not a crash');
   assert.equal(f.layers.scan, 'ok', 'a failed live layer must not degrade the local scan');
 });
+
+// ---- regression: "committed" has to mean committed --------------------------
+// The counter is named `committed_secret_files`, but the check was a bare
+// existsSync on the project root. On any WordPress project wp-config.php MUST
+// exist for the site to boot and is gitignored by every sane setup, so the rule
+// fired on every run, forever, on a file that is not in the repository and
+// cannot be removed. A finding a human can only ever answer with "yes, and?" is
+// noise that costs the real findings their credibility — and no amount of
+// hand-suppression in the report survives the next run.
+function gitProject(files, { ignore = null, stage = [] } = {}) {
+  const dir = siteProject({ 'index.html': '<html lang="en"><body><h1>Acme</h1></body></html>' });
+  for (const [name, body] of Object.entries(files)) put(join(dir, name), body);
+  if (ignore) put(join(dir, '.gitignore'), ignore);
+  execFileSync('git', ['init', '-q'], { cwd: dir });
+  if (stage.length) execFileSync('git', ['add', '--', ...stage], { cwd: dir });
+  return dir;
+}
+
+test('hygiene: a gitignored wp-config.php is not a committed secret', () => {
+  const dir = gitProject({ 'wp-config.php': "<?php define( 'WP_DEBUG', false );\n" }, { ignore: 'wp-config.php\n' });
+  run([dir]);
+  const h = facts(dir).checks.hygiene;
+  assert.equal(h.counts.committed_secret_files, 0, 'the repo ignores it — it was never going to ship');
+  assert.equal(h.counts.ignored_secret_files, 1, 'still counted, so the fact is visible without being an item');
+  assert.deepEqual(h.findings.filter((x) => x.kind === 'secret_file'), []);
+});
+
+test('hygiene: a gitignored wp-config.php with WP_DEBUG on is still reported', () => {
+  // Being out of the repo says nothing about being wrong on the server: debug
+  // output on production leaks paths and queries to visitors either way.
+  const dir = gitProject({ 'wp-config.php': "<?php define( 'WP_DEBUG', true );\n" }, { ignore: 'wp-config.php\n' });
+  run([dir]);
+  const h = facts(dir).checks.hygiene;
+  assert.equal(h.counts.committed_secret_files, 0);
+  assert.equal(h.counts.wp_debug_on, 1, 'the debug flag is a server fact, not a repository fact');
+});
+
+test('hygiene: a tracked .env is a committed secret and says so', () => {
+  const dir = gitProject({ '.env': 'API_KEY=sk-live-abc123\n' }, { stage: ['.env'] });
+  run([dir]);
+  const h = facts(dir).checks.hygiene;
+  assert.equal(h.counts.committed_secret_files, 1);
+  const f = h.findings.find((x) => x.kind === 'secret_file' && x.file === '.env');
+  assert.match(f.detail, /committed/i, `detail must name the actual exposure: ${f.detail}`);
+});
+
+test('hygiene: an untracked, un-ignored .env is still reported — one add away from shipping', () => {
+  const dir = gitProject({ '.env': 'API_KEY=sk-live-abc123\n' });
+  run([dir]);
+  assert.equal(facts(dir).checks.hygiene.counts.committed_secret_files, 1);
+});

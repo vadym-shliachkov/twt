@@ -21,7 +21,7 @@
 // worrying answer into a real finding, and a clearing answer into none) and
 // still writes every finding's impact and action (Step 6).
 import { finding } from '../../launch-audit.mjs';
-import { QUESTIONS } from './questions.mjs';
+import { QUESTIONS, resolveQuestions } from './questions.mjs';
 
 // An answer counts when it has non-empty text. `answers.json` is written by the
 // model in Step 5 as `{ "<question id>": { "answer": "...", "asked": "..." } }`
@@ -38,9 +38,13 @@ export function isAnswered(answers, id) {
 // must not add an UNVERIFIED to the count that drives the verdict.
 export const interviewRules = QUESTIONS.filter((q) => q.blocking).map((q) => ({
   id: `INTV-${q.id}`,
+  // The wording is resolved against facts, so a site that is already serving
+  // traffic is asked about monitoring rather than about a cutover it has
+  // already had. Same id and same severity either way — only the sentence a
+  // human reads changes.
   run: (facts) => (isAnswered(facts.answers, q.id) ? [] : [finding({
     rule: 'INTV001', category: q.category, severity: 'UNVERIFIED', owner: q.owner,
     where: `interview: ${q.id}`,
-    evidence: `not answered — ${q.question}`,
+    evidence: `not answered — ${resolveQuestions(facts, [q])[0].question}`,
   })]),
 }));
