@@ -6,20 +6,30 @@
 'use strict';
 import { loadPlaywright } from '../lib/resolve-playwright.mjs';
 
-// Tags whose content is never walked. Mirrors parse.mjs's treatment of
-// link/meta (VOID — never have children) and script/style (RAW — content is
-// skipped wholesale, never tokenized into child nodes). `noscript` is added
-// for a browser-specific reason parse.mjs never has to deal with: Playwright
-// runs with scripting ENABLED, and per the HTML parsing spec that means a
-// browser parses <noscript>'s content as opaque RAWTEXT (a single literal
-// text blob, not child elements) — walking it "normally" would hand back a
-// node whose one text child is unparsed markup source, which is a worse and
-// far more misleading shape mismatch than dropping it outright. parse.mjs,
-// by contrast, has no scripting flag and parses noscript's content as
-// ordinary child elements. This is a known, accepted divergence: a page
-// whose only content lives inside <noscript> fallback markup will report
-// fewer blocks under the Playwright engine than the static one. See the
-// task-11 report for the probe that confirmed this.
+// Tags dropped from the walked tree entirely — NOT the same thing parse.mjs
+// does with the same tag names, just harmless enough that the difference
+// never reaches extract.mjs's output. parse.mjs still emits a node for
+// link/meta (VOID — empty children, no text) and script/style (RAW — empty
+// children, no text): the NODE exists, it is just always childless. This
+// walker drops all five tags before a node is ever created for them, so the
+// parent's `children` array is shorter under Playwright than under the
+// static engine for the same page. That is a real shape difference on the
+// raw tree — it is invisible only because extract.mjs's own SKIP set
+// (script/style/link/meta/head/title/br/#root) re-filters every one of
+// these tags again on its own, recursively, regardless of which engine
+// produced the tree, so no qualifying block's atoms/children ever depend on
+// whether the dropped node was "absent" or "present but empty". `noscript`
+// is dropped for a further, browser-specific reason parse.mjs never has to
+// deal with: Playwright runs with scripting ENABLED, and per the HTML
+// parsing spec that means a browser parses <noscript>'s content as opaque
+// RAWTEXT (a single literal text blob, not child elements) — walking it
+// "normally" would hand back a node whose one text child is unparsed markup
+// source, which is a worse and far more misleading shape mismatch than
+// dropping it outright. parse.mjs, by contrast, has no scripting flag and
+// parses noscript's content as ordinary child elements. This is a known,
+// accepted divergence: a page whose only content lives inside <noscript>
+// fallback markup will report fewer blocks under the Playwright engine than
+// the static one. See the task-11 report for the probe that confirmed this.
 const ATOM_LIKE = ['script', 'style', 'link', 'meta', 'noscript'];
 
 // RAW tags (parse.mjs's RAW set) other than <title> always get `text: ''`

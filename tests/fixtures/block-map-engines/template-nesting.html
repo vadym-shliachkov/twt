@@ -1,0 +1,17 @@
+<!doctype html><html><head><link rel="stylesheet" href="../block-map-site/style.css"><title>Template nesting</title></head>
+<body>
+<main>
+  <section class="promo">
+    <template id="promo-tpl">
+      <article class="promo-card">
+        <h2>Templated headline</h2>
+        <p>Templated body copy that reads like real prose.</p>
+        <a href="#">Learn more</a>
+        <template id="promo-tpl-inner">
+          <div class="promo-note"><h3>Nested note</h3><p>Nested templated paragraph.</p></div>
+        </template>
+      </article>
+    </template>
+  </section>
+</main>
+</body></html>
