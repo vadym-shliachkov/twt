@@ -464,11 +464,16 @@ export function cluster(instances) {
 // Apply the model's rulings on the gray band. Runs AFTER cluster(), so the
 // deterministic result stays reproducible on its own and adjudication is a
 // separate, inspectable layer on top of it.
+//
+// `d && ` guards against a null/malformed array element -- defense in depth
+// for any caller that reaches this function directly (the CLI additionally
+// rejects a malformed --decisions file outright, with a clear message,
+// before ever calling this).
 export function applyDecisions({ blocks, grayBand, unadjudicated }, decisions = []) {
   const byId = new Map(blocks.map((b) => [b.id, b]));
   const dropped = new Set();
   for (const d of decisions) {
-    if (d.verdict !== 'same') continue;
+    if (!d || d.verdict !== 'same') continue;
     const keep = byId.get(d.a), gone = byId.get(d.b);
     if (!keep || !gone || keep === gone || dropped.has(d.a) || dropped.has(d.b)) continue;
     keep.aliases = [...new Set([...keep.aliases, ...gone.aliases])];
@@ -493,7 +498,48 @@ export function applyDecisions({ blocks, grayBand, unadjudicated }, decisions = 
     b.children = [...new Set(b.children.map(survivor).filter((x) => x && x !== b.id))];
     b.parents = [...new Set(b.parents.map(survivor).filter((x) => x && x !== b.id))];
   }
+  // Re-pointing above only strips a SELF edge (survivor pointing at itself).
+  // It does not stop a 2+-hop cycle: merging two blocks that sat at
+  // ancestor distance >= 2 in the pre-merge tree (e.g. a grandchild ruled
+  // "same" as its own grandparent) makes the survivor inherit the
+  // grandparent's child edge to the middle block while KEEPING its own
+  // parent edge to that same middle block -- the middle block ends up
+  // both parent and child of the survivor, a direct cycle, and longer
+  // chains of merges can produce longer cycles the same way. Acyclicity
+  // is a stated invariant of this graph (Step 5's "orphan = no parents"
+  // reading and report.mjs's neighborhood diagram both assume a DAG), so
+  // break any cycle deterministically before returning.
+  breakCycles(remaining);
   return { blocks: remaining, grayBand, unadjudicated };
+}
+
+// Standard DFS cycle-removal over the `children` edges, ordered by block id
+// so the outcome never depends on `decisions` array order (only on the
+// graph's own content, matching this file's general determinism
+// discipline). Any edge found back to a node still on the current
+// recursion stack is a cycle-closing edge -- necessarily redundant with a
+// shorter forward path already discovered, since a genuine DAG never has
+// one -- and is removed from both sides (child's `children` and, on the
+// other end, the parent's `parents`).
+function breakCycles(blocks) {
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  const state = new Map(); // unset = unvisited, 1 = on the current path, 2 = done
+  const ordered = blocks.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const visit = (b) => {
+    state.set(b.id, 1);
+    for (const cid of [...b.children]) {
+      const c = byId.get(cid);
+      if (!c) continue;
+      if (state.get(c.id) === 1) {
+        b.children = b.children.filter((x) => x !== c.id);
+        c.parents = c.parents.filter((x) => x !== b.id);
+        continue;
+      }
+      if (!state.has(c.id)) visit(c);
+    }
+    state.set(b.id, 2);
+  };
+  for (const b of ordered) if (!state.has(b.id)) visit(b);
 }
 
 // Parent/child edges follow the extraction tree: a block is a parent of every

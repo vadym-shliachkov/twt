@@ -140,7 +140,7 @@ const DECISIONS = opts.decisions;
 
   // --- identity -------------------------------------------------------------
   let clustered = cluster(instances);
-  let decisionsRead = 0;
+  let sameRulingsRead = 0, mergesApplied = 0, staleRulingsSkipped = 0;
   if (DECISIONS) {
     let rulings;
     try {
@@ -155,8 +155,34 @@ const DECISIONS = opts.decisions;
       process.exitCode = 1;
       return;
     }
-    decisionsRead = rulings.filter((r) => r && r.verdict === 'same').length;
-    clustered = applyDecisions(clustered, rulings);
+    // A null/malformed entry must fail the same clear way as any other
+    // malformed --decisions input (exit 1, one-line message) -- never a
+    // raw TypeError surfacing from inside applyDecisions().
+    const malformed = rulings.some((r) => !r || typeof r !== 'object' ||
+      typeof r.a !== 'string' || typeof r.b !== 'string' || typeof r.verdict !== 'string');
+    if (malformed) {
+      console.error(`block-map: --decisions file entries must be objects with string a/b/verdict fields: ${DECISIONS}`);
+      process.exitCode = 1;
+      return;
+    }
+    sameRulingsRead = rulings.filter((r) => r.verdict === 'same').length;
+
+    // A ruling's {a,b} ids are POSITIONAL — B01..BN from whichever run
+    // produced the gray-band.json a model adjudicated. The normal
+    // --decisions workflow re-runs the mapper from scratch, and nothing
+    // about that guarantees the same ids: one extra or missing page/block
+    // shifts every id, so a ruling silently applied against the NEW run
+    // would merge whatever now happens to sit at those ids — a confidently
+    // wrong map with no warning. Only apply a ruling whose {a,b} pair still
+    // appears, in either order, in THIS run's gray band.
+    const pairKey = (x, y) => (x < y ? `${x}|${y}` : `${y}|${x}`);
+    const currentPairs = new Set((clustered.grayBand || []).map((g) => pairKey(g.a, g.b)));
+    const applicable = rulings.filter((r) => currentPairs.has(pairKey(r.a, r.b)));
+    staleRulingsSkipped = rulings.length - applicable.length;
+
+    const before = clustered.blocks.length;
+    clustered = applyDecisions(clustered, applicable);
+    mergesApplied = before - clustered.blocks.length;
   }
 
   // --- emit -------------------------------------------------------------
@@ -170,7 +196,10 @@ const DECISIONS = opts.decisions;
   console.log(`  aliases merged: ${result.blocks.reduce((s, b) => s + Math.max(0, b.aliases.length - 1), 0)}`);
   console.log(`  gray band: ${result.grayBand.length} pairs to adjudicate` + (result.unadjudicated ? `, ${result.unadjudicated} auto-split (over cap)` : ''));
   if (DECISIONS) {
-    console.log(`  decisions: applied ${decisionsRead} "same" ruling(s) from ${DECISIONS}`);
+    console.log(`  decisions: applied ${mergesApplied} merge(s) from ${sameRulingsRead} "same" ruling(s) read from ${DECISIONS}`);
+    if (staleRulingsSkipped) {
+      console.log(`  WARNING decisions: skipped ${staleRulingsSkipped} ruling(s) whose pair is not in this run's gray band (stale ids)`);
+    }
   }
   if (js.length && engine === 'static') {
     console.log(`  WARNING js-rendered pages read statically — map incomplete for: ${js.slice(0, 10).join(', ')}`);

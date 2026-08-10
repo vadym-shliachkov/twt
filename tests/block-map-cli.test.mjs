@@ -136,6 +136,59 @@ test('a well-formed but empty --decisions file is accepted and noted in stdout',
   assert.ok(/decisions/i.test(stdout), 'stdout should acknowledge the --decisions file was read');
 });
 
+// --- task-14 review fixes ----------------------------------------------------
+
+test('a --decisions file containing a null entry exits 1 with a clear message, not a stack trace (review minor 3)', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  const dec = join(out, 'decisions.json');
+  writeFileSync(dec, JSON.stringify([null]));
+  await assert.rejects(
+    () => run('node', [TOOL, FIX, '--out', out, '--static', '--decisions', dec]),
+    (e) => e.code === 1 && /decisions/i.test(e.stderr || '') && !/TypeError/.test(e.stderr || '')
+  );
+  assert.ok(!existsSync(join(out, 'summary.json')), 'no artifact should be written on a malformed --decisions entry');
+});
+
+test('a --decisions file with an entry missing a/b/verdict as strings exits 1, not a crash (review minor 3)', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  const dec = join(out, 'decisions.json');
+  writeFileSync(dec, JSON.stringify([{ a: 'B01' }])); // missing b, verdict
+  await assert.rejects(
+    () => run('node', [TOOL, FIX, '--out', out, '--static', '--decisions', dec]),
+    (e) => e.code === 1 && /decisions/i.test(e.stderr || '')
+  );
+});
+
+test('a ruling whose pair is not in the current run\'s gray band is skipped, not applied, and warned about (review IMPORTANT 2)', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  await run('node', [TOOL, FIX, '--out', out, '--static']);
+  const before = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8')).blocks.length;
+  const dec = join(out, 'decisions.json');
+  // Simulates the real danger the review flagged: a ruling naming ids that
+  // ARE real blocks (not a typo/nonexistent id — that path is already
+  // guarded inside applyDecisions itself) but do NOT form a pair in this
+  // run's gray band, as if a live re-crawl shifted the ids after the model
+  // adjudicated a prior run. Without this check, both real blocks silently
+  // merge (verified by mutation testing: removing the filter merges B01
+  // into B03 here, 25 blocks -> 24, with zero warning).
+  const gb = JSON.parse(readFileSync(join(out, 'gray-band.json'), 'utf8'));
+  const grayPairs = new Set(gb.map((g) => [g.a, g.b].sort().join('|')));
+  const ids = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8')).blocks.map((b) => b.id);
+  let staleA = null, staleB = null;
+  outer: for (const a of ids) for (const b of ids) {
+    if (a >= b) continue;
+    if (!grayPairs.has([a, b].sort().join('|'))) { staleA = a; staleB = b; break outer; }
+  }
+  assert.ok(staleA && staleB, 'fixture must have at least two real block ids that are not a gray-band pair');
+  writeFileSync(dec, JSON.stringify([{ a: staleA, b: staleB, verdict: 'same', reason: 'stale' }]));
+  const { stdout } = await run('node', [TOOL, FIX, '--out', out, '--static', '--decisions', dec]);
+  const after = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8')).blocks.length;
+  assert.equal(after, before, 'a stale ruling naming two real, non-paired blocks must not merge them');
+  assert.match(stdout, /applied 0 merge/i, 'stdout must report merges actually applied, not rulings read');
+  assert.match(stdout, /skipped 1/i);
+  assert.match(stdout, /gray band|stale/i);
+});
+
 // --- numeric flags -----------------------------------------------------------
 
 test('--decisions merges the pairs the model ruled the same', async () => {

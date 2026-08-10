@@ -14,9 +14,11 @@ dependencies:
 reads:
   - $ARGUMENTS (site url, local dir, figma url, --max, --depth, --static)
 writes:
+  - .twt-artifacts/block-map/figma-export.json  # conditional — only when a figma.com URL was given
   - .twt-artifacts/block-map/block-map.json
   - .twt-artifacts/block-map/summary.json
   - .twt-artifacts/block-map/gray-band.json
+  - .twt-artifacts/block-map/gray-band-decisions.json
   - .twt-artifacts/block-map/report.html
   - .twt-artifacts/block-map/block-<id>-<slug>.html
   - .twt-artifacts/block-map/block-map.md
@@ -92,7 +94,7 @@ One Bash call, allowlist-matchable, literal paths, no `VAR=` prefixes and no she
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20
 ```
-Add `--depth <n>` and/or `--static` if the user specified them in Step 1 (still one flat command — substitute the literal values, don't build the command string in a variable). `<source>` is the site URL, local directory, or `figma-export.json` path resolved above.
+`--max 20` is the default shown above — if Step 1 detected an explicit `--max <n>` in `$ARGUMENTS`, substitute that literal value instead of 20 (never drop it). Add `--depth <n>` and/or `--static` too if the user specified them in Step 1 (still one flat command — substitute the literal values, don't build the command string in a variable). `<source>` is the site URL, local directory, or `figma-export.json` path resolved above.
 
 Read the stdout (bounded, ~8 lines): page/block/instance counts, engine used, aliases merged, gray-band size, any js-rendered-page warning, and the artifact paths written.
 
@@ -108,11 +110,11 @@ Write the decisions to `.twt-artifacts/block-map/gray-band-decisions.json`:
 ```
 One entry per adjudicated pair (both `same` and `different` verdicts — `different` rulings are recorded too, even though only `same` changes the map, so the report can show every pair was actually looked at).
 
-Then re-run the mapper with `--decisions` so the rulings are actually applied — pass the same `<source>`/`--out`/flags as Step 3 plus the new flag:
+Then re-run the mapper with `--decisions` so the rulings are actually applied — pass the exact same `<source>`/`--out`/`--max`/`--depth`/`--static` values used in Step 3 (whatever those resolved to there, not necessarily the defaults shown below) plus the new flag:
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20 --decisions ".twt-artifacts/block-map/gray-band-decisions.json"
 ```
-This regenerates every artifact with the merges folded in. From here on, **read `summary.json`, never `block-map.json`** — `block-map.json` carries full markup per variant and exists only for the deterministic HTML renderer; reading it into model context defeats the entire token-budget design of this skill.
+This regenerates every artifact with the merges folded in. The CLI only applies a ruling whose `{a,b}` pair still appears in *this* run's gray band — a re-run from scratch can renumber blocks (e.g. a live site returning a different page set), which would otherwise let a stale ruling silently merge the wrong pair. If stdout reports any rulings skipped as stale, say so in Step 6 rather than treating the adjudication as fully applied. From here on, **read `summary.json`, never `block-map.json`** — `block-map.json` carries full markup per variant and exists only for the deterministic HTML renderer; reading it into model context defeats the entire token-budget design of this skill.
 
 ## Step 5 — Write the findings
 
@@ -131,7 +133,7 @@ Never hand-edit any other part of either file — both are otherwise fully gener
 ## Step 6 — Report
 
 Tell the user:
-- The headline counts from the final (post-adjudication) run: pages mapped, canonical blocks, total instances, engine used (static/playwright), and how many gray-band pairs were adjudicated (same vs. different).
+- The headline counts from the final (post-adjudication) run: pages mapped, canonical blocks, total instances, engine used (static/playwright), how many gray-band pairs were adjudicated (same vs. different), and — read from stdout, not guessed — how many merges were actually applied (this can be lower than the number of `same` rulings written in Step 4: a ruling is skipped, not applied, if its pair no longer appears in this run's gray band). If stdout reported any skipped-as-stale rulings, say so explicitly and name the count.
 - The path to open: `.twt-artifacts/block-map/report.html` (the homepage — reuse matrix, skeleton diagram, and now the findings section), with a note that each canonical block also has its own `block-<id>-<slug>.html` reachable from it.
 - Any js-rendered-page warning the mapper printed (map may be incomplete for those pages under the static engine).
 - The findings surfaced in Step 5, in one line each.

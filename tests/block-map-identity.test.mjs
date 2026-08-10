@@ -623,3 +623,57 @@ test('applyDecisions: children/parents pointing at a dropped block are re-pointe
   assert.ok(child.parents.includes('B01'), 'B03\'s parent edge must be re-pointed to the survivor B01');
   assert.ok(!child.parents.includes('B02'), 'the dropped id must not remain in any edge list');
 });
+
+// No block may be its own ancestor by following `children` edges —
+// acyclicity is a stated invariant of the parents/children graph (Step 5's
+// "orphan = no parents" reading and report.mjs's neighborhood diagram both
+// assume a DAG).
+function assertAcyclic(blocks, msg) {
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  for (const start of blocks) {
+    const seen = new Set();
+    const stack = [...start.children];
+    while (stack.length) {
+      const id = stack.pop();
+      assert.notEqual(id, start.id, `${msg}: ${start.id} is its own ancestor (cycle through ${id})`);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const node = byId.get(id);
+      if (node) stack.push(...node.children);
+    }
+  }
+}
+
+test('applyDecisions: a merge across ancestor distance >= 2 cannot leave a cycle (task-14 review IMPORTANT 1)', () => {
+  // Chain B03 -> B01 -> B02 (parent -> child). Ruling merges B02 with its
+  // own grandparent B03: naive edge-union would give the merged B02 both
+  // B03's inherited child edge to B01 AND B02's own original parent edge
+  // to B01 — B01 ends up listed as both parent and child of B02, a direct
+  // 2-cycle (the exact reproducer from the review, at ancestor distance 2).
+  const b03 = fakeBlock('B03', { page: '/c', children: ['B01'] });
+  const b01 = fakeBlock('B01', { page: '/b', parents: ['B03'], children: ['B02'] });
+  const b02 = fakeBlock('B02', { page: '/a', parents: ['B01'] });
+  const { blocks: out } = applyTo([b03, b01, b02], [{ a: 'B02', b: 'B03', verdict: 'same', reason: 'grandparent merge' }]);
+  assert.equal(out.length, 2);
+  assertAcyclic(out, 'post-merge graph');
+  // The merge and the survivor's own instance/alias bookkeeping must still
+  // have happened — cycle-breaking must not silently undo the merge itself.
+  const survivor = out.find((b) => b.id === 'B02');
+  assert.ok(survivor, 'B02 must still be the survivor');
+  assert.equal(survivor.mergedBy.length, 1);
+  assert.equal(survivor.mergedBy[0].absorbed, 'B03');
+});
+
+test('applyDecisions: a longer merge chain that would close a longer cycle stays acyclic', () => {
+  // Chain B04 -> B03 -> B01 -> B02. Two rulings merge B02 into its
+  // grandparent-once-removed B04, testing that cycle-breaking holds even
+  // once the survivor's own id has already absorbed one block.
+  const b04 = fakeBlock('B04', { page: '/d', children: ['B03'] });
+  const b03 = fakeBlock('B03', { page: '/c', parents: ['B04'], children: ['B01'] });
+  const b01 = fakeBlock('B01', { page: '/b', parents: ['B03'], children: ['B02'] });
+  const b02 = fakeBlock('B02', { page: '/a', parents: ['B01'] });
+  const { blocks: out } = applyTo([b04, b03, b01, b02], [
+    { a: 'B02', b: 'B04', verdict: 'same', reason: 'x' },
+  ]);
+  assertAcyclic(out, 'post-merge graph (longer chain)');
+});

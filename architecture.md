@@ -552,9 +552,11 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
+| .twt-artifacts/block-map/figma-export.json  # conditional — only when a figma.com URL was given |  |
 | .twt-artifacts/block-map/block-map.json |  |
 | .twt-artifacts/block-map/summary.json |  |
 | .twt-artifacts/block-map/gray-band.json |  |
+| .twt-artifacts/block-map/gray-band-decisions.json |  |
 | .twt-artifacts/block-map/report.html |  |
 | .twt-artifacts/block-map/block-<id>-<slug>.html |  |
 | .twt-artifacts/block-map/block-map.md |  |
