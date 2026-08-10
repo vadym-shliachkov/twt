@@ -138,6 +138,37 @@ test('a well-formed but empty --decisions file is accepted and noted in stdout',
 
 // --- numeric flags -----------------------------------------------------------
 
+test('--decisions merges the pairs the model ruled the same', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  await run('node', [TOOL, FIX, '--out', out, '--static']);
+  const before = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8')).blocks.length;
+  const dec = join(out, 'decisions.json');
+  const gb = JSON.parse(readFileSync(join(out, 'gray-band.json'), 'utf8'));
+  if (!gb.length) return;                       // nothing ambiguous in the fixture; nothing to assert
+  writeFileSync(dec, JSON.stringify([{ a: gb[0].a, b: gb[0].b, verdict: 'same', reason: 'test' }]));
+  await run('node', [TOOL, FIX, '--out', out, '--static', '--decisions', dec]);
+  const after = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8')).blocks.length;
+  assert.equal(after, before - 1);
+});
+
+test('mergedBy reaches block-map.json but never leaks into summary.json', async () => {
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  await run('node', [TOOL, FIX, '--out', out, '--static']);
+  const gb = JSON.parse(readFileSync(join(out, 'gray-band.json'), 'utf8'));
+  if (!gb.length) return; // nothing ambiguous in the fixture; nothing to assert
+  const dec = join(out, 'decisions.json');
+  writeFileSync(dec, JSON.stringify([{ a: gb[0].a, b: gb[0].b, verdict: 'same', reason: 'unit-test-reason-marker' }]));
+  await run('node', [TOOL, FIX, '--out', out, '--static', '--decisions', dec]);
+  const full = JSON.parse(readFileSync(join(out, 'block-map.json'), 'utf8'));
+  const survivor = full.blocks.find((b) => (b.mergedBy || []).length > 0);
+  assert.ok(survivor, 'block-map.json must record a mergedBy entry for the merged pair');
+  assert.equal(survivor.mergedBy[0].absorbed, gb[0].b);
+  assert.equal(survivor.mergedBy[0].reason, 'unit-test-reason-marker');
+  const summaryRaw = readFileSync(join(out, 'summary.json'), 'utf8');
+  assert.ok(!summaryRaw.includes('mergedBy'), 'summary.json must never carry mergedBy');
+  assert.ok(!summaryRaw.includes('unit-test-reason-marker'), 'summary.json must never carry a merge reason string');
+});
+
 test('--max 0 and --depth 0 do not crash the CLI', async () => {
   const out = mkdtempSync(join(tmpdir(), 'bm-'));
   const { stdout } = await run('node', [TOOL, FIX, '--out', out, '--static', '--max', '0', '--depth', '0']);

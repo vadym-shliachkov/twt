@@ -15,7 +15,7 @@ import { fromDir, fromUrl, fromFigmaExport } from './block-map/acquire.mjs';
 import { parseHtml } from './block-map/parse.mjs';
 import { walkWithPlaywright } from './block-map/playwright-walk.mjs';
 import { extractBlocks } from './block-map/extract.mjs';
-import { cluster } from './block-map/identity.mjs';
+import { cluster, applyDecisions } from './block-map/identity.mjs';
 import { emitAll } from './block-map/emit.mjs';
 import { renderReport } from './block-map/report.mjs';
 
@@ -155,14 +155,8 @@ const DECISIONS = opts.decisions;
       process.exitCode = 1;
       return;
     }
-    // NOTE: tools/block-map/identity.mjs does not yet export
-    // applyDecisions() as of this task — that lands with the skill body
-    // (adjudication is the model's job, wired up when the skill exists to
-    // drive it). Until then, a --decisions file is read and validated (so
-    // the flag is real and a malformed file fails loudly, not silently)
-    // and the "same"-verdict count is surfaced in stdout, but no merge is
-    // applied to `clustered` yet.
     decisionsRead = rulings.filter((r) => r && r.verdict === 'same').length;
+    clustered = applyDecisions(clustered, rulings);
   }
 
   // --- emit -------------------------------------------------------------
@@ -176,7 +170,7 @@ const DECISIONS = opts.decisions;
   console.log(`  aliases merged: ${result.blocks.reduce((s, b) => s + Math.max(0, b.aliases.length - 1), 0)}`);
   console.log(`  gray band: ${result.grayBand.length} pairs to adjudicate` + (result.unadjudicated ? `, ${result.unadjudicated} auto-split (over cap)` : ''));
   if (DECISIONS) {
-    console.log(`  decisions: ${decisionsRead} "same" ruling(s) read from ${DECISIONS} (application lands with the skill, later)`);
+    console.log(`  decisions: applied ${decisionsRead} "same" ruling(s) from ${DECISIONS}`);
   }
   if (js.length && engine === 'static') {
     console.log(`  WARNING js-rendered pages read statically — map incomplete for: ${js.slice(0, 10).join(', ')}`);

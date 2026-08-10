@@ -461,6 +461,41 @@ export function cluster(instances) {
   return { blocks, grayBand, unadjudicated: Math.max(0, gray.length - grayBand.length) };
 }
 
+// Apply the model's rulings on the gray band. Runs AFTER cluster(), so the
+// deterministic result stays reproducible on its own and adjudication is a
+// separate, inspectable layer on top of it.
+export function applyDecisions({ blocks, grayBand, unadjudicated }, decisions = []) {
+  const byId = new Map(blocks.map((b) => [b.id, b]));
+  const dropped = new Set();
+  for (const d of decisions) {
+    if (d.verdict !== 'same') continue;
+    const keep = byId.get(d.a), gone = byId.get(d.b);
+    if (!keep || !gone || keep === gone || dropped.has(d.a) || dropped.has(d.b)) continue;
+    keep.aliases = [...new Set([...keep.aliases, ...gone.aliases])];
+    keep.instances = [...keep.instances, ...gone.instances];
+    keep._members = [...keep._members, ...gone._members];
+    keep.reuse = {
+      pages: new Set(keep.instances.map((i) => i.page)).size,
+      instances: keep.instances.length,
+    };
+    keep.children = [...new Set([...keep.children, ...gone.children])];
+    keep.parents = [...new Set([...keep.parents, ...gone.parents])].filter((p) => p !== keep.id);
+    keep.mergedBy = [...(keep.mergedBy || []), { absorbed: gone.id, reason: d.reason || '' }];
+    dropped.add(gone.id);
+  }
+  const remaining = blocks.filter((b) => !dropped.has(b.id));
+  // Re-point any edge that referenced a dropped block at its survivor.
+  const survivor = (id) => {
+    for (const b of remaining) if (b.id === id || (b.mergedBy || []).some((m) => m.absorbed === id)) return b.id;
+    return null;
+  };
+  for (const b of remaining) {
+    b.children = [...new Set(b.children.map(survivor).filter((x) => x && x !== b.id))];
+    b.parents = [...new Set(b.parents.map(survivor).filter((x) => x && x !== b.id))];
+  }
+  return { blocks: remaining, grayBand, unadjudicated };
+}
+
 // Parent/child edges follow the extraction tree: a block is a parent of every
 // canonical block its instances directly contain.
 function linkEdges(blocks) {

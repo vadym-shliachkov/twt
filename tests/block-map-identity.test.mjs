@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseHtml } from '../tools/block-map/parse.mjs';
 import { extractBlocks } from '../tools/block-map/extract.mjs';
-import { cluster, GRAY_CAP, MERGE_AT, nameFor, excerpt } from '../tools/block-map/identity.mjs';
+import { cluster, GRAY_CAP, MERGE_AT, nameFor, excerpt, applyDecisions } from '../tools/block-map/identity.mjs';
 import { fingerprint, similarity } from '../tools/block-map/fingerprint.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));
@@ -495,4 +495,131 @@ test('9-page: a solo-vs-repeated molecule pair surfaces in the gray band, not si
   assert.ok(cardVsCardBody, '.card__body must appear in the gray band against a repeated-card block');
   assert.ok(cardVsCardBody.score > 0.60 && cardVsCardBody.score < 0.95,
     `expected a gray-band score, got ${cardVsCardBody.score}`);
+});
+
+// --- applyDecisions() --------------------------------------------------------
+//
+// Built from hand-rolled block objects (not cluster() output) so each test
+// controls exactly which ids collide, chain, or reference an already-merged
+// block, without depending on the fixture's real similarity scores.
+
+function fakeBlock(id, { page = '/p', aliases, children = [], parents = [] } = {}) {
+  return {
+    id, name: id, tier: 'molecule',
+    aliases: aliases || [id.toLowerCase()],
+    parents: [...parents], children: [...children],
+    reuse: { pages: 1, instances: 1 },
+    instances: [{ page, selector: '.' + id.toLowerCase() }],
+    _members: [{ page, block: { id } }],
+  };
+}
+
+function applyTo(blocks, decisions) {
+  return applyDecisions({ blocks, grayBand: [], unadjudicated: 0 }, decisions);
+}
+
+test('applyDecisions: a chain of rulings that always references the same survivor merges all three', () => {
+  const blocks = [fakeBlock('B01', { page: '/a' }), fakeBlock('B02', { page: '/b' }), fakeBlock('B03', { page: '/c' })];
+  const { blocks: out } = applyTo(blocks, [
+    { a: 'B01', b: 'B02', verdict: 'same', reason: 'r1' },
+    { a: 'B01', b: 'B03', verdict: 'same', reason: 'r2' },
+  ]);
+  assert.equal(out.length, 1);
+  const survivor = out[0];
+  assert.equal(survivor.id, 'B01');
+  assert.deepEqual([...survivor.aliases].sort(), ['b01', 'b02', 'b03']);
+  assert.equal(survivor.reuse.instances, 3);
+  assert.equal(survivor.reuse.pages, 3);
+  assert.equal(survivor.mergedBy.length, 2);
+  assert.deepEqual(survivor.mergedBy.map((m) => m.absorbed).sort(), ['B02', 'B03']);
+});
+
+test('applyDecisions: a ruling naming an already-absorbed block as the NEW keep is silently skipped', () => {
+  // "chain" shape where the second ruling names the just-absorbed block (B02)
+  // as its `a` (keep) rather than re-using the original survivor (B01) — the
+  // function does not chase the merge transitively through a dropped id, it
+  // just refuses to touch it again.
+  const blocks = [fakeBlock('B01', { page: '/a' }), fakeBlock('B02', { page: '/b' }), fakeBlock('B03', { page: '/c' })];
+  const { blocks: out } = applyTo(blocks, [
+    { a: 'B01', b: 'B02', verdict: 'same', reason: 'r1' },
+    { a: 'B02', b: 'B03', verdict: 'same', reason: 'r2' },
+  ]);
+  assert.equal(out.length, 2, 'B03 must remain separate — B02 was already absorbed and cannot keep anything');
+  const survivor = out.find((b) => b.id === 'B01');
+  assert.equal(survivor.mergedBy.length, 1);
+  assert.equal(survivor.mergedBy[0].absorbed, 'B02');
+  assert.ok(out.some((b) => b.id === 'B03'), 'B03 must still exist, untouched');
+});
+
+test('applyDecisions: a ruling naming an already-absorbed block as `b` (gone) is silently skipped', () => {
+  const blocks = [fakeBlock('B01', { page: '/a' }), fakeBlock('B02', { page: '/b' }), fakeBlock('B03', { page: '/c' })];
+  const { blocks: out } = applyTo(blocks, [
+    { a: 'B01', b: 'B02', verdict: 'same', reason: 'r1' },
+    { a: 'B03', b: 'B02', verdict: 'same', reason: 'r2' }, // B02 already gone — must not be absorbed twice
+  ]);
+  assert.equal(out.length, 2);
+  assert.ok(out.some((b) => b.id === 'B03' && (b.mergedBy || []).length === 0), 'B03 must be untouched by the second ruling');
+});
+
+test('applyDecisions: self-merge (a === b) is a no-op', () => {
+  const blocks = [fakeBlock('B01'), fakeBlock('B02')];
+  const { blocks: out } = applyTo(blocks, [{ a: 'B01', b: 'B01', verdict: 'same', reason: 'x' }]);
+  assert.equal(out.length, 2);
+  assert.equal((out.find((b) => b.id === 'B01').mergedBy || []).length, 0);
+});
+
+test('applyDecisions: rulings naming ids that do not exist are silently skipped, not thrown', () => {
+  const blocks = [fakeBlock('B01'), fakeBlock('B02')];
+  assert.doesNotThrow(() => {
+    const { blocks: out } = applyTo(blocks, [
+      { a: 'B99', b: 'B01', verdict: 'same', reason: 'x' },
+      { a: 'B01', b: 'B99', verdict: 'same', reason: 'x' },
+    ]);
+    assert.equal(out.length, 2, 'neither ruling references two real ids, so nothing merges');
+  });
+});
+
+test('applyDecisions: a duplicate ruling merges once, not twice', () => {
+  const blocks = [fakeBlock('B01', { page: '/a' }), fakeBlock('B02', { page: '/b' })];
+  const { blocks: out } = applyTo(blocks, [
+    { a: 'B01', b: 'B02', verdict: 'same', reason: 'r1' },
+    { a: 'B01', b: 'B02', verdict: 'same', reason: 'r1-repeat' },
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].mergedBy.length, 1, 'the duplicate ruling must not append a second mergedBy entry');
+  assert.equal(out[0].reuse.instances, 2);
+});
+
+test('applyDecisions: reuse.pages/reuse.instances stay exact through a merge, including overlapping pages', () => {
+  // B01 has 2 instances on the SAME page; B02 has 1 instance on a page B01
+  // already covers plus none new. reuse.pages after merge must count
+  // DISTINCT pages across the union, not sum the two blocks' page counts.
+  const b01 = fakeBlock('B01', { page: '/a' });
+  b01.instances = [{ page: '/a', selector: '.b01' }, { page: '/a', selector: '.b01' }];
+  b01.reuse = { pages: 1, instances: 2 };
+  const b02 = fakeBlock('B02', { page: '/a' }); // same page as b01
+  const { blocks: out } = applyTo([b01, b02], [{ a: 'B01', b: 'B02', verdict: 'same', reason: 'x' }]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].reuse.instances, 3, 'instance count must be exact (2 + 1)');
+  assert.equal(out[0].reuse.pages, 1, 'both blocks live only on /a — pages must not double-count the overlap');
+
+  // A second case where the pages genuinely differ, to confirm the union path too.
+  const c01 = fakeBlock('C01', { page: '/x' });
+  const c02 = fakeBlock('C02', { page: '/y' });
+  const { blocks: out2 } = applyTo([c01, c02], [{ a: 'C01', b: 'C02', verdict: 'same', reason: 'x' }]);
+  assert.equal(out2[0].reuse.instances, 2);
+  assert.equal(out2[0].reuse.pages, 2, 'distinct pages must both be counted');
+});
+
+test('applyDecisions: children/parents pointing at a dropped block are re-pointed to the survivor', () => {
+  const b01 = fakeBlock('B01', { page: '/a' });
+  const b02 = fakeBlock('B02', { page: '/a', children: ['B03'] });
+  const b03 = fakeBlock('B03', { page: '/a', parents: ['B02'] });
+  const { blocks: out } = applyTo([b01, b02, b03], [{ a: 'B01', b: 'B02', verdict: 'same', reason: 'x' }]);
+  assert.equal(out.length, 2);
+  const survivor = out.find((b) => b.id === 'B01');
+  const child = out.find((b) => b.id === 'B03');
+  assert.ok(survivor.children.includes('B03'), 'B02\'s child edge must be re-pointed to the survivor B01');
+  assert.ok(child.parents.includes('B01'), 'B03\'s parent edge must be re-pointed to the survivor B01');
+  assert.ok(!child.parents.includes('B02'), 'the dropped id must not remain in any edge list');
 });
