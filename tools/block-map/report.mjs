@@ -168,6 +168,14 @@ export function matrixHtml(map) {
 // double work. See task-10-report.md for the character-by-character trace.
 const mermaidLabel = esc;
 
+// These diagrams are Mermaid SOURCE, not pictures — this file ships no
+// Mermaid renderer (Task 10's deliberate call: the report is meant to be
+// published and viewed as a Claude Artifact, which renders `.mermaid`
+// natively). Opened directly in a plain browser, the box below reads as a
+// wall of `flowchart` source text instead. Say so right where the reader
+// will otherwise be confused, not just in the skill's own instructions.
+const MERMAID_NOTE = '<p class="note">Diagram source — renders as an actual picture once this page is opened as a Claude Artifact (or another Mermaid-aware viewer); a plain browser shows the raw text below.</p>';
+
 // Only reused blocks (>= 2 instances). Pages collapse into one badge node.
 export function skeletonMermaid(map) {
   const keep = (map.blocks || []).filter((b) => b.reuse.instances >= 2);
@@ -179,7 +187,7 @@ export function skeletonMermaid(map) {
     if (!(b.parents || []).some((p) => ids.has(p))) lines.push(`  pages --> ${b.id}`);
     for (const p of b.parents || []) if (ids.has(p)) lines.push(`  ${p} --> ${b.id}`);
   }
-  return `<pre class="mermaid">${esc(lines.join('\n'))}</pre>`;
+  return `${MERMAID_NOTE}<pre class="mermaid">${esc(lines.join('\n'))}</pre>`;
 }
 
 // Beyond this many parents/children a flat one-hop fan-out stops being
@@ -199,7 +207,7 @@ export function neighborhoodMermaid(block, byId) {
   let note = '';
   if (parents.length > NEIGHBOR_CAP) note += `<p class="note">+${parents.length - NEIGHBOR_CAP} more parent(s) not shown — see the reuse matrix.</p>`;
   if (children.length > NEIGHBOR_CAP) note += `<p class="note">+${children.length - NEIGHBOR_CAP} more child(ren) not shown — see the reuse matrix.</p>`;
-  return `<pre class="mermaid">${esc(lines.join('\n'))}</pre>${note}`;
+  return `${MERMAID_NOTE}<pre class="mermaid">${esc(lines.join('\n'))}</pre>${note}`;
 }
 
 const shell = (title, body) =>

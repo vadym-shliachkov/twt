@@ -236,6 +236,33 @@ test('skeletonMermaid entity-escapes a literal double-quote inside a block name'
   assert.ok(label[1].includes('&quot;'), `the name's own quote must survive as an entity INSIDE the label, not as a literal " that closes it early. Got label: ${JSON.stringify(label[1])}`);
 });
 
+// --- Final review, RECOMMENDED 7: the mermaid diagrams are inert text in a
+// plain browser (deliberate — they render once published as an Artifact),
+// but nothing on the page itself said so. A short note now sits directly
+// above each diagram.
+
+test('skeletonMermaid prepends a note explaining the diagram needs a Mermaid-aware viewer', () => {
+  const map = {
+    meta: { pages: 1 },
+    blocks: [{ id: 'B1', name: 'Y', tier: 'organism', aliases: [], parents: [], children: [], reuse: { pages: 1, instances: 2 }, instances: [] }],
+  };
+  const html = skeletonMermaid(map);
+  assert.match(html, /Claude Artifact/i, 'must explain where the diagram actually renders');
+  assert.ok(html.indexOf('note') < html.indexOf('class="mermaid"'), 'the note must come BEFORE the diagram, not after it');
+});
+
+test('the "no block is reused" fallback carries no mermaid note — there is no diagram to explain', () => {
+  const html = skeletonMermaid({ meta: { pages: 1 }, blocks: [] });
+  assert.ok(!/Claude Artifact/i.test(html), 'nothing to render, nothing to caveat');
+});
+
+test('neighborhoodMermaid prepends the same Mermaid-aware-viewer note', () => {
+  const byId = new Map([['P1', { id: 'P1', name: 'Parent' }]]);
+  const html = neighborhoodMermaid({ id: 'X', name: 'X', parents: ['P1'], children: [] }, byId);
+  assert.match(html, /Claude Artifact/i);
+  assert.ok(html.indexOf('note') < html.indexOf('class="mermaid"'), 'the note must come BEFORE the diagram, not after it');
+});
+
 test('variantSection renders an overflow bucket with a distinct heading, never as a normal variant', () => {
   const html = variantSection({ id: 'v8', count: 16, html: '<div>h</div>', overflow: true, overflowShapes: 9 });
   assert.ok(html.includes('+9 more shape'), `overflow bucket must say how many shapes were folded in:\n${html}`);
