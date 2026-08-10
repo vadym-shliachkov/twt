@@ -10,7 +10,6 @@ dependencies:
   hard: []
   soft:
     - twt-block-preview
-    - twt-content-fetch-figma
 reads:
   - $ARGUMENTS (site url, local dir, figma url, --max, --depth, --static)
 writes:

@@ -97,7 +97,6 @@ flowchart TB
     twt_content_fetch -.-> twt_audience_define
     twt_audience_define --> twt_audience_validate
     twt_block_preview -.-> twt_block_map
-    twt_content_fetch_figma -.-> twt_block_map
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -540,7 +539,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-block-preview, twt-content-fetch-figma
+- Soft: twt-block-preview
 
 **Feeds into:**
 - Hard consumers: none
@@ -895,7 +894,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-block-map, twt-content-fetch, twt-design-system-audit
+- Soft consumers: twt-content-fetch, twt-design-system-audit
 
 **Reads:**
 - <figma-url> (via the Figma MCP read tools)
@@ -2807,7 +2806,7 @@ flowchart TB
 | /twt-audience | none | twt-audience-define, twt-audience-validate |
 | /twt-audience-define | none | twt-positioning-define, twt-brand-define, twt-content-fetch |
 | /twt-audience-validate | twt-audience-define | none |
-| /twt-block-map | none | twt-block-preview, twt-content-fetch-figma |
+| /twt-block-map | none | twt-block-preview |
 | /twt-block-preview | none | none |
 | /twt-brand | none | twt-brand-fetch, twt-brand-define, twt-brand-validate |
 | /twt-brand-define | none | twt-brand-fetch |

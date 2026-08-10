@@ -173,7 +173,7 @@ Map what a real site (or Figma file) is actually **made of** — every repeatabl
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-block-preview, twt-content-fetch-figma
+- Soft: twt-block-preview
 
 **Reads:**
 - $ARGUMENTS (site url, local dir, figma url, --max, --depth, --static)
