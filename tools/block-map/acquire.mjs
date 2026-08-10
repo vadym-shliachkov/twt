@@ -23,10 +23,21 @@ function isInside(root, candidate) {
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
 }
 
+// `fromDir` deliberately does not recurse (that would change what gets
+// mapped and is out of this task's scope) — but it must not vanish pages
+// silently either. An SSG build with `dist/blog/*.html` has every one of
+// those pages disappear from the map with zero warning otherwise, so any
+// subdirectory found alongside the top-level html files is collected and
+// reported back to the caller via the non-enumerable-to-JSON `skippedDirs`
+// property on the returned array (arrays serialize by index only, so this
+// never leaks into an emitted artifact) — block-map.mjs surfaces it on
+// stdout.
 export async function fromDir(dir) {
   const root = resolve(dir);
-  const files = readdirSync(root).filter((f) => /\.html?$/i.test(f)).sort();
-  return files.map((f, i) => {
+  const entries = readdirSync(root, { withFileTypes: true });
+  const skippedDirs = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
+  const files = entries.filter((e) => e.isFile() && /\.html?$/i.test(e.name)).map((e) => e.name).sort();
+  const pages = files.map((f, i) => {
     const p = join(root, f);
     const html = readFileSync(p, 'utf8');
     let css = '';
@@ -40,6 +51,8 @@ export async function fromDir(dir) {
     for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)) css += m[1] + '\n';
     return { id: pageId(i), url: p, html, css, jsRendered: looksJsRendered(html) };
   });
+  if (skippedDirs.length) pages.skippedDirs = skippedDirs;
+  return pages;
 }
 
 // Cheap sniff for "is this actually HTML" — fetchUrl doesn't surface

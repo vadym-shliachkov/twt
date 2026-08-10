@@ -38,6 +38,22 @@ test('warns loudly about js-rendered pages under the static engine', async () =>
   assert.ok(/js-rendered/i.test(stdout), 'app.html must trigger a visible warning');
 });
 
+test('warns loudly when a directory source has subdirectories fromDir cannot see into', async () => {
+  // dist/blog/*.html shape: pages under a subdirectory are invisible to the
+  // non-recursive directory adapter and must not vanish without a trace.
+  const src = mkdtempSync(join(tmpdir(), 'bm-src-'));
+  writeFileSync(join(src, 'index.html'), '<html><body><section class="hero"><h1>x</h1><p>y</p></section></body></html>');
+  mkdirSync(join(src, 'blog'));
+  writeFileSync(join(src, 'blog', 'post.html'), '<html><body>a post that must never surface</body></html>');
+
+  const out = mkdtempSync(join(tmpdir(), 'bm-'));
+  const { stdout } = await run('node', [TOOL, src, '--out', out, '--static']);
+  assert.match(stdout, /subdirector(y|ies)/i, 'a skipped subdirectory must trigger a visible warning');
+  assert.match(stdout, /blog/, 'the warning must name the skipped subdirectory');
+  assert.ok(stdout.split('\n').length <= 40, `stdout was ${stdout.split('\n').length} lines`);
+  assert.ok(!stdout.includes('a post that must never surface'), 'stdout must never leak page content');
+});
+
 // --- argument-parsing robustness -------------------------------------------
 //
 // The brief's reference parser located the source with

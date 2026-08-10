@@ -201,6 +201,9 @@ const DECISIONS = opts.decisions;
       console.log(`  WARNING decisions: skipped ${staleRulingsSkipped} ruling(s) whose pair is not in this run's gray band (stale ids)`);
     }
   }
+  if (pages.skippedDirs && pages.skippedDirs.length) {
+    console.log(`  WARNING: fromDir does not recurse — ${pages.skippedDirs.length} subdirectory(ies) skipped, map incomplete for: ${pages.skippedDirs.slice(0, 10).join(', ')}`);
+  }
   if (js.length && engine === 'static') {
     console.log(`  WARNING js-rendered pages read statically — map incomplete for: ${js.slice(0, 10).join(', ')}`);
   } else if (js.length) {

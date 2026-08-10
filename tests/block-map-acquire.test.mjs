@@ -212,3 +212,28 @@ test('fromDir still loads a stylesheet referenced from a legitimate subdirectory
   assert.equal(pages.length, 1);
   assert.ok(pages[0].css.includes('LEGIT-SUBDIR-CSS'), 'a stylesheet inside the site dir must still load — the traversal guard must not overreach');
 });
+
+test('fromDir does not recurse into subdirectories, and reports them as skipped', async () => {
+  // An SSG build with dist/blog/*.html would otherwise have those pages
+  // vanish from the map with zero warning — fromDir must stay non-
+  // recursive (that's a scope decision, not this test's job to relax) but
+  // it must surface that pages were left out.
+  const siteDir = mkdtempSync(join(tmpdir(), 'bm-site3-'));
+  writeFileSync(join(siteDir, 'index.html'), '<html><body>home</body></html>');
+  mkdirSync(join(siteDir, 'blog'));
+  writeFileSync(join(siteDir, 'blog', 'post.html'), '<html><body>a blog post that must not surface</body></html>');
+  mkdirSync(join(siteDir, 'assets')); // a second subdir, no html inside — still worth reporting
+
+  const pages = await fromDir(siteDir);
+
+  assert.equal(pages.length, 1, 'only the top-level html file is read — no silent recursion');
+  assert.ok(!pages.some((p) => p.html.includes('blog post')), 'a subdirectory page must never be silently folded in');
+  assert.deepEqual(pages.skippedDirs, ['assets', 'blog'], 'every skipped subdirectory must be reported, sorted');
+});
+
+test('fromDir reports no skippedDirs when there are no subdirectories', async () => {
+  const siteDir = mkdtempSync(join(tmpdir(), 'bm-site4-'));
+  writeFileSync(join(siteDir, 'index.html'), '<html><body>home</body></html>');
+  const pages = await fromDir(siteDir);
+  assert.equal(pages.skippedDirs, undefined);
+});
