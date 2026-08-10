@@ -49,7 +49,17 @@ export async function fromDir(dir) {
       if (existsSync(cssPath)) css += readFileSync(cssPath, 'utf8') + '\n';
     }
     for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)) css += m[1] + '\n';
-    return { id: pageId(i), url: p, html, css, jsRendered: looksJsRendered(html) };
+    // `url` is the page's DISPLAY label — it becomes a matrix column header
+    // in report.mjs and a meta.pages entry in summary.json, both shared with
+    // the user. The absolute filesystem path (`C:\...\tests\fixtures\...`)
+    // is unreadable there (9 columns barely fit 2 on screen at 1440px) and
+    // bakes the operator's local paths into a shareable report, so label it
+    // relative to the source root instead ("bem-card.html", "blog/post.html"
+    // — forward slashes even on Windows, matching every other url in this
+    // pipeline). `fsPath` keeps the real absolute path for anything that
+    // still needs to open the file (the Playwright walk below).
+    const relUrl = relative(root, p).split(sep).join('/');
+    return { id: pageId(i), url: relUrl, fsPath: p, html, css, jsRendered: looksJsRendered(html) };
   });
   if (skippedDirs.length) pages.skippedDirs = skippedDirs;
   return pages;

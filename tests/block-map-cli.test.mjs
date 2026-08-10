@@ -6,10 +6,12 @@ import { mkdtempSync, existsSync, readFileSync, writeFileSync, mkdirSync, cpSync
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright } from '../tools/lib/resolve-playwright.mjs';
 
 const run = promisify(execFile);
 const TOOL = fileURLToPath(new URL('../tools/block-map.mjs', import.meta.url));
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site', import.meta.url));
+const { pw } = await loadPlaywright();
 
 test('maps the fixture dir and writes every artifact', async () => {
   const out = mkdtempSync(join(tmpdir(), 'bm-'));
@@ -36,6 +38,23 @@ test('warns loudly about js-rendered pages under the static engine', async () =>
   const out = mkdtempSync(join(tmpdir(), 'bm-'));
   const { stdout } = await run('node', [TOOL, FIX, '--out', out, '--static']);
   assert.ok(/js-rendered/i.test(stdout), 'app.html must trigger a visible warning');
+});
+
+test('the Playwright engine still opens the right file for a directory source once page urls became relative labels', { skip: !pw }, async () => {
+  // acquire.mjs's fromDir keeps `url` as a display-only relative label (the
+  // matrix column header) but must still hand the REAL absolute path
+  // (`fsPath`) to the Playwright walk — pathToFileURL() on a relative url
+  // silently resolves to nothing openable, which wouldn't crash, it would
+  // just make walkWithPlaywright() return null and the engine silently fall
+  // back to 'static' with no error. Catch that regression by asserting the
+  // engine genuinely reaches 'playwright' for a directory source.
+  const src = mkdtempSync(join(tmpdir(), 'bm-pw-src-'));
+  writeFileSync(join(src, 'index.html'), '<html><body><section class="hero"><h1>x</h1><p>enough text to not look js-rendered by the heuristic</p></section></body></html>');
+  const out = mkdtempSync(join(tmpdir(), 'bm-pw-'));
+  await run('node', [TOOL, src, '--out', out]); // no --static
+  const s = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8'));
+  assert.equal(s.meta.engine, 'playwright', 'the walk must succeed against fsPath, not the relative display url');
+  assert.equal(s.pages[0].url, 'index.html');
 });
 
 test('warns loudly when a directory source has subdirectories fromDir cannot see into', async () => {

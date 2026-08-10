@@ -111,6 +111,15 @@ test('the directory adapter reaches every fixture page, including the one the cr
       s.meta.jsRenderedPages.some((u) => u.includes('app.html')),
       'app.html must be flagged js-rendered under the static engine'
     );
+    // Matrix column labels (report.mjs renders one <th> per s.pages[].url):
+    // a directory source must label pages relative to the fixture root, not
+    // as absolute filesystem paths — the raw FIX path barely fits 2 of 9
+    // columns on screen and bakes the operator's local layout into a
+    // shareable report.
+    for (const p of s.pages) {
+      assert.ok(!p.url.includes(FIX), `page url must not embed the absolute fixture path, got ${p.url}`);
+    }
+    assert.ok(s.pages.some((p) => p.url === 'index.html'), 'index.html must appear under its bare relative name');
   } finally {
     rmSync(out, { recursive: true, force: true });
   }

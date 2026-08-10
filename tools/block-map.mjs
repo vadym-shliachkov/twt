@@ -129,7 +129,10 @@ const DECISIONS = opts.decisions;
   for (const p of pages) {
     let tree = null;
     if (!STATIC && sourceKind !== 'figma') {
-      const walkUrl = sourceKind === 'url' ? p.url : pathToFileURL(p.url).href;
+      // Directory-source pages carry a display-only relative `url`
+      // (acquire.mjs) — the real absolute path a browser can navigate to
+      // lives in `fsPath`.
+      const walkUrl = sourceKind === 'url' ? p.url : pathToFileURL(p.fsPath).href;
       tree = await walkWithPlaywright(walkUrl);
       if (tree) engine = 'playwright';
     }

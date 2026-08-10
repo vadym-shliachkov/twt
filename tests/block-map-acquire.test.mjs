@@ -2,8 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import { writeFileSync, mkdtempSync, mkdirSync, readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { writeFileSync, mkdtempSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
+import { join, relative, sep, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
 import { fromDir, fromUrl, fromFigmaExport } from '../tools/block-map/acquire.mjs';
@@ -35,6 +35,24 @@ test('fromDir reads every html file and inlines local css', async () => {
   const home = pages.find((p) => p.url.endsWith('index.html'));
   assert.ok(home.html.includes('<section class="hero">'));
   assert.ok(home.css.includes('--brand'), 'linked stylesheet must be inlined');
+});
+
+test('fromDir labels pages relative to the source root, not as absolute filesystem paths', async () => {
+  // Directory-source page urls are the page↔block matrix's column headers
+  // (report.mjs). The full absolute path (this repo alone lives under
+  // "C:\Work\~marketplace\tests\fixtures\...") only leaves room for ~2 of 9
+  // columns on screen and bakes the operator's local filesystem layout into
+  // a shareable report. `id` stays the stable key; `fsPath` still carries
+  // the real absolute path for anything (the Playwright walk) that needs to
+  // open the file.
+  const pages = await fromDir(FIX);
+  for (const p of pages) {
+    assert.ok(!isAbsolute(p.url), `page url must be a relative label, got ${p.url}`);
+    assert.ok(!p.url.includes(FIX), `page url must not embed the absolute source path, got ${p.url}`);
+    assert.ok(existsSync(p.fsPath), 'fsPath must still resolve to a real file on disk');
+  }
+  const home = pages.find((p) => p.fsPath.endsWith('index.html'));
+  assert.equal(home.url, 'index.html');
 });
 
 test('fromDir flags the JS-rendered page', async () => {
