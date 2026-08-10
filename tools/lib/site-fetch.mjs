@@ -34,12 +34,16 @@ export function sameHost(a, b) { try { return new URL(a).host === new URL(b).hos
 
 // Canonicalize a page URL so `https://site.com` and `https://site.com/` (and
 // `/about` vs `/about/`) don't crawl as two separate pages — which doubled the
-// home page and inflated the page/cluster counts. Drops hash + query and the
-// trailing slash (except the bare root).
+// home page and inflated the page/cluster counts. Drops hash + query, folds a
+// trailing well-known index filename (index.html, index.htm, index.php) into
+// its parent directory — `/about/index.html` and `/about/` must be the same
+// page, or a crawl starting at the bare root visits the home page twice under
+// two distinct URLs — and strips the trailing slash (except the bare root).
 export function normUrl(u) {
   try {
     const x = new URL(u);
     x.hash = ''; x.search = '';
+    x.pathname = x.pathname.replace(/\/index\.(html?|php)$/i, '/');
     if (x.pathname.length > 1) x.pathname = x.pathname.replace(/\/+$/, '');
     return x.href;
   } catch { return u; }

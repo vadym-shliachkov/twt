@@ -21,6 +21,23 @@ test('normUrl strips a trailing slash except on the bare root', () => {
   assert.equal(normUrl('https://x.com/'), 'https://x.com/'); // bare root: pathname.length === 1, exception applies, slash kept
 });
 
+test('normUrl folds a trailing index filename into its parent directory URL', () => {
+  // /about/index.html must canonicalize to exactly what /about/ already
+  // canonicalizes to (the '/index.(html?|php)$' -> '/' fold runs BEFORE
+  // the trailing-slash strip above), or a crawl starting at the bare
+  // domain root visits the home page twice under two distinct URLs.
+  assert.equal(normUrl('https://x.com/index.html'), 'https://x.com/');
+  assert.equal(normUrl('https://x.com/about/index.html'), 'https://x.com/about');
+  assert.equal(normUrl('https://x.com/about/'), 'https://x.com/about');
+  assert.equal(normUrl('https://x.com/about/index.htm'), 'https://x.com/about');
+  assert.equal(normUrl('https://x.com/about/INDEX.HTML'), 'https://x.com/about');
+  assert.equal(normUrl('https://x.com/about/index.php'), 'https://x.com/about');
+  // only a genuine trailing index filename folds — a name that merely
+  // starts with "index" must pass through untouched
+  assert.equal(normUrl('https://x.com/about/index-page.html'), 'https://x.com/about/index-page.html');
+  assert.equal(normUrl('https://x.com/about/myindex.html'), 'https://x.com/about/myindex.html');
+});
+
 test('sameHost compares hosts, not schemes', () => {
   assert.equal(sameHost('https://x.com/a', 'http://x.com/b'), true);
   assert.equal(sameHost('https://x.com/a', 'https://y.com/b'), false);

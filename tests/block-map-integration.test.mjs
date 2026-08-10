@@ -56,17 +56,17 @@ test('full pipeline over HTTP reproduces the ground truth for the pages the craw
   // the js-rendered/app.html assertion is checked below via the directory
   // adapter instead, which is the only adapter that reaches app.html at all.
   //
-  // Start the crawl AT index.html rather than at the bare origin. The
-  // fixture server maps "/" to the exact same bytes as "/index.html", but
-  // acquire.mjs's normUrl() does not fold "/" and "/index.html" into one
-  // URL — they are genuinely different paths, so it doesn't try to. Starting
-  // at "/" makes the crawl visit the home page twice under two distinct
-  // URLs (measured: 4 "pages", 12 .card instances instead of 9) — a real
-  // crawl-adapter property, not a test bug, but not what this assertion set
-  // is pinning. Starting at the canonical index.html URL avoids it.
+  // Start the crawl at the bare origin, not "/index.html". Before the
+  // normUrl() index-folding fix, the fixture server maps "/" to the exact
+  // same bytes as "/index.html" but the two were genuinely different URLs
+  // to the crawler, so starting at "/" visited the home page twice (4
+  // "pages", 12 .card instances instead of 9). normUrl() now folds a
+  // trailing index filename into its parent directory, so "/" and
+  // "/index.html" collapse to one URL and this holds as a real regression
+  // gate rather than a workaround.
   const out = mkdtempSync(join(tmpdir(), 'bm-'));
   try {
-    await run('node', [TOOL, `${base}/index.html`, '--out', out, '--static', '--max', '10']);
+    await run('node', [TOOL, `${base}/`, '--out', out, '--static', '--max', '10']);
     const s = JSON.parse(readFileSync(join(out, 'summary.json'), 'utf8'));
 
     assert.equal(s.meta.pages, 3, 'nav only links index/services/pricing.html');
