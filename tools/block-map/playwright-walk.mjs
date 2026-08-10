@@ -58,13 +58,23 @@ export async function walkWithPlaywright(url, { timeout = 20000 } = {}) {
         const tag = el.tagName.toLowerCase();
         const attrs = {};
         for (const a of el.attributes) attrs[a.name.toLowerCase()] = a.value;
+        // <template>'s content is never in el.children — the HTML parser
+        // diverts it into a separate `.content` DocumentFragment (that's
+        // what keeps a template inert). parse.mjs has no such content-model
+        // special case: its tokenizer treats <template> as an ordinary
+        // container tag and walks straight through to whatever is inside.
+        // Reading .content.children here (instead of .children) is what
+        // keeps the two engines agreeing on a page that uses <template> —
+        // without it, every node nested inside a template silently
+        // vanishes from the Playwright tree only.
+        const kidSource = tag === 'template' ? [...el.content.children] : [...el.children];
         return {
           tag,
           attrs,
           classes: [...el.classList],
           id: el.id || '',
           text: forceEmptyText.includes(tag) ? '' : ownText(el),
-          children: [...el.children]
+          children: kidSource
             .filter((c) => !skip.includes(c.tagName.toLowerCase()))
             .map(walk),
         };
