@@ -44,6 +44,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 |---------|----------|-------------|
 | /twt-assets-produce | assets | Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs |
 | /twt-audience | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
+| /twt-block-map | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |

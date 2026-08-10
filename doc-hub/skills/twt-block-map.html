@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Map what a real site (or Figma file) is actually **made of** — every repeatable block and subblock, clustered into canonical identities regardless of ">
+  <title>/twt-block-map | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/design.html">Design</a><span>/</span><strong class="breadcrumb-command">/twt-block-map</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Design · design-system</p>
+          <h1>/twt-block-map</h1>
+          <p class="lede">Map what a real site (or Figma file) is actually <strong>made of</strong> — every repeatable block and subblock, clustered into canonical identities regardless of what class name or component name...</p>
+          <div class="fact-row">
+            <span>Version 1.0.0</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--mid token-usage--compact" data-token-usage="mid" aria-label="Token usage: Mid">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i></i><i></i></span>
+    <strong>Mid</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Map what a real site (or Figma file) is actually <strong>made of</strong> — every repeatable block and subblock, clustered into canonical identities regardless of what class name or component name each instance happens to carry, plus a page↔block reuse matrix showing which blocks live where. It answers &quot;what is this site built from, and what's genuinely shared vs. a one-off.&quot;</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/block-map/block-map.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/block-map/summary.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/block-map/gray-band.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/block-map/report.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/block-map/block-&lt;id&gt;-&lt;slug&gt;.html</code><span class="file-desc">An HTML page.</span></li><li><code>.twt-artifacts/block-map/block-map.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Not a token/drift audit. <code>/twt-design-system-audit</code> answers &quot;does this instance drift from the token baseline&quot; (colors, spacing, type against a design system); this skill never compares against tokens and never scores drift — it only answers &quot;what is this site made of and what is shared.&quot; The two must never grow into each other: if a future change wants to add token comparison here, or block-inventory clustering there, it belongs in the other skill instead.</li><li>Never edits the mapped site or Figma file — read-only in, artifacts out.</li><li>Never calls the MCP Playwright tools (see below) — the bundled CLI does its own headless-browser walk when needed.</li><li>Does not judge visual quality, accessibility, or content — it reports structure and reuse only.</li><li>Does not screenshot blocks — that is <code>/twt-block-preview</code>'s job, as a follow-up once block ids/selectors are known.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>report.html</code> (the homepage) plus one <code>block-&lt;id&gt;-&lt;slug&gt;.html</code> per canonical block, showing the reuse matrix, the parent/child skeleton, and every block's variants and instances.</li><li>Every block's identity is <strong>name-blind</strong>: two blocks with different class names but the same structure/content shape cluster into one canonical block; two blocks that merely share a class name but differ structurally do not.</li><li>The gray band (the handful of pairs the deterministic clustering could not resolve on its own) is adjudicated with one sentence of reasoning per pair, and those rulings are actually applied to the map — not just recorded.</li><li>The model never reads <code>block-map.json</code> (the fat, markup-carrying artifact) — only <code>summary.json</code> and <code>gray-band.json</code>, both markup-free.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

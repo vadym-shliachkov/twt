@@ -41,6 +41,7 @@ const LEVEL_META = Object.freeze(Object.fromEntries(
 export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-assets-produce': 'high',
   'twt-audience': 'high',
+  'twt-block-map': 'mid',
   'twt-block-preview': 'low',
   'twt-brand': 'high',
   'twt-brand-fetch': 'mid',

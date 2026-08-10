@@ -12,6 +12,7 @@ flowchart TB
     twt_audience["/twt-audience"]:::skill
     twt_audience_define["/twt-audience-define"]:::skill
     twt_audience_validate["/twt-audience-validate"]:::skill
+    twt_block_map["/twt-block-map"]:::skill
     twt_block_preview["/twt-block-preview"]:::skill
     twt_brand["/twt-brand"]:::skill
     twt_brand_define["/twt-brand-define"]:::skill
@@ -95,6 +96,8 @@ flowchart TB
     twt_brand_define -.-> twt_audience_define
     twt_content_fetch -.-> twt_audience_define
     twt_audience_define --> twt_audience_validate
+    twt_block_preview -.-> twt_block_map
+    twt_content_fetch_figma -.-> twt_block_map
     twt_brand_fetch -.-> twt_brand
     twt_brand_define -.-> twt_brand
     twt_brand_validate -.-> twt_brand
@@ -287,6 +290,7 @@ flowchart TB
 
 ### design-system
 
+- /twt-block-map - Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix
 - /twt-block-preview - Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
 - /twt-design-system - Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
 - /twt-design-system-audit - Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
@@ -526,6 +530,35 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/audience/validation-report.md |  |
 
+### /twt-block-map
+
+**Category:** design-system
+**Version:** 1.0.0
+
+**Inputs:**
+- A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-block-preview, twt-content-fetch-figma
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS (site url, local dir, figma url, --max, --depth, --static)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/block-map/block-map.json |  |
+| .twt-artifacts/block-map/summary.json |  |
+| .twt-artifacts/block-map/gray-band.json |  |
+| .twt-artifacts/block-map/report.html |  |
+| .twt-artifacts/block-map/block-<id>-<slug>.html |  |
+| .twt-artifacts/block-map/block-map.md |  |
+
 ### /twt-block-preview
 
 **Category:** design-system
@@ -541,7 +574,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-assets-produce, twt-design-system-audit
+- Soft consumers: twt-assets-produce, twt-block-map, twt-design-system-audit
 
 **Reads:**
 - $ARGUMENTS (url/file, --selector, --width, --height, --wait, --out, --audit)
@@ -860,7 +893,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-fetch, twt-design-system-audit
+- Soft consumers: twt-block-map, twt-content-fetch, twt-design-system-audit
 
 **Reads:**
 - <figma-url> (via the Figma MCP read tools)
@@ -2772,6 +2805,7 @@ flowchart TB
 | /twt-audience | none | twt-audience-define, twt-audience-validate |
 | /twt-audience-define | none | twt-positioning-define, twt-brand-define, twt-content-fetch |
 | /twt-audience-validate | twt-audience-define | none |
+| /twt-block-map | none | twt-block-preview, twt-content-fetch-figma |
 | /twt-block-preview | none | none |
 | /twt-brand | none | twt-brand-fetch, twt-brand-define, twt-brand-validate |
 | /twt-brand-define | none | twt-brand-fetch |
@@ -2852,6 +2886,7 @@ flowchart TB
 ```
 .twt-artifacts/
   <html-site|elementor-theme>/
+  block-map/
   content-approval/
   content-quality/
   design/

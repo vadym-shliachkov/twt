@@ -10,6 +10,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 |---------|----------|-------------|
 | [/twt-assets-produce](#twt-assets-produce) | assets | Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs |
 | [/twt-audience](#twt-audience) | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
+| [/twt-block-map](#twt-block-map) | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
@@ -156,6 +157,47 @@ One-call audience workflow: define → validate in one pass (§9 — no iteratio
 - Produces/refines `personas.md` + current `validation-report.md`
 - Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
 - On exit, states whether BLOCKERs remain
+
+---
+
+## /twt-block-map
+
+**Category:** design-system
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Map what a real site (or Figma file) is actually **made of** — every repeatable block and subblock, clustered into canonical identities regardless of what class name or component name each instance happens to carry, plus a page↔block reuse matrix showing which blocks live where. It answers "what is this site built from, and what's genuinely shared vs. a one-off."
+
+**Inputs:**
+- A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-block-preview, twt-content-fetch-figma
+
+**Reads:**
+- $ARGUMENTS (site url, local dir, figma url, --max, --depth, --static)
+
+**Writes:**
+- .twt-artifacts/block-map/block-map.json
+- .twt-artifacts/block-map/summary.json
+- .twt-artifacts/block-map/gray-band.json
+- .twt-artifacts/block-map/report.html
+- .twt-artifacts/block-map/block-<id>-<slug>.html
+- .twt-artifacts/block-map/block-map.md
+
+**Non-goals:**
+- Not a token/drift audit. `/twt-design-system-audit` answers "does this instance drift from the token baseline" (colors, spacing, type against a design system); this skill never compares against tokens and never scores drift — it only answers "what is this site made of and what is shared." The two must never grow into each other: if a future change wants to add token comparison here, or block-inventory clustering there, it belongs in the other skill instead.
+- Never edits the mapped site or Figma file — read-only in, artifacts out.
+- Never calls the MCP Playwright tools (see below) — the bundled CLI does its own headless-browser walk when needed.
+- Does not judge visual quality, accessibility, or content — it reports structure and reuse only.
+- Does not screenshot blocks — that is `/twt-block-preview`'s job, as a follow-up once block ids/selectors are known.
+
+**Success criteria:**
+- `report.html` (the homepage) plus one `block-<id>-<slug>.html` per canonical block, showing the reuse matrix, the parent/child skeleton, and every block's variants and instances.
+- Every block's identity is **name-blind**: two blocks with different class names but the same structure/content shape cluster into one canonical block; two blocks that merely share a class name but differ structurally do not.
+- The gray band (the handful of pairs the deterministic clustering could not resolve on its own) is adjudicated with one sentence of reasoning per pair, and those rulings are actually applied to the map — not just recorded.
+- The model never reads `block-map.json` (the fat, markup-carrying artifact) — only `summary.json` and `gray-band.json`, both markup-free.
 
 ---
 
