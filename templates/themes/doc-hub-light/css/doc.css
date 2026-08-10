@@ -15,9 +15,31 @@ h4 { font-size: 1rem; margin: 1.1em 0 .25em; }
 pre { background: var(--tx-panel); border: 1px solid var(--tx-rule); border-radius: 8px; padding: 12px 14px; font-size: .85em; overflow-x: auto; }
 pre code { background: none; border: none; padding: 0; }
 h2, h3 { break-after: avoid-page; }
-/* Keep small units on one page — but never a whole summary grid: that block can be
-   taller than the space left on page 1, and an all-or-nothing avoid shoves it to
-   page 2 wholesale, leaving the title alone on a near-empty first page. The grid
-   may break between cells; each cell stays intact. */
-table, .tx-finding, dl.tx-kv:not(.tx-kv--summary) { break-inside: avoid; }
+/* A heading is a label for what follows; splitting one across a page boundary
+   leaves half a sentence as a bold fragment at the top of the next page (seen:
+   a finding title whose URL tail became a heading of its own). Headings are
+   short enough that avoiding the break inside them costs nothing. */
+h1, h2, h3, h4 { break-inside: avoid; }
+/* Keep small units on one page — but never a block that can outgrow the page.
+   `break-inside: avoid` on a tall container does not keep it together; it moves
+   the container whole to the next page and strands whatever space is left on
+   this one. That was true of the summary grid (title alone on a near-empty
+   first page) and it is true of finding cards, which are five prose fields
+   deep: a launch report came back with one page holding a single two-line
+   field, a section heading alone at the foot of another, and a near-empty page
+   in the middle of the backlog.
+   So: tall containers break, and the rules below keep the pieces readable. */
+table { break-inside: avoid; }
+.tx-finding, dl.tx-kv:not(.tx-kv--summary) { break-inside: auto; }
+/* Only the narrow kv lists, where dt and dd stack and a label really can end a
+   page alone. A finding card lays its labels out in a left-hand column beside
+   the value, so the label cannot strand — and applying it there measurably
+   costs a page: it makes every label/value pair a keep-together unit, which
+   was enough to stop the first card starting on the page its heading is on. */
+dl.tx-kv dt { break-after: avoid; }
 dl.tx-kv--summary .tx-kv__cell { break-inside: avoid; }
+/* Values are prose and routinely run a dozen lines — an evidence paragraph that
+   cannot break does not stay together, it evicts the whole card from the page
+   and leaves the heading stranded above the gap. Let them break; orphans and
+   widows stop the break from leaving one-line remnants at a page edge. */
+p, li, dd { orphans: 3; widows: 3; }

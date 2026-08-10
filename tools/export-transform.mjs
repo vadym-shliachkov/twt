@@ -438,14 +438,25 @@ const TRANSFORMS = [
     name: 'findingCards',
     profiles: ['report'],
     apply(blocks) {
-      const LABELS = new Set(['where', 'problem', 'recommendation', 'severity', 'fix']);
+      // Two finding vocabularies, because two families of skill write findings:
+      // the *-validate critics (Where/Problem/Recommendation) and the audits
+      // that assign work (Owner/Evidence/Impact/Action/Rule). Only the first was
+      // listed, so every launch-audit finding fell through to the generic kv
+      // list — where the first one in the document picked up the summary-grid
+      // styling and the rest did not, giving one finding a different look from
+      // its eleven identical siblings.
+      const SHAPES = [
+        { labels: new Set(['where', 'problem', 'recommendation', 'severity', 'fix']), needs: ['problem'] },
+        { labels: new Set(['owner', 'evidence', 'impact', 'action', 'rule']), needs: ['evidence', 'action'] },
+      ];
       let hit = false;
       for (let i = 0; i < blocks.length; i++) {
         if (blocks[i].t !== 'BulletList') continue;
         const pairs = blocks[i].c.map(kvParse);
         if (pairs.length < 2 || pairs.some((p) => !p)) continue;
         const labels = pairs.map((p) => p.label.toLowerCase());
-        if (!labels.every((l) => LABELS.has(l)) || !labels.includes('problem')) continue;
+        const fits = (s) => labels.every((l) => s.labels.has(l)) && s.needs.every((n) => labels.includes(n));
+        if (!SHAPES.some(fits)) continue;
         const rows = pairs.map((p) => `<dt>${esc(p.label)}</dt><dd>${p.valueHtml}</dd>`).join('');
         blocks[i] = rawBlock(`<section class="tx-finding"><dl>${rows}</dl></section>`);
         hit = true;
@@ -457,13 +468,20 @@ const TRANSFORMS = [
     name: 'kvList',
     profiles: ['report', 'brief', 'spec', 'generic'],
     apply(blocks, { profile }) {
-      let firstList = true, hit = false;
+      // The summary grid is the document's masthead stat block, so it can only
+      // be a kv list that is (a) the first one actually converted and (b) still
+      // above any per-item section. The old test was "the first BulletList
+      // anywhere", which consumed the flag on lists it then skipped, and in a
+      // report whose first bullet list is a finding body six sections down it
+      // gave that one finding the summary-grid layout and a page of its own.
+      let firstList = true, hit = false, inSection = false;
       for (let i = 0; i < blocks.length; i++) {
+        if (blocks[i].t === 'Header' && blocks[i].c[0] >= 3) inSection = true;
         if (blocks[i].t !== 'BulletList') continue;
         const pairs = blocks[i].c.map(kvParse);
-        const isFirst = firstList; firstList = false;
         if (pairs.length < 3 || pairs.some((p) => !p)) continue;
-        const summary = profile === 'report' && isFirst;
+        const summary = profile === 'report' && firstList && !inSection;
+        firstList = false;
         blocks[i] = rawBlock(kvListHtml(pairs, summary));
         hit = true;
       }
@@ -790,6 +808,40 @@ if (_isMain && process.argv.includes('--self-test')) {
   // fall-through: unmatched structures survive
   const surv = astToHtml(transformAst(pandocAst('Just a paragraph.\n\n- plain\n- list\n'), 'report').ast);
   assert.match(surv, /<li>plain<\/li>/);
+
+  // ---- regression: findings in an audit report all render alike.
+  // A launch-audit report opens with a verdict paragraph and a matrix table,
+  // then one H3 per finding whose body is an Owner/Evidence/Impact/Action/Rule
+  // bullet list. findingCards only knew the Where/Problem/Recommendation
+  // vocabulary, so these fell through to kvList — which handed the summary-grid
+  // layout to whichever finding happened to come first in the document and the
+  // plain layout to every other one.
+  const auditMd = ['# Launch readiness', '', '## Verdict', '', '**NO-GO**', '',
+    '## Discoverability', '', '### LAUNCH-BLOCKER — /robots.txt', '',
+    '- **Owner:** hosting-ops', '- **Evidence:** GET /robots.txt returns the homepage',
+    '- **Impact:** Crawlers get no directives.', '- **Action:** Fix the catch-all redirect.',
+    '- **Rule:** JDG-SEO001', '',
+    '## Legal & compliance', '', '### LAUNCH-BLOCKER — signup form', '',
+    '- **Owner:** client-decision', '- **Evidence:** No privacy policy anywhere on the site',
+    '- **Impact:** PII collected without notice.', '- **Action:** Client supplies a policy.',
+    '- **Rule:** JDG-LEGAL001', ''].join('\n');
+  const auditOut = astToHtml(transformAst(pandocAst(auditMd), 'report').ast);
+  assert.equal((auditOut.match(/<section class="tx-finding">/g) || []).length, 2, 'every audit finding is a finding card');
+  assert.ok(!auditOut.includes('tx-kv--summary'), 'a finding body is never the document summary grid');
+  assert.match(auditOut, /<dt>Owner<\/dt><dd>hosting-ops<\/dd>/, 'the labels survive the conversion');
+
+  // ---- regression: the summary flag must be spent by a list that is actually
+  // converted, and only above the per-item sections. A leading plain list used
+  // to consume it, leaving the real summary grid unstyled.
+  const leadMd = ['# Report', '', '- plain lead-in', '- second item', '- third item', '',
+    'Scope of this audit.', '',
+    '- **Overall:** 82/100', '- **Findings:** 3', '- **Band:** Revise', ''].join('\n');
+  const leadOut = astToHtml(transformAst(pandocAst(leadMd), 'report').ast);
+  assert.match(leadOut, /tx-kv--summary/, 'a non-kv list ahead of it must not spend the summary flag');
+  const deepMd = ['# Report', '', '## Section', '', '### Item', '',
+    '- **Owner:** dev', '- **Note:** something', '- **State:** open', ''].join('\n');
+  assert.ok(!astToHtml(transformAst(pandocAst(deepMd), 'report').ast).includes('tx-kv--summary'),
+    'a kv list inside a per-item section is never the masthead summary');
 
   // Span inlines (c=[Attr,[Inline]]): content must survive serializers and be reachable by walkers
   assert.match(astToHtml(transformAst(pandocAst('# Report [Draft]{.x}\n\ntext'), 'generic').ast), /Report Draft/, 'span content survives docHeader');

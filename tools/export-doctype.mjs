@@ -25,6 +25,8 @@
 // | decisions.md / asset-manifest.md                 | decisions             | spec    |
 // | facts.md (curation ledger / wiki ledger)         | facts                 | spec    |
 // | phase-review.md (twt-site per-phase reviews)     | phase-review          | report  |
+// | launch-report[-provisional].md (twt-launch-audit)| launch-report         | report  |
+// | punch-list.md (twt-launch-audit)                 | punch-list            | report  |
 // | site-log.md / site-dev-log.md (orchestrators)    | site-log              | spec    |
 // | .project-wiki/decisions|entities|ideas|analyses/ | wiki-decision/-entity/-idea/-analysis | brief |
 // | .project-wiki/ anything else (overview, glossary)| wiki-page             | brief   |
@@ -68,6 +70,13 @@ export const REGISTRY = [
   { id: 'facts',             profile: 'spec',   file: /^facts\.md$/ },
   { id: 'phase-review',      profile: 'report', file: /^phase-review\.md$/ },
   { id: 'site-log',          profile: 'spec',   file: /^site(-dev)?-log\.md$/ },
+  // Before the *-report catch-all: launch-report.md matched it and exported
+  // with "Generic report" stamped in the header and footer of a document whose
+  // whole job is to say whether a site can ship. The provisional variant is the
+  // same document under the filename the renderer uses when the scan did not
+  // complete, so it needs the same treatment.
+  { id: 'launch-report',     profile: 'report', file: /^launch-report(-provisional)?\.md$/ },
+  { id: 'punch-list',        profile: 'report', file: /^punch-list\.md$/ },
   { id: 'generic-report',    profile: 'report', file: /^[a-z0-9-]+-report\.md$/ },
 ];
 
@@ -180,6 +189,13 @@ if (_isMain && process.argv.includes('--self-test')) {
   assert.equal(classifyDoc({ markdown: '# x', filePath: '.project-wiki/validation-report.md' }).docType, 'validation-report');
   // regressions: specific registry rule wins over the *-report catch-all
   assert.equal(classifyDoc({ markdown: '# x', filePath: 'layout-report.md' }).profile, 'spec');
+  // regression: the launch documents used to fall through to 'generic-report',
+  // which docTypeLabel() renders as the literal words "Generic report" in the
+  // header and page footer of a launch readiness verdict.
+  assert.equal(classifyDoc({ markdown: '# x', filePath: '.twt-artifacts/launch/launch-report.md' }).docType, 'launch-report');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'launch/launch-report-provisional.md' }).docType, 'launch-report');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'launch/punch-list.md' }).docType, 'punch-list');
+  assert.equal(classifyDoc({ markdown: '# x', filePath: 'launch/launch-report.md' }).profile, 'report');
   // regressions: hex in prose + unrelated table must not read as brief
   assert.equal(classifyDoc({ markdown: '# n\n\nRef #a1b2c3 in prose.\n\n| a | b |\n|---|---|\n| 1 | 2 |', filePath: 'notes.md' }).docType, 'generic');
   // regressions: hex inside a table row still detected as brief
