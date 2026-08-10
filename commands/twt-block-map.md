@@ -1,8 +1,8 @@
 ---
 name: twt-block-map
 category: design-system
-description: (v1.0.0) Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix
-version: 1.0.0
+description: (v1.0.1) Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static

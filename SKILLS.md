@@ -163,7 +163,7 @@ One-call audience workflow: define → validate in one pass (§9 — no iteratio
 ## /twt-block-map
 
 **Category:** design-system
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Map what a real site (or Figma file) is actually **made of** — every repeatable block and subblock, clustered into canonical identities regardless of what class name or component name each instance happens to carry, plus a page↔block reuse matrix showing which blocks live where. It answers "what is this site built from, and what's genuinely shared vs. a one-off."

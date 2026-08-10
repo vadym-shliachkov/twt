@@ -533,7 +533,7 @@ flowchart TB
 ### /twt-block-map
 
 **Category:** design-system
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static
