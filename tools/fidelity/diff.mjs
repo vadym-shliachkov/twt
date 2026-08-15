@@ -68,11 +68,16 @@ export function matchElements(refEls, gotEls) {
 // token supplied the value. system mode downgrades it to a warning and labels
 // it; strict mode promotes it to a failure whose fix is to add the exact value
 // to tokens.css as a real token (never an inlined literal).
-function snapLabel(got, prop, ref, val) {
+//
+// `index` names WHICH side of an array-valued property (padding/margin/radius)
+// actually drove the worst-side verdict, so the label names the value that
+// differs rather than always index 0 — a symmetric fixture can't tell the two
+// apart, which is why the array branch below tracks it explicitly.
+function snapLabel(got, prop, ref, val, index = 0) {
   const token = got.tokens?.[prop];
   if (!token) return null;
-  const r = Array.isArray(ref) ? ref[0] : ref;
-  const v = Array.isArray(val) ? val[0] : val;
+  const r = Array.isArray(ref) ? ref[index] : ref;
+  const v = Array.isArray(val) ? val[index] : val;
   return `snapped: ${token} (ref ${r} -> token ${v}, d${Math.abs(v - r)})`;
 }
 
@@ -88,19 +93,32 @@ export function diffSpec(refSpec, measuredEls, { mode = 'system', width } = {}) 
 
       // Array-valued properties (padding/margin/radius) compare element-wise
       // and report the worst side, so one bad edge cannot hide behind three
-      // good ones.
+      // good ones. worstIndex tracks WHICH side won so snapLabel can name the
+      // value that actually drifted. A length mismatch is a definite fail on
+      // the property (never an `undefined`-status row from reducing an empty
+      // array), and a zero-length pair on both sides has nothing to compare.
       let cmp;
+      let worstIndex = 0;
       if (Array.isArray(refVal) && Array.isArray(gotVal)) {
-        const each = refVal.map((v, i) => compareProperty(prop, v, gotVal[i], ctx));
-        const rank = { fail: 3, warn: 2, pass: 1, skip: 0 };
-        cmp = each.reduce((worst, c) => (rank[c.status] > rank[worst.status] ? c : worst), each[0]);
-        cmp = { ...cmp, ref: refVal, got: gotVal };
+        if (refVal.length !== gotVal.length) {
+          cmp = { prop, status: 'fail', delta: null, ref: refVal, got: gotVal, unit: '' };
+        } else if (refVal.length === 0) {
+          cmp = { prop, status: 'skip', delta: null, ref: refVal, got: gotVal, unit: '' };
+        } else {
+          const each = refVal.map((v, i) => compareProperty(prop, v, gotVal[i], ctx));
+          const rank = { fail: 3, warn: 2, pass: 1, skip: 0 };
+          cmp = each[0];
+          each.forEach((c, i) => {
+            if (rank[c.status] > rank[cmp.status]) { cmp = c; worstIndex = i; }
+          });
+          cmp = { ...cmp, ref: refVal, got: gotVal };
+        }
       } else {
         cmp = compareProperty(prop, refVal, gotVal, ctx);
       }
       if (cmp.status === 'skip') continue;
 
-      const snapped = cmp.status !== 'pass' ? snapLabel(got, prop, refVal, gotVal) : null;
+      const snapped = cmp.status !== 'pass' ? snapLabel(got, prop, refVal, gotVal, worstIndex) : null;
       let status = cmp.status;
       if (snapped) status = mode === 'strict' ? 'fail' : 'warn';
 
@@ -142,21 +160,31 @@ export function diffSpec(refSpec, measuredEls, { mode = 'system', width } = {}) 
   const counts = { pass: 0, warn: 0, fail: 0 };
   for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
 
-  return { rows, counts, score: scoreOf(rows), mode, width };
+  return { rows, counts, score: scoreOf(rows), mode, width, target: refSpec.target };
 }
 
+// A group with zero compared rows was never ASSESSED — it must not collect
+// full marks by default. Health is the weighted average over only the
+// groups that have rows, renormalized by those groups' weight sum (so
+// structure sitting empty on a typical run, the common case, cannot inflate
+// Health by silently banking its 25 points). When nothing was assessed at
+// all, health is `null` and the band says so — never a number standing in
+// for "we don't know."
 export function scoreOf(rows) {
   const per = {};
   for (const g of Object.keys(WEIGHTS)) {
     const inGroup = rows.filter((r) => r.group === g);
-    if (inGroup.length === 0) { per[g] = 5; continue; }
+    if (inGroup.length === 0) { per[g] = null; continue; }
     const credit = inGroup.reduce(
       (sum, r) => sum + (r.status === 'pass' ? 1 : r.status === 'warn' ? 0.5 : 0), 0);
     per[g] = Number(((credit / inGroup.length) * 5).toFixed(2));
   }
-  const health = Math.round(
-    Object.entries(WEIGHTS).reduce((sum, [g, w]) => sum + (per[g] / 5) * w, 0));
-  const band = health >= 80 ? 'Pass' : health >= 50 ? 'Revise' : 'Fail';
+  const assessed = Object.entries(WEIGHTS).filter(([g]) => per[g] !== null);
+  const weightSum = assessed.reduce((sum, [, w]) => sum + w, 0);
+  const health = weightSum === 0
+    ? null
+    : Math.round(assessed.reduce((sum, [g, w]) => sum + (per[g] / 5) * w, 0) / weightSum * 100);
+  const band = health === null ? 'Not assessed' : health >= 80 ? 'Pass' : health >= 50 ? 'Revise' : 'Fail';
   return { per, health, band, weights: { ...WEIGHTS } };
 }
 

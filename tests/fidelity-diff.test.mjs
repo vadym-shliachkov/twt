@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeElement, makeSpec } from '../tools/fidelity/spec.mjs';
-import { matchElements, diffSpec, toSummary, SUMMARY_MAX_ROWS } from '../tools/fidelity/diff.mjs';
+import { matchElements, diffSpec, toSummary, scoreOf, SUMMARY_MAX_ROWS } from '../tools/fidelity/diff.mjs';
 
 const el = (id, over = {}) => makeElement({ id, ...over });
 
@@ -245,4 +245,116 @@ test('all failures survive truncation even when they are interleaved after warni
   const failRow = summary.rows.find((r) => r.id === `row.${n - 1}`);
   assert.ok(failRow, 'the lone failure, though last in row order, must survive the cap');
   assert.equal(failRow.status, 'fail');
+});
+
+// --- Fix-round coverage (reviewer findings on Task 3) ----------------------
+
+test('an unassessed group (zero rows) is null, not a free 5, and Health is renormalized over the assessed groups only', () => {
+  // geometry (box defaults) and colour (fill.color) both pass; typography
+  // fails hard on type.size; structure has no rows at all (no unmatched
+  // elements, no reorder, no layout.* set). Hand-derived expectation:
+  //   per = { geometry: 5, typography: 0, structure: null, colour: 5 }
+  //   weightSum(assessed) = 30 + 25 + 20 = 75 (structure's 25 excluded)
+  //   health = round(((5/5*30) + (0/5*25) + (5/5*20)) / 75 * 100)
+  //          = round((30 + 0 + 20) / 75 * 100) = round(66.666...) = 67
+  const spec = makeSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
+  });
+  const got = [el('hero.0', { type: { size: 40 }, fill: { color: '#000000' } })];
+  const { score } = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  assert.equal(score.per.structure, null, 'a group with zero rows must not be graded');
+  assert.equal(score.per.geometry, 5);
+  assert.equal(score.per.typography, 0);
+  assert.equal(score.per.colour, 5);
+  assert.equal(score.health, 67, 'must be the exact renormalized integer, not a range');
+  assert.equal(score.band, 'Revise');
+});
+
+test('a group that entirely fails drops Health by that group\'s renormalized share, not its raw weight', () => {
+  // Same base fixture as above but colour fails hard instead of typography;
+  // structure again has no rows.
+  //   per = { geometry: 5, typography: 5, structure: null, colour: 0 }
+  //   weightSum(assessed) = 30 + 25 + 20 = 75
+  //   health = round(((5/5*30) + (5/5*25) + (0/5*20)) / 75 * 100)
+  //          = round((30 + 25 + 0) / 75 * 100) = round(73.333...) = 73
+  // A fully-passing run under the same unassessed-structure shape scores 100
+  // (see "score weights are..." test below), so colour failing outright costs
+  // 27 points here — not colour's raw 20-point weight, and not 25 (its share
+  // of the un-renormalized 100), because the denominator shrank to 75 too.
+  const spec = makeSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
+  });
+  const got = [el('hero.0', { type: { size: 56 }, fill: { color: '#ffffff' } })];
+  const { score } = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  assert.equal(score.per.structure, null);
+  assert.equal(score.per.colour, 0);
+  assert.equal(score.health, 73, 'must be the exact renormalized integer, not a range');
+  assert.equal(score.band, 'Revise');
+});
+
+test('scoreOf of zero rows is unassessed everywhere: health null, band "Not assessed", never a number', () => {
+  const score = scoreOf([]);
+  assert.deepEqual(score.per, { geometry: null, typography: null, structure: null, colour: null });
+  assert.equal(score.health, null);
+  assert.equal(score.band, 'Not assessed');
+  assert.deepEqual(score.weights, { geometry: 30, typography: 25, structure: 25, colour: 20 });
+});
+
+test('asymmetric array snap labels the index that actually drifted, not always index 0', () => {
+  // Only the third padding value (index 2) drifts; the others are identical.
+  // A buggy snapLabel that always reads index 0 would report "92 -> 92, d0"
+  // even though the worst-side reduce correctly picked index 2 (92 -> 96).
+  const spec = makeSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { spacing: { padding: [92, 0, 92, 0] } })],
+  });
+  const got = [el('hero.0', {
+    spacing: { padding: [92, 0, 96, 0] },
+    tokens: { 'spacing.padding': '--space-6' },
+  })];
+  const { rows } = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  const row = rows.find((r) => r.prop === 'spacing.padding');
+  assert.equal(row.status, 'warn');
+  assert.match(row.snapped, /--space-6/);
+  assert.match(row.snapped, /ref 92 -> token 96, d4/, `expected the drifted index in the label, got: ${row.snapped}`);
+  assert.doesNotMatch(row.snapped, /ref 92 -> token 92, d0/, 'must not report the untouched index 0');
+});
+
+test('diffSpec carries the reference spec\'s target through to the returned diff', () => {
+  const spec = makeSpec({
+    target: 'hero-section', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { type: { size: 56 } })],
+  });
+  const got = [el('hero.0', { type: { size: 56 } })];
+  const diff = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  assert.equal(diff.target, 'hero-section');
+  const summary = toSummary(diff, {});
+  assert.equal(summary.target, 'hero-section', 'toSummary must surface the real target, not null');
+});
+
+test('a length-mismatched array pair is a definite fail, not an undefined-status row', () => {
+  const spec = makeSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { spacing: { padding: [10, 20] } })],
+  });
+  const got = [el('hero.0', { spacing: { padding: [10, 20, 30] } })];
+  const { rows, counts } = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  const row = rows.find((r) => r.prop === 'spacing.padding');
+  assert.ok(row, 'a length mismatch must still produce a row');
+  assert.equal(row.status, 'fail');
+  assert.equal(counts.fail, (counts.fail ?? 0), 'counts must not have accumulated an undefined key');
+  assert.equal(Object.keys(counts).includes('undefined'), false);
+});
+
+test('a zero-length array pair on both sides produces no row (nothing to compare) rather than an undefined-status row', () => {
+  const spec = makeSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    elements: [el('hero.0', { spacing: { padding: [] } })],
+  });
+  const got = [el('hero.0', { spacing: { padding: [] } })];
+  const { rows, counts } = diffSpec(spec, got, { mode: 'system', width: 1440 });
+  assert.equal(rows.find((r) => r.prop === 'spacing.padding'), undefined);
+  assert.equal(Object.keys(counts).includes('undefined'), false);
 });
