@@ -90,7 +90,8 @@ export function deltaE(a, b) {
 export function compareColour(ref, got, prop = '') {
   const d = deltaE(ref, got);
   if (d === null) return cmp(prop, 'skip', null, ref, got, 'dE');
-  const { pass, warn } = TOLERANCES['fill.color'];
+  const band = TOLERANCES[prop] || TOLERANCES['fill.color'];
+  const { pass, warn } = band;
   const status = d <= pass ? 'pass' : d <= warn ? 'warn' : 'fail';
   return cmp(prop, status, Number(d.toFixed(2)), ref, got, 'dE');
 }

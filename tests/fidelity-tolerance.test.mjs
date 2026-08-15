@@ -35,6 +35,13 @@ test('compareEm converts px letter-spacing against the element font size', () =>
   assert.equal(compareEm(0, 0, 16).status, 'pass');
 });
 
+test('compareEm at the exact 0.02em boundary', () => {
+  // At fontSize 16, 0.02em = 0.32px, so deltaEm = 0.32/16 = 0.02 ≤ 0.02 → pass
+  assert.equal(compareEm(0, 0.32, 16).status, 'pass');
+  // At fontSize 16, 0.33px → deltaEm = 0.33/16 ≈ 0.020625 > 0.02 → fail
+  assert.equal(compareEm(0, 0.33, 16).status, 'fail');
+});
+
 test('deltaE is 0 for identical colours and grows with difference', () => {
   assert.equal(deltaE('#000000', '#000000'), 0);
   assert.equal(deltaE('rgb(0, 0, 0)', '#000000'), 0);
@@ -55,6 +62,23 @@ test('compareColour skips (never passes) when a colour cannot be parsed', () => 
   assert.equal(compareColour('linear-gradient(#fff,#000)', '#ffffff').status, 'skip');
   assert.equal(compareColour('#0b0b0f', '#0b0b10').status, 'pass');
   assert.equal(compareColour('#0b0b0f', '#e8ff5a').status, 'fail');
+});
+
+test('compareColour at pass/warn/fail boundaries', () => {
+  // Pass: ΔE ≤ 1
+  const passResult = compareColour('#0b0b0f', '#0b0b10');
+  assert.equal(passResult.status, 'pass');
+
+  // Warn: 1 < ΔE ≤ 3
+  // Pure red (#ff0000) to red-orange (#ff1100) gives ΔE ≈ 2.4
+  const warnResult = compareColour('#ff0000', '#ff1100');
+  assert.equal(warnResult.status, 'warn');
+  assert.ok(warnResult.delta > 1 && warnResult.delta <= 3,
+    `warn band ΔE should be in (1,3], got ${warnResult.delta}`);
+
+  // Fail: ΔE > 3
+  const failResult = compareColour('#0b0b0f', '#e8ff5a');
+  assert.equal(failResult.status, 'fail');
 });
 
 test('compareProperty routes each property to the right comparator', () => {
