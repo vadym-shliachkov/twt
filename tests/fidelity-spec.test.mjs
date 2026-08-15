@@ -23,9 +23,12 @@ test('deriveId always carries the sibling index', () => {
 });
 
 test('adding a sibling does not rename the existing element', () => {
-  const before = deriveId(['Hero', 'CTA'], 0);
-  const after = deriveId(['Hero', 'CTA'], 0); // a second CTA now exists at index 1
-  assert.equal(before, after, 'index 0 must be stable when a sibling is added');
+  // A parent with one child: derive IDs for indices 0 and 1
+  const oneChild = [deriveId(['Hero', 'CTA'], 0)];
+  // Same parent with two children: derive IDs for both
+  const twoChildren = [deriveId(['Hero', 'CTA'], 0), deriveId(['Hero', 'CTA'], 1)];
+  // The first child's ID must be byte-identical across both scenarios
+  assert.equal(oneChild[0], twoChildren[0], 'index 0 must be stable when a second sibling is added');
 });
 
 test('makeElement fills every schema field with defaults', () => {
@@ -42,6 +45,15 @@ test('makeElement fills every schema field with defaults', () => {
 
 test('makeElement rejects an element with no id', () => {
   assert.throws(() => makeElement({ box: { x: 0, y: 0, w: 1, h: 1 } }), /id/);
+});
+
+test('a partial nested object keeps its sibling defaults', () => {
+  const el = makeElement({ id: 'x.0', box: { w: 100 } });
+  assert.deepEqual(el.box, { x: 0, y: 0, w: 100, h: 0 });
+  const sp = makeElement({ id: 'y.0', spacing: { padding: [92, 0, 92, 0] } });
+  assert.deepEqual(sp.spacing.padding, [92, 0, 92, 0]);
+  assert.deepEqual(sp.spacing.margin, [0, 0, 0, 0]);
+  assert.equal(sp.spacing.gap, 0);
 });
 
 test('a spec with any estimated element is estimated, and renames its files', () => {
