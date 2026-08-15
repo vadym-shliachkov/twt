@@ -1,8 +1,8 @@
 ---
 name: twt-inherit-define
 category: inherit
-description: Discover an existing project's architecture and derive build conventions from it
-version: 1.0.0
+description: (v1.0.1) Discover an existing project's architecture and derive build conventions from it
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
@@ -42,7 +42,12 @@ writes:
 ---
 
 ## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Placeholder — `/twt-marketplace-docs` stamps the canonical body here; do not hand-copy it.
+Check (Glob/Read — never a shell command) that `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
+- **Missing, interactive (main thread):** ask via **AskUserQuestion** (single-select, header "Setup"): **Run /twt-setup now** (recommended — merges the curated allowlist so routine calls stop prompting) · **Skip** (expect per-call prompts) · **You decide**. On run: dispatch `/twt-setup` (Agent tool), wait, continue.
+- **Missing, unattended** (auto mode, or dispatched as a subagent): seed silently — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, continue.
+- **Present:** continue without asking (the seeder is idempotent).
+- Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
+- **Keep every Bash call allowlist-matchable (applies to the whole run):** the seeded rules match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`). Never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed, so they force a manual prompt even when the binary is allowlisted. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
 ## Step 1 — Refinement check (§10)
 

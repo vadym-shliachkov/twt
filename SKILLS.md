@@ -47,6 +47,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
+| [/twt-inherit-define](#twt-inherit-define) | inherit | Discover an existing project's architecture and derive build conventions from it |
 | [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
 | [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
@@ -1722,6 +1723,47 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 - Every finding has Where / Problem / Recommendation, with Problem citing evidence
 - Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
 - If BOTH `sitemap.md` and `functional-scope.md` are missing, aborts pointing to `/twt-ia-define`
+
+---
+
+## /twt-inherit-define
+
+**Category:** inherit
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Read an existing project's codebase — its own framework, styling system, component idiom, and file layout — and derive `.twt-artifacts/inherited/conventions.md`, the contract every later `inherit`-target step (the block creator, the target descriptor, asset sync) reads instead of assuming a twt-scaffolded layout.
+
+**Inputs:**
+- Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.css
+- the host project's source tree (read-only)
+
+**Writes:**
+- .twt-artifacts/inherited/detection.json
+- .twt-artifacts/inherited/conventions.md
+- .twt-artifacts/inherited/exemplars.md
+- .twt-artifacts/inherited/token-map.md
+- .twt-artifacts/inherited/host-style.json
+- .twt-artifacts/inherited/decisions.md
+
+**Non-goals:**
+- **Never modifies the host project.** This skill is read-only on the codebase it inspects — every file it writes lives under `.twt-artifacts/inherited/`. Only the builder (`/twt-inherit-block-creator`) ever writes into the host.
+- Does not scaffold a new project structure (there's already one — that's the point of `inherit`).
+- Does not install any dependency, config, or tool into the host.
+- Does not retrofit the host's existing components to match the design system. It documents the host's idiom as-is; making anything conform to it is later work, done with the user watching.
+
+**Success criteria:**
+- `conventions.md` opens with a `## Detected` block (stack, styling system, component idiom, routing, asset root — each with confidence and evidence) and has all seven sections (Partials, Scoping, Tokens, Responsive tiers, Content, Reuse-first, File layout) populated from real exemplar files, each citing the file it was learned from.
+- The **File layout** section names the host's actual static-asset root — a later step (asset sync) has nothing to bind to if this is vague or missing.
+- No `medium`-confidence, load-bearing signal was ever silently promoted into a written convention without the user seeing it first.
+- The user saw the Detected block, the exemplar paths, and the token-map summary and explicitly accepted them — via the Step 7 review gate in an interactive run, or via `decisions.md` in collect mode — before the run reports success.
 
 ---
 

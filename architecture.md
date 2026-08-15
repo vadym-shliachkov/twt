@@ -53,6 +53,7 @@ flowchart TB
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
     twt_ia_validate["/twt-ia-validate"]:::skill
+    twt_inherit_define["/twt-inherit-define"]:::skill
     twt_launch_audit["/twt-launch-audit"]:::skill
     twt_layout_define["/twt-layout-define"]:::skill
     twt_layout_validate["/twt-layout-validate"]:::skill
@@ -331,6 +332,10 @@ flowchart TB
 
 - /twt-ia-define - Build or refine sitemap.md and functional-scope.md
 - /twt-ia-validate - Critique sitemap.md + functional-scope.md against positioning and content; write report
+
+### inherit
+
+- /twt-inherit-define - Discover an existing project's architecture and derive build conventions from it
 
 ### intake
 
@@ -1807,6 +1812,36 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/ia/validation-report.md |  |
 
+### /twt-inherit-define
+
+**Category:** inherit
+**Version:** 1.0.1
+
+**Inputs:**
+- Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/design/design-system/tokens.css
+- the host project's source tree (read-only)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/inherited/detection.json |  |
+| .twt-artifacts/inherited/conventions.md |  |
+| .twt-artifacts/inherited/exemplars.md |  |
+| .twt-artifacts/inherited/token-map.md |  |
+| .twt-artifacts/inherited/host-style.json |  |
+| .twt-artifacts/inherited/decisions.md |  |
+
 ### /twt-launch-audit
 
 **Category:** qa
@@ -2847,6 +2882,7 @@ flowchart TB
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |
 | /twt-ia-validate | twt-ia-define | none |
+| /twt-inherit-define | none | none |
 | /twt-launch-audit | none | twt-qa, twt-content-approval-checklist, twt-seo, twt-status |
 | /twt-layout-define | none | twt-audience-define |
 | /twt-layout-validate | none | none |
@@ -2896,6 +2932,7 @@ flowchart TB
   figma-dev-audit/
   figma-export/
   html-site/
+  inherited/
   intake/
   launch/
   pre-design/
