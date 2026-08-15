@@ -185,6 +185,25 @@ test('nearestStep on an empty scale has nothing to snap to and returns null', ()
   assert.equal(nearestStep(50, {}), null);
 });
 
+test('nearestStep breaks a tie toward the smaller step on a REAL fractional Tailwind scale', () => {
+  // Tailwind's actual default spacing scale has fractional keys (0.5, 1.5,
+  // 2.5, ...). Those are not canonical integer object keys, so plain objects
+  // enumerate them in INSERTION order, not value order — this scale is
+  // deliberately built out of ascending-value order to prove the tie-break
+  // doesn't secretly depend on how the caller happened to write the object
+  // literal. 7 is equidistant from 6 (key 1.5) and 8 (key 2): must pick 1.5.
+  const scale = { '0.5': 2, '1': 4, '1.5': 6, '2': 8, '2.5': 10, '3': 12 };
+  assert.deepEqual(nearestStep(7, scale), { key: '1.5', value: 6, delta: -1 });
+});
+
+test('nearestStep finds the true nearest on a fractional scale inserted in descending order', () => {
+  // Same fractional-key scale, but written in descending insertion order —
+  // and a non-tie lookup, so this pins ordinary (non-tie) correctness against
+  // the same insertion-order hazard, not just the tie-break case above.
+  const scale = { '3': 12, '2.5': 10, '2': 8, '1.5': 6, '1': 4, '0.5': 2 };
+  assert.deepEqual(nearestStep(9.5, scale), { key: '2.5', value: 10, delta: 0.5 });
+});
+
 test('a tailwind token with an empty host spacing scale is unmapped, not thrown or crashed on', () => {
   // Exercises nearestStep's null-scale path end-to-end through adaptTokens,
   // since tailwindRow guards this before ever calling nearestStep.

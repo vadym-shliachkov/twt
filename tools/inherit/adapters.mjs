@@ -28,27 +28,35 @@ export function detectStylingSystem(scan) {
 }
 
 export function nearestStep(value, scale) {
+  // Sort into an ARRAY and iterate that, never an object: JS re-enumerates
+  // canonical integer-like object keys ("0", "1", "24" ...) in ascending KEY
+  // order regardless of insertion order, silently discarding a by-value sort
+  // the moment it's round-tripped through Object.fromEntries. That happens to
+  // coincide with ascending-by-value for small all-integer scales (which is
+  // why this bug hid behind every test on 2-3 integer-key fixtures) but
+  // breaks on Tailwind's real default spacing scale, whose fractional keys
+  // ('0.5', '1.5', '2.5' ...) are NOT canonical integer indices and so
+  // enumerate in raw insertion order — completely divorced from value.
+  const entries = Object.entries(scale).sort((a, b) => a[1] - b[1]);
   let best = null;
-  for (const [key, stepValue] of Object.entries(scale)) {
+  for (const [key, stepValue] of entries) {
     const delta = stepValue - value;
     const dist = Math.abs(delta);
-    // Strict < keeps the FIRST-seen step on an exact tie; entries are sorted
-    // ascending below so that is deterministically the smaller one.
+    // Strict < keeps the FIRST-seen step on an exact tie; iterating the
+    // array sorted above (not an object) is what makes "first-seen" mean
+    // "smaller value" deterministically, independent of key shape.
     if (!best || dist < best.dist) best = { key, value: stepValue, delta, dist };
   }
   if (!best) return null;
   return { key: best.key, value: best.value, delta: best.delta };
 }
 
-const sortedScale = (scale) =>
-  Object.fromEntries(Object.entries(scale || {}).sort((a, b) => a[1] - b[1]));
-
 function tailwindRow(token, value, hostScale, mode) {
   const m = PX.exec(value);
   if (!m) return { token, value, became: null, status: 'unmapped',
     note: 'no Tailwind scale equivalent for a non-length value' };
   const px = parseFloat(m[1]);
-  const scale = sortedScale(hostScale?.spacing);
+  const scale = hostScale?.spacing || {};
   if (Object.keys(scale).length === 0) {
     return { token, value, became: null, status: 'unmapped', note: 'host has no spacing scale' };
   }
