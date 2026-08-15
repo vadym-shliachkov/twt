@@ -150,7 +150,12 @@ export function scanProject(root) {
                        'template-parts', 'wp-content/themes', 'src/routes'];
   const dirSignals = DIR_SIGNALS.filter((d) => tree.dirs.includes(d));
 
-  const COMPONENT_EXT = new Set(['.tsx', '.jsx', '.ts', '.vue', '.svelte', '.astro', '.php']);
+  // Deliberately excludes .ts: a bare .ts file in a components dir is far more
+  // likely a barrel re-export, type-decl, or util than an actual component,
+  // and a later task ranks componentDirs to pick EXEMPLAR files a builder will
+  // imitate — a one-line `export { Card } from './Card'` barrel teaches the
+  // wrong idiom if it counts as component-shaped evidence here.
+  const COMPONENT_EXT = new Set(['.tsx', '.jsx', '.vue', '.svelte', '.astro', '.php']);
   const perDir = new Map();
   for (const f of tree.files) {
     if (!COMPONENT_EXT.has(extname(f))) continue;

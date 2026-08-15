@@ -66,7 +66,24 @@ test('the WP fixture is NOT reported as elementor', () => {
 test('component-directory candidates are ranked by file count', () => {
   const s = scanProject(FIX('inherit-next-tailwind'));
   assert.equal(s.candidates.componentDirs[0].dir.replace(/\\/g, '/'), 'src/components');
-  assert.equal(s.candidates.componentDirs[0].count, 3);
+  assert.equal(s.candidates.componentDirs[0].count, 2);
+});
+
+test('the barrel re-export in src/components is not counted as a component', () => {
+  // src/components holds Card.tsx, Badge.tsx, AND index.ts (a one-line
+  // `export { Card } from './Card'` barrel). A later task ranks
+  // componentDirs to pick EXEMPLAR files a builder imitates, and that rule
+  // explicitly excludes barrels/type-decls/utils because they teach the
+  // wrong idiom — so componentDirs must never count a .ts file as
+  // component-shaped, even though the directory obviously has three files
+  // in it. Pin both halves: the .ts files genuinely exist in the tree
+  // (extensions proves the walk saw them), and the component count is 2,
+  // not 3 — proving the barrel was excluded on purpose, not just uncounted
+  // by omission.
+  const s = scanProject(FIX('inherit-next-tailwind'));
+  assert.equal(s.extensions['.ts'], 2, 'tailwind.config.ts + src/components/index.ts must both be visible to the walk');
+  const componentsDir = s.candidates.componentDirs.find((c) => c.dir.replace(/\\/g, '/') === 'src/components');
+  assert.equal(componentsDir.count, 2, 'index.ts (the barrel) must not be counted alongside Card.tsx and Badge.tsx');
 });
 
 test('a monorepo reports every workspace and picks none', () => {
