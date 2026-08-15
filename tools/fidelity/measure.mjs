@@ -33,7 +33,10 @@ export async function measure({ url, file, root = 'body', widths = [1440] } = {}
       await page.goto(target, { waitUntil: 'networkidle', timeout: 20000 });
       out[width] = await page.evaluate((rootSel) => {
         const rootEl = document.querySelector(rootSel);
-        if (!rootEl) return [];
+        // A root selector matching nothing is a user error (wrong selector,
+        // page not built yet), not an empty page worth diffing — a silent
+        // `[]` here would report as a clean zero-element pass.
+        if (!rootEl) throw new Error(`root selector matched no element: ${rootSel}`);
         const rootBox = rootEl.getBoundingClientRect();
         const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
         const els = [];
@@ -94,8 +97,13 @@ export async function measure({ url, file, root = 'body', widths = [1440] } = {}
       await page.close();
     }
     return { widths: out, how };
-  } catch {
-    return null;
+  } catch (err) {
+    // Distinct from "Playwright is missing" (the `!pw` return above, which
+    // stays `null`): this is Playwright working fine and the measurement
+    // itself failing — bad selector, navigation failure, timeout. The two
+    // must not collapse into the same value, or a real measurement bug
+    // reports itself to the caller as "go install Playwright."
+    return { error: 'measurement', message: String((err && err.message) || err) };
   } finally {
     if (browser) await browser.close();
   }
@@ -129,6 +137,10 @@ if (isMain) {
   if (!out) {
     process.stderr.write('playwright unavailable — npm install playwright && npx playwright install chromium\n');
     process.exit(2);
+  }
+  if (out.error === 'measurement') {
+    process.stderr.write(`measurement failed: ${out.message}\n`);
+    process.exit(3);
   }
   const rounded = Object.fromEntries(
     Object.entries(out.widths).map(([w, els]) => [w, round(els)]));

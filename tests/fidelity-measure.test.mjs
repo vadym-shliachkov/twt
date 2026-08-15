@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { measure } from '../tools/fidelity/measure.mjs';
+import { makeElement } from '../tools/fidelity/spec.mjs';
+import { detectPlaywright } from '../tools/lib/resolve-playwright.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/fidelity-pair/', import.meta.url));
 
@@ -10,6 +12,19 @@ const FIX = fileURLToPath(new URL('./fixtures/fidelity-pair/', import.meta.url))
 async function measured(file) {
   const out = await measure({ file: FIX + file, root: '.hero', widths: [1440] });
   return out;
+}
+
+// Independent of measure()'s own return value, so the error-path tests below
+// can assert "must not be null" without that assertion being maskable by the
+// very code path they're pinning — inferring availability from `out === null`
+// would let a mutation that wrongly returns null read as "skip", not "fail".
+let chromiumOk;
+async function chromiumAvailable() {
+  if (chromiumOk === undefined) {
+    const d = await detectPlaywright();
+    chromiumOk = d.playwright && d.chromium;
+  }
+  return chromiumOk;
 }
 
 test('measure reads the data-fid stamp as the element id', async (t) => {
@@ -118,4 +133,54 @@ test('letter-spacing: normal measures as 0, never null', async (t) => {
   const cta = out.widths[1440].find((e) => e.id === 'hero.cta.0');
   assert.equal(cta.type.letterSpacing, 0);
   assert.notEqual(cta.type.letterSpacing, null);
+});
+
+// --- Coordinator follow-up: distinguish "playwright missing" from "the ---
+// --- measurement itself failed", and pin measure()'s element shape ------
+//
+// measure() previously returned `null` for BOTH "Playwright/Chromium isn't
+// installed" and "something else went wrong" (bad selector, 404, timeout).
+// The CLI branched only on `!out`, so a real measurement bug reported
+// itself identically to "go install Playwright" — misdirecting whoever
+// reads the error. A root selector matching nothing was worse: it was a
+// SILENT SUCCESS (an empty array), not an error at all.
+
+test('a root selector that matches nothing is a measurement error, not an empty success', async (t) => {
+  if (!(await chromiumAvailable())) return t.skip('playwright/chromium unavailable');
+  const out = await measure({ file: FIX + 'reference.html', root: '.does-not-exist', widths: [1440] });
+  assert.notEqual(out, null, 'must not collapse into the "playwright unavailable" sentinel');
+  assert.equal(out.error, 'measurement');
+  assert.match(out.message, /does-not-exist/);
+  assert.equal(out.widths, undefined, 'a failed measurement must not also carry a (misleadingly empty) widths map');
+});
+
+test('a nonexistent file path is a measurement error, not null', async (t) => {
+  if (!(await chromiumAvailable())) return t.skip('playwright/chromium unavailable');
+  const out = await measure({ file: FIX + 'does-not-exist.html', root: '.hero', widths: [1440] });
+  assert.notEqual(out, null);
+  assert.equal(out.error, 'measurement');
+  assert.equal(typeof out.message, 'string');
+  assert.ok(out.message.length > 0);
+});
+
+test("the element shape measure() emits matches spec.mjs's canonical shape, key for key", async (t) => {
+  const out = await measured('reference.html');
+  if (!out) return t.skip('playwright/chromium unavailable');
+  if (out.error) return t.skip('measurement error — shape comparison not applicable');
+  const got = out.widths[1440].find((e) => e.id === 'hero.title.0');
+  const gotKeys = Object.keys(got).sort();
+  const wantKeys = Object.keys(makeElement({ id: 'x.0' })).sort();
+  const extra = gotKeys.filter((k) => !wantKeys.includes(k));
+  const missing = wantKeys.filter((k) => !gotKeys.includes(k));
+  // measure() cannot call makeElement/deriveId directly — the literal is
+  // built inside a page.evaluate() closure that runs in the BROWSER, which
+  // has no access to this file's Node module scope. That is the one
+  // legitimate, known divergence: measure() adds `fontFallback` (a
+  // rendering-artifact flag spec.mjs's schema does not yet have a home
+  // for), and never sets `source` (spec.mjs's provenance-tracking field,
+  // populated only by the reference-spec side, never by a live measurement).
+  // Any OTHER divergence means the inline literal has silently drifted from
+  // spec.mjs's schema and this assertion must fail.
+  assert.deepEqual(extra, ['fontFallback']);
+  assert.deepEqual(missing, ['source']);
 });
