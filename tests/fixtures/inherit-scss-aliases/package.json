@@ -1,0 +1,4 @@
+{
+  "name": "fixture-scss-aliases",
+  "devDependencies": { "sass": "1.70.0", "node-sass": "9.0.0" }
+}

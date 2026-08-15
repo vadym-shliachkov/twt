@@ -13,7 +13,7 @@
 // evidence is never emitted at all.
 'use strict';
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
-import { join, relative, extname } from 'node:path';
+import { join, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SKIP_DIRS = new Set([
@@ -99,6 +99,12 @@ function workspacesOf(pkg, root) {
 
 export function scanProject(root) {
   if (!existsSync(root)) throw new Error(`scanProject: root not readable: ${root}`);
+  // existsSync passes for a FILE too, and walk()'s per-subdirectory catch is
+  // correct for individual subdirectories but would otherwise also swallow a
+  // top-level readdirSync(ENOTDIR) failure here, returning an empty-but-valid
+  // Scan. An empty scan reads as "a project with nothing in it" and would be
+  // acted on — so a non-directory root must throw before walk() ever runs.
+  if (!statSync(root).isDirectory()) throw new Error(`scanProject: root exists but is not a directory: ${root}`);
 
   const pkg = readJson(join(root, 'package.json'));
   const tree = walk(root);
@@ -118,32 +124,39 @@ export function scanProject(root) {
   const deps = { ...(pkg?.dependencies || {}), ...(pkg?.devDependencies || {}) };
   const wordpress = wordpressOf(root);
 
-  // Evidence collection: a claim reaches `high` only with two independent kinds.
+  // Evidence collection: a claim reaches `high` only with two INDEPENDENT
+  // KINDS of evidence (dependency / config / file), never just two facts of
+  // the same kind. Two dependency aliases for one claim (sass + node-sass,
+  // both -> 'scss') must stay `medium` — grading on evidence-string count
+  // alone let two same-kind facts silently masquerade as independent
+  // corroboration, which is exactly the false-high a later skill would act
+  // on as "no need to ask the user". Each claim maps evidence TEXT -> KIND;
+  // the text stays deduped and human-readable, the kind drives the grade.
   const evidence = new Map();
-  const add = (claim, item) => {
-    if (!evidence.has(claim)) evidence.set(claim, new Set());
-    evidence.get(claim).add(item);
+  const add = (claim, kind, item) => {
+    if (!evidence.has(claim)) evidence.set(claim, new Map());
+    evidence.get(claim).set(item, kind);
   };
   for (const [dep, claim] of Object.entries(DEP_CLAIMS)) {
-    if (deps[dep]) add(claim, `dependency ${dep}@${deps[dep]}`);
+    if (deps[dep]) add(claim, 'dependency', `dependency ${dep}@${deps[dep]}`);
   }
-  for (const c of configs) add(c.kind, `config file ${c.file}`);
+  for (const c of configs) add(c.kind, 'config', `config file ${c.file}`);
   if (wordpress) {
-    add('wordpress', `style.css Theme Name: ${wordpress.themeName}`);
-    if (existsSync(join(root, 'functions.php'))) add('wordpress', 'functions.php present');
+    add('wordpress', 'file', `style.css Theme Name: ${wordpress.themeName}`);
+    if (existsSync(join(root, 'functions.php'))) add('wordpress', 'file', 'functions.php present');
   }
   // Elementor is a DIFFERENT target and must never be claimed from a bare WP theme.
   if (deps['elementor'] || tree.dirs.some((d) => /(^|\/)elementor($|\/)/i.test(d))) {
-    add('elementor', 'elementor dependency or directory');
+    add('elementor', 'file', 'elementor dependency or directory');
   }
   if (tree.files.some((f) => f.endsWith('.module.css') || f.endsWith('.module.scss'))) {
-    add('css-modules', 'a *.module.css file exists');
+    add('css-modules', 'file', 'a *.module.css file exists');
   }
 
-  const signals = [...evidence.entries()].map(([claim, set]) => ({
+  const signals = [...evidence.entries()].map(([claim, byText]) => ({
     claim,
-    confidence: set.size >= 2 ? 'high' : 'medium',
-    evidence: [...set],
+    confidence: new Set(byText.values()).size >= 2 ? 'high' : 'medium',
+    evidence: [...byText.keys()],
   }));
 
   const DIR_SIGNALS = ['app', 'pages', 'src/components', 'components', 'resources/views',
@@ -159,7 +172,13 @@ export function scanProject(root) {
   const perDir = new Map();
   for (const f of tree.files) {
     if (!COMPONENT_EXT.has(extname(f))) continue;
-    const dir = f.split('/').slice(0, -1).join('/') || '.';
+    // Files at the repository root are never component evidence — same
+    // class of problem as the barrel exclusion above. A component at the
+    // repo root is essentially never the real idiom (WordPress bootstrap
+    // files like functions.php are the recurring offender), and a depth
+    // rule needs no maintenance as bootstrap filenames vary by target.
+    if (!f.includes('/')) continue;
+    const dir = f.split('/').slice(0, -1).join('/');
     perDir.set(dir, (perDir.get(dir) || 0) + 1);
   }
   const componentDirs = [...perDir.entries()]

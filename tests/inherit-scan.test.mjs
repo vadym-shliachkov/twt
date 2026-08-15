@@ -44,6 +44,44 @@ test('a single piece of evidence yields medium, never high', () => {
   assert.equal(sass.evidence.length, 1);
 });
 
+test('two dependency aliases for the same claim still grade medium, not high', () => {
+  // sass and node-sass are both DEP_CLAIMS aliases for 'scss', and this
+  // fixture has both as devDependencies with NO config file at all. Two
+  // evidence items of the SAME kind (dependency + dependency) must never
+  // reach `high` — only two DISTINCT kinds (e.g. a dependency AND a config
+  // file) do. Reproduces the review finding: grading on evidence-string
+  // Set.size let two dependency aliases silently reach `high` with zero
+  // config-file corroboration, converting what should be a question for
+  // the user into a silent assumption.
+  const s = scanProject(FIX('inherit-scss-aliases'));
+  const scss = s.signals.find((x) => x.claim === 'scss');
+  assert.equal(scss.confidence, 'medium');
+  assert.equal(scss.evidence.length, 2, 'both dependency@version strings should still be listed, even though the kind-grade stays medium');
+});
+
+test('an existing root that is a FILE, not a directory, throws rather than returning an empty scan', () => {
+  // existsSync passes for a file too. Without an explicit isDirectory()
+  // check, walk()'s per-subdirectory catch (correct for subdirectories)
+  // also swallows the top-level readdirSync(ENOTDIR) failure, returning a
+  // fully-formed but empty Scan — exactly the silent "nothing here" a
+  // downstream skill would wrongly act on.
+  const filePath = fileURLToPath(new URL('./fixtures/inherit-next-tailwind/package.json', import.meta.url));
+  assert.throws(() => scanProject(filePath), /not a directory/i);
+});
+
+test('root-level files are never counted as component evidence', () => {
+  // functions.php sits at the WP fixture's ROOT. componentDirs feeds a
+  // later exemplar picker that must never be handed a non-representative
+  // file — same class of problem as the barrel-.ts exclusion above, but a
+  // general depth rule this time: files directly under root never count,
+  // regardless of filename.
+  const s = scanProject(FIX('inherit-wp-classic'));
+  const rootEntry = s.candidates.componentDirs.find((c) => c.dir === '.' || c.dir === '');
+  assert.equal(rootEntry, undefined, 'functions.php at root must not produce a componentDirs entry at all');
+  const templateParts = s.candidates.componentDirs.find((c) => c.dir.replace(/\\/g, '/') === 'template-parts');
+  assert.equal(templateParts.count, 2, 'content-hero.php + content-card.php, unaffected by the root-exclusion rule');
+});
+
 test('scan never emits a claim it has no evidence for', () => {
   const s = scanProject(FIX('inherit-wp-classic'));
   assert.equal(s.signals.find((x) => x.claim === 'next'), undefined);
