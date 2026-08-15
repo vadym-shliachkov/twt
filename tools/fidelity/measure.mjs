@@ -20,13 +20,30 @@ const px = (v) => {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
 };
 
-export async function measure({ url, file, root = 'body', widths = [1440] } = {}) {
+export async function measure({ url, file, root = 'body', widths = [1440], _launch } = {}) {
   const { pw, how } = await loadPlaywright();
   if (!pw) return null;
   const target = url || pathToFileURL(file).href;
+
+  // Launching the browser is its own failure class, kept separate from the
+  // measurement try/catch below: a missing Chromium BINARY (package resolved
+  // fine, `npx playwright install chromium` was never run) must read exactly
+  // like "playwright unavailable" — same null, same exit 2, same install
+  // message — because that is what the user actually needs to run. Folding
+  // a launch failure into the generic measurement-failure bucket would print
+  // a raw Playwright stack under "measurement failed" for the single most
+  // common first-run problem this tool has.
+  // `_launch` is a test-only injection point so the classification below can
+  // be pinned by a stub without depending on whether THIS environment
+  // happens to have Chromium installed.
   let browser;
   try {
-    browser = await pw.chromium.launch();
+    browser = await (_launch ? _launch(pw) : pw.chromium.launch());
+  } catch {
+    return null;
+  }
+
+  try {
     const out = {};
     for (const width of widths) {
       const page = await browser.newPage({ viewport: { width, height: 1200 } });
@@ -39,12 +56,22 @@ export async function measure({ url, file, root = 'body', widths = [1440] } = {}
         if (!rootEl) throw new Error(`root selector matched no element: ${rootSel}`);
         const rootBox = rootEl.getBoundingClientRect();
         const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+        // Same test walk() uses to skip a node entirely. children must be
+        // built through it too — otherwise a display:none sibling is absent
+        // from the flat output (correctly) but still named in its parent's
+        // `children` array, and diff.mjs's child-ORDER check would then see
+        // a stamp on one side that can never be matched on the other and
+        // raise a spurious structural failure for an element nobody built.
+        const isVisible = (node) => {
+          const cs = getComputedStyle(node);
+          return cs.display !== 'none' && cs.visibility !== 'hidden';
+        };
         const els = [];
         let positional = 0;
 
         const walk = (node, pathNames) => {
+          if (!isVisible(node)) return;
           const cs = getComputedStyle(node);
-          if (cs.display === 'none' || cs.visibility === 'hidden') return;
           const r = node.getBoundingClientRect();
           const stamped = node.getAttribute('data-fid');
           const id = stamped || `__unstamped__${positional++}`;
@@ -85,7 +112,7 @@ export async function measure({ url, file, root = 'body', widths = [1440] } = {}
               justify: cs.justifyContent, align: cs.alignItems,
             },
             text: node.children.length === 0 ? (node.textContent || '').trim().slice(0, 200) : null,
-            children: [...node.children].map((c) => c.getAttribute('data-fid')).filter(Boolean),
+            children: [...node.children].filter(isVisible).map((c) => c.getAttribute('data-fid')).filter(Boolean),
           });
 
           for (const child of node.children) walk(child, pathNames);
@@ -105,7 +132,11 @@ export async function measure({ url, file, root = 'body', widths = [1440] } = {}
     // reports itself to the caller as "go install Playwright."
     return { error: 'measurement', message: String((err && err.message) || err) };
   } finally {
-    if (browser) await browser.close();
+    // A browser whose process already died (e.g. after a goto timeout) can
+    // make close() itself throw. That must not replace whatever try/catch
+    // above was about to return — including a legitimate success — with an
+    // unhandled rejection the CLI has no top-level handler for.
+    if (browser) { try { await browser.close(); } catch { /* already gone */ } }
   }
 }
 

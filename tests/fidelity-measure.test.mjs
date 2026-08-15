@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { measure } from '../tools/fidelity/measure.mjs';
 import { makeElement } from '../tools/fidelity/spec.mjs';
-import { detectPlaywright } from '../tools/lib/resolve-playwright.mjs';
+import { detectPlaywright, loadPlaywright } from '../tools/lib/resolve-playwright.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/fidelity-pair/', import.meta.url));
 
@@ -25,6 +25,21 @@ async function chromiumAvailable() {
     chromiumOk = d.playwright && d.chromium;
   }
   return chromiumOk;
+}
+
+// The launch-classification tests below only need the playwright NPM
+// PACKAGE to resolve (so measure() gets past `if (!pw) return null` and
+// reaches the `_launch` injection point) — they never touch a real browser,
+// so they must not gate on Chromium being installed. That is the whole
+// point: they pin the one classification bug the suite could not previously
+// see in an environment where Chromium already IS installed.
+let pkgOk;
+async function playwrightPackageAvailable() {
+  if (pkgOk === undefined) {
+    const { pw } = await loadPlaywright();
+    pkgOk = !!pw;
+  }
+  return pkgOk;
 }
 
 test('measure reads the data-fid stamp as the element id', async (t) => {
@@ -120,6 +135,14 @@ test('a display:none element is excluded from the measured set entirely', async 
   const ids = out.widths[1440].map((e) => e.id);
   assert.ok(ids.includes('hero.title.0'), 'visible sibling must still be captured');
   assert.ok(!ids.includes('hero.ghost.0'), 'display:none element must not appear in the output');
+  // Finding 3: the parent's `children` array must not name an id that
+  // appears nowhere in the flat output. diff.mjs compares children ORDER
+  // between reference and build; a hidden child stamped on one side and
+  // silently unmatchable on the other would raise a spurious structural
+  // failure for an element nobody actually built.
+  const hero = out.widths[1440].find((e) => e.id === 'hero.0');
+  assert.ok(!hero.children.includes('hero.ghost.0'), 'a display:none child must not appear in its parent\'s children list');
+  assert.deepEqual(hero.children, ['hero.title.0']);
 });
 
 test('letter-spacing: normal measures as 0, never null', async (t) => {
@@ -183,4 +206,45 @@ test("the element shape measure() emits matches spec.mjs's canonical shape, key 
   // spec.mjs's schema and this assertion must fail.
   assert.deepEqual(extra, ['fontFallback']);
   assert.deepEqual(missing, ['source']);
+});
+
+// --- Coordinator follow-up 2: classify a launch failure separately from a --
+// --- measurement failure, by injection rather than by environment ---------
+//
+// `if (!pw) return null` only proves the playwright PACKAGE resolved. It
+// says nothing about whether the Chromium BINARY is installed — that only
+// fails inside `chromium.launch()`, which used to share a catch block with
+// navigation/evaluate failures. In a bare checkout (package present,
+// `npx playwright install chromium` never run) that bug would make the CLI
+// print a raw Playwright stack under "measurement failed" instead of the
+// friendly install line — the single most likely first-run failure this
+// tool has, getting the least useful message.
+//
+// The environment this suite runs in already has Chromium installed, so a
+// real launch failure can't be observed by letting it happen naturally —
+// these two tests inject a stub launcher via `_launch` to force each branch
+// and pin the classification directly.
+
+test('a launcher that throws (Chromium binary missing) yields null, not a measurement error', async (t) => {
+  if (!(await playwrightPackageAvailable())) return t.skip('playwright package unavailable');
+  const out = await measure({
+    file: FIX + 'reference.html', root: '.hero', widths: [1440],
+    _launch: async () => { throw new Error('simulated: chromium binary not installed'); },
+  });
+  assert.equal(out, null, 'a launch failure must read exactly like "playwright unavailable" (CLI exit 2)');
+});
+
+test('a page operation that throws after a successful launch yields a measurement error, not null', async (t) => {
+  if (!(await playwrightPackageAvailable())) return t.skip('playwright package unavailable');
+  const fakeBrowser = {
+    newPage: async () => { throw new Error('simulated: navigation failed'); },
+    close: async () => {},
+  };
+  const out = await measure({
+    file: FIX + 'reference.html', root: '.hero', widths: [1440],
+    _launch: async () => fakeBrowser,
+  });
+  assert.notEqual(out, null, 'a post-launch failure must not collapse into the "playwright unavailable" sentinel');
+  assert.equal(out.error, 'measurement');
+  assert.match(out.message, /simulated: navigation failed/);
 });
