@@ -1,8 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import {
   detectStylingSystem, nearestStep, adaptTokens, renderTokenMap,
 } from '../tools/inherit/adapters.mjs';
+
+const run = promisify(execFile);
+const CLI = fileURLToPath(new URL('../tools/inherit/adapters.mjs', import.meta.url));
 
 const scanWith = (signals, extra = {}) => ({ signals, deps: {}, configs: [], ...extra });
 
@@ -256,4 +265,71 @@ test('a collision is reported per-system, not just for css-vars', () => {
   const row = map.find((r) => r.token === '--brand');
   assert.equal(row.status, 'collision');
   assert.match(row.note, /already defines/i);
+});
+
+// --- CLI entrypoint (task 3: adapters.mjs is reachable from a skill's Bash
+// calls, mirroring scan.mjs's library-plus-isMain shape) -------------------
+
+test('the CLI writes token-map.md and reports the summary on stderr', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-adapt-'));
+  const scanPath = join(dir, 'detection.json');
+  const tokensPath = join(dir, 'tokens.css');
+  writeFileSync(scanPath, JSON.stringify({ signals: [] }));
+  writeFileSync(tokensPath, ':root {\n  --space-1: 4px;\n}\n');
+  const out = join(dir, 'out');
+  const { stderr } = await run('node', [CLI, '--scan', scanPath, '--tokens', tokensPath, '--out', out]);
+  assert.ok(existsSync(join(out, 'token-map.md')), 'token-map.md must be written');
+  const md = readFileSync(join(out, 'token-map.md'), 'utf8');
+  assert.match(md, /--space-1/);
+  assert.match(stderr, /system none/i);
+  assert.match(stderr, /1 mapped/);
+});
+
+test('a missing tokens file exits 3, not 0 and not a crash', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-adapt-'));
+  const scanPath = join(dir, 'detection.json');
+  writeFileSync(scanPath, JSON.stringify({ signals: [] }));
+  const out = join(dir, 'out');
+  await assert.rejects(
+    () => run('node', [CLI, '--scan', scanPath, '--tokens', join(dir, 'does-not-exist.css'), '--out', out]),
+    (e) => e.code === 3 && /no tokens file/i.test(e.stderr || ''),
+  );
+  assert.ok(!existsSync(join(out, 'token-map.md')), 'nothing should be written on the exit-3 path');
+});
+
+test('missing required flags is a usage error, exit 2', async () => {
+  await assert.rejects(() => run('node', [CLI]), (e) => e.code === 2);
+});
+
+test('the stderr summary names the unmapped count when a token has no host equivalent', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-adapt-'));
+  const scanPath = join(dir, 'detection.json');
+  const tokensPath = join(dir, 'tokens.css');
+  // tailwind, high confidence, and no --host-style file at all — tailwindRow's
+  // "host has no spacing scale" branch fires, so --space-6 is unmapped.
+  writeFileSync(scanPath, JSON.stringify({
+    signals: [{ claim: 'tailwind', confidence: 'high', evidence: ['a', 'b'] }],
+  }));
+  writeFileSync(tokensPath, ':root {\n  --space-6: 92px;\n}\n');
+  const out = join(dir, 'out');
+  const { stderr } = await run('node', [CLI, '--scan', scanPath, '--tokens', tokensPath, '--out', out]);
+  assert.match(stderr, /1 unmapped/, 'the unmapped count must be visible, never buried');
+  const md = readFileSync(join(out, 'token-map.md'), 'utf8');
+  assert.match(md, /## Unmapped/);
+});
+
+test('--host-style supplies the host spacing scale the CLI maps against', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-adapt-'));
+  const scanPath = join(dir, 'detection.json');
+  const tokensPath = join(dir, 'tokens.css');
+  const hostStylePath = join(dir, 'host-style.json');
+  writeFileSync(scanPath, JSON.stringify({
+    signals: [{ claim: 'tailwind', confidence: 'high', evidence: ['a', 'b'] }],
+  }));
+  writeFileSync(tokensPath, ':root {\n  --space-6: 92px;\n}\n');
+  writeFileSync(hostStylePath, JSON.stringify({ scale: { spacing: { 20: 80, 24: 96 } } }));
+  const out = join(dir, 'out');
+  const { stderr } = await run('node',
+    [CLI, '--scan', scanPath, '--tokens', tokensPath, '--out', out, '--host-style', hostStylePath]);
+  assert.match(stderr, /1 snapped/, '92px must snap onto the host scale supplied via --host-style, not go unmapped');
 });

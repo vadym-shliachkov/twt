@@ -10,7 +10,19 @@
 // The host/exact modes mirror /twt-fidelity's system/strict deliberately: it is
 // the same tension (host scale vs exact value) and the two skills should not
 // invent competing vocabulary for one idea.
+//
+// CLI entrypoint (mirrors scan.mjs's library-plus-isMain shape): a SKILL.md is
+// prose executed by a model — it can run Bash and use file tools, but it cannot
+// call a library function directly, and CONVENTIONS §15 bans throwaway `node -e`
+// computation. So this module doubles as its own CLI. What it deliberately does
+// NOT do: evaluate the host's styling config (a tailwind.config.ts is code).
+// Reading and summarizing that config into --host-style JSON is the calling
+// skill's job (model judgment), not this script's (deterministic computation).
 'use strict';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { parseCssVars } from '../lib/contrast.mjs';
 
 const PX = /^(-?[\d.]+)px$/;
 
@@ -156,4 +168,46 @@ export function renderTokenMap(rows, meta = {}) {
     lines.push('');
   }
   return lines.join('\n');
+}
+
+const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+if (isMain) {
+  const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1]; };
+  const scanPath = arg('scan');
+  const tokensPath = arg('tokens');
+  const outDir = arg('out');
+  const mode = arg('mode', 'host');
+  const hostStylePath = arg('host-style');   // optional, written by the model
+
+  if (!scanPath || !tokensPath || !outDir) {
+    process.stderr.write('usage: adapters.mjs --scan <detection.json> --tokens <tokens.css> --out <dir> [--mode host|exact] [--host-style <json>]\n');
+    process.exit(2);
+  }
+  if (!existsSync(tokensPath)) {
+    process.stderr.write(`no tokens file at ${tokensPath} — nothing to adapt\n`);
+    process.exit(3);
+  }
+
+  const scan = JSON.parse(readFileSync(scanPath, 'utf8'));
+  // parseCssVars returns { vars: Map, order }, not a plain object — adaptTokens
+  // does Object.entries(tokens), so the Map must be flattened first or every
+  // token silently vanishes behind two bogus keys ('vars', 'order').
+  const { vars: parsedVars } = parseCssVars(readFileSync(tokensPath, 'utf8'));
+  const tokens = Object.fromEntries(parsedVars);
+  const hostStyle = hostStylePath && existsSync(hostStylePath)
+    ? JSON.parse(readFileSync(hostStylePath, 'utf8')) : {};
+
+  const detected = detectStylingSystem(scan);
+  const { artifacts, map } = adaptTokens(tokens, {
+    system: detected.system, hostScale: hostStyle.scale, hostVars: hostStyle.vars, mode,
+  });
+
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, 'token-map.md'),
+    renderTokenMap(map, { system: detected.system, mode }));
+  for (const a of artifacts) writeFileSync(join(outDir, a.path.replace(/[\\/]/g, '_')), a.contents);
+
+  const n = (s) => map.filter((r) => r.status === s).length;
+  process.stderr.write(`system ${detected.system} (${detected.confidence}) · `
+    + `${n('mapped')} mapped, ${n('snapped')} snapped, ${n('collision')} collision, ${n('unmapped')} unmapped\n`);
 }
