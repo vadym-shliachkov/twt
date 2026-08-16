@@ -1730,7 +1730,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Build a page or block **into an existing project's own architecture** — the conventions `/twt-inherit-define` already discovered and wrote to `.twt-artifacts/inherited/` — instead of a twt-scaffolded layout. This is the only skill in the `inherit` target that writes into the host's real source tree, so it plans every write, classifies it as CREATE or MODIFY, and gets one consolidated approval for the whole batch before touching anything the user didn't already agree to.

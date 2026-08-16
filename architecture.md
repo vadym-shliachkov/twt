@@ -1818,7 +1818,7 @@ flowchart TB
 ### /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout

@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-16 **v1.0.101** — twt-inherit-block-creator.md → 1.0.2
 - 2026-08-16 **v1.0.100** — twt-inherit-block-creator.md → 1.0.1
 - 2026-08-16 **v1.0.99** — twt-inherit-define → 1.0.2
 - 2026-08-15 **v1.0.98** — twt-inherit-define → 1.0.1
