@@ -972,17 +972,17 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.9
+**Version:** 1.3.10
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
 
 **Inputs:**
-- Optional --target html|elementor (else menu); optional page scope
+- Optional --target html|elementor|inherit (else menu); optional page scope
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
 
 **Reads:**
 - .twt-artifacts/design/design-brief.md
@@ -1002,6 +1002,7 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - site/assets/css/general.css             # html target — merged deltas
 - <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas
 - <THEME>/assets/css/design-system.css    # elementor target — merged token deltas
+- the host project's source tree          # inherit target — new files freely; existing files only after one consolidated approval
 
 **Non-goals:**
 - Doesn't do QA (Phase 4)
@@ -2511,7 +2512,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.13.3
+**Version:** 1.13.4
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2566,7 +2567,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.9
+**Version:** 1.5.10
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -2577,7 +2578,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css

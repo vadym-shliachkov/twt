@@ -150,6 +150,8 @@ flowchart TB
     twt_html_block_creator -.-> twt_develop
     twt_elementor_theme_creator -.-> twt_develop
     twt_elementor_block_creator -.-> twt_develop
+    twt_inherit_define -.-> twt_develop
+    twt_inherit_block_creator -.-> twt_develop
     twt_content_approval_checklist -.-> twt_develop
     twt_assets_produce -.-> twt_develop
     twt_figma_dev_audit -.-> twt_develop
@@ -227,6 +229,8 @@ flowchart TB
     twt_elementor_block_creator -.-> twt_site_dev
     twt_html_site_creator -.-> twt_site_dev
     twt_html_block_creator -.-> twt_site_dev
+    twt_inherit_define -.-> twt_site_dev
+    twt_inherit_block_creator -.-> twt_site_dev
     twt_content_approval_checklist -.-> twt_site_dev
     twt_figma_dev_audit -.-> twt_site_dev
     twt_spec_define -.-> twt_spec
@@ -1264,14 +1268,14 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.9
+**Version:** 1.3.10
 
 **Inputs:**
-- Optional --target html|elementor (else menu); optional page scope
+- Optional --target html|elementor|inherit (else menu); optional page scope
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
+- Soft: twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit
 
 **Feeds into:**
 - Hard consumers: none
@@ -1297,6 +1301,7 @@ flowchart TB
 | site/assets/css/general.css             # html target — merged deltas |  |
 | <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas |  |
 | <THEME>/assets/css/design-system.css    # elementor target — merged token deltas |  |
+| the host project's source tree          # inherit target — new files freely; existing files only after one consolidated approval |  |
 
 ### /twt-direction-define
 
@@ -1829,7 +1834,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/inherited/conventions.md
@@ -1859,7 +1864,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: twt-inherit-block-creator
-- Soft consumers: none
+- Soft consumers: twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css
@@ -2513,7 +2518,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.3
+**Version:** 1.13.4
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2553,7 +2558,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.9
+**Version:** 1.5.10
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2561,7 +2566,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
 
 **Feeds into:**
 - Hard consumers: none
@@ -2899,7 +2904,7 @@ flowchart TB
 | /twt-design-system-audit | none | twt-brand, twt-design-system-define, twt-design-system-validate, twt-content-fetch-figma, twt-block-preview |
 | /twt-design-system-define | none | figma-mcp |
 | /twt-design-system-validate | none | none |
-| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit |
+| /twt-develop | none | twt-html-site-creator, twt-html-block-creator, twt-elementor-theme-creator, twt-elementor-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-assets-produce, twt-figma-dev-audit |
 | /twt-direction-define | none | none |
 | /twt-elementor-block-creator | twt-elementor-theme-creator | twt-design-system-define, figma-mcp |
 | /twt-elementor-theme-creator | none | none |
@@ -2941,7 +2946,7 @@ flowchart TB
 | /twt-seo-validate | twt-seo-define | none |
 | /twt-setup | none | none |
 | /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa |
-| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp |
+| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
