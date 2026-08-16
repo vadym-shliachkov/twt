@@ -62,7 +62,9 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/inherit/scan.mjs" "$CLAUDE_PROJECT_DIR" --out 
 
 If `$ARGUMENTS` supplied an explicit project-root path, substitute it for `$CLAUDE_PROJECT_DIR` in that one call (`scan.mjs`'s first positional accepts any absolute path) — it stays a single Bash call either way.
 
+- **Exit 2:** a usage error in this step's own call (e.g. `--out` with no path after it) — that's a bug in how this step constructed the command, not a host-project condition; fix the call and retry once.
 - **Exit 3:** the root was missing or wasn't a directory. Stop and report the exact message `scan.mjs` printed to stderr — do not retry with a guessed path.
+- **Exit 4:** the scan itself succeeded but the output could not be written (the message starts `could not write`). `scan.mjs` already creates the output directory, so this means something else blocks the path — a read-only location, a permission problem, or a *file* where a directory is needed. Report the exact stderr message and the path; do not retry with a guessed path, and never confuse this with exit 3 (the root was fine).
 - **Exit 0:** continue. **Read `detection.json`** with the Read tool (never shell) to load `packageManager`, `deps`, `scripts`, `configs`, `extensions`, `dirSignals`, `workspaces`, `wordpress`, `candidates.componentDirs`, and `signals`.
 
 ## Step 3 — Resolve ambiguity before reading anything
@@ -105,7 +107,12 @@ Scope to `candidates.componentDirs[0]` (within the resolved workspace, if any).
 
 - **Empty (no `componentDirs` at all):** say so plainly, then ask the user — **plain text**, this is free-form input, not a fixed-option choice — to name a representative component file themselves. Use whatever they name as the sole component exemplar and continue.
 - **Refinement mode (Step 1) and an existing `exemplars.md`:** prefer its previously-chosen paths if they still exist on disk and their directory is still `candidates.componentDirs[0]` (or still top-ranked within the resolved workspace). Only re-pick a path that's gone or whose directory ranking changed.
-- **Otherwise:** Glob `candidates.componentDirs[0]/*` to list its files. Read each one and note its line count (skip anything that reads as a one-line/near-empty barrel or type-only re-export — the same class `scan.mjs` already excludes for bare `.ts` files, applied here to whatever the actual extension is). Rank the rest by line count and choose **2-3 of median size** — explicitly not the smallest survivor (still likely thin/atypical) and not the largest (more likely accumulated legacy code than the current idiom). Both extremes teach the wrong lesson to whatever reads `conventions.md` next.
+- **Otherwise:** use `candidates.componentDirs[0].files` from `detection.json` — `scan.mjs` already measured every file in the top-ranked directories and reports each as `{ file, lines }`. **Do not Read files to measure them.** Reading a whole directory to pick three exemplars is a token budget spent on arithmetic the scanner did for free; on a host with 150 components it is 150 reads to choose 3.
+  - Drop anything with a **`lines` count of 5 or fewer** — that reads as a one-line/near-empty barrel or type-only re-export, the same class `scan.mjs` already excludes for bare `.ts` files, applied here to whatever the actual extension is.
+  - Rank the survivors by `lines` and pick the **finalists** from the middle of that ranking: aim for **2-3 of median size** — explicitly not the smallest survivor (still likely thin/atypical) and not the largest (more likely accumulated legacy code than the current idiom). Both extremes teach the wrong lesson to whatever reads `conventions.md` next.
+  - **Boundary rule (small directories).** "Median, excluding both extremes" degenerates on a tiny survivor set — on 2 files it selects nothing, on 3 it selects one. So: **1 survivor** → use it and say in the report that it is the only candidate, so it is atypical by necessity; **2 or 3 survivors** → use *all of them* (there is no meaningful extreme to exclude); **4 or more** → apply the median rule above. Never return an empty exemplar set while survivors exist.
+  - If the top directory has `filesTruncated: true`, `scan.mjs` hit its per-directory measurement cap — the ranking is over the measured subset, which is fine; note it in the report.
+  - **Fallback only** (a directory `scan.mjs` reported no `files` array for — e.g. a dir ranked below the measured top few, or one the user named in the empty-`componentDirs` branch above): Glob it and Read at most **25** files to measure them, then apply the same rules. Never Read an uncapped directory listing.
 
 Then, regardless of mode:
 - Pick **one route/page file** from the routing directory Step 3 resolved (skip if Step 3 found none): Glob its files, prefer an index/home route if one is obviously present, else the first non-trivial file.
@@ -194,11 +201,28 @@ Every section cites the exemplar file it was learned from — a section with no 
 **Skip this step and say so in the report** if `.twt-artifacts/design/design-system/tokens.css` doesn't exist. Otherwise:
 
 1. **Read the host's styling config with the Read tool** — never evaluate it; a `tailwind.config.ts` is executable code, and running it is out of scope for a bundled script. Which file depends on the styling system Step 3 identified:
-   - `tailwind`: the config file `detection.json.configs` recorded with `kind: 'tailwind'`. Extract any `theme.extend.spacing`/`theme.spacing` numeric-key -> px/rem mapping you can read statically off the page.
+   - `tailwind`: the config file `detection.json.configs` recorded with `kind: 'tailwind'`. Extract **every scale you can read statically off the page**, not just spacing — `theme.extend.spacing`/`theme.spacing`, `borderRadius`, `fontSize`, `borderWidth`, `boxShadow`, `colors`, and any explicit width/height `size` scale. Each scale is a `<step key> -> px` mapping. **This matters:** `adapters.mjs` classifies each design token by its NAME (a `--radius-*` token is a radius, a `--font-size-*` token is a font size) and maps it onto the scale for *that* family only. A family you don't supply a scale for is reported `unmapped` — honest, and the builder falls back to the host's nearest existing idiom — but a scale you *could* have read and didn't is fidelity thrown away for nothing.
    - `css-vars` / `css-modules` / `theme-object` / `scss`: the styles exemplar recorded in `exemplars.md` (Step 4). Extract its existing `--custom-property: value;` (or `$scss-var: value;`, or theme-object key) declarations.
    - `none`: nothing to read — write `{}`.
    If nothing is confidently extractable (e.g. the config composes values through a `require()` this skill can't statically resolve), write `{}` (or whichever key you do have) and say so in the Step 8 report — a partial `host-style.json` is honest; a guessed one isn't.
-2. **Write** `.twt-artifacts/inherited/host-style.json`: `{ "scale": { "spacing": { "<step>": <px> } }, "vars": { "--name": "value" } }` — both keys optional, omit what the host doesn't have.
+2. **Write** `.twt-artifacts/inherited/host-style.json`. Its shape:
+
+```json
+{
+  "scale": {
+    "spacing":      { "4": 16, "6": 24 },
+    "fontSize":     { "base": 16, "5xl": 48 },
+    "borderRadius": { "md": 6, "lg": 16 },
+    "borderWidth":  { "DEFAULT": 1, "2": 2 },
+    "boxShadow":    { "md": 6 },
+    "size":         { "8": 32 },
+    "colors":       {}
+  },
+  "vars": { "--name": "value" }
+}
+```
+
+   Every key is **optional** — omit any scale the host doesn't have (an omitted family is reported `unmapped`, which is the honest answer, not a failure). The scale key names are exactly the family names `adapters.mjs` classifies tokens into: `spacing`, `fontSize`, `borderRadius`, `borderWidth`, `boxShadow`, `colors`, `size`. Values are **numbers in px** (convert a `rem` scale at the host's own root font size and say so in the report). `vars` is the host's already-defined custom properties, used for collision detection.
 3. One Bash call:
 
 ```
@@ -206,6 +230,8 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/inherit/adapters.mjs" --scan ".twt-artifacts/i
 ```
 
 Use `--mode exact` only when `--exact` was passed in `$ARGUMENTS`; otherwise `--mode host`.
+
+**`--exact` is a power-user flag for direct invocation only.** No orchestrator (`/twt-develop`, `/twt-site-dev`, `/twt-site`) offers it in a target menu or forwards it, deliberately: `exact` mode adds named steps to the host's own config scales, which turns `tailwind.config` into a MODIFY the builder must get approved — a cost the user should opt into knowingly, by typing `/twt-inherit-define --exact`, rather than acquire from a menu. Default (`host`) mode snaps onto the scales the host already has and needs no config change at all.
 
 - **Exit 3:** no tokens file — this shouldn't happen since you just checked for it above, but if the file was removed mid-run, report it and continue without a token map rather than failing the whole run.
 - **Exit 2:** a usage error in this skill's own call (a missing `--scan`/`--tokens`/`--out`) — that's a bug in how this step constructed the command, not a host-project condition; fix the call and retry once.
@@ -218,6 +244,7 @@ Present, in one place: the `## Detected` block from `conventions.md`, the exempl
 - **Interactive:** ask via **AskUserQuestion** (single-select, header "Conventions"): **Accept** (description: "use this as the contract for everything `inherit` builds next") / **Let me edit conventions.md first** (description: "I'll open the file and adjust it myself, then re-run this skill to re-validate") / **Re-derive with different exemplars** (description: "go back to Step 4 and let me name the files instead"). On the edit option, stop here — don't re-run automatically; the next invocation's Step 1 refinement check picks up the user's edits. On re-derive, return to Step 4 and ask the user (plain text) which files to use instead of the ones auto-picked.
 - **Collect mode** (`subagent-collect` in `$ARGUMENTS`): don't ask. Write `.twt-artifacts/inherited/decisions.md` instead:
   - Frontmatter: `generated`, `area: inherit`, `producer: twt-inherit-define`, `status: open`.
+  - **H1 title** (immediately after the frontmatter, required — `check-decisions.mjs` fails the file without one): `# Decisions to confirm — inherited conventions`.
   - `## Open questions` — one entry per unresolved ambiguity from Step 3 (and the refinement-mode default from Step 1, if collect mode took it): `- <question> — options: [<a>, <b>, ...] — model-leaning: <x>`, with an **indented** continuation line `  - why it matters: <one line>`.
   - `## Model-decided assumptions (review)` — one entry per value this run picked without asking: `- <field> = <value> — basis: <reason> — reversible: <yes|no>`.
   - `## Proposed rules (confirm before binding)` — the Detected block's stack/styling-system/component-idiom/routing/asset-root rows, restated as rules the rest of the `inherit` pipeline would bind to if accepted.

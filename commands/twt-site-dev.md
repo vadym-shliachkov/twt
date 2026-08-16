@@ -99,6 +99,20 @@ Record the choice as `<target>` and continue.
 | `elementor` | `.twt-artifacts/elementor-theme/conventions.md` | `/twt-elementor-block-creator` | `wordpress` | `<THEME>/assets` |
 | `inherit` | `.twt-artifacts/inherited/conventions.md` | `/twt-inherit-block-creator` | `wordpress` if the host is a WordPress theme, else `web` | the **File layout** section of the inherited `conventions.md` — never a path this skill invents |
 
+**Dispatch modes (§13) — binding for every Agent call in this skill.** A dispatched skill that would ask the user something must be dispatched with `subagent-collect` **and** have its returned `decisions.md` surfaced, because `AskUserQuestion` does not work inside a subagent. "Collect-and-surface" means: pass the flag, then present the child's decisions via `AskUserQuestion` on the main thread (auto mode: resolve them yourself and log each; collect mode: aggregate into your own report for the orchestrator above).
+
+| Step | Dispatch | Mode |
+|---|---|---|
+| 2·pre | `/twt-figma-dev-audit` | collect (advisory; the proceed prompt is asked here, on the main thread) |
+| 2 | `/twt-design-system-define`, `/twt-component-define` | collect-and-surface |
+| 2a | `/twt-content-approval-checklist` | collect (no user-facing gate to surface) |
+| 3 | `/twt-elementor-theme-creator`, `/twt-html-site-creator` | plain — scaffolders, no gate |
+| 3 | `/twt-inherit-define` | **collect-and-surface** — its Step 7 review gate is user-facing |
+| 4 | `/twt-html-block-creator`, `/twt-elementor-block-creator` | collect-and-surface |
+| 4 | `/twt-inherit-block-creator` | **collect-and-surface** — its Step 5 consolidated write approval is user-facing |
+
+No inherit dispatch in this skill is left mode-unstated. A bare `(Agent tool)` on either inherit skill is a defect, not a shorthand.
+
 ## Step 2·pre — Developer readiness check (advisory)
 
 Run before the design system is derived: a blocker in the Figma file invalidates the spine that Step 2 builds from it.
@@ -135,7 +149,9 @@ In interactive mode, tell the user this workbook is the human approval surface f
 
 - `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool) first. If present, skip.
 - `<target>` = **html**: if `.twt-artifacts/html-site/conventions.md` is missing, dispatch `/twt-html-site-creator` (Agent tool) first. If present, skip.
-- `<target>` = **inherit**: if `.twt-artifacts/inherited/conventions.md` is missing, dispatch `/twt-inherit-define` (Agent tool) first. If present, skip. There is **no scaffolder for this target** — the scaffold is the host project, which already exists; `/twt-inherit-define` discovers its conventions rather than creating them.
+- `<target>` = **inherit**: if `.twt-artifacts/inherited/conventions.md` is missing, dispatch `/twt-inherit-define` (Agent tool) **with `subagent-collect`** first, then surface what it returns per the rule below. If present, skip. There is **no scaffolder for this target** — the scaffold is the host project, which already exists; `/twt-inherit-define` discovers its conventions rather than creating them.
+
+  **Surface its review gate before Step 4 builds anything (§13).** `/twt-inherit-define`'s Step 7 is the checkpoint that makes adapting to a host safe — the user confirms the stack, styling system, exemplars and asset root that everything downstream binds to. It is an `AskUserQuestion` gate, and `AskUserQuestion` **does not work inside a subagent**, so a bare dispatch stalls it or skips it silently. Always pass the flag, then Read `.twt-artifacts/inherited/decisions.md` and present its `## Open questions` and `## Proposed rules (confirm before binding)` via **AskUserQuestion** (one question per open decision, each with a **"You decide"** option accepting the recorded `model-leaning`), then re-dispatch `/twt-inherit-define` with `subagent-collect` in refinement mode with the answers. **In auto mode**, resolve them yourself the same way as Step 2 — prefer answers derivable from the context, else accept the child's proposed assumption — and log each one. **In collect mode** (dispatched by `/twt-site` under Express), aggregate the block into your own report and let the orchestrator above surface it. Surfacing must happen **here, before Step 4**: `/twt-inherit-block-creator` writes to the same `decisions.md`, so an unsurfaced conventions decision is overwritten by the first build and lost.
 
 (Unlike the builders, this skill never bails on a missing scaffold — it creates it. The inherit arm is the exception noted above: there is nothing to create, only to discover.)
 
@@ -145,6 +161,15 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 - `<target>` = **html** → `/twt-html-block-creator`
 - `<target>` = **inherit** → `/twt-inherit-block-creator`
+
+**Then surface what the builder returned — this step is not finished at the dispatch (§13).** Step 2 already does this for `/twt-design-system-define` ("Interactively, surface any returned `decisions.md` questions via AskUserQuestion"); the builder needs it just as much and for higher stakes. Read `.twt-artifacts/<html-site|elementor-theme|inherited>/decisions.md` if the child wrote one, and present its open questions via **AskUserQuestion**; in auto mode resolve them yourself and log each one; in collect mode aggregate them into your own report.
+
+**For `<target>` = inherit this is load-bearing, not housekeeping.** `/twt-inherit-block-creator` writes into a repo somebody else owns. In collect mode it always takes the safe *new files only* path and defers every existing-file edit into `.twt-artifacts/inherited/decisions.md` under `## Proposed rules (confirm before binding)`. If that list is never surfaced, **every modification is permanently deferred to a TODO and the user is never asked at all** — the one consolidated approval the whole target is built around never happens. So:
+- **Interactive:** present the whole scope **once**, in the builder's own shape — the CREATE count, then each MODIFY path with what changes and its line estimate — and ask via **AskUserQuestion** (single-select, header "Changes"): **Approve the whole plan** / **New files only — report the modifications as TODOs** / **Stop** / **You decide** (defers every MODIFY to TODOs — the conservative default when writing into a real repo). On approve, **re-dispatch `/twt-inherit-block-creator` for the same page with `subagent-collect modifications-approved`**; its pre-approved branch applies the MODIFYs without asking again. Log the gate Q&A to the Timeline like any other question.
+- **Auto mode:** never auto-approve a MODIFY. Leave every modification as a TODO, and list them in Step 5 as auto-decisions the user must review. Silence is not consent for edits to a repo the user did not hand us.
+- **Collect mode** (dispatched by `/twt-site` under Express): return the decisions block verbatim and leave the MODIFYs deferred; the orchestrator above surfaces it and re-dispatches you.
+
+Say plainly in Step 5 how many approvals an inherit build asked for: **one** for the inherited conventions (Step 3, first run only) plus **one per builder dispatch**. The builder's predictable MODIFY set — route registration, nav/menu config, the global stylesheet import — is shared across pages by construction, so the same file can appear in more than one prompt. A single cross-page consolidated plan is a recorded follow-up, not shipped behaviour.
 
 ## Step 5 — Report & finalize the log
 **First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).
