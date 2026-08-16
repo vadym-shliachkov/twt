@@ -1815,7 +1815,7 @@ flowchart TB
 ### /twt-inherit-define
 
 **Category:** inherit
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
@@ -1841,6 +1841,7 @@ flowchart TB
 | .twt-artifacts/inherited/token-map.md |  |
 | .twt-artifacts/inherited/host-style.json |  |
 | .twt-artifacts/inherited/decisions.md |  |
+| .twt-artifacts/inherited/<tailwind.config.extension.js|_tokens.scss|theme.tokens.js> |  |
 
 ### /twt-launch-audit
 

@@ -1729,7 +1729,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-inherit-define
 
 **Category:** inherit
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Read an existing project's codebase — its own framework, styling system, component idiom, and file layout — and derive `.twt-artifacts/inherited/conventions.md`, the contract every later `inherit`-target step (the block creator, the target descriptor, asset sync) reads instead of assuming a twt-scaffolded layout.
@@ -1752,6 +1752,7 @@ Read an existing project's codebase — its own framework, styling system, compo
 - .twt-artifacts/inherited/token-map.md
 - .twt-artifacts/inherited/host-style.json
 - .twt-artifacts/inherited/decisions.md
+- .twt-artifacts/inherited/<tailwind.config.extension.js|_tokens.scss|theme.tokens.js>
 
 **Non-goals:**
 - **Never modifies the host project.** This skill is read-only on the codebase it inspects — every file it writes lives under `.twt-artifacts/inherited/`. Only the builder (`/twt-inherit-block-creator`) ever writes into the host.
