@@ -178,12 +178,21 @@ The build target (how Development renders the site) is **independent** of whethe
 
 **Hard guard (binding):** this step runs **only when `<development-selected>` (Step 1) is true**. If Development was not selected, **skip this entire step** — do **not** render the Static HTML vs. Elementor question, do not infer a target, do not mention it. There is nothing to build, so the build target is irrelevant. If you are about to ask it while `<development-selected>` is false, stop — that is the bug this guard prevents.
 
-**Auto mode:** infer the target from the context and skip the menu — "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
+**Auto mode:** infer the target from the context and skip the menu — "elementor"/"wordpress"/an existing `.twt-artifacts/elementor-theme/conventions.md` → **Elementor**; an existing `.twt-artifacts/inherited/conventions.md` → **Inherit**; otherwise default **Static HTML**. Record the inference and its reason for the final summary.
 
 If `site-instruction.md` already named the build target (Step 0·instr), use it (state it back) and skip the menu. Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") how Development should build:
 - **Static HTML** — dependency-free `site/` (runs `/twt-develop --target html`, or `/twt-site-dev` with `--target html` under Express)
 - **Elementor** — WordPress child theme (runs `/twt-develop --target elementor`, or `/twt-site-dev` with `--target elementor` under Express)
-- **You decide** — I pick the best-fit (defaults to Static HTML; Elementor when the context/`conventions.md` indicates WordPress)
+- **Use this project's existing stack** — build into the current codebase in its own idiom (runs `/twt-develop --target inherit`, or `/twt-site-dev` with `--target inherit` under Express)
+- **You decide** — I pick the best-fit (defaults to Static HTML; Elementor when the context/`conventions.md` indicates WordPress; Inherit when `.twt-artifacts/inherited/conventions.md` already exists)
+
+**Target descriptor.** Resolve `<target>` once and use the descriptor for the rest of the run:
+
+| target | conventions | builder | platform | assets root |
+|---|---|---|---|---|
+| `html` | `.twt-artifacts/html-site/conventions.md` | `/twt-html-block-creator` | `web` | `site/assets` |
+| `elementor` | `.twt-artifacts/elementor-theme/conventions.md` | `/twt-elementor-block-creator` | `wordpress` | `<THEME>/assets` |
+| `inherit` | `.twt-artifacts/inherited/conventions.md` | `/twt-inherit-block-creator` | `wordpress` if the host is a WordPress theme, else `web` | the **File layout** section of the inherited `conventions.md` — never a path this skill invents |
 
 ## Step 3 — Run the selected phases in order
 For each phase still selected, in pipeline order, dispatch its wrapper via the Agent tool, then run the Step 4 pause before moving on:
@@ -208,7 +217,7 @@ Treat the **Content approval checklist** as an **automatic** sub-step whenever `
 
 If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. In auto mode, reuse and log it.
 
-Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and the build target resolved at Step 2 as the platform hint (Elementor → `--platform wordpress`, Static HTML → `--platform web`).
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and the build target resolved at Step 2 as the platform hint (Elementor → `--platform wordpress`, Static HTML → `--platform web`, Inherit → `--platform wordpress` if the host is a WordPress theme per the descriptor, else `--platform web`).
 
 When it returns, state the Blocker and High counts and the report path. **Interactively**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **In auto mode, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
 

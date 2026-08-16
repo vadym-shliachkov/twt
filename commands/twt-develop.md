@@ -5,7 +5,7 @@ description: (v1.3.9) Phase 3 full path — promote the Phase-2 design into the 
 version: 1.3.9
 accepts_arguments: true
 inputs:
-  - Optional --target html|elementor (else menu); optional page scope
+  - Optional --target html|elementor|inherit (else menu); optional page scope
 dependencies:
   hard: []
   soft:
@@ -13,6 +13,8 @@ dependencies:
     - twt-html-block-creator
     - twt-elementor-theme-creator
     - twt-elementor-block-creator
+    - twt-inherit-define
+    - twt-inherit-block-creator
     - twt-content-approval-checklist
     - twt-assets-produce
     - twt-figma-dev-audit
@@ -33,6 +35,7 @@ writes:
   - site/assets/css/general.css             # html target — merged deltas
   - <THEME>/assets/css/widgets.css          # elementor target — merged widget-CSS deltas
   - <THEME>/assets/css/design-system.css    # elementor target — merged token deltas
+  - the host project's source tree          # inherit target — new files freely; existing files only after one consolidated approval
 ---
 
 # /twt-develop
@@ -71,12 +74,21 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 
 ## Step 1 — Target
 
-Parse `--target html|elementor` from `$ARGUMENTS`. If absent, ask via the **AskUserQuestion** tool (single-select, header "Target") What is the build target?:
+Parse `--target html|elementor|inherit` from `$ARGUMENTS`. If absent, ask via the **AskUserQuestion** tool (single-select, header "Target") What is the build target?:
 - **Static HTML/CSS** — dependency-free static site
 - **Elementor (WordPress)** — Hello Elementor child theme with widgets
-- **You decide** — I pick the best-fit target from the project context (existing `conventions.md` or hints; defaults to Static HTML/CSS)
+- **Use this project's existing stack** — build into the current codebase in its own idiom (runs `/twt-inherit-define` to discover conventions, then `/twt-inherit-block-creator`)
+- **You decide** — I pick the best-fit target from the project context (existing `inherited/conventions.md`, `elementor-theme/conventions.md`, or `html-site/conventions.md`, or other hints; defaults to Static HTML/CSS)
 
 Record the choice as `<target>` and continue.
+
+**Target descriptor.** Resolve `<target>` once and use the descriptor for the rest of the run:
+
+| target | conventions | builder | platform | assets root |
+|---|---|---|---|---|
+| `html` | `.twt-artifacts/html-site/conventions.md` | `/twt-html-block-creator` | `web` | `site/assets` |
+| `elementor` | `.twt-artifacts/elementor-theme/conventions.md` | `/twt-elementor-block-creator` | `wordpress` | `<THEME>/assets` |
+| `inherit` | `.twt-artifacts/inherited/conventions.md` | `/twt-inherit-block-creator` | `wordpress` if the host is a WordPress theme, else `web` | the **File layout** section of the inherited `conventions.md` — never a path this skill invents |
 
 ## Step 2 — Read the Phase-2 design
 
@@ -96,6 +108,7 @@ After the child returns, verify `.twt-artifacts/content-approval/content-approva
 
 - `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool). If present, continue.
 - `<target>` = **html**: if `.twt-artifacts/html-site/conventions.md` is missing, dispatch `/twt-html-site-creator` (Agent tool). If present, continue.
+- `<target>` = **inherit**: if `.twt-artifacts/inherited/conventions.md` is missing, dispatch `/twt-inherit-define` (Agent tool). If present, continue. There is **no scaffolder for this target** — the scaffold is the host project, which already exists; `/twt-inherit-define` discovers its conventions rather than creating them.
 
 ## Step 3a — Produce & sync assets (best-effort, never blocks)
 
@@ -111,7 +124,7 @@ Run before the first build dispatch (Step 4): a blocker in the Figma file is che
 
 If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists: **standalone interactive**, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. **Collect mode (dispatched by an orchestrator) or an unattended `auto` run**, reuse and log it without asking.
 
-Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`).
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL and `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`, `inherit` → `--platform wordpress` if the host is a WordPress theme per the descriptor, else `--platform web`).
 
 When it returns, state the Blocker and High counts and the report path. **Standalone interactive**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **Collect mode or an unattended `auto` run, always continue** — record the counts, the report path, and the decision to continue for the Step 5 report, and move on. An unattended run must never halt on this.
 
@@ -124,6 +137,7 @@ Pages are independent **except** for the shared files each builder appends to �
 Take the page list from `mockup/pages/`, falling back to page-level `mockup/*.html` files except `index.html` (respect any page scope from `$ARGUMENTS`). The **home/index** page — or the first page if there is no home — is the **foundation page** / **pilot**. The matching builder is:
 - `<target>` = **html** → `/twt-html-block-creator`
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
+- `<target>` = **inherit** → `/twt-inherit-block-creator`
 
 **Continuation:** if `$ARGUMENTS` contains the token `pilot-approved`, the pilot was already built and approved in a prior pass — **skip Steps 4a and the gate** and go straight to Step 4b for the pages not yet built.
 

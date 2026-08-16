@@ -16,6 +16,8 @@ dependencies:
     - twt-elementor-block-creator
     - twt-html-site-creator
     - twt-html-block-creator
+    - twt-inherit-define
+    - twt-inherit-block-creator
     - twt-content-approval-checklist
     - twt-figma-dev-audit
     - figma-mcp
@@ -78,14 +80,23 @@ Arm the always-on run trace (no flag): run (Bash) `node "${CLAUDE_PLUGIN_ROOT}/h
 
 ## Step 1 — Target menu
 
-**Auto mode:** infer `<target>` and skip the menu — "elementor"/"wordpress" in the context or an existing `.twt-artifacts/elementor-theme/conventions.md` → **elementor**; an existing `.twt-artifacts/html-site/conventions.md` → **html**; otherwise default **html**. Record the inference and its reason.
+**Auto mode:** infer `<target>` and skip the menu — "elementor"/"wordpress" in the context or an existing `.twt-artifacts/elementor-theme/conventions.md` → **elementor**; an existing `.twt-artifacts/html-site/conventions.md` → **html**; an existing `.twt-artifacts/inherited/conventions.md` → **inherit**; otherwise default **html**. Record the inference and its reason.
 
 Otherwise ask via the **AskUserQuestion** tool (single-select, header "Target") What is the build target?:
 - **Static HTML/CSS** — dependency-free static site
 - **Elementor (WordPress)** — Hello Elementor child theme with widgets
-- **You decide** — I pick the best-fit target from the project context (existing `conventions.md` or hints; defaults to Static HTML/CSS)
+- **Use this project's existing stack** — build into the current codebase in its own idiom (runs `/twt-inherit-define` to discover conventions, then `/twt-inherit-block-creator`)
+- **You decide** — I pick the best-fit target from the project context (existing `inherited/conventions.md`, `elementor-theme/conventions.md`, or `html-site/conventions.md`, or other hints; defaults to Static HTML/CSS)
 
 Record the choice as `<target>` and continue.
+
+**Target descriptor.** Resolve `<target>` once and use the descriptor for the rest of the run:
+
+| target | conventions | builder | platform | assets root |
+|---|---|---|---|---|
+| `html` | `.twt-artifacts/html-site/conventions.md` | `/twt-html-block-creator` | `web` | `site/assets` |
+| `elementor` | `.twt-artifacts/elementor-theme/conventions.md` | `/twt-elementor-block-creator` | `wordpress` | `<THEME>/assets` |
+| `inherit` | `.twt-artifacts/inherited/conventions.md` | `/twt-inherit-block-creator` | `wordpress` if the host is a WordPress theme, else `web` | the **File layout** section of the inherited `conventions.md` — never a path this skill invents |
 
 ## Step 2·pre — Developer readiness check (advisory)
 
@@ -95,7 +106,7 @@ Run before the design system is derived: a blocker in the Figma file invalidates
 
 If `.twt-artifacts/figma-dev-audit/readiness-report.md` already exists: **standalone interactive**, ask via **AskUserQuestion** (single-select, header "Readiness"): **Reuse the existing report** (recommended) / **Re-run the audit** / **You decide**. **Collect mode (dispatched by an orchestrator, e.g. `/twt-site` under Express) or an unattended `auto` run**, reuse and log it without asking.
 
-Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL obtained in Step 0 and the chosen `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`).
+Otherwise dispatch `/twt-figma-dev-audit` via the Agent tool with `subagent-collect`, prefixing the prompt with a `WHY:` line for the dispatch trace, passing the Figma URL obtained in Step 0 and the chosen `<target>` as the platform hint (`elementor` → `--platform wordpress`, `html` → `--platform web`, `inherit` → `--platform wordpress` if the host is a WordPress theme per the descriptor, else `--platform web`).
 
 When it returns, state the Blocker and High counts and the report path. **Standalone interactive**, ask via **AskUserQuestion** (single-select, header "Proceed"): **Proceed anyway** (the audit is advisory; findings do not block the build) / **Stop and fix first** (pause here; nothing further runs) / **You decide**. **Collect mode or an unattended `auto` run, always continue** — record the counts, the report path, and the decision to continue in the session log, and move on. An unattended run must never halt on this.
 
@@ -123,14 +134,16 @@ In interactive mode, tell the user this workbook is the human approval surface f
 
 - `<target>` = **elementor**: if `.twt-artifacts/elementor-theme/conventions.md` is missing, dispatch `/twt-elementor-theme-creator` (Agent tool) first. If present, skip.
 - `<target>` = **html**: if `.twt-artifacts/html-site/conventions.md` is missing, dispatch `/twt-html-site-creator` (Agent tool) first. If present, skip.
+- `<target>` = **inherit**: if `.twt-artifacts/inherited/conventions.md` is missing, dispatch `/twt-inherit-define` (Agent tool) first. If present, skip. There is **no scaffolder for this target** — the scaffold is the host project, which already exists; `/twt-inherit-define` discovers its conventions rather than creating them.
 
-(Unlike the builders, this skill never bails on a missing scaffold — it creates it.)
+(Unlike the builders, this skill never bails on a missing scaffold — it creates it. The inherit arm is the exception noted above: there is nothing to create, only to discover.)
 
 ## Step 4 — Build
 
 Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding the Figma URL and any notes so it starts page/block development (in auto mode, resolve its open decisions the same way as Step 2):
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 - `<target>` = **html** → `/twt-html-block-creator`
+- `<target>` = **inherit** → `/twt-inherit-block-creator`
 
 ## Step 5 — Report & finalize the log
 **First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).
