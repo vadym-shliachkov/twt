@@ -817,7 +817,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.6
+**Version:** 1.1.7
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor|inherit
@@ -1272,7 +1272,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.12
+**Version:** 1.3.13
 
 **Inputs:**
 - Optional --target html|elementor|inherit (else menu); optional page scope
@@ -1827,7 +1827,7 @@ flowchart TB
 ### /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
@@ -1857,7 +1857,7 @@ flowchart TB
 ### /twt-inherit-define
 
 **Category:** inherit
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
@@ -1888,7 +1888,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
@@ -2227,7 +2227,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.10
+**Version:** 1.0.11
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -2312,7 +2312,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -2526,7 +2526,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.6
+**Version:** 1.13.7
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2566,7 +2566,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.11
+**Version:** 1.5.12
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu

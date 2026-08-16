@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-16 **v1.0.107** — twt-inherit-define → 1.0.3, twt-inherit-block-creator.md → 1.0.3, twt-develop.md → 1.3.13, twt-site-dev.md → 1.5.12, twt-site.md → 1.13.7, twt-content-approval-implement.md → 1.1.7, twt-qa.md → 1.0.11, twt-launch-audit.md → 1.0.6, twt-qa-design.md → 1.1.5
 - 2026-08-16 **v1.0.106** — twt-qa.md → 1.0.10
 - 2026-08-16 **v1.0.105** — twt-qa.md → 1.0.9
 - 2026-08-16 **v1.0.104** — twt-develop.md → 1.3.12, twt-content-approval-implement.md → 1.1.6, twt-launch-audit.md → 1.0.5, twt-qa.md → 1.0.8, twt-qa-design.md → 1.1.4, twt-project-intake.md → 1.0.2, twt-site.md → 1.13.6

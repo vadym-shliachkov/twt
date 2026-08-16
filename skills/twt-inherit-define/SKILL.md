@@ -1,8 +1,8 @@
 ---
 name: twt-inherit-define
 category: inherit
-description: (v1.0.2) Discover an existing project's architecture and derive build conventions from it
-version: 1.0.2
+description: (v1.0.3) Discover an existing project's architecture and derive build conventions from it
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact

@@ -455,7 +455,7 @@ Create the content approval workbook that proves every page, shared header/foote
 ## /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.6
+**Version:** 1.1.7
 **Accepts arguments:** yes
 
 Read the content approval workbook after stakeholder confirmation and update the corresponding site blocks/pages with only the rows whose `approved content` is filled and `ready to implement (true, false)` is `true`. This is intentionally called later, after Development has already built pages/templates with the content available at build time.
@@ -976,7 +976,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.12
+**Version:** 1.3.13
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas — **except for the `inherit` target**, which promotes every remaining page **serially** instead (Step 4b-inherit), to preserve its single consolidated-approval contract rather than optimize for speed.
@@ -1735,7 +1735,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Build a page or block **into an existing project's own architecture** — the conventions `/twt-inherit-define` already discovered and wrote to `.twt-artifacts/inherited/` — instead of a twt-scaffolded layout. This is the only skill in the `inherit` target that writes into the host's real source tree, so it plans every write, classifies it as CREATE or MODIFY, and gets one consolidated approval for the whole batch before touching anything the user didn't already agree to.
@@ -1777,7 +1777,7 @@ Build a page or block **into an existing project's own architecture** — the co
 ## /twt-inherit-define
 
 **Category:** inherit
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Read an existing project's codebase — its own framework, styling system, component idiom, and file layout — and derive `.twt-artifacts/inherited/conventions.md`, the contract every later `inherit`-target step (the block creator, the target descriptor, asset sync) reads instead of assuming a twt-scaffolded layout.
@@ -1819,7 +1819,7 @@ Read an existing project's codebase — its own framework, styling system, compo
 ## /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
 Answer one question about a project that thinks it is finished: **if we pushed this to production today, what breaks, what is missing, and who owns each item?** Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.
@@ -2202,7 +2202,7 @@ Convert messy project notes, links, Figma references, document paths, and constr
 ## /twt-qa
 
 **Category:** qa
-**Version:** 1.0.10
+**Version:** 1.0.11
 **Accepts arguments:** yes
 
 One-call QA: pick the mode (local files, or live crawl if a URL is given), run the applicable audits, then aggregate a `qa-report.md` (with a PASS/FAIL verdict) and synthesize a client-ready `gaps.md` punch-list of outstanding content and links.
@@ -2313,7 +2313,7 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 ## /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.4
+**Version:** 1.1.5
 **Accepts arguments:** yes
 
 Read-only audit of design & token fidelity on the **source** files — CSS is token-only (no hex/px/font literals), every custom property used is defined in `tokens.css`, and each page's section structure includes the components its layout requires.
@@ -2520,7 +2520,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.13.6
+**Version:** 1.13.7
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2575,7 +2575,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.11
+**Version:** 1.5.12
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
