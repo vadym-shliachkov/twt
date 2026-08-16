@@ -32,7 +32,7 @@ writes:
   - .twt-artifacts/site-log.md
   - .twt-artifacts/pre-design/phase-review.md
   - .twt-artifacts/design/phase-review.md
-  - .twt-artifacts/<html-site|elementor-theme>/phase-review.md
+  - .twt-artifacts/<html-site|elementor-theme|inherited>/phase-review.md
   - .twt-artifacts/reports/index.html
   - .twt-artifacts/reports/ (copied headline reports)
   - .twt-artifacts/pre-design/content/text-analysis/
@@ -223,7 +223,7 @@ When it returns, state the Blocker and High counts and the report path. **Intera
 
 The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothing the rest of this run depends on.
 
-**Pilot-page surfacing (interactive only, during Development via `/twt-develop`).** A full multi-page build is the most expensive part of the run, so check one page before committing to all. When Development builds via `/twt-develop` (not Figma express) and this is **not** auto mode: `/twt-develop` (dispatched with `subagent-collect`) builds only the **pilot page** and returns an open "Pilot page built — approve to build the rest" decision in `.twt-artifacts/<html-site|elementor-theme>/decisions.md` with the pilot's path and the list of remaining pages. Read it and present the gate to the user via the **AskUserQuestion** tool (single-select, header "Pilot"): **Build the remaining N pages** / **Add one more pilot page** / **Adjust the pilot** / **Stop here**. On approve, re-dispatch `/twt-develop --target <target> pilot-approved` (with `subagent-collect`) to promote the rest; on adjust/add, forward the feedback and re-dispatch, then re-surface; on stop, leave the remaining pages unbuilt and record it. Log each gate Q&A to the Timeline. **Auto mode skips this** — dispatch `/twt-develop auto …` so it builds all pages in one pass.
+**Pilot-page surfacing (interactive only, during Development via `/twt-develop`).** A full multi-page build is the most expensive part of the run, so check one page before committing to all. When Development builds via `/twt-develop` (not Figma express) and this is **not** auto mode: `/twt-develop` (dispatched with `subagent-collect`) builds only the **pilot page** and returns an open "Pilot page built — approve to build the rest" decision in `.twt-artifacts/<html-site|elementor-theme|inherited>/decisions.md` with the pilot's path and the list of remaining pages. Read it and present the gate to the user via the **AskUserQuestion** tool (single-select, header "Pilot"): **Build the remaining N pages** / **Add one more pilot page** / **Adjust the pilot** / **Stop here**. On approve, re-dispatch `/twt-develop --target <target> pilot-approved` (with `subagent-collect`) to promote the rest; on adjust/add, forward the feedback and re-dispatch, then re-surface; on stop, leave the remaining pages unbuilt and record it. Log each gate Q&A to the Timeline. **Auto mode skips this** — dispatch `/twt-develop auto …` so it builds all pages in one pass.
 
 Before dispatching a phase, check its prerequisite exists: Development (non-express) needs `.twt-artifacts/design/design-brief.md`; QA needs built output (`site/` or a theme). If a prerequisite is missing, raise it at the Step 4 pause instead of dispatching blindly (in auto mode: stop the pipeline there and report — never invent the missing input).
 
@@ -236,7 +236,7 @@ Read the just-finished phase's output and count any **outstanding BLOCKERs**. **
 - QA: the `verdict` and BLOCKER count in `.twt-artifacts/qa/qa-report.md` (+ the `gaps.md` items).
 
 ### Step 4a — Write the phase review (after Pre-design, Design, and Development)
-Before the gate, distil what the phase's validators found into a **short, scannable review** the user can act on — not a wall of validation prose. **Split it into two parts**: the things that need the user's answer (actionable, first) and the read-only assessment (informational, below). Aggregate from every sub-area's open `decisions.md`, the sub-area `validation-report.md`s, the brief's Outstanding BLOCKERs, and the builders' reported issues, then write **`.twt-artifacts/<phase>/phase-review.md`** (`<phase>` = `pre-design` / `design` / the build dir `html-site` or `elementor-theme`) with the Write tool, in **exactly** this shape:
+Before the gate, distil what the phase's validators found into a **short, scannable review** the user can act on — not a wall of validation prose. **Split it into two parts**: the things that need the user's answer (actionable, first) and the read-only assessment (informational, below). Aggregate from every sub-area's open `decisions.md`, the sub-area `validation-report.md`s, the brief's Outstanding BLOCKERs, and the builders' reported issues, then write **`.twt-artifacts/<phase>/phase-review.md`** (`<phase>` = `pre-design` / `design` / the build dir `html-site`, `elementor-theme`, or `inherited`) with the Write tool, in **exactly** this shape:
 
 ```markdown
 # <Phase> review — <ISO timestamp>

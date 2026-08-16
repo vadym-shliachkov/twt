@@ -26,6 +26,7 @@ reads:
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - .twt-artifacts/elementor-theme/conventions.md
   - .twt-artifacts/html-site/conventions.md
+  - .twt-artifacts/inherited/conventions.md
   - .twt-artifacts/figma-dev-audit/readiness-report.md
 writes:
   - .twt-artifacts/site-dev-log.md

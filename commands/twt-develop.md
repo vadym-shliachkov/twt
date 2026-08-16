@@ -132,7 +132,7 @@ The audit writes only under `.twt-artifacts/figma-dev-audit/` and changes nothin
 
 ## Step 4 — Promote pages (pilot first, gate, then parallel batch)
 
-Pages are independent **except** for the shared files each builder appends to — HTML: `sections.css` / `general.css`, the inlined `partials/`, the `tokens.css` mirror; Elementor: `widgets.css` / `design-system.css`, the `$map` registry in `class-<slug>-elementor.php`, `wpml-config.xml`. Promoting every page fully in parallel would both **race** on those shared files and **defeat reuse-first** (each agent, starting from the same baseline, re-creates the same hero/CTA). So promote in phases, with a pilot checkpoint before the expensive full batch.
+Pages are independent **except** for the shared files each builder appends to — HTML: `sections.css` / `general.css`, the inlined `partials/`, the `tokens.css` mirror; Elementor: `widgets.css` / `design-system.css`, the `$map` registry in `class-<slug>-elementor.php`, `wpml-config.xml`. Promoting every page fully in parallel would both **race** on those shared files and **defeat reuse-first** (each agent, starting from the same baseline, re-creates the same hero/CTA). So promote in phases, with a pilot checkpoint before the expensive full batch. (`<target>` = **inherit** shares the pilot pass and its gate below, then takes a different, serial path afterward — see Step 4b-inherit.)
 
 Take the page list from `mockup/pages/`, falling back to page-level `mockup/*.html` files except `index.html` (respect any page scope from `$ARGUMENTS`). The **home/index** page — or the first page if there is no home — is the **foundation page** / **pilot**. The matching builder is:
 - `<target>` = **html** → `/twt-html-block-creator`
@@ -147,23 +147,31 @@ Dispatch the builder for the **foundation page only**, normally (Agent tool, pas
 ### Step 4a-gate — Pilot review (checkpoint before the full set)
 The pilot is the cheap proof of how the design lands in `<target>`. Gate on it before spending tokens promoting every remaining page.
 
-- **Auto / unattended** (the run was started in `auto`): skip the gate — proceed to Step 4b and build all remaining pages. Note in the report that the pilot was auto-approved.
-- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** build the rest and do **not** ask. Record an open decision in the target's decisions file — `.twt-artifacts/html-site/decisions.md` (html) or `.twt-artifacts/elementor-theme/decisions.md` (elementor) — "Pilot page `<page>` built at `<path>`; approve to promote the remaining N pages, adjust the pilot, or stop" (`status: open`, list the remaining pages) — and **return** that decision + the pilot path in your report. The orchestrator surfaces the gate and re-dispatches `/twt-develop` with `pilot-approved` to continue. Stop here.
+- **Auto / unattended** (the run was started in `auto`): skip the gate — build all remaining pages (`<target>` = **inherit** → Step 4b-inherit's serial loop; html/elementor → Step 4b's parallel batch). Note in the report that the pilot was auto-approved.
+- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** build the rest and do **not** ask. Record an open decision in the target's decisions file — `.twt-artifacts/html-site/decisions.md` (html), `.twt-artifacts/elementor-theme/decisions.md` (elementor), or `.twt-artifacts/inherited/decisions.md` (inherit) — "Pilot page `<page>` built at `<path>`; approve to promote the remaining N pages, adjust the pilot, or stop" (`status: open`, list the remaining pages) — and **return** that decision + the pilot path in your report. The orchestrator surfaces the gate and re-dispatches `/twt-develop` with `pilot-approved` to continue. Stop here.
 - **Standalone interactive:** present the pilot to the user (the built page path; invite them to open it) and ask via the **AskUserQuestion** tool (single-select, header "Pilot"):
-  - **Build the remaining N pages** — proceed to Step 4b.
+  - **Build the remaining N pages** — proceed to Step 4b (html/elementor) or Step 4b-inherit (inherit), per the branch below.
   - **Add one more pilot page** — build one representative interior page serially (same reuse pool), then re-show this gate, so an interior layout is seen before committing.
   - **Adjust the pilot first** — collect feedback (plain text), re-dispatch the builder for the pilot page(s) with it, then re-show this gate.
   - **Stop here** — finish with only the pilot built; go to Step 5 and report what remains.
-  Only on **Build the remaining** continue to Step 4b.
+  Only on **Build the remaining** continue: `<target>` = **inherit** goes to Step 4b-inherit below; html/elementor continue to Step 4b.
 
-### Step 4b — Parallel batch (remaining pages)
+### Step 4b-inherit — Serial promotion (inherit only)
+`<target>` = **inherit** never enters the parallel batch (Step 4b) or the delta merge (Step 4c) below — this is a deliberate exclusion, not an oversight, and it stays that way even though the pilot pass and its gate above are shared with html/elementor. `/twt-inherit-block-creator`'s defining contract is **one consolidated approval covering every write in the batch** (its Intent: "gets one consolidated approval for the whole batch before touching anything the user didn't already agree to"). Step 4b's parallel-promotion contract exists purely as a **speed optimization** for html/elementor, and when the two conflict, the contract wins, not the optimization. Concretely, dispatching this builder in parallel breaks three ways:
+- **Interactively**, N parallel builders would each surface their own approval — multiplying exactly the prompt the consolidated-approval contract exists to prevent.
+- **In collect mode**, N parallel invocations would race-write the single shared `.twt-artifacts/inherited/decisions.md`.
+- Step 4b's premise below — "each page file is disjoint, so there is no write conflict" — does not hold for this target: the builder's predictable MODIFY set (route registration, nav config, global stylesheet import) is shared across pages by construction, unlike a fresh `site/<page>.html`.
+
+So for inherit, promote the remaining pages **one at a time, serially**: dispatch the builder for the next page (Agent tool, passing its mockup HTML + `layouts/<page>.md`), wait for it to return, then dispatch the next — until every remaining page is built. Skip Step 4b and Step 4c entirely for this target; go straight to Step 5 once the last page returns.
+
+### Step 4b — Parallel batch (remaining pages; html/elementor only)
 Dispatch **every page not yet built** (the set after the pilot and any pilot-added interior pages) in a **single batch of parallel Agent calls** (one message, multiple Agent tool uses), each passing the page's mockup HTML + `layouts/<page>.md`. Pass the asset manifest to each builder: media must use the **exact `filename` and `alt` from the manifest** (place real files under the build's `assets/img|video/`); where an asset file isn't present yet, emit the correct `<img src>`/path with the manifest's alt and leave the file to be supplied — never invent a different filename. In every agent's prompt, include the **parallel-promotion contract**:
 
 > Parallel mode — return deltas, don't write shared files. Reuse-first against the shared files the foundation pass already wrote. Write **only** your own disjoint page file (`site/<page>.html`, or `import/<page-slug>/import.json` + its `assets/`). Do **not** write or append to any shared file (`sections.css`, `general.css`, `widgets.css`, `design-system.css`, the `$map` registry, `wpml-config.xml`, or `partials/`). Instead **return in your report** any new shared-file deltas as text — new section-/widget-CSS blocks, new tokens, new `$map`/WPML entries, and any partial change — only for sections that genuinely aren't already in the reuse pool.
 
 Each page file is disjoint, so there is no write conflict. Wait for the whole batch to finish.
 
-### Step 4c — Merge deltas (serial)
+### Step 4c — Merge deltas (serial; html/elementor only)
 Apply the returned deltas to the shared files yourself, one at a time, **de-duplicating**: if two pages returned the same new section (same purpose/selector), add it once and point both pages at it. Then, if any page needed a partial change, re-inline the partial into every page; re-mirror `tokens.css` if a token was added. Finally run the builder's own inline build checks across all pages (every page links the CSS / registers its widgets; no literals; links resolve; chrome identical; no lorem where real content exists).
 
 ## Step 5 — Report
