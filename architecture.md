@@ -1272,7 +1272,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.13
+**Version:** 1.3.14
 
 **Inputs:**
 - Optional --target html|elementor|inherit (else menu); optional page scope; optional continuation tokens `pilot-approved` and `modifications-approved` (Step 4, evaluated in that reverse order — see Continuation tokens)
@@ -1827,7 +1827,7 @@ flowchart TB
 ### /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
@@ -2526,7 +2526,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.7
+**Version:** 1.13.8
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2566,7 +2566,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.12
+**Version:** 1.5.13
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu

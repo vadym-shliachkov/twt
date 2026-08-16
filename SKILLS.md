@@ -976,7 +976,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.13
+**Version:** 1.3.14
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas — **except for the `inherit` target**, which promotes every remaining page **serially** instead (Step 4b-inherit), to preserve its single consolidated-approval contract rather than optimize for speed.
@@ -1735,7 +1735,7 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 ## /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Build a page or block **into an existing project's own architecture** — the conventions `/twt-inherit-define` already discovered and wrote to `.twt-artifacts/inherited/` — instead of a twt-scaffolded layout. This is the only skill in the `inherit` target that writes into the host's real source tree, so it plans every write, classifies it as CREATE or MODIFY, and gets one consolidated approval for the whole batch before touching anything the user didn't already agree to.
@@ -2520,7 +2520,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.13.7
+**Version:** 1.13.8
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2575,7 +2575,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.12
+**Version:** 1.5.13
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
