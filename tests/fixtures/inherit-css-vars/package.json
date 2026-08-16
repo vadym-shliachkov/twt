@@ -1,0 +1,7 @@
+{
+  "name": "fixture-css-vars",
+  "private": true,
+  "dependencies": {
+    "vue": "3.4.0"
+  }
+}

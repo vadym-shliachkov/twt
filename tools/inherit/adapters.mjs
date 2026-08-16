@@ -30,6 +30,51 @@ const PX = /^(-?[\d.]+)px$/;
 // modules — the scss claim describes the compiler, not the authoring idiom.
 const PRECEDENCE = ['tailwind', 'css-modules', 'theme-object', 'scss', 'css-vars'];
 
+// Token-name FAMILIES. What a Tailwind token becomes is decided by what the
+// token MEANS, never by what its value looks like.
+//
+// The earlier implementation matched any `^-?[\d.]+px$` value and snapped it
+// against the spacing scale, emitting `py-<key>` — so `--radius-lg: 16px`
+// became `py-4`, `--border-width: 2px` became `py-1`, and `--font-size-h1:
+// 48px` became `py-12`, all three reported as perfect-fidelity `mapped` with
+// ZERO unmapped. A builder following that map writes vertical padding where a
+// heading size was needed and every downstream gate reads clean — strictly
+// worse than the silent loss the module exists to prevent.
+//
+// Order matters: the more specific family wins. `--font-size-h1` must resolve
+// as a font size, not as `size`; `--border-radius-lg` as a radius, not as a
+// border width.
+const TOKEN_FAMILIES = [
+  ['spacing', /(?:^|-)(?:space|spacing|gap|pad|padding|margin|inset)(?:-|$)/],
+  ['fontSize', /(?:^|-)(?:font|fontsize|text|type|leading|tracking)(?:-|$)/],
+  ['borderRadius', /(?:^|-)(?:radius|rounded|corner)(?:-|$)/],
+  ['borderWidth', /(?:^|-)(?:border|stroke|outline|hairline)(?:-|$)/],
+  ['boxShadow', /(?:^|-)(?:shadow|elevation)(?:-|$)/],
+  ['colors', /(?:^|-)(?:color|colour|bg|background|surface|foreground|fg|palette|ink)(?:-|$)/],
+  ['size', /(?:^|-)(?:size|width|height|icon|avatar|measure)(?:-|$)/],
+];
+
+// The Tailwind utility prefixes a builder would reasonably reach for, per
+// family. Deliberately NOT baked into `became`: this module has no idea whether
+// a spacing token is padding, margin or a flex gap, and picking one (the old
+// `py-`) is the same class of unilateral error as picking the wrong scale.
+// `became` names the SCALE ENTRY (`spacing.6`); the builder picks the utility.
+export const FAMILY_UTILITIES = {
+  spacing: 'p-/py-/px-/m-/gap- (whichever the design value is for)',
+  fontSize: 'text-',
+  borderRadius: 'rounded-',
+  borderWidth: 'border-',
+  boxShadow: 'shadow-',
+  colors: 'text-/bg-/border- (whichever property the color applies to)',
+  size: 'w-/h-/size-',
+};
+
+export function tokenFamily(token) {
+  const name = String(token).replace(/^--/, '').toLowerCase();
+  for (const [family, re] of TOKEN_FAMILIES) if (re.test(name)) return family;
+  return null;
+}
+
 export function detectStylingSystem(scan) {
   const byClaim = new Map((scan.signals || []).map((s) => [s.claim, s]));
   for (const system of PRECEDENCE) {
@@ -49,7 +94,11 @@ export function nearestStep(value, scale) {
   // breaks on Tailwind's real default spacing scale, whose fractional keys
   // ('0.5', '1.5', '2.5' ...) are NOT canonical integer indices and so
   // enumerate in raw insertion order — completely divorced from value.
-  const entries = Object.entries(scale).sort((a, b) => a[1] - b[1]);
+  // `|| {}` is load-bearing, not defensive noise: nearestStep is EXPORTED, so a
+  // caller reaching a family the host never supplied a scale for passes
+  // undefined. Without the guard that is a TypeError instead of the documented
+  // `null` return, which is what every caller here already handles.
+  const entries = Object.entries(scale || {}).sort((a, b) => a[1] - b[1]);
   let best = null;
   for (const [key, stepValue] of entries) {
     const delta = stepValue - value;
@@ -64,22 +113,32 @@ export function nearestStep(value, scale) {
 }
 
 function tailwindRow(token, value, hostScale, mode) {
-  const m = PX.exec(value);
-  if (!m) return { token, value, became: null, status: 'unmapped',
-    note: 'no Tailwind scale equivalent for a non-length value' };
-  const px = parseFloat(m[1]);
-  const scale = hostScale?.spacing || {};
-  if (Object.keys(scale).length === 0) {
-    return { token, value, became: null, status: 'unmapped', note: 'host has no spacing scale' };
+  const family = tokenFamily(token);
+  if (!family) {
+    return { token, value, became: null, status: 'unmapped',
+      note: 'token name names no known design family (spacing / font / radius / border / shadow / color / size), '
+        + 'so no Tailwind scale can be chosen for it — use the host\'s nearest existing idiom' };
   }
+  const scale = hostScale?.[family] || {};
+  if (Object.keys(scale).length === 0) {
+    return { token, value, became: null, status: 'unmapped', family,
+      note: `host has no ${family} scale — supply one under host-style.json \`scale.${family}\` to map this family` };
+  }
+  const m = PX.exec(value);
+  if (!m) {
+    return { token, value, became: null, status: 'unmapped', family,
+      note: `no Tailwind ${family} scale equivalent for a non-length value` };
+  }
+  const px = parseFloat(m[1]);
   const near = nearestStep(px, scale);
   if (mode === 'exact' && near.delta !== 0) {
     const key = String(px);
-    return { token, value, became: `py-${key}`, status: 'mapped', delta: 0,
-      note: `extends the host spacing scale with a named step ${key}` };
+    return { token, value, became: `${family}.${key}`, status: 'mapped', delta: 0, family,
+      extendsScale: true,
+      note: `extends the host ${family} scale with a named step ${key}` };
   }
   return {
-    token, value, became: `py-${near.key}`,
+    token, value, became: `${family}.${near.key}`, family,
     status: near.delta === 0 ? 'mapped' : 'snapped', delta: near.delta,
   };
 }
@@ -88,7 +147,7 @@ export function adaptTokens(tokens, { system, hostScale, hostVars, mode = 'host'
   const map = [];
   const artifacts = [];
   const varLines = [];
-  const extendSpacing = {};
+  const extend = {};   // family -> { namedStep: value } for --exact scale extensions
 
   for (const [token, value] of Object.entries(tokens)) {
     if (system === 'none') {
@@ -104,9 +163,12 @@ export function adaptTokens(tokens, { system, hostScale, hostVars, mode = 'host'
     }
     if (system === 'tailwind') {
       const row = tailwindRow(token, value, hostScale, mode);
-      if (row.status === 'mapped' && mode === 'exact' && row.note) {
+      if (row.extendsScale) {
         const m = PX.exec(value);
-        if (m) extendSpacing[String(parseFloat(m[1]))] = value;
+        if (m) {
+          if (!extend[row.family]) extend[row.family] = {};
+          extend[row.family][String(parseFloat(m[1]))] = value;
+        }
       }
       map.push(row);
       continue;
@@ -118,17 +180,17 @@ export function adaptTokens(tokens, { system, hostScale, hostVars, mode = 'host'
   }
 
   if (system === 'tailwind') {
-    if (Object.keys(extendSpacing).length) {
+    if (Object.keys(extend).length) {
       artifacts.push({
         path: 'tailwind.config.extension.js',
         contents: `// Generated by /twt-inherit-define (--exact). Merge into theme.extend.\n`
-          + `module.exports = { theme: { extend: { spacing: ${JSON.stringify(extendSpacing, null, 2)} } } };\n`,
+          + `module.exports = { theme: { extend: ${JSON.stringify(extend, null, 2)} } };\n`,
       });
     }
   } else if (system === 'scss') {
     artifacts.push({
       path: '_tokens.scss',
-      contents: varLines.map((l) => l.trim().replace(/^--/, '$').replace(/;$/, ';')).join('\n') + '\n',
+      contents: varLines.map((l) => l.trim().replace(/^--/, '$')).join('\n') + '\n',
     });
   } else if (system === 'theme-object') {
     const obj = Object.fromEntries(map.filter((r) => r.status === 'mapped')
@@ -152,9 +214,16 @@ export function renderTokenMap(rows, meta = {}) {
   lines.push(`**Host styling system:** ${meta.system ?? 'unknown'} · **Mode:** ${meta.mode ?? 'host'}`, '');
   lines.push(`${count('mapped')} mapped · ${count('snapped')} snapped · `
     + `${count('collision')} collision · ${count('unmapped')} unmapped`, '');
-  lines.push('| Token | Value | Became | Status | Δ | Note |', '|---|---|---|---|---|---|');
+  if (meta.system === 'tailwind') {
+    lines.push('`Became` names a **scale entry**, not a utility class — `spacing.6` means '
+      + "the host's `spacing` scale step `6`. Pick the utility prefix from the property the "
+      + 'design value is for (`p-`/`py-`/`px-`/`m-`/`gap-` for spacing, `text-` for fontSize, '
+      + '`rounded-` for borderRadius, `border-` for borderWidth, `shadow-` for boxShadow, '
+      + '`w-`/`h-` for size). This map deliberately does not choose the direction for you.', '');
+  }
+  lines.push('| Token | Family | Value | Became | Status | Δ | Note |', '|---|---|---|---|---|---|---|');
   for (const r of rows) {
-    lines.push(`| \`${r.token}\` | ${r.value} | ${r.became ?? '—'} | ${r.status} | `
+    lines.push(`| \`${r.token}\` | ${r.family ?? '—'} | ${r.value} | ${r.became ?? '—'} | ${r.status} | `
       + `${r.delta ?? ''} | ${r.note ?? ''} |`);
   }
   lines.push('');

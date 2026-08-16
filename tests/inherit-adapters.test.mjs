@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
-  detectStylingSystem, nearestStep, adaptTokens, renderTokenMap,
+  detectStylingSystem, nearestStep, adaptTokens, renderTokenMap, tokenFamily,
 } from '../tools/inherit/adapters.mjs';
 
 const run = promisify(execFile);
@@ -56,7 +56,7 @@ test('host mode snaps to the nearest step and records the delta', () => {
   );
   const row = map.find((r) => r.token === '--space-6');
   assert.equal(row.status, 'snapped');
-  assert.equal(row.became, 'py-24');
+  assert.equal(row.became, 'spacing.24');
   assert.equal(row.delta, 4);
 });
 
@@ -80,7 +80,7 @@ test('exact mode extends the host scale with a NAMED step, never an arbitrary es
   // regression here is invisible to that check alone).
   assert.doesNotMatch(row.became, /\[92px\]/,
     'the class name itself must not be an arbitrary-value escape');
-  assert.equal(row.became, 'py-92');
+  assert.equal(row.became, 'spacing.92');
 });
 
 test('both modes report the same source value; only the outcome differs', () => {
@@ -232,7 +232,7 @@ test('exact mode still snaps cleanly (no scale extension) when the value already
   const row = map.find((r) => r.token === '--space-6');
   assert.equal(row.status, 'mapped');
   assert.equal(row.delta, 0);
-  assert.equal(row.became, 'py-24');
+  assert.equal(row.became, 'spacing.24');
   // No extension was needed, so no config-extension artifact should appear.
   assert.equal(artifacts.find((a) => /tailwind\.config/.test(a.path)), undefined);
 });
@@ -265,6 +265,132 @@ test('a collision is reported per-system, not just for css-vars', () => {
   const row = map.find((r) => r.token === '--brand');
   assert.equal(row.status, 'collision');
   assert.match(row.note, /already defines/i);
+});
+
+// ---------------------------------------------------------------------------
+// Token-family classification (final-review Critical C2). The adapter used to
+// match on the VALUE alone (`^-?[\d.]+px$`) and snap every hit against the
+// spacing scale as `py-<key>`, so a radius, a border width and a font size all
+// silently became vertical padding while token-map.md reported zero unmapped
+// and perfect fidelity. Every pre-existing test used `--space-*` names, so the
+// whole suite stayed green on the happy naming. These pin the classifier.
+// ---------------------------------------------------------------------------
+
+const TAILWIND_SCALE = {
+  spacing: { 1: 4, 2: 8, 4: 16, 6: 24, 12: 48 },
+};
+
+test('a radius token is NEVER turned into vertical padding', () => {
+  const { map } = adaptTokens({ '--radius-lg': '16px' },
+    { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  const row = map[0];
+  assert.doesNotMatch(String(row.became), /^py-/, '--radius-lg must not become a py-* utility');
+  assert.equal(row.status, 'unmapped', 'no borderRadius scale was supplied, so the honest answer is unmapped');
+  assert.match(row.note, /borderRadius/, 'the note must name the family that could not be mapped');
+});
+
+test('a border-width token is NEVER turned into vertical padding', () => {
+  const { map } = adaptTokens({ '--border-width': '2px' },
+    { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  const row = map[0];
+  assert.doesNotMatch(String(row.became), /^py-/);
+  assert.equal(row.status, 'unmapped');
+  assert.match(row.note, /borderWidth/);
+});
+
+test('a font-size token is NEVER turned into vertical padding', () => {
+  const { map } = adaptTokens({ '--font-size-h1': '48px' },
+    { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  const row = map[0];
+  assert.doesNotMatch(String(row.became), /^py-/, '--font-size-h1 must not become py-12');
+  assert.notEqual(row.became, 'py-12');
+  assert.equal(row.status, 'unmapped');
+  assert.match(row.note, /fontSize/);
+});
+
+test('the realistic four-token mix reports the loss instead of hiding it', () => {
+  // Reproduces the review's exact evidence table. Before the fix this printed
+  // "4 mapped · 0 unmapped" with py-4 / py-1 / py-12 / py-6.
+  const { map } = adaptTokens({
+    '--radius-lg': '16px', '--border-width': '2px',
+    '--font-size-h1': '48px', '--space-6': '24px',
+  }, { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  const by = Object.fromEntries(map.map((r) => [r.token, r]));
+  assert.equal(by['--space-6'].status, 'mapped');
+  assert.equal(by['--space-6'].became, 'spacing.6');
+  for (const t of ['--radius-lg', '--border-width', '--font-size-h1']) {
+    assert.equal(by[t].status, 'unmapped', `${t} has no host scale to map onto`);
+    assert.equal(by[t].became, null);
+  }
+  const md = renderTokenMap(map, { system: 'tailwind', mode: 'host' });
+  assert.match(md, /3 unmapped/, 'the loss must be counted, not reported as clean');
+  // The rendered Became column, not the prose legend (which names `py-` as one
+  // of the prefixes a builder may CHOOSE — that is guidance, not a mapping).
+  assert.deepEqual(map.map((r) => r.became).filter(Boolean), ['spacing.6']);
+  for (const r of map) assert.doesNotMatch(String(r.became), /py-/);
+});
+
+test('a non-spacing family IS mapped once the host supplies that scale', () => {
+  const { map } = adaptTokens({ '--font-size-h1': '48px', '--radius-lg': '16px' }, {
+    system: 'tailwind',
+    hostScale: { spacing: { 6: 24 }, fontSize: { '5xl': 48 }, borderRadius: { lg: 16 } },
+    mode: 'host',
+  });
+  const by = Object.fromEntries(map.map((r) => [r.token, r]));
+  assert.equal(by['--font-size-h1'].became, 'fontSize.5xl');
+  assert.equal(by['--font-size-h1'].status, 'mapped');
+  assert.equal(by['--radius-lg'].became, 'borderRadius.lg');
+  assert.equal(by['--radius-lg'].status, 'mapped');
+});
+
+test('a spacing token emits the bare scale key, never a chosen direction', () => {
+  // Picking `py-` unilaterally is the same class of error as picking the wrong
+  // scale: this module cannot know whether a spacing value is padding, margin,
+  // or a flex gap. It names the scale entry; the builder picks the utility.
+  const { map } = adaptTokens({ '--space-6': '24px' },
+    { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  assert.equal(map[0].became, 'spacing.6');
+  assert.doesNotMatch(map[0].became, /^(p|py|px|m|my|mx|gap)-/);
+});
+
+test('a token whose name names no family is unmapped with a note, never guessed at', () => {
+  const { map } = adaptTokens({ '--zort': '12px' },
+    { system: 'tailwind', hostScale: TAILWIND_SCALE, mode: 'host' });
+  assert.equal(map[0].status, 'unmapped');
+  assert.equal(map[0].became, null);
+  assert.match(map[0].note, /no known design family/i);
+});
+
+test('tokenFamily resolves the specific family ahead of the general one', () => {
+  assert.equal(tokenFamily('--space-6'), 'spacing');
+  assert.equal(tokenFamily('--gap'), 'spacing');
+  assert.equal(tokenFamily('--font-size-h1'), 'fontSize', 'font beats size');
+  assert.equal(tokenFamily('--border-radius-lg'), 'borderRadius', 'radius beats border');
+  assert.equal(tokenFamily('--border-width'), 'borderWidth');
+  assert.equal(tokenFamily('--shadow-lg'), 'boxShadow');
+  assert.equal(tokenFamily('--color-brand'), 'colors');
+  assert.equal(tokenFamily('--icon-size-md'), 'size');
+  assert.equal(tokenFamily('--zort'), null);
+});
+
+test('exact mode extends the RIGHT scale, not always spacing', () => {
+  const { artifacts, map } = adaptTokens({ '--radius-xl': '20px' }, {
+    system: 'tailwind',
+    hostScale: { spacing: { 4: 16, 6: 24 }, borderRadius: { lg: 16 } },
+    mode: 'exact',
+  });
+  assert.equal(map[0].status, 'mapped');
+  assert.equal(map[0].became, 'borderRadius.20');
+  const config = artifacts.find((a) => /tailwind\.config/.test(a.path));
+  assert.ok(config, 'exact mode must emit a config extension');
+  assert.match(config.contents, /"borderRadius"/, 'the extension must land under borderRadius');
+  assert.doesNotMatch(config.contents, /"spacing"/, 'a radius must never extend the spacing scale');
+});
+
+test('nearestStep survives an undefined scale instead of throwing', () => {
+  // nearestStep is exported, so a caller reaching a family the host never
+  // supplied passes undefined. The documented contract is null, not TypeError.
+  assert.equal(nearestStep(12, undefined), null);
 });
 
 // --- CLI entrypoint (task 3: adapters.mjs is reachable from a skill's Bash

@@ -12,14 +12,22 @@
 // (a dependency and a config file), `medium` is one, and a claim with no
 // evidence is never emitted at all.
 'use strict';
-import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join, extname, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', '.nuxt', 'out',
   'vendor', 'coverage', '.turbo', '.svelte-kit', '.astro',
 ]);
+
+// Hard caps. This scanner is the cheap deterministic layer in front of a model
+// that pays per token; an uncapped read loop on a large monorepo turns it into
+// the expensive layer. Both numbers are budgets, not correctness thresholds —
+// the claims and exemplar candidates they feed degrade gracefully when hit.
+const CSS_SCAN_LIMIT = 200;      // stylesheets opened for the css-vars claim
+const LINE_COUNT_DIRS = 3;       // componentDirs given per-file line counts
+const LINE_COUNT_FILES = 120;    // files line-counted per such directory
 
 const CONFIG_KINDS = [
   [/^next\.config\.(js|mjs|ts)$/, 'next'],
@@ -152,6 +160,32 @@ export function scanProject(root) {
   if (tree.files.some((f) => f.endsWith('.module.css') || f.endsWith('.module.scss'))) {
     add('css-modules', 'file', 'a *.module.css file exists');
   }
+  // A host that genuinely styles with CSS custom properties leaves its evidence
+  // inside the stylesheets, never in package.json — so this is the one styling
+  // claim that needs a file READ rather than a dependency or filename match.
+  // Without it `css-vars` was unreachable: it sat in adapters.mjs's PRECEDENCE
+  // and in the skills' prose, but no code path ever emitted it, so a
+  // custom-properties host resolved to `none` and was reported as "degraded, no
+  // styling system detected" — the highest-fidelity adapter graded as the
+  // lowest. The two kinds are genuinely separable facts: the DECLARATION (this
+  // file defines custom properties) and the CONVENTION (the project keeps them
+  // in a file named like a design-token stylesheet, which is that styling
+  // system's config file in the same sense `tailwind.config.ts` is Tailwind's).
+  const ROOT_VARS = /(?::root|\[data-theme[^\]]*\]|html)[^{}]*\{[^{}]*--[\w-]+\s*:/;
+  const TOKEN_FILE = /^(?:tokens|variables|vars|custom-properties|theme|design-tokens)\.(?:css|scss)$/i;
+  let cssRead = 0;
+  for (const f of tree.files) {
+    if (cssRead >= CSS_SCAN_LIMIT) break;
+    if (!/\.css$/.test(f) || /\.module\.css$/.test(f)) continue;
+    cssRead += 1;
+    let text;
+    try { text = readFileSync(join(root, f), 'utf8').slice(0, 20000); } catch { continue; }
+    if (!ROOT_VARS.test(text)) continue;
+    add('css-vars', 'file', `${f} declares custom properties on a root selector`);
+    if (TOKEN_FILE.test(f.split('/').pop())) {
+      add('css-vars', 'config', `${f} is a conventional design-token stylesheet`);
+    }
+  }
 
   const signals = [...evidence.entries()].map(([claim, byText]) => ({
     claim,
@@ -170,6 +204,7 @@ export function scanProject(root) {
   // wrong idiom if it counts as component-shaped evidence here.
   const COMPONENT_EXT = new Set(['.tsx', '.jsx', '.vue', '.svelte', '.astro', '.php']);
   const perDir = new Map();
+  const filesPerDir = new Map();
   for (const f of tree.files) {
     if (!COMPONENT_EXT.has(extname(f))) continue;
     // Files at the repository root are never component evidence — same
@@ -180,10 +215,29 @@ export function scanProject(root) {
     if (!f.includes('/')) continue;
     const dir = f.split('/').slice(0, -1).join('/');
     perDir.set(dir, (perDir.get(dir) || 0) + 1);
+    if (!filesPerDir.has(dir)) filesPerDir.set(dir, []);
+    filesPerDir.get(dir).push(f);
   }
   const componentDirs = [...perDir.entries()]
     .map(([dir, count]) => ({ dir, count }))
     .sort((a, b) => b.count - a.count || a.dir.localeCompare(b.dir));
+
+  // Per-file LINE COUNTS for the top-ranked directories. The exemplar picker in
+  // /twt-inherit-define ranks candidate files by size to find a median-typical
+  // component; without this it had to Read every file in the directory just to
+  // measure it — 150 model-side file reads on a large host to choose 3. Counting
+  // lines costs this script nothing and costs the model nothing, so the skill
+  // Reads only the finalists. Capped (see the budget constants): a directory
+  // past the cap simply reports the files it did measure.
+  for (const entry of componentDirs.slice(0, LINE_COUNT_DIRS)) {
+    const list = (filesPerDir.get(entry.dir) || []).slice(0, LINE_COUNT_FILES);
+    entry.files = list.map((f) => {
+      let lines = null;
+      try { lines = readFileSync(join(root, f), 'utf8').split(/\r?\n/).length; } catch { /* unreadable */ }
+      return { file: f, lines };
+    });
+    if ((filesPerDir.get(entry.dir) || []).length > list.length) entry.filesTruncated = true;
+  }
 
   const workspaces = workspacesOf(pkg, root);
 
@@ -208,14 +262,38 @@ const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
 if (isMain) {
   const root = process.argv[2];
   const outIdx = process.argv.indexOf('--out');
+  const outPath = outIdx === -1 ? null : process.argv[outIdx + 1];
+  if (outIdx !== -1 && !outPath) {
+    process.stderr.write('usage: scan.mjs <root> [--out <detection.json>]\n');
+    process.exit(2);
+  }
+
+  // Scanning and writing fail for completely different reasons and must NOT
+  // share an exit code. Exit 3 means "the root is unusable" and the calling
+  // skill is instructed to stop and not retry; folding a write failure into it
+  // made every first run on a fresh project report a wrong diagnosis (the
+  // output directory `.twt-artifacts/inherited/` does not exist until something
+  // creates it, and nothing did). Writes now create their directory first and
+  // report their own failures as exit 4.
+  let scan;
   try {
-    const scan = scanProject(root);
-    const payload = JSON.stringify(scan, null, 2);
-    if (outIdx !== -1) writeFileSync(process.argv[outIdx + 1], payload);
-    else process.stdout.write(payload);
-    process.stderr.write(`scanned ${Object.values(scan.extensions).reduce((a, b) => a + b, 0)} files, ${scan.signals.length} signals\n`);
+    scan = scanProject(root);
   } catch (err) {
     process.stderr.write(`${err.message}\n`);
     process.exit(3);
   }
+
+  const payload = JSON.stringify(scan, null, 2);
+  if (outPath) {
+    try {
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, payload);
+    } catch (err) {
+      process.stderr.write(`could not write ${outPath}: ${err.message}\n`);
+      process.exit(4);
+    }
+  } else {
+    process.stdout.write(payload);
+  }
+  process.stderr.write(`scanned ${Object.values(scan.extensions).reduce((a, b) => a + b, 0)} files, ${scan.signals.length} signals\n`);
 }

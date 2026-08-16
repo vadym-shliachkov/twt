@@ -1,8 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtempSync, existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { scanProject } from '../tools/inherit/scan.mjs';
+import { detectStylingSystem } from '../tools/inherit/adapters.mjs';
 
+const run = promisify(execFile);
+const CLI = fileURLToPath(new URL('../tools/inherit/scan.mjs', import.meta.url));
 const FIX = (name) => fileURLToPath(new URL(`./fixtures/${name}/`, import.meta.url));
 
 test('scan reports the package manager and dependencies as facts', () => {
@@ -171,4 +179,119 @@ test('a fixture with no package.json at all does not throw', () => {
   assert.deepEqual(s.deps, {});
   assert.deepEqual(s.scripts, {});
   assert.deepEqual(s.workspaces, []);
+});
+
+// ---------------------------------------------------------------------------
+// css-vars reachability (final-review Important I1). `css-vars` sat in
+// adapters.mjs's PRECEDENCE and in twt-inherit-define's prose, but scan.mjs
+// never emitted the claim — so a host that genuinely styles with CSS custom
+// properties resolved to `none` and was reported as "degraded: no styling
+// system detected". The spec's HIGHEST-fidelity adapter was graded as its
+// LOWEST, and /twt-qa-design's one runnable rule set was permanently skipped.
+// ---------------------------------------------------------------------------
+
+test('a custom-properties host resolves to css-vars, not the degraded none path', () => {
+  const s = scanProject(FIX('inherit-css-vars'));
+  const claim = s.signals.find((x) => x.claim === 'css-vars');
+  assert.ok(claim, 'the css-vars claim must be emitted at all');
+  assert.equal(detectStylingSystem(s).system, 'css-vars');
+  assert.notEqual(detectStylingSystem(s).system, 'none');
+});
+
+test('a conventionally-named token stylesheet plus the declaration reaches high confidence', () => {
+  const s = scanProject(FIX('inherit-css-vars'));
+  const claim = s.signals.find((x) => x.claim === 'css-vars');
+  assert.equal(claim.confidence, 'high');
+  assert.ok(claim.evidence.some((e) => /declares custom properties/.test(e)));
+  assert.ok(claim.evidence.some((e) => /conventional design-token stylesheet/.test(e)));
+});
+
+test('a stylesheet with no :root custom properties produces no css-vars claim', () => {
+  // inherit-wp-classic's style.css is a WordPress theme header comment only.
+  const s = scanProject(FIX('inherit-wp-classic'));
+  assert.equal(s.signals.find((x) => x.claim === 'css-vars'), undefined);
+  assert.equal(detectStylingSystem(s).system, 'none');
+});
+
+test('css-modules still outranks css-vars on a host that has both', () => {
+  // inherit-vite-modules carries src/styles/tokens.css AND *.module.css. The
+  // authoring idiom is modules; the custom properties are what they feed.
+  const s = scanProject(FIX('inherit-vite-modules'));
+  assert.ok(s.signals.some((x) => x.claim === 'css-vars'), 'the claim is still emitted...');
+  assert.equal(detectStylingSystem(s).system, 'css-modules', '...but precedence still picks the authoring idiom');
+});
+
+// ---------------------------------------------------------------------------
+// Per-file line counts (final-review Important I6). The exemplar picker had to
+// Read every file in a component directory just to measure it — 150 model-side
+// reads on a large host to choose 3. The scanner measures for free.
+// ---------------------------------------------------------------------------
+
+test('componentDirs carries per-file line counts for the top-ranked directories', () => {
+  const s = scanProject(FIX('inherit-next-tailwind'));
+  const top = s.candidates.componentDirs[0];
+  assert.ok(Array.isArray(top.files), 'the top directory must list its files');
+  assert.equal(top.files.length, top.count, 'one entry per counted component file');
+  for (const f of top.files) {
+    assert.equal(typeof f.file, 'string');
+    assert.ok(Number.isInteger(f.lines) && f.lines > 0, `${f.file} must carry a usable line count`);
+  }
+  assert.ok(top.files.every((f) => !/index\.ts$/.test(f.file)), 'the barrel is still excluded');
+});
+
+test('line counts are supplied for the WP fixture too, whatever the extension', () => {
+  const s = scanProject(FIX('inherit-wp-classic'));
+  const top = s.candidates.componentDirs[0];
+  assert.equal(top.dir.replace(/\\/g, '/'), 'template-parts');
+  assert.deepEqual(top.files.map((f) => f.file.split('/').pop()).sort(),
+    ['content-card.php', 'content-hero.php']);
+  assert.ok(top.files.every((f) => f.lines > 0));
+});
+
+// ---------------------------------------------------------------------------
+// CLI write path (final-review Critical C1). `--out` had no mkdirSync and sat
+// inside the try that maps everything to exit 3, so the very first run on a
+// fresh project (where .twt-artifacts/inherited/ does not exist yet) died with
+// ENOENT reported as "the root was missing or wasn't a directory" — a wrong
+// diagnosis the skill's own instructions forbid it from recovering from.
+// ---------------------------------------------------------------------------
+
+test('--out into a non-existent nested directory creates it and succeeds', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-scan-'));
+  const out = join(dir, '.twt-artifacts', 'inherited', 'detection.json');
+  const { stderr } = await run('node', [CLI, FIX('inherit-next-tailwind'), '--out', out]);
+  assert.ok(existsSync(out), 'the CLI must create the output directory rather than fail');
+  const parsed = JSON.parse(readFileSync(out, 'utf8'));
+  assert.ok(parsed.signals.some((s) => s.claim === 'next'));
+  assert.match(stderr, /signals/);
+});
+
+test('an unusable root is exit 3 and writes nothing', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-scan-'));
+  const out = join(dir, 'nested', 'detection.json');
+  await assert.rejects(
+    () => run('node', [CLI, join(dir, 'no-such-root'), '--out', out]),
+    (e) => e.code === 3,
+  );
+  assert.ok(!existsSync(out), 'nothing is written on the unusable-root path');
+});
+
+test('a write failure is exit 4, never exit 3 — the two diagnoses must not collide', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'inherit-scan-'));
+  // package.json is a FILE, so mkdirSync(dirname) on a path underneath it
+  // cannot succeed — a genuine write failure with a perfectly good root.
+  const out = join(dir, 'blocker.json', 'nested', 'detection.json');
+  const { writeFileSync } = await import('node:fs');
+  writeFileSync(join(dir, 'blocker.json'), '{}');
+  await assert.rejects(
+    () => run('node', [CLI, FIX('inherit-next-tailwind'), '--out', out]),
+    (e) => e.code === 4 && /could not write/i.test(e.stderr || ''),
+  );
+});
+
+test('--out with no value is a usage error (exit 2), not a crash', async () => {
+  await assert.rejects(
+    () => run('node', [CLI, FIX('inherit-next-tailwind'), '--out']),
+    (e) => e.code === 2 && /usage/i.test(e.stderr || ''),
+  );
 });
