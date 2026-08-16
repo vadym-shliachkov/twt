@@ -14,6 +14,7 @@ dependencies:
     - twt-seo
     - twt-status
 reads:
+  - .twt-artifacts/inherited/conventions.md
   - .twt-artifacts/qa/qa-report.md
   - .twt-artifacts/qa/gaps.md
   - .twt-artifacts/pre-design/seo/seo-map.md

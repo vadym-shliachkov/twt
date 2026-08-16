@@ -15,6 +15,7 @@ dependencies:
     - twt-qa-links
     - twt-qa-elementor
 reads:
+  - .twt-artifacts/inherited/conventions.md
   - .twt-artifacts/qa/content-report.md
   - .twt-artifacts/qa/design-report.md
   - .twt-artifacts/qa/a11y-report.md

@@ -24,8 +24,9 @@ reads:
 writes:
   - site/
   - <THEME>/
-  - the host project's source tree          # inherit target — existing files only, per its conventions.md
+  - the host project's source tree          # inherit target — existing files only, and only after one consolidated approval (Step 4a)
   - .twt-artifacts/content-approval/content-approval-implementation-report.md
+  - .twt-artifacts/content-approval/decisions.md
 ---
 
 # /twt-content-approval-implement
@@ -38,6 +39,7 @@ writes:
 - Does not implement unapproved or not-ready rows.
 - Does not guess where ambiguous approved content belongs; ambiguous rows are reported and skipped.
 - Does not create the approval workbook; use `/twt-content-approval-checklist` first.
+- **Never edits a host project's source tree without one consolidated approval** (`inherit` target, Step 4a) — and never runs a command named by the host project's own config without asking first.
 
 **Success criteria:**
 - Approved ready rows from the workbook are applied to the corresponding blocks/pages, shared header/footer, media fields, links, video embeds, and SEO metadata.
@@ -125,6 +127,18 @@ For SEO:
 - Elementor target: update generated import/template metadata or the theme's SEO handoff artifact when direct WordPress database edits are not available. Never claim WordPress admin data was updated unless the tool actually updated it.
 - Inherit target: update meta/SEO fields the way the host project already does it — per the routing and meta-tag pattern named in `.twt-artifacts/inherited/conventions.md` — never bolt on a WordPress- or static-HTML-shaped mechanism the host doesn't have.
 
+## Step 4a - Inherit target: plan the writes and get ONE consolidated approval
+
+**Applies only when `<target>` = `inherit`.** Skip this step entirely for `html` and `elementor` — those write into scaffolds twt created, where an edit costs nothing that wasn't ours.
+
+For `inherit` the write target is **the host project's real source tree**, and by construction every write this skill makes is an edit to a file that already exists — that is precisely the MODIFY class the whole `inherit` approval design exists to gate. `/twt-inherit-block-creator` never touches a host file without one consolidated approval; this skill must not be the back door that does.
+
+1. **Enumerate** every host file the mapping in Step 4 would edit, with, per file: which worksheet/page it serves, which fields land in it, and an estimated count of lines changed. A file this skill would *create* (rare — a new meta partial, say) is a CREATE and flows freely; everything else is a MODIFY.
+2. **Screen every candidate path against the never-touched list before it reaches the plan** — the same list `/twt-inherit-block-creator` Step 4 uses, and for the same reason. Drop (don't ask about) any path matching: a lockfile (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `composer.lock`, `Gemfile.lock`, `poetry.lock`, `Cargo.lock`); CI config (`.github/workflows/`, `.gitlab-ci.yml`, `.circleci/`, `Jenkinsfile`, `azure-pipelines.yml`); `.env` or any dotenv variant; a migrations directory; build output (`dist/`, `build/`, `.next/`, `.nuxt/`, `out/`, `.output/`); `node_modules/` or `vendor/`; and anything `git check-ignore -q "<path>"` confirms (one Bash call per remaining candidate, exit 0 means gitignored — drop it). A dropped path is reported as skipped, never silently written.
+3. **Ask once, for the whole batch.** Present the full scope in one place — every file, what changes in it, the line estimate — then ask via **AskUserQuestion** (single-select, header "Changes"): **Apply the whole plan** / **Report as TODOs instead — change nothing** / **Stop** / **You decide** (reports as TODOs; the conservative default when writing into a repo the user did not hand us). One approval covers the entire batch: after it, apply Step 5 without asking again. If mid-apply you discover a file the plan did not list, stop, come back **once** with the full revised list and the same four options — never a stream of single questions.
+4. **In collect mode** (`subagent-collect` in `$ARGUMENTS`): don't ask. Take the **report as TODOs** path — change nothing in the host tree — and write `.twt-artifacts/content-approval/decisions.md`: frontmatter (`generated`, `area: content-approval`, `producer: twt-content-approval-implement`, `status: open`), H1 `# Decisions to confirm — content approval into host`, a `## Model-decided assumptions (review)` entry recording the deferral (`- Host edits deferred to TODOs instead of applied — basis: collect mode never blocks on approval, so the safe report-only path was taken — reversible: yes (re-run interactively and approve to apply them)`), and a `## Proposed rules (confirm before binding)` section holding the full file list exactly as the interactive plan would show it. Validate it (one Bash call): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file ".twt-artifacts/content-approval/decisions.md"` — fix until it exits 0. Report the block in your own output; the dispatching orchestrator surfaces it per §13.
+5. **Auto / unattended:** same as collect mode — report the plan, change nothing. Never auto-approve an edit to a host file.
+
 ## Step 5 - Apply edits safely
 
 Before editing, inspect the relevant target files and preserve user changes. Do not replace broad chunks when a smaller targeted edit is possible.
@@ -143,7 +157,7 @@ When the workbook changes many pages, process one page first, verify the mapping
 Run the cheapest relevant checks available for the target:
 - HTML: parse or grep changed pages for approved values, verify key links/assets are present, and run any existing local checks.
 - Elementor: verify changed PHP/JSON files still parse where possible and that import files contain approved values.
-- Inherit: grep changed files for the approved values, and run whatever check the host project's own conventions name (lint/build/test command) when one is documented; otherwise the grep is the check.
+- Inherit: **grep the changed files for the approved values — that is the check.** Do **not** run the host project's lint/build/test command on your own initiative. No other skill on the `inherit` path executes an arbitrary command out of a host repo's config, and "whatever command the conventions name" is an instruction to run a string this skill did not write, from a file it did not author, against a machine it does not own. If a documented host check exists and you believe it is worth running, **name the exact command in your report and let the user run it**; only run it yourself after asking via **AskUserQuestion** (single-select, header "Host check"): **Run `<the exact command>`** / **Skip — I'll run it myself** / **You decide** (skips). Never ask this in collect, auto, or unattended mode — there, always skip and report the command instead.
 
 Do not report success for a row unless the approved value is present in the target file or generated artifact.
 

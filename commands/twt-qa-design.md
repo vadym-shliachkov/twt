@@ -55,11 +55,12 @@ If `$ARGUMENTS` contains an `http(s)://` URL, write `.twt-artifacts/qa/design-re
 
 ## Step 1b — Inherit-target guard
 
-If `.twt-artifacts/inherited/conventions.md` exists and its detected styling system is **not** custom properties, **do not run this audit**. Write a one-paragraph report stating: the audit was skipped, the detected host styling system, and why — this skill's rule is *token-only CSS, no hex/px/font literals, everything is `var(--…)`*, which flags every Tailwind utility class and every CSS-Modules literal as a violation. Running it against such a host produces a report that is essentially all false positives, which is worse than no report because someone will spend an afternoon on it.
+If `.twt-artifacts/inherited/conventions.md` exists, read the **Styling system** row of its `## Detected` table. That row carries the value `scan.mjs`/`adapters.mjs` resolved, spelled exactly one of: `css-vars`, `tailwind`, `css-modules`, `scss`, `theme-object`, `none`.
+
+- **`css-vars`** — the host styles with CSS custom properties. **Run this audit normally.** This is the one case where its existing rule (*token-only CSS, no hex/px/font literals, everything is `var(--…)`*) applies unchanged, because it is describing the host's own idiom rather than fighting it.
+- **Anything else (`tailwind`, `css-modules`, `scss`, `theme-object`, `none`)** — **do not run this audit.** Write a one-paragraph report stating: the audit was skipped, the detected host styling system (by its exact value), and why — the token-only rule flags every Tailwind utility class and every CSS-Modules literal as a violation, so the report would be essentially all false positives, which is worse than no report because someone will spend an afternoon on it.
 
 Host-specific rule sets (Tailwind: scale steps vs arbitrary-value escapes; CSS Modules: token references vs hardcoded values) are **not implemented yet** — say so, and name `.twt-artifacts/inherited/token-map.md` as the artifact that does carry token-fidelity information today.
-
-A custom-properties host is the one case where this audit's existing rule applies unchanged — run it normally.
 
 ## Step 2 — Locate source
 Audit `site/assets/css/*.css` + `site/*.html` if `site/` exists; otherwise `.twt-artifacts/design/mockup/styles.css` + `mockup/pages/*.html`. If neither exists, abort: "No built source to audit — build the site (Phase 3) first." Read `tokens.css`, `components.md`, and `layouts/` as baselines.
