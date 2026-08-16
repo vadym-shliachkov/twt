@@ -47,6 +47,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
 | [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
+| [/twt-inherit-block-creator](#twt-inherit-block-creator) | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
 | [/twt-inherit-define](#twt-inherit-define) | inherit | Discover an existing project's architecture and derive build conventions from it |
 | [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
 | [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
@@ -1723,6 +1724,48 @@ Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them 
 - Every finding has Where / Problem / Recommendation, with Problem citing evidence
 - Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
 - If BOTH `sitemap.md` and `functional-scope.md` are missing, aborts pointing to `/twt-ia-define`
+
+---
+
+## /twt-inherit-block-creator
+
+**Category:** inherit
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Build a page or block **into an existing project's own architecture** — the conventions `/twt-inherit-define` already discovered and wrote to `.twt-artifacts/inherited/` — instead of a twt-scaffolded layout. This is the only skill in the `inherit` target that writes into the host's real source tree, so it plans every write, classifies it as CREATE or MODIFY, and gets one consolidated approval for the whole batch before touching anything the user didn't already agree to.
+
+**Inputs:**
+- page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
+
+**Dependencies:**
+- Hard: twt-inherit-define
+- Soft: figma-mcp
+
+**Reads:**
+- .twt-artifacts/inherited/conventions.md
+- .twt-artifacts/inherited/exemplars.md
+- .twt-artifacts/inherited/token-map.md
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/design-system/component/components.md
+
+**Writes:**
+- the host project's source tree (new files freely; existing files only after one consolidated approval)
+- .twt-artifacts/inherited/decisions.md
+
+**Non-goals:**
+- Does not install dependencies. If a block genuinely needs a package the project lacks, it is reported as a decision, never installed — adding a dependency belongs to whoever maintains `package.json`.
+- Does not retrofit existing components to the design system. It builds new work in the host's idiom as documented; making the host's existing code conform to anything is separate, user-watched work `/twt-inherit-define` explicitly does not do either.
+- Does not scaffold a project structure — there's already one, discovered by `/twt-inherit-define`, which must have run first.
+- Never touches lockfiles, CI config, `.env*` files, database migrations, build output, `node_modules`, or anything gitignored — regardless of approval. These are excluded from the write plan before the user ever sees it, not offered as a choice.
+
+**Success criteria:**
+- Every intended write was classified CREATE or MODIFY *before* anything was written.
+- If the MODIFY list was non-empty, the user saw the whole plan once — full file list, what changes, line counts — and gave one approval that covered the entire batch; no per-file questions followed.
+- Files written match the host's idiom: exemplar directory placement, naming, import style, and co-located test/story files where the exemplars have them.
+- Styling uses the host's own system per `token-map.md` — snapped values in `host` mode, named scale extensions in `--exact` mode — never an inline arbitrary-value escape, and never an invented literal for an `unmapped` token.
+- The report lists files created, files modified (or the TODO list if modifications were declined), the reuse decision, any unmapped tokens that affected the build, and any dependency decisions.
 
 ---
 

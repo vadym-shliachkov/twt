@@ -53,6 +53,7 @@ flowchart TB
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
     twt_ia_validate["/twt-ia-validate"]:::skill
+    twt_inherit_block_creator["/twt-inherit-block-creator"]:::skill
     twt_inherit_define["/twt-inherit-define"]:::skill
     twt_launch_audit["/twt-launch-audit"]:::skill
     twt_layout_define["/twt-layout-define"]:::skill
@@ -172,6 +173,7 @@ flowchart TB
     twt_audience_define -.-> twt_ia_define
     twt_content_fetch -.-> twt_ia_define
     twt_ia_define --> twt_ia_validate
+    twt_inherit_define --> twt_inherit_block_creator
     twt_qa -.-> twt_launch_audit
     twt_content_approval_checklist -.-> twt_launch_audit
     twt_seo -.-> twt_launch_audit
@@ -335,6 +337,7 @@ flowchart TB
 
 ### inherit
 
+- /twt-inherit-block-creator - Build blocks and pages into an existing project using its own architecture and idiom
 - /twt-inherit-define - Discover an existing project's architecture and derive build conventions from it
 
 ### intake
@@ -1812,6 +1815,36 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/ia/validation-report.md |  |
 
+### /twt-inherit-block-creator
+
+**Category:** inherit
+**Version:** 1.0.1
+
+**Inputs:**
+- page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
+
+**Dependencies:**
+- Hard: twt-inherit-define
+- Soft: figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/inherited/conventions.md
+- .twt-artifacts/inherited/exemplars.md
+- .twt-artifacts/inherited/token-map.md
+- .twt-artifacts/design/mockup/pages/
+- .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/design/design-system/component/components.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| the host project's source tree (new files freely; existing files only after one consolidated approval) |  |
+| .twt-artifacts/inherited/decisions.md |  |
+
 ### /twt-inherit-define
 
 **Category:** inherit
@@ -1825,7 +1858,7 @@ flowchart TB
 - Soft: none
 
 **Feeds into:**
-- Hard consumers: none
+- Hard consumers: twt-inherit-block-creator
 - Soft consumers: none
 
 **Reads:**
@@ -2883,6 +2916,7 @@ flowchart TB
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |
 | /twt-ia-validate | twt-ia-define | none |
+| /twt-inherit-block-creator | twt-inherit-define | figma-mcp |
 | /twt-inherit-define | none | none |
 | /twt-launch-audit | none | twt-qa, twt-content-approval-checklist, twt-seo, twt-status |
 | /twt-layout-define | none | twt-audience-define |

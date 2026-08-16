@@ -1,8 +1,8 @@
 ---
 name: twt-inherit-block-creator
 category: inherit
-description: Build blocks and pages into an existing project using its own architecture and idiom
-version: 1.0.0
+description: (v1.0.1) Build blocks and pages into an existing project using its own architecture and idiom
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
