@@ -58,7 +58,7 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 ## Step 1 — Pick mode & targets
 Parse `$ARGUMENTS` for an `http(s)://` URL.
 - **URL present → live mode.** Applicable audits: content, links, a11y (forward the URL). Skip design and elementor (record in `skipped` with the reason "source-only").
-- **No URL → local mode.** Detect subjects: if `site/` exists (or Phase-2 mockups exist) → content, design, a11y, links apply; if a `wp-content/themes/hello-elementor-*` theme exists → elementor applies; if `.twt-artifacts/inherited/conventions.md` exists (an inherit-target build) → content, design, a11y, links apply the same way, dispatched against whatever built pages the host project has. Skip any audit whose subject is absent (record in `skipped`).
+- **No URL → local mode.** Detect subjects: if `site/` exists (or Phase-2 mockups exist) → content, design, a11y, links apply; if a `wp-content/themes/hello-elementor-*` theme exists → elementor applies; if `.twt-artifacts/inherited/conventions.md` exists (an inherit-target build) → content, design, a11y, links apply the same way, dispatched against whatever built pages the host project has — but these audits' scanner (`locate()` in `tools/lib/sources.mjs`) still only resolves `site/` or the design mockup, so on an inherit-only project with no `site/` built it finds no root and each audit reports nothing found, not because the build is clean. Skip any audit whose subject is absent (record in `skipped`).
 If nothing is auditable, stop: "Nothing to QA — build the site (Phase 3) or pass a live URL."
 
 ## Step 2 — Run the applicable audits (in parallel)
