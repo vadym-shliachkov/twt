@@ -1,8 +1,8 @@
 ---
 name: twt-content-approval-implement
 category: content
-description: (v1.1.5) Apply ready approved XLSX content into the built site or development artifacts
-version: 1.1.5
+description: (v1.1.6) Apply ready approved XLSX content into the built site or development artifacts
+version: 1.1.6
 model: sonnet
 accepts_arguments: true
 inputs:

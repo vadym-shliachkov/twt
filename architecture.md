@@ -113,6 +113,7 @@ flowchart TB
     twt_content_approval_checklist --> twt_content_approval_implement
     twt_html_block_creator -.-> twt_content_approval_implement
     twt_elementor_block_creator -.-> twt_content_approval_implement
+    twt_inherit_block_creator -.-> twt_content_approval_implement
     twt_content_fetch_site -.-> twt_content_fetch
     twt_content_fetch_pdf -.-> twt_content_fetch
     twt_content_fetch_doc -.-> twt_content_fetch
@@ -816,14 +817,14 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
-- Optional path to content-approval-checklist.xlsx; optional --target html|elementor
+- Optional path to content-approval-checklist.xlsx; optional --target html|elementor|inherit
 
 **Dependencies:**
 - Hard: twt-content-approval-checklist
-- Soft: twt-html-block-creator, twt-elementor-block-creator
+- Soft: twt-html-block-creator, twt-elementor-block-creator, twt-inherit-block-creator
 
 **Feeds into:**
 - Hard consumers: none
@@ -835,12 +836,14 @@ flowchart TB
 - <THEME>/
 - .twt-artifacts/html-site/conventions.md
 - .twt-artifacts/elementor-theme/conventions.md
+- .twt-artifacts/inherited/conventions.md
 
 **Writes:**
 | Path | Notes |
 |------|-------|
 | site/ |  |
 | <THEME>/ |  |
+| the host project's source tree          # inherit target — existing files only, per its conventions.md |  |
 | .twt-artifacts/content-approval/content-approval-implementation-report.md |  |
 
 ### /twt-content-fetch
@@ -1268,7 +1271,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.11
+**Version:** 1.3.12
 
 **Inputs:**
 - Optional --target html|elementor|inherit (else menu); optional page scope
@@ -1834,7 +1837,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-develop, twt-site-dev
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/inherited/conventions.md
@@ -1884,7 +1887,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
@@ -2190,7 +2193,7 @@ flowchart TB
 ### /twt-project-intake
 
 **Category:** intake
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`
@@ -2210,6 +2213,7 @@ flowchart TB
 - .twt-artifacts/site-instruction.md
 - .twt-artifacts/pre-design/pre-design-brief.md
 - .twt-artifacts/design/design-brief.md
+- .twt-artifacts/inherited/conventions.md
 
 **Writes:**
 | Path | Notes |
@@ -2221,7 +2225,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -2305,7 +2309,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -2325,6 +2329,7 @@ flowchart TB
 - .twt-artifacts/design/design-system/tokens.css
 - .twt-artifacts/design/design-system/component/components.md
 - .twt-artifacts/design/layout/layouts/
+- .twt-artifacts/inherited/conventions.md
 
 **Writes:**
 | Path | Notes |
@@ -2518,7 +2523,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.5
+**Version:** 1.13.6
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2890,7 +2895,7 @@ flowchart TB
 | /twt-component-define | none | none |
 | /twt-component-validate | none | none |
 | /twt-content-approval-checklist | none | twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define, twt-seo-define |
-| /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator |
+| /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator, twt-inherit-block-creator |
 | /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma |
 | /twt-content-fetch-doc | none | twt-content-fetch |
 | /twt-content-fetch-figma | none | twt-content-fetch |
