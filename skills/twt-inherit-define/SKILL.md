@@ -19,6 +19,7 @@ writes:
   - .twt-artifacts/inherited/token-map.md
   - .twt-artifacts/inherited/host-style.json
   - .twt-artifacts/inherited/decisions.md
+  - .twt-artifacts/inherited/<tailwind.config.extension.js|_tokens.scss|theme.tokens.js>
 ---
 
 # /twt-inherit-define
@@ -40,14 +41,6 @@ writes:
 - The user saw the Detected block, the exemplar paths, and the token-map summary and explicitly accepted them — via the Step 7 review gate in an interactive run, or via `decisions.md` in collect mode — before the run reports success.
 
 ---
-
-## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Check (Glob/Read — never a shell command) that `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
-- **Missing, interactive (main thread):** ask via **AskUserQuestion** (single-select, header "Setup"): **Run /twt-setup now** (recommended — merges the curated allowlist so routine calls stop prompting) · **Skip** (expect per-call prompts) · **You decide**. On run: dispatch `/twt-setup` (Agent tool), wait, continue.
-- **Missing, unattended** (auto mode, or dispatched as a subagent): seed silently — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, continue.
-- **Present:** continue without asking (the seeder is idempotent).
-- Seeder unavailable (global install without bundled tools): warn once and continue — **never block the run**.
-- **Keep every Bash call allowlist-matchable (applies to the whole run):** the seeded rules match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`). Never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed, so they force a manual prompt even when the binary is allowlisted. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
 ## Step 1 — Refinement check (§10)
 
@@ -84,9 +77,15 @@ Resolve every load-bearing ambiguity from `detection.json`'s structured data alo
 
 **The WordPress ruling.** If `detection.json.wordpress` is non-null, the stack is settled: it's a WordPress theme named `wordpress.themeName` (with `wordpress.template` as its parent, if set). **Do not ask "is this WordPress?"** even though the `wordpress` signal in `signals[]` caps at `medium` confidence — both of its evidence items (the `style.css` Theme Name header and `functions.php`) are kind `file`, so the grading formula can never promote it past `medium` no matter how certain the identification is. That's a grading artifact of `scan.mjs`'s two-independent-kinds rule, not real doubt. Treat `wordpress` non-null as `high` confidence for the purposes of this step and the Detected block, and skip straight to the framework/styling/idiom/routing checks below for everything `wordpress.json` doesn't already answer.
 
-**Framework and styling system.** For each, find its `signals[]` entry (styling-system claims, in the precedence order that decides which one wins when more than one is present: `tailwind` > `css-modules` > `theme-object` > `scss` > `css-vars`; take the highest-precedence claim that has a `signals` entry, or `none` if no styling claim is present at all).
+**Framework.** `scan.mjs` emits framework and styling claims into one flat `signals[]` array with no built-in tie-break, and a real project routinely carries several framework-shaped claims at once — an Astro or Nuxt project lists `vite` as a dependency too, which is normal and not ambiguity, not a competing framework identification. Resolve to a single framework claim with this precedence, highest tier wins: **meta-framework** (`next`, `nuxt`, `astro`, `svelte`, `angular`) beats **bundler** (`vite`), which beats **bare UI library** (`react`, `vue`). Take the highest-tier claim that has a `signals[]` entry.
+- That claim's own confidence is `high`, or the WordPress ruling above already settled the stack: proceed, no question.
+- That claim is `medium` confidence, **or** more than one claim occupies the same top tier (a genuine tie — e.g. two meta-framework claims present, which the precedence order alone can't break): this is the confidence-driven question below.
+
+**Styling system.** Same shape, different precedence (mirrors `adapters.mjs`'s `PRECEDENCE`): `tailwind` > `css-modules` > `theme-object` > `scss` > `css-vars`. Take the highest-precedence claim that has a `signals[]` entry, or `none` if no styling claim is present at all.
 - `high` confidence, or the WordPress ruling above already settled it: proceed, no question.
-- `medium` confidence: ask via **AskUserQuestion** (single-select, header matching the aspect — "Framework" or "Styling system"): the detected claim (labeled with its name, described with its evidence) / a free-type override (the tool's built-in escape covers this — don't add a manual "Other" option) / **"You decide"** (accepts the detected claim and says why the evidence, though thin, is still the best read).
+- `medium` confidence: this is the confidence-driven question below.
+
+**The confidence-driven question**, for either framework or styling system landing in the medium/tied case above: ask via **AskUserQuestion** (single-select, header matching the aspect — "Framework" or "Styling system"): the detected claim(s) (one option per tied or medium-confidence claim, labeled with its name, described with its evidence) / a free-type override (the tool's built-in escape covers this — don't add a manual "Other" option) / **"You decide"** (accepts the highest-tier/highest-precedence claim and says why the evidence, though thin or tied, is still the best read).
 
 **Component idiom.** `detection.json` only gives `candidates.componentDirs` as `{dir, count}` pairs — it doesn't itemize which extensions make up that count. Glob `candidates.componentDirs[0]/*` (and the second-ranked dir too, if its count is close) to see the actual file extensions among `.tsx`/`.jsx`/`.vue`/`.svelte`/`.astro`/`.php`.
 - A single extension accounts for the top dir's files, or the top dir's count is clearly ahead of the second-ranked dir (not a near-tie): confident, proceed.
@@ -219,10 +218,10 @@ Present, in one place: the `## Detected` block from `conventions.md`, the exempl
 - **Interactive:** ask via **AskUserQuestion** (single-select, header "Conventions"): **Accept** (description: "use this as the contract for everything `inherit` builds next") / **Let me edit conventions.md first** (description: "I'll open the file and adjust it myself, then re-run this skill to re-validate") / **Re-derive with different exemplars** (description: "go back to Step 4 and let me name the files instead"). On the edit option, stop here — don't re-run automatically; the next invocation's Step 1 refinement check picks up the user's edits. On re-derive, return to Step 4 and ask the user (plain text) which files to use instead of the ones auto-picked.
 - **Collect mode** (`subagent-collect` in `$ARGUMENTS`): don't ask. Write `.twt-artifacts/inherited/decisions.md` instead:
   - Frontmatter: `generated`, `area: inherit`, `producer: twt-inherit-define`, `status: open`.
-  - `## Open questions` — one entry per unresolved ambiguity from Step 3 (and the refinement-mode default from Step 1, if collect mode took it): the question, the options considered, the model's leaning, and an indented `- why it matters:` line.
-  - `## Model-decided assumptions (review)` — one entry per value this run picked without asking: field = value — basis — reversible (yes/no).
+  - `## Open questions` — one entry per unresolved ambiguity from Step 3 (and the refinement-mode default from Step 1, if collect mode took it): `- <question> — options: [<a>, <b>, ...] — model-leaning: <x>`, with an **indented** continuation line `  - why it matters: <one line>`.
+  - `## Model-decided assumptions (review)` — one entry per value this run picked without asking: `- <field> = <value> — basis: <reason> — reversible: <yes|no>`.
   - `## Proposed rules (confirm before binding)` — the Detected block's stack/styling-system/component-idiom/routing/asset-root rows, restated as rules the rest of the `inherit` pipeline would bind to if accepted.
-  Set `status: open`. Report the decisions block in your own output — the dispatching orchestrator surfaces it per §13; this skill never loops on the user itself.
+  Set `status: open`. **After writing `decisions.md`, verify it** (Bash): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file ".twt-artifacts/inherited/decisions.md"` — fix until it exits 0. Three consumers (the orchestrator's surface-up flow, `gen-report`, `wiki-harvest`) parse this exact format, and a drifted section title (e.g. dropping the `(review)`/`(confirm before binding)` suffix) is silently invisible to all three. Report the decisions block in your own output — the dispatching orchestrator surfaces it per §13; this skill never loops on the user itself.
 
 **This gate is what makes adapting to a host safe.** Nothing downstream (the block creator, asset sync) is meant to run against `conventions.md` until the user — directly, or via the surfaced decisions in collect mode — has seen exactly what this skill read off their codebase and said yes.
 
