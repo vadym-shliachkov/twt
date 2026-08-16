@@ -139,7 +139,7 @@ Take the page list from `mockup/pages/`, falling back to page-level `mockup/*.ht
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 - `<target>` = **inherit** → `/twt-inherit-block-creator`
 
-**Continuation:** if `$ARGUMENTS` contains the token `pilot-approved`, the pilot was already built and approved in a prior pass — **skip Steps 4a and the gate** and go straight to Step 4b for the pages not yet built.
+**Continuation:** if `$ARGUMENTS` contains the token `pilot-approved`, the pilot was already built and approved in a prior pass — **skip Steps 4a and the gate** and go straight to the pages not yet built: Step 4b-inherit's serial loop for `<target>` = **inherit**, Step 4b's parallel batch for html/elementor.
 
 ### Step 4a — Foundation / pilot pass (serial)
 Dispatch the builder for the **foundation page only**, normally (Agent tool, passing its mockup HTML + `layouts/<page>.md`). It writes its page file *and* the shared files, priming the reuse pool: the common sections/widgets, chrome, and shared CSS now exist for every other page to reuse. If there is only one page, you're done — skip to Step 5.
