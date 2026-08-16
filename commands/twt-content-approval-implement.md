@@ -6,22 +6,25 @@ version: 1.1.5
 model: sonnet
 accepts_arguments: true
 inputs:
-  - Optional path to content-approval-checklist.xlsx; optional --target html|elementor
+  - Optional path to content-approval-checklist.xlsx; optional --target html|elementor|inherit
 dependencies:
   hard:
     - twt-content-approval-checklist
   soft:
     - twt-html-block-creator
     - twt-elementor-block-creator
+    - twt-inherit-block-creator
 reads:
   - .twt-artifacts/content-approval/content-approval-checklist.xlsx
   - site/
   - <THEME>/
   - .twt-artifacts/html-site/conventions.md
   - .twt-artifacts/elementor-theme/conventions.md
+  - .twt-artifacts/inherited/conventions.md
 writes:
   - site/
   - <THEME>/
+  - the host project's source tree          # inherit target — existing files only, per its conventions.md
   - .twt-artifacts/content-approval/content-approval-implementation-report.md
 ---
 
@@ -74,10 +77,11 @@ On Windows where `python` is unavailable but `py` exists, use `py -m pip install
 
 Use the workbook path from `$ARGUMENTS` if supplied; otherwise use `.twt-artifacts/content-approval/content-approval-checklist.xlsx`. Abort if it does not exist.
 
-Parse `--target html|elementor` from `$ARGUMENTS`. If absent, infer:
+Parse `--target html|elementor|inherit` from `$ARGUMENTS`. If absent, infer:
 - `html` when `site/` or `.twt-artifacts/html-site/conventions.md` exists.
 - `elementor` when `.twt-artifacts/elementor-theme/conventions.md` or a likely theme folder exists.
-- If both exist or neither exists, ask via AskUserQuestion with `Static HTML`, `Elementor`, and `You decide`.
+- `inherit` when `.twt-artifacts/inherited/conventions.md` exists.
+- If more than one apply or none do, ask via AskUserQuestion with `Static HTML`, `Elementor`, `This project's existing stack`, and `You decide`.
 
 Read the target conventions before editing target files.
 
@@ -119,6 +123,7 @@ For media:
 For SEO:
 - HTML target: update page filename/slug only when the target convention supports it; otherwise update `<title>`, meta tags, canonical/open-graph tags, and JSON-LD in the page head.
 - Elementor target: update generated import/template metadata or the theme's SEO handoff artifact when direct WordPress database edits are not available. Never claim WordPress admin data was updated unless the tool actually updated it.
+- Inherit target: update meta/SEO fields the way the host project already does it — per the routing and meta-tag pattern named in `.twt-artifacts/inherited/conventions.md` — never bolt on a WordPress- or static-HTML-shaped mechanism the host doesn't have.
 
 ## Step 5 - Apply edits safely
 
@@ -138,6 +143,7 @@ When the workbook changes many pages, process one page first, verify the mapping
 Run the cheapest relevant checks available for the target:
 - HTML: parse or grep changed pages for approved values, verify key links/assets are present, and run any existing local checks.
 - Elementor: verify changed PHP/JSON files still parse where possible and that import files contain approved values.
+- Inherit: grep changed files for the approved values, and run whatever check the host project's own conventions name (lint/build/test command) when one is documented; otherwise the grep is the check.
 
 Do not report success for a row unless the approved value is present in the target file or generated artifact.
 
@@ -149,7 +155,7 @@ Write `.twt-artifacts/content-approval/content-approval-implementation-report.md
 # Content approval implementation report
 Generated: <ISO>
 Workbook: <path>
-Target: <html|elementor>
+Target: <html|elementor|inherit>
 
 ## Applied
 | Page | Block | Field type | Target file | Notes |

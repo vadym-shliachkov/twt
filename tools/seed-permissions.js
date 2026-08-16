@@ -45,6 +45,13 @@ const BASH_UTILS = [
   'cd', 'sed', 'sort', 'uniq', 'bc', 'curl',
 ];
 
+// Two read-only git invocations, narrowly scoped — not `git` wholesale. The
+// inherit-target builder's never-touch rule needs `git check-ignore` to know
+// what's gitignored, and its dirty-tree courtesy needs `git status --porcelain`
+// to detect pre-existing changes before it runs; neither writes anything. No
+// git command is otherwise pre-authorized, and this stays that way.
+const GIT_READONLY = ['git check-ignore', 'git status --porcelain'];
+
 // Playwright browser MCP tools (portable — plain tool names, never a path).
 // Live QA, /twt-block-preview, and the DS audit drive a browser to inspect,
 // screenshot, and read computed styles from pages; these navigate/read/inspect
@@ -100,6 +107,8 @@ const SCRATCH_ACCESS = [
 const ALLOW = [
   ...BASH_UTILS.map((c) => `Bash(${c}:*)`),
   ...BASH_UTILS.map((c) => `Bash(${c} *)`),
+  ...GIT_READONLY.map((c) => `Bash(${c}:*)`),
+  ...GIT_READONLY.map((c) => `Bash(${c} *)`),
   ...PLAYWRIGHT_READS,
   ...PLUGIN_READS,
   ...SCRATCH_ACCESS,

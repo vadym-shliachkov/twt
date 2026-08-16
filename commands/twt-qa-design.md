@@ -17,6 +17,7 @@ reads:
   - .twt-artifacts/design/design-system/tokens.css
   - .twt-artifacts/design/design-system/component/components.md
   - .twt-artifacts/design/layout/layouts/
+  - .twt-artifacts/inherited/conventions.md
 writes:
   - .twt-artifacts/qa/design-report.md
 ---
@@ -51,6 +52,14 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 
 ## Step 1 — Mode guard
 If `$ARGUMENTS` contains an `http(s)://` URL, write `.twt-artifacts/qa/design-report.md` containing only: "Design/token fidelity is a source-only audit — run `/twt-qa` locally (no URL) to check token compliance." Then stop.
+
+## Step 1b — Inherit-target guard
+
+If `.twt-artifacts/inherited/conventions.md` exists and its detected styling system is **not** custom properties, **do not run this audit**. Write a one-paragraph report stating: the audit was skipped, the detected host styling system, and why — this skill's rule is *token-only CSS, no hex/px/font literals, everything is `var(--…)`*, which flags every Tailwind utility class and every CSS-Modules literal as a violation. Running it against such a host produces a report that is essentially all false positives, which is worse than no report because someone will spend an afternoon on it.
+
+Host-specific rule sets (Tailwind: scale steps vs arbitrary-value escapes; CSS Modules: token references vs hardcoded values) are **not implemented yet** — say so, and name `.twt-artifacts/inherited/token-map.md` as the artifact that does carry token-fidelity information today.
+
+A custom-properties host is the one case where this audit's existing rule applies unchanged — run it normally.
 
 ## Step 2 — Locate source
 Audit `site/assets/css/*.css` + `site/*.html` if `site/` exists; otherwise `.twt-artifacts/design/mockup/styles.css` + `mockup/pages/*.html`. If neither exists, abort: "No built source to audit — build the site (Phase 3) first." Read `tokens.css`, `components.md`, and `layouts/` as baselines.

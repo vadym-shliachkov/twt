@@ -35,6 +35,7 @@ const SOURCES = [
   { phase: 'design', title: 'Design', file: join(ART, 'design', 'phase-review.md') },
   { phase: 'html-site', title: 'Development — HTML', file: join(ART, 'html-site', 'phase-review.md') },
   { phase: 'elementor-theme', title: 'Development — Elementor', file: join(ART, 'elementor-theme', 'phase-review.md') },
+  { phase: 'inherited', title: 'Development — Inherited stack', file: join(ART, 'inherited', 'phase-review.md') },
   { phase: 'qa', title: 'QA', file: join(ART, 'qa', 'qa-report.md') },
 ];
 const found = SOURCES.filter((s) => existsSync(s.file)).map((s) => ({ ...s, md: readFileSync(s.file, 'utf8') }));

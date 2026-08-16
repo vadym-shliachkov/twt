@@ -58,14 +58,14 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 ## Step 1 — Pick mode & targets
 Parse `$ARGUMENTS` for an `http(s)://` URL.
 - **URL present → live mode.** Applicable audits: content, links, a11y (forward the URL). Skip design and elementor (record in `skipped` with the reason "source-only").
-- **No URL → local mode.** Detect subjects: if `site/` exists (or Phase-2 mockups exist) → content, design, a11y, links apply; if a `wp-content/themes/hello-elementor-*` theme exists → elementor applies. Skip any audit whose subject is absent (record in `skipped`).
+- **No URL → local mode.** Detect subjects: if `site/` exists (or Phase-2 mockups exist) → content, design, a11y, links apply; if a `wp-content/themes/hello-elementor-*` theme exists → elementor applies; if `.twt-artifacts/inherited/conventions.md` exists (an inherit-target build) → content, design, a11y, links apply the same way, dispatched against whatever built pages the host project has. Skip any audit whose subject is absent (record in `skipped`).
 If nothing is auditable, stop: "Nothing to QA — build the site (Phase 3) or pass a live URL."
 
 ## Step 2 — Run the applicable audits (in parallel)
 Dispatch every applicable audit via the Agent tool, referencing its Intent and forwarding the URL in live mode. The audits have no ordering dependency and each writes its own, disjoint `.twt-artifacts/qa/<dimension>-report.md` — so **issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before Step 3. _All five audits are script-driven (`qa-scan.mjs` supplies the counts, `score-rubric.mjs` the arithmetic) and each declares `model: sonnet` in its own frontmatter — when your Agent tool supports a `model` parameter, pass `sonnet` explicitly too, since a dispatched subagent otherwise inherits this orchestrator's model. Aggregation (Step 3) and the PASS/FAIL verdict stay on the session model._
 
 ## Step 3 — Aggregate `qa-report.md`
-Read every report that was produced; sum BLOCKER / WARNING / SUGGESTION counts and read each audit's **Health/Band** from its Scorecard. Write `.twt-artifacts/qa/qa-report.md`:
+Read every report that was produced; sum BLOCKER / WARNING / SUGGESTION counts and read each audit's **Health/Band** from its Scorecard. If `design-report.md` states the audit was **skipped** (its Step 1b inherit-target guard, on a host whose styling system isn't custom properties), do not fold it into the BLOCKER/WARNING/SUGGESTION sum or the By-dimension Health/Band table as if it passed — instead add it to `skipped` with the stated reason (detected styling system + "host-specific rules not implemented yet, see `.twt-artifacts/inherited/token-map.md`") and say so plainly in the Verdict block, the same as any audit whose subject was absent. An all-zero design score on an inherit host is a **skip**, never a clean pass. Write `.twt-artifacts/qa/qa-report.md`:
 ```
 ---
 generated: <YYYY-MM-DD>
@@ -73,7 +73,7 @@ phase: qa
 mode: <local|live>
 url: <url if live, else omit>
 verdict: <PASS if total BLOCKER == 0, else FAIL>
-targets: [<html and/or elementor>]
+targets: [<html and/or elementor and/or inherit>]
 skipped: [<audits not run, with reasons below>]
 ---
 

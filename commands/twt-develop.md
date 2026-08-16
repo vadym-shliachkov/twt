@@ -46,7 +46,7 @@ writes:
 
 ## Intent
 
-**Purpose:** Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
+**Purpose:** Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas — **except for the `inherit` target**, which promotes every remaining page **serially** instead (Step 4b-inherit), to preserve its single consolidated-approval contract rather than optimize for speed.
 
 **Non-goals:**
 - Doesn't do QA (Phase 4)
@@ -58,7 +58,7 @@ writes:
 - `.twt-artifacts/content-approval/content-approval-checklist.xlsx` is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically
 - Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests
 - A **foundation page** is promoted first (serial) to seed reuse; it doubles as a **pilot** that the user reviews at a gate before the remaining pages are built — so a wrong direction is caught after 1 page, not after all of them
-- After the pilot is approved, the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially
+- After the pilot is approved, the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially — **except `inherit`**, which promotes the remaining pages **serially, one at a time** (Step 4b-inherit) instead of a parallel batch, because its consolidated-approval contract wins over the speed optimization
 - Approved workbook rows are **not** applied by this skill; after stakeholder confirmation, the user explicitly runs `/twt-content-approval-implement` to update the corresponding blocks/pages
 - Reports what was built per page and anything to follow up before Phase 4
 
@@ -114,7 +114,7 @@ After the child returns, verify `.twt-artifacts/content-approval/content-approva
 
 Read `.twt-artifacts/design/assets/manifest.md`. If it exists and has rows whose `status` is missing, `planned`, or `missing-provided`, dispatch `/twt-assets-produce` (Agent tool) **with `subagent-collect`** so the pool (`.twt-artifacts/design/assets/img|video|icons|meta/`) is as full as it can get before pages are built; aggregate its `decisions.md` upward per rule 13. If the dispatch fails or the manifest is absent, note it and continue — builders already emit manifest-correct paths for missing files.
 
-Then **sync the pool into the build target**: copy the pool's populated subdirectories into the build's asset root — html target → `site/assets/img|video|icons|meta/`, elementor target → the theme's `assets/img|video|icons|meta/` (per its `conventions.md`). One simple `cp -r "<pool-subdir>" "<build-assets-dir>"` per subdirectory (Bash) — no loops or chains; skip subdirectories that don't exist. Never overwrite a newer file already in the build with an older pool copy — when in doubt, report instead of clobbering. Rows still `pending-stock`/`pending-video`/`missing-provided` after the sync go into the Step 5 report as expected QA gaps.
+Then **sync the pool into the build target**: copy the pool's populated subdirectories into the build's asset root, per the Step 1 descriptor — html target → `site/assets/img|video|icons|meta/`, elementor target → the theme's `assets/img|video|icons|meta/` (per its `conventions.md`), inherit target → the asset root named in `.twt-artifacts/inherited/conventions.md`'s **File layout** section (never a path this skill invents; if that section names no static-asset root, skip the sync, note it in the Step 5 report, and leave the pool as the deliverable). One simple `cp -r "<pool-subdir>" "<build-assets-dir>"` per subdirectory (Bash) — no loops or chains; skip subdirectories that don't exist. Never overwrite a newer file already in the build with an older pool copy — when in doubt, report instead of clobbering. Rows still `pending-stock`/`pending-video`/`missing-provided` after the sync go into the Step 5 report as expected QA gaps.
 
 ## Step 3b — Developer readiness check (advisory)
 

@@ -16,6 +16,7 @@ reads:
   - .twt-artifacts/site-instruction.md
   - .twt-artifacts/pre-design/pre-design-brief.md
   - .twt-artifacts/design/design-brief.md
+  - .twt-artifacts/inherited/conventions.md
 writes:
   - .twt-artifacts/site-instruction.md
   - site-instruction.md (only with --root or explicit user confirmation)
@@ -88,7 +89,7 @@ Classify sources:
 - `.pdf`: PDF source.
 - `.doc`, `.docx`, Google Docs, `.md`, `.txt`: document source.
 - Local image names or folders: brand/design/media source.
-- Phrases like "WordPress", "Elementor", "static HTML", "landing page", "QA only", "skip design": pipeline constraints.
+- Phrases like "WordPress", "Elementor", "static HTML", "our existing site/app/codebase", "landing page", "QA only", "skip design": pipeline constraints.
 
 Infer these slots when evidence is strong:
 - What and who: business/product, site purpose, audience, primary conversion goal.
@@ -97,7 +98,7 @@ Infer these slots when evidence is strong:
 - Stage: new build, redesign, or extend.
 - Phases: Pre-design, Design, Development, QA.
 - Figma approach: Express or Design source.
-- Build target: Static HTML or Elementor.
+- Build target: Static HTML, Elementor, or this project's existing stack (inherit).
 - Per-phase guidance: notes aimed at pre-design, design, development, content approval, or QA.
 
 When the evidence is weak, record an open question. Do not ask live unless the missing answer blocks a useful instruction file. A useful file may contain open questions; `/twt-site` can still use the known slots and ask only for what remains.
@@ -109,14 +110,14 @@ Ask live questions only when the instruction file would otherwise be misleading.
 Use plain text for free-form missing details. For fixed choices, use AskUserQuestion:
 - Stage: New build / Redesign / Extend / You decide.
 - Figma approach, only when a Figma link exists and the notes do not make intent clear: Express / Design source / You decide.
-- Build target, only when Development is likely and no target is clear: Static HTML / Elementor / You decide.
+- Build target, only when Development is likely and no target is clear: Static HTML / Elementor / This project's existing stack / You decide.
 
 If the user chooses "You decide", record the selected default plus the evidence behind it in `## Model-decided assumptions`.
 
 Default choices when the user delegates:
 - Stage: redesign when an existing live site is provided; otherwise new build.
 - Figma approach: Express when the Figma appears to be the finished design and the user asks to build it; otherwise Design source.
-- Build target: Elementor when WordPress, Elementor, child theme, or existing theme artifacts are mentioned; otherwise Static HTML.
+- Build target: this project's existing stack (inherit) when `.twt-artifacts/inherited/conventions.md` already exists or the notes describe building into an existing non-WordPress codebase/app (e.g. "our existing site", "this repo", "integrate into our app"); Elementor when WordPress, Elementor, child theme, or existing theme artifacts are mentioned; otherwise Static HTML.
 - Phases: all phases unless the notes explicitly scope the run, such as "QA only", "build from this Figma", or "skip pre-design".
 
 ## Step 5 - Write site-instruction.md
@@ -147,7 +148,7 @@ Stage: <new build | redesign | extend | open question>
 
 Phases: <Pre-design, Design, Development, QA | scoped set | open question>
 Figma approach: <Express | Design source | not applicable | open question>
-Build target: <Static HTML | Elementor | open question>
+Build target: <Static HTML | Elementor | This project's existing stack | open question>
 
 ## Per-phase guidance
 

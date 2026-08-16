@@ -71,9 +71,11 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 
 Parse `$ARGUMENTS` for an `http(s)://` URL and for `--skip-interview`.
 
-Check (Glob/Read) that `site/`, `.twt-artifacts/design/mockup/`, or a `wp-content/themes/hello-elementor-*/` theme exists. If none do and no URL was given, stop: *"Nothing to audit — build the site (Phase 3) or pass a live URL."* Write nothing.
+Check (Glob/Read) that `site/`, `.twt-artifacts/design/mockup/`, a `wp-content/themes/hello-elementor-*/` theme, or `.twt-artifacts/inherited/conventions.md` (an inherit-target build) exists. If none do and no URL was given, stop: *"Nothing to audit — build the site (Phase 3) or pass a live URL."* Write nothing.
 
 All three are genuinely auditable and the scanner handles each: with no built HTML the page-scoped checks (content, discoverability, social, legal, analytics, conversion, performance) report nothing rather than reporting everything as missing, while build hygiene reads the project root and the theme, the error-page check reads the theme's `404.php` (and reports nothing at all on a URL-only run, where it would otherwise be measuring zero input), and the live layer reads the URL. A theme-only or URL-only run is a complete scan (`layers.scan: ok`) over a narrower surface, not a partial one — say in Step 8 which layers actually had input.
+
+**An inherit-target build is a fourth, narrower case the deterministic scanner does not yet locate.** `launch-scan.mjs`'s build-root finder (`tools/lib/sources.mjs`) only knows `site/` and a `wp-content/themes/hello-elementor-*/` theme — it has no reader yet for the arbitrary host path an inherit build writes into (named in `.twt-artifacts/inherited/conventions.md`'s **File layout** section). So on an inherit-only project the scan still runs (`layers.scan: ok`), but every page-scoped and build-hygiene layer will report nothing found — **not because the build is clean**, but because the scanner had no root to read. Say this plainly in Step 8 rather than letting an all-zero findings list read as a pass, and lean on the harvested `qa-report.md`/`gaps.md` citations (Step 3) as the only real evidence for this surface until a follow-on teaches `sources.mjs` to resolve an inherit build's root from `conventions.md`.
 
 ## Step 2 — Run the deterministic scan
 
