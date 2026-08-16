@@ -78,6 +78,7 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-html-site-creator': 'mid',
   'twt-ia-define': 'mid',
   'twt-ia-validate': 'mid',
+  'twt-inherit-define': 'high',
   'twt-launch-audit': 'high',
   'twt-layout-define': 'mid',
   'twt-layout-validate': 'mid',

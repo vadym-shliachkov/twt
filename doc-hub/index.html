@@ -40,7 +40,7 @@
       <div class="reveal">
         <p class="eyebrow">The twt skills marketplace</p>
         <h1>Every skill, one page — what this marketplace is and what's inside.</h1>
-        <p class="lede">A plain-language tour of the marketplace: what a skills marketplace even is, why this one exists, and all 65 skills grouped by what they're for.</p>
+        <p class="lede">A plain-language tour of the marketplace: what a skills marketplace even is, why this one exists, and all 66 skills grouped by what they're for.</p>
       </div>
     </section>
     <section class="marketplace-story" aria-label="Marketplace introduction">
@@ -217,7 +217,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-eval-smoke.html"><code>/twt-eval-smoke</code></a>
           <span class="alt-skill-name">Eval Smoke</span>
-          <span class="alt-skill-version">v1.0.2</span>
+          <span class="alt-skill-version">v1.0.4</span>
         </span>
         <p class="alt-skill-desc">A behavioral smoke test for the marketplace itself: it seeds a fixture project, runs real skills against it, and mechanically checks that they leave behind what they promise. It's a marketplace-development tool — you won't need it on a normal website project.</p>
         <span class="token-usage token-usage--mid" data-token-usage="mid" aria-label="Token usage: Mid">
@@ -607,7 +607,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-block-map.html"><code>/twt-block-map</code></a>
           <span class="alt-skill-name">Block Map</span>
-          <span class="alt-skill-version">v1.0.0</span>
+          <span class="alt-skill-version">v1.0.2</span>
         </span>
         <p class="alt-skill-desc">Map what a real site (or Figma file) is actually <strong>made of</strong> — every repeatable block and subblock, clustered into canonical identities regardless of what class name or component name each instance happens to carry, plus a page↔block reuse matrix showing which blocks live where. It answers &quot;what is this site built from, and what's genuinely shared vs. a one-off.&quot;</p>
         <span class="token-usage token-usage--mid" data-token-usage="mid" aria-label="Token usage: Mid">
@@ -795,7 +795,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-figma-dev-audit.html"><code>/twt-figma-dev-audit</code></a>
           <span class="alt-skill-name">Figma Dev Audit</span>
-          <span class="alt-skill-version">v1.0.6</span>
+          <span class="alt-skill-version">v1.0.7</span>
         </span>
         <p class="alt-skill-desc">Answer one question about a Figma file before anyone estimates or builds from it: <strong>can a developer build this without stopping to ask questions?</strong> Scan the file through the Figma Plugin API, apply a deterministic rule set, add the judgment a rule set cannot reach, and produce a readiness report that names exact frames and layers, grades every issue by development impact, and separates what was measured from what must be asked.</p>
         <span class="token-usage token-usage--high" data-token-usage="high" aria-label="Token usage: High">
@@ -807,7 +807,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-launch-audit.html"><code>/twt-launch-audit</code></a>
           <span class="alt-skill-name">Launch Audit</span>
-          <span class="alt-skill-version">v1.0.0</span>
+          <span class="alt-skill-version">v1.0.4</span>
         </span>
         <p class="alt-skill-desc">Answer one question about a project that thinks it is finished: <strong>if we pushed this to production today, what breaks, what is missing, and who owns each item?</strong> Harvest every existing report as cited evidence, scan the built output for the ship-only dimensions nothing else covers, ask the human what no file can answer, and produce a GO / GO WITH RISKS / NO-GO verdict with an owner-grouped punch list.</p>
         <span class="token-usage token-usage--high" data-token-usage="high" aria-label="Token usage: High">
@@ -897,7 +897,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-export-pdf.html"><code>/twt-export-pdf</code></a>
           <span class="alt-skill-name">Export PDF</span>
-          <span class="alt-skill-version">v1.1.5</span>
+          <span class="alt-skill-version">v1.1.6</span>
         </span>
         <p class="alt-skill-desc">Turns a Markdown document into a polished, on-brand PDF. A reliable script does the conversion, so the result looks identical on every run.</p>
         <span class="token-usage token-usage--low" data-token-usage="low" aria-label="Token usage: Low">
@@ -933,7 +933,7 @@
     </section><section class="section-band catalog-section">
       <div class="section-title reveal">
         <div>
-          <p class="eyebrow">Purpose · 5 skills</p>
+          <p class="eyebrow">Purpose · 6 skills</p>
           <h2>Standalone utilities</h2>
         </div>
       </div>
@@ -993,6 +993,18 @@
           <span class="alt-skill-version">v1.0.1</span>
         </span>
         <p class="alt-skill-desc">Rebuild the Phase-2 HTML page mockups (<code>.twt-artifacts/design/mockup/pages/*.html</code>) inside the project's Figma file — one frame per selected page × breakpoint — <strong>instantiating the design-system library components</strong> pushed by <code>/twt-figma-design-system</code> wherever a mockup section maps to a cataloged component, with the mockup's real content. Re-runs update existing page frames in place via the node-map.</p>
+        <span class="token-usage token-usage--high" data-token-usage="high" aria-label="Token usage: High">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
+    <strong>High</strong>
+  </span>
+      </li><li class="reveal" data-skill="twt-inherit-define">
+        <span class="alt-skill-head">
+          <a href="skills/twt-inherit-define.html"><code>/twt-inherit-define</code></a>
+          <span class="alt-skill-name">Inherit</span>
+          <span class="alt-skill-version">v1.0.1</span>
+        </span>
+        <p class="alt-skill-desc">Read an existing project's codebase — its own framework, styling system, component idiom, and file layout — and derive <code>.twt-artifacts/inherited/conventions.md</code>, the contract every later <code>inherit</code>-target step (the block creator, the target descriptor, asset sync) reads instead of assuming a twt-scaffolded layout.</p>
         <span class="token-usage token-usage--high" data-token-usage="high" aria-label="Token usage: High">
     <span class="token-usage__label">Token usage</span>
     <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
