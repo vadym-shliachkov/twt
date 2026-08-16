@@ -1275,7 +1275,7 @@ flowchart TB
 **Version:** 1.3.13
 
 **Inputs:**
-- Optional --target html|elementor|inherit (else menu); optional page scope
+- Optional --target html|elementor|inherit (else menu); optional page scope; optional continuation tokens `pilot-approved` and `modifications-approved` (Step 4, evaluated in that reverse order — see Continuation tokens)
 
 **Dependencies:**
 - Hard: none

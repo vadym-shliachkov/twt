@@ -103,6 +103,7 @@ Record the choice as `<target>` and continue.
 
 | Step | Dispatch | Mode |
 |---|---|---|
+| 0·setup | `/twt-setup` | plain — interactive-only, and the one question it needs is asked here before dispatching |
 | 2·pre | `/twt-figma-dev-audit` | collect (advisory; the proceed prompt is asked here, on the main thread) |
 | 2 | `/twt-design-system-define`, `/twt-component-define` | collect-and-surface |
 | 2a | `/twt-content-approval-checklist` | collect (no user-facing gate to surface) |

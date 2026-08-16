@@ -5,7 +5,7 @@ description: (v1.3.13) Phase 3 full path — promote the Phase-2 design into the
 version: 1.3.13
 accepts_arguments: true
 inputs:
-  - Optional --target html|elementor|inherit (else menu); optional page scope
+  - Optional --target html|elementor|inherit (else menu); optional page scope; optional continuation tokens `pilot-approved` and `modifications-approved` (Step 4, evaluated in that reverse order — see Continuation tokens)
 dependencies:
   hard: []
   soft:
@@ -94,6 +94,7 @@ Record the choice as `<target>` and continue.
 
 | Step | Dispatch | Mode |
 |---|---|---|
+| 0·setup | `/twt-setup` | plain — interactive-only, and the one question it needs is asked here before dispatching |
 | 2a | `/twt-content-approval-checklist` | collect (no user-facing gate to surface) |
 | 3 | `/twt-elementor-theme-creator`, `/twt-html-site-creator` | plain — scaffolders, no gate |
 | 3 | `/twt-inherit-define` | **collect-and-surface** — its Step 7 review gate is user-facing |
@@ -163,7 +164,16 @@ Take the page list from `mockup/pages/`, falling back to page-level `mockup/*.ht
 - `<target>` = **elementor** → `/twt-elementor-block-creator`
 - `<target>` = **inherit** → `/twt-inherit-block-creator`
 
-**Continuation:** if `$ARGUMENTS` contains the token `pilot-approved`, the pilot was already built and approved in a prior pass — **skip Steps 4a and the gate** and go straight to the pages not yet built: Step 4b-inherit's serial loop for `<target>` = **inherit**, Step 4b's parallel batch for html/elementor.
+**Continuation tokens.** This step accepts two, and they **compose** — one is about which pages still need building, the other is about writes the user has already approved. Evaluate them in this order, never the other way round:
+
+**1. `modifications-approved` (inherit only) — handled FIRST, before any continuation skip.** It means: the user has seen the write plan sitting open in `.twt-artifacts/inherited/decisions.md` and approved it. Before anything else in Step 4:
+- Read `.twt-artifacts/inherited/decisions.md` and take the page named on its `## Proposed rules (confirm before binding)` section's `Plan for page:` line (the builder writes it there; fall back to the pilot page if the file predates that field).
+- **Re-dispatch `/twt-inherit-block-creator` for that page with `subagent-collect modifications-approved`** and wait. Its pre-approved branch applies the approved MODIFYs, treats the CREATEs the earlier run already wrote as its own output rather than as unplanned edits, and marks the decision `status: resolved`.
+- Record the applied MODIFYs for the Step 5 report, then continue with the rest of Step 4.
+
+This must not be skipped by anything, because **`pilot-approved` short-circuits straight past Step 4a** — so on a run carrying both tokens (the normal shape when `/twt-site` surfaces the write approval and the pilot review in one pass), evaluating `pilot-approved` first would jump to Step 4b-inherit and the pilot page's approved modifications would never be applied at all. A `modifications-approved` run with no open, unresolved plan in `decisions.md` is a no-op: note it and move on, never re-apply a plan already marked `status: resolved`.
+
+**2. `pilot-approved` — handled second.** The pilot was already built and approved in a prior pass — **skip Steps 4a and the gate** and go straight to the pages not yet built: Step 4b-inherit's serial loop for `<target>` = **inherit**, Step 4b's parallel batch for html/elementor.
 
 ### Step 4a — Foundation / pilot pass (serial)
 Dispatch the builder for the **foundation page only** (Agent tool, passing its mockup HTML + `layouts/<page>.md`). It writes its page file *and* the shared files, priming the reuse pool: the common sections/widgets, chrome, and shared CSS now exist for every other page to reuse. If there is only one page, you're done — skip to Step 5.
@@ -179,7 +189,7 @@ Dispatch the builder for the **foundation page only** (Agent tool, passing its m
 The pilot is the cheap proof of how the design lands in `<target>`. Gate on it before spending tokens promoting every remaining page.
 
 - **Auto / unattended** (the run was started in `auto`): skip the gate — build all remaining pages (`<target>` = **inherit** → Step 4b-inherit's serial loop; html/elementor → Step 4b's parallel batch). Note in the report that the pilot was auto-approved.
-- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** build the rest and do **not** ask. Record an open decision in the target's decisions file — `.twt-artifacts/html-site/decisions.md` (html), `.twt-artifacts/elementor-theme/decisions.md` (elementor), or `.twt-artifacts/inherited/decisions.md` (inherit) — "Pilot page `<page>` built at `<path>`; approve to promote the remaining N pages, adjust the pilot, or stop" (`status: open`, list the remaining pages) — and **return** that decision + the pilot path in your report. The orchestrator surfaces the gate and re-dispatches `/twt-develop` with `pilot-approved` to continue. Stop here.
+- **Collect mode** (`subagent-collect` in `$ARGUMENTS`, e.g. dispatched by `/twt-site`): do **not** build the rest and do **not** ask. Record an open decision in the target's decisions file — `.twt-artifacts/html-site/decisions.md` (html), `.twt-artifacts/elementor-theme/decisions.md` (elementor), or `.twt-artifacts/inherited/decisions.md` (inherit) — "Pilot page `<page>` built at `<path>`; approve to promote the remaining N pages, adjust the pilot, or stop" (`status: open`, list the remaining pages) — and **return** that decision + the pilot path in your report. The orchestrator surfaces the gate and re-dispatches `/twt-develop` with `pilot-approved` to continue — and, for inherit, with `modifications-approved` alongside it if it surfaced the builder's write plan in the same pass. Both tokens together are the normal shape; Step 4's Continuation tokens rule applies the approved writes **before** `pilot-approved` skips ahead. Stop here.
   **For `inherit`, merge — never overwrite.** `/twt-inherit-block-creator` writes its own deferred MODIFY plan into that same `.twt-artifacts/inherited/decisions.md` during Step 4a. Read it first and **add** your pilot question to its `## Open questions` section, leaving its `## Proposed rules (confirm before binding)` list intact; a blind rewrite here silently discards the write plan the user is supposed to approve. Re-validate afterwards (one Bash call): `node "${CLAUDE_PLUGIN_ROOT}/tools/check-decisions.mjs" --file ".twt-artifacts/inherited/decisions.md"` — fix until it exits 0. Return **both** decisions (the pilot gate and the write plan) in your report so the orchestrator can surface them together in one pass rather than two.
 - **Standalone interactive:** present the pilot to the user (the built page path; invite them to open it) and ask via the **AskUserQuestion** tool (single-select, header "Pilot"):
   - **Build the remaining N pages** — proceed to Step 4b (html/elementor) or Step 4b-inherit (inherit), per the branch below.
