@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Build a page or block **into an existing project's own architecture** — the conventions `/twt-inherit-define` already discovered and wrote to `.twt-ar">
+  <title>/twt-inherit-block-creator | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-inherit-block-creator</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · inherit</p>
+          <h1>/twt-inherit-block-creator</h1>
+          <p class="lede">Build a page or block <strong>into an existing project's own architecture</strong> — the conventions <code>/twt-inherit-define</code> already discovered and wrote to <code>.twt-artifacts/inherited/</code> — instead of a...</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
+    <strong>High</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Build a page or block <strong>into an existing project's own architecture</strong> — the conventions <code>/twt-inherit-define</code> already discovered and wrote to <code>.twt-artifacts/inherited/</code> — instead of a twt-scaffolded layout. This is the only skill in the <code>inherit</code> target that writes into the host's real source tree, so it plans every write, classifies it as CREATE or MODIFY, and gets one consolidated approval for the whole batch before touching anything the user didn't already agree to.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/inherited/conventions.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/inherited/exemplars.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/inherited/token-map.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/design/mockup/pages/</code><span class="file-desc">The rendered HTML mockup for each page.</span></li><li><code>.twt-artifacts/design/layout/layouts/</code><span class="file-desc">Per-page layout specs — section order, components, content, and breakpoints.</span></li><li><code>.twt-artifacts/design/design-system/component/components.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>the host project's source tree</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>.twt-artifacts/inherited/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Does not install dependencies. If a block genuinely needs a package the project lacks, it is reported as a decision, never installed — adding a dependency belongs to whoever maintains <code>package.json</code>.</li><li>Does not retrofit existing components to the design system. It builds new work in the host's idiom as documented; making the host's existing code conform to anything is separate, user-watched work <code>/twt-inherit-define</code> explicitly does not do either.</li><li>Does not scaffold a project structure — there's already one, discovered by <code>/twt-inherit-define</code>, which must have run first.</li><li>Never touches lockfiles, CI config, <code>.env*</code> files, database migrations, build output, <code>node_modules</code>, or anything gitignored — regardless of approval. These are excluded from the write plan before the user ever sees it, not offered as a choice.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Every intended write was classified CREATE or MODIFY *before* anything was written.</li><li>If the MODIFY list was non-empty, the user saw the whole plan once — full file list, what changes, line counts — and gave one approval that covered the entire batch; no per-file questions followed.</li><li>Files written match the host's idiom: exemplar directory placement, naming, import style, and co-located test/story files where the exemplars have them.</li><li>Styling uses the host's own system per <code>token-map.md</code> — snapped values in <code>host</code> mode, named scale extensions in <code>--exact</code> mode — never an inline arbitrary-value escape, and never an invented literal for an <code>unmapped</code> token.</li><li>The report lists files created, files modified (or the TODO list if modifications were declined), the reuse decision, any unmapped tokens that affected the build, and any dependency decisions.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
