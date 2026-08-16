@@ -1268,7 +1268,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.10
+**Version:** 1.3.11
 
 **Inputs:**
 - Optional --target html|elementor|inherit (else menu); optional page scope
@@ -2518,7 +2518,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.4
+**Version:** 1.13.5
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2549,7 +2549,7 @@ flowchart TB
 | .twt-artifacts/site-log.md |  |
 | .twt-artifacts/pre-design/phase-review.md |  |
 | .twt-artifacts/design/phase-review.md |  |
-| .twt-artifacts/<html-site|elementor-theme>/phase-review.md |  |
+| .twt-artifacts/<html-site|elementor-theme|inherited>/phase-review.md |  |
 | .twt-artifacts/reports/index.html |  |
 | .twt-artifacts/reports/ (copied headline reports) |  |
 | .twt-artifacts/pre-design/content/text-analysis/ |  |
@@ -2558,7 +2558,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.10
+**Version:** 1.5.11
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2577,6 +2577,7 @@ flowchart TB
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
@@ -2962,7 +2963,7 @@ flowchart TB
 
 ```
 .twt-artifacts/
-  <html-site|elementor-theme>/
+  <html-site|elementor-theme|inherited>/
   block-map/
   content-approval/
   content-quality/

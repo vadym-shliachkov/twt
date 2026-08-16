@@ -972,7 +972,7 @@ Audit how good a design system is **and** how consistently a real design follows
 ## /twt-develop
 
 **Category:** develop
-**Version:** 1.3.10
+**Version:** 1.3.11
 **Accepts arguments:** yes
 
 Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold exists, promote the design into production code using currently available content, and keep the content approval workbook running as a parallel confirmation track. It dispatches the builders; for multi-page promotion it runs one serial **foundation page** to seed the reuse pool, then promotes the rest as a **parallel batch**, and merges their shared-file deltas.
@@ -2512,7 +2512,7 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 ## /twt-site
 
 **Category:** site
-**Version:** 1.13.4
+**Version:** 1.13.5
 **Accepts arguments:** yes
 
 Run the entire twt pipeline — Pre-design → Design → Content approval checklist → Development → QA — as a single guided command. The user picks which phases to run and the build target up front, then approves (or repeats/stops) at a pause after each phase, with that phase's outstanding BLOCKERs surfaced before the decision. With the first token `auto`, the whole run is unattended: every choice is inferred from the provided input, existing artifacts, and defaults — zero questions.
@@ -2540,7 +2540,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 - .twt-artifacts/site-log.md
 - .twt-artifacts/pre-design/phase-review.md
 - .twt-artifacts/design/phase-review.md
-- .twt-artifacts/<html-site|elementor-theme>/phase-review.md
+- .twt-artifacts/<html-site|elementor-theme|inherited>/phase-review.md
 - .twt-artifacts/reports/index.html
 - .twt-artifacts/reports/ (copied headline reports)
 - .twt-artifacts/pre-design/content/text-analysis/
@@ -2567,7 +2567,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.10
+**Version:** 1.5.11
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
@@ -2585,6 +2585,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 - .twt-artifacts/content-approval/content-approval-checklist.xlsx
 - .twt-artifacts/elementor-theme/conventions.md
 - .twt-artifacts/html-site/conventions.md
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/figma-dev-audit/readiness-report.md
 
 **Writes:**
