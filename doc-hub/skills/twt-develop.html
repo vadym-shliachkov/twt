@@ -42,7 +42,7 @@
           <h1>/twt-develop</h1>
           <p class="lede">Promote the approved design into production code — a foundation page first, then the rest in parallel.</p>
           <div class="fact-row">
-            <span>Version 1.3.9</span>
+            <span>Version 1.3.12</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--very-high token-usage--compact" data-token-usage="very-high" aria-label="Token usage: Very high">
     <span class="token-usage__label">Token usage</span>
@@ -64,7 +64,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Optional --target html|elementor (else menu); optional page scope</p>
+    <p>Optional --target html|elementor|inherit (else menu); optional page scope</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
@@ -72,7 +72,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>site/assets/css/sections.css</code><span class="file-desc">Reusable section styles, built from tokens.</span></li><li><code>site/assets/css/general.css</code><span class="file-desc">Site-wide base styles, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/widgets.css</code><span class="file-desc">The CSS for the theme's custom widgets, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/design-system.css</code><span class="file-desc">The design tokens compiled into the theme's stylesheet.</span></li></ul>
+    <ul class="file-list"><li><code>site/assets/css/sections.css</code><span class="file-desc">Reusable section styles, built from tokens.</span></li><li><code>site/assets/css/general.css</code><span class="file-desc">Site-wide base styles, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/widgets.css</code><span class="file-desc">The CSS for the theme's custom widgets, built from tokens.</span></li><li><code>&lt;THEME&gt;/assets/css/design-system.css</code><span class="file-desc">The design tokens compiled into the theme's stylesheet.</span></li><li><code>the host project's source tree</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
@@ -80,7 +80,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Target chosen (HTML or Elementor); the target's scaffold is ensured (created if its <code>conventions.md</code> is missing)</li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code> is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically</li><li>Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests</li><li>A <strong>foundation page</strong> is promoted first (serial) to seed reuse; it doubles as a <strong>pilot</strong> that the user reviews at a gate before the remaining pages are built — so a wrong direction is caught after 1 page, not after all of them</li><li>After the pilot is approved, the remaining pages are promoted as a <strong>single parallel batch</strong>, then their shared-file deltas are merged and de-duplicated serially</li><li>Approved workbook rows are <strong>not</strong> applied by this skill; after stakeholder confirmation, the user explicitly runs <code>/twt-content-approval-implement</code> to update the corresponding blocks/pages</li><li>Reports what was built per page and anything to follow up before Phase 4</li></ul>
+    <ul><li>Target chosen (HTML or Elementor); the target's scaffold is ensured (created if its <code>conventions.md</code> is missing)</li><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code> is created or refreshed as a parallel approval artifact, without blocking Development and without applying approved rows automatically</li><li>Each Phase-2 mockup page is promoted into the target via the matching builder, using the content currently available from Figma, content-fetch artifacts, layouts, mockups, and asset manifests</li><li>A <strong>foundation page</strong> is promoted first (serial) to seed reuse; it doubles as a <strong>pilot</strong> that the user reviews at a gate before the remaining pages are built — so a wrong direction is caught after 1 page, not after all of them</li><li>After the pilot is approved, the remaining pages are promoted as a <strong>single parallel batch</strong>, then their shared-file deltas are merged and de-duplicated serially — <strong>except <code>inherit</code></strong>, which promotes the remaining pages <strong>serially, one at a time</strong> (Step 4b-inherit) instead of a parallel batch, because its consolidated-approval contract wins over the speed optimization</li><li>Approved workbook rows are <strong>not</strong> applied by this skill; after stakeholder confirmation, the user explicitly runs <code>/twt-content-approval-implement</code> to update the corresponding blocks/pages</li><li>Reports what was built per page and anything to follow up before Phase 4</li></ul>
   </section>
       </section>
   </main>

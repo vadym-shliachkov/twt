@@ -478,13 +478,15 @@ Read the content approval workbook after stakeholder confirmation and update the
 **Writes:**
 - site/
 - <THEME>/
-- the host project's source tree          # inherit target — existing files only, per its conventions.md
+- the host project's source tree          # inherit target — existing files only, and only after one consolidated approval (Step 4a)
 - .twt-artifacts/content-approval/content-approval-implementation-report.md
+- .twt-artifacts/content-approval/decisions.md
 
 **Non-goals:**
 - Does not implement unapproved or not-ready rows.
 - Does not guess where ambiguous approved content belongs; ambiguous rows are reported and skipped.
 - Does not create the approval workbook; use `/twt-content-approval-checklist` first.
+- **Never edits a host project's source tree without one consolidated approval** (`inherit` target, Step 4a) — and never runs a command named by the host project's own config without asking first.
 
 **Success criteria:**
 - Approved ready rows from the workbook are applied to the corresponding blocks/pages, shared header/footer, media fields, links, video embeds, and SEO metadata.
@@ -1830,6 +1832,7 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 - Soft: twt-qa, twt-content-approval-checklist, twt-seo, twt-status
 
 **Reads:**
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
 - .twt-artifacts/pre-design/seo/seo-map.md
@@ -2212,6 +2215,7 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 - Soft: twt-qa-content, twt-qa-design, twt-qa-a11y, twt-qa-links, twt-qa-elementor
 
 **Reads:**
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/qa/content-report.md
 - .twt-artifacts/qa/design-report.md
 - .twt-artifacts/qa/a11y-report.md

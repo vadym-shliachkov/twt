@@ -42,7 +42,7 @@
           <h1>/twt-content-approval-implement</h1>
           <p class="lede">Push approved workbook content into the built site — only the rows marked ready to implement.</p>
           <div class="fact-row">
-            <span>Version 1.1.5</span>
+            <span>Version 1.1.6</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
     <span class="token-usage__label">Token usage</span>
@@ -64,19 +64,19 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Optional path to content-approval-checklist.xlsx; optional --target html|elementor</p>
+    <p>Optional path to content-approval-checklist.xlsx; optional --target html|elementor|inherit</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
-    <ul class="file-list"><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>&lt;THEME&gt;/</code><span class="file-desc">The WordPress child theme being built or extended.</span></li><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li><li><code>.twt-artifacts/elementor-theme/conventions.md</code><span class="file-desc">The build conventions every Elementor widget and template in this project follows.</span></li></ul>
+    <ul class="file-list"><li><code>.twt-artifacts/content-approval/content-approval-checklist.xlsx</code><span class="file-desc">A per-page workbook where every headline, link, asset, and SEO field is reviewed and signed off before build.</span></li><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>&lt;THEME&gt;/</code><span class="file-desc">The WordPress child theme being built or extended.</span></li><li><code>.twt-artifacts/html-site/conventions.md</code><span class="file-desc">The build conventions every HTML page in this project follows.</span></li><li><code>.twt-artifacts/elementor-theme/conventions.md</code><span class="file-desc">The build conventions every Elementor widget and template in this project follows.</span></li><li><code>.twt-artifacts/inherited/conventions.md</code><span class="file-desc">A Markdown document.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Result it provides</h2>
-    <ul class="file-list"><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>&lt;THEME&gt;/</code><span class="file-desc">The WordPress child theme being built or extended.</span></li><li><code>.twt-artifacts/content-approval/content-approval-implementation-report.md</code><span class="file-desc">A record of which approved rows were applied to the built site.</span></li></ul>
+    <ul class="file-list"><li><code>site/</code><span class="file-desc">The built static website.</span></li><li><code>&lt;THEME&gt;/</code><span class="file-desc">The WordPress child theme being built or extended.</span></li><li><code>the host project's source tree</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>.twt-artifacts/content-approval/content-approval-implementation-report.md</code><span class="file-desc">A record of which approved rows were applied to the built site.</span></li><li><code>.twt-artifacts/content-approval/decisions.md</code><span class="file-desc">A log of the key decisions and trade-offs made while producing this artifact.</span></li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Does not implement unapproved or not-ready rows.</li><li>Does not guess where ambiguous approved content belongs; ambiguous rows are reported and skipped.</li><li>Does not create the approval workbook; use <code>/twt-content-approval-checklist</code> first.</li></ul>
+    <ul><li>Does not implement unapproved or not-ready rows.</li><li>Does not guess where ambiguous approved content belongs; ambiguous rows are reported and skipped.</li><li>Does not create the approval workbook; use <code>/twt-content-approval-checklist</code> first.</li><li><strong>Never edits a host project's source tree without one consolidated approval</strong> (<code>inherit</code> target, Step 4a) — and never runs a command named by the host project's own config without asking first.</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>

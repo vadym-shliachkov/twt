@@ -843,8 +843,9 @@ flowchart TB
 |------|-------|
 | site/ |  |
 | <THEME>/ |  |
-| the host project's source tree          # inherit target — existing files only, per its conventions.md |  |
+| the host project's source tree          # inherit target — existing files only, and only after one consolidated approval (Step 4a) |  |
 | .twt-artifacts/content-approval/content-approval-implementation-report.md |  |
+| .twt-artifacts/content-approval/decisions.md |  |
 
 ### /twt-content-fetch
 
@@ -1901,6 +1902,7 @@ flowchart TB
 - Soft consumers: twt-eval-smoke
 
 **Reads:**
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/qa/qa-report.md
 - .twt-artifacts/qa/gaps.md
 - .twt-artifacts/pre-design/seo/seo-map.md
@@ -2239,6 +2241,7 @@ flowchart TB
 - Soft consumers: twt-launch-audit, twt-site
 
 **Reads:**
+- .twt-artifacts/inherited/conventions.md
 - .twt-artifacts/qa/content-report.md
 - .twt-artifacts/qa/design-report.md
 - .twt-artifacts/qa/a11y-report.md
