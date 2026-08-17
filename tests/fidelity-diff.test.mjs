@@ -1,9 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { makeElement, makeSpec } from '../tools/fidelity/spec.mjs';
 import { matchElements, diffSpec, toSummary, scoreOf, SUMMARY_MAX_ROWS } from '../tools/fidelity/diff.mjs';
 
 const el = (id, over = {}) => makeElement({ id, ...over });
+const DIFF_CLI = fileURLToPath(new URL('../tools/fidelity/diff.mjs', import.meta.url));
+
+// The CLI reads the reference spec straight off disk, in the shape
+// twt-fidelity-fetch (Task 7) actually writes it: `widths` is an OBJECT keyed
+// by pixel width, each value the elements array captured at that width — NOT
+// spec.mjs's makeSpec() shape used everywhere else in this file (`widths: [array
+// of numbers]` + a flat top-level `elements`), which is a unit-test convenience
+// for calling diffSpec()/toSummary() directly with one width's slice already
+// picked out. The brief's own Step 2 CLI test built its fixture with makeSpec()
+// and would have produced `spec.widths['1440'] === undefined` (array indexed by
+// a string key past its length) the moment the CLI tried to pair widths — an
+// eighth brief defect in this plan (the cross-task fact about the widths-keyed
+// map was right; the test fixture illustrating it used the wrong constructor).
+// Every fixture below is hand-built in the real on-disk shape instead.
+const onDiskSpec = ({ target, source, provenance, widths }) => ({
+  schema: 'twt-fidelity/1', target, source, provenance, widths,
+});
 
 test('elements match on the data-fid stamp regardless of order', () => {
   const ref = [el('hero.title.0'), el('hero.cta.0')];
@@ -357,4 +379,204 @@ test('a zero-length array pair on both sides produces no row (nothing to compare
   const { rows, counts } = diffSpec(spec, got, { mode: 'system', width: 1440 });
   assert.equal(rows.find((r) => r.prop === 'spacing.padding'), undefined);
   assert.equal(Object.keys(counts).includes('undefined'), false);
+});
+
+// --- CLI entrypoint (Step 3 in the skill: "Diff and render") ---------------
+
+test('the diff CLI writes deltas, summary and both reports', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, got ${res.status}; stderr: ${res.stderr}`);
+  for (const f of ['deltas.json', 'summary.json', 'validation-report.md', 'fidelity-report.html']) {
+    assert.ok(existsSync(join(dir, f)), `missing ${f}`);
+  }
+  const summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
+  assert.ok(summary.rows.some((r) => r.prop === 'type.size' && r.status === 'fail'));
+});
+
+test('the diff CLI honours the estimated filenames', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-est-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'image', ref: 'r.png' },
+    provenance: { measured: 0, estimated: 1 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  // Mark the one element estimated directly (spec.mjs's makeElement default is
+  // 'measured'; the on-disk shape carries provenance per-element the same way).
+  spec.widths['1440'][0].provenance = 'estimated';
+  writeFileSync(join(dir, 'reference-spec-estimated.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, got ${res.status}; stderr: ${res.stderr}`);
+  assert.ok(existsSync(join(dir, 'validation-report-estimated.md')));
+  assert.ok(!existsSync(join(dir, 'validation-report.md')),
+    'an estimated run must never render under the measured filename');
+  assert.ok(existsSync(join(dir, 'fidelity-report-estimated.html')));
+  assert.ok(!existsSync(join(dir, 'fidelity-report.html')),
+    'an estimated run must never render its HTML report under the measured filename either');
+});
+
+// --- Boundary + regression coverage beyond the brief ------------------------
+// Standing instruction: the brief's tests are a floor, not a ceiling — every
+// threshold the CLI compares against gets an assertion, and both CLIs' exit
+// codes get boundary coverage. Unlike pixdiff.mjs's exit-2 branch, both exit
+// conditions below are deterministic and directly reachable from a real
+// subprocess call — no environment-gating or injection seam needed.
+
+test('no reference spec in --dir exits 3, not 0, and writes nothing', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({ widths: { 1440: [] }, how: 'test' }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 3, `expected exit 3, got ${res.status}`);
+  assert.match(res.stderr, /no reference spec/);
+  assert.ok(!existsSync(join(dir, 'deltas.json')), 'a failed run must not write a partial deltas.json');
+});
+
+test('a measured width the reference never captured exits 3, not a silent pass', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  // measured.json captured 768 — a width the reference spec above never saw.
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 768: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 3, `expected exit 3, got ${res.status}`);
+  assert.match(res.stderr, /reference has no width 768/);
+  assert.ok(!existsSync(join(dir, 'deltas.json')));
+});
+
+test('the score is computed across every measured width, not just the first (Ruling R2)', () => {
+  // JS object keys that look like array indices (bare non-negative integers)
+  // always iterate in ASCENDING NUMERIC order regardless of insertion order —
+  // so Object.entries(measured.widths) below always yields 768 before 1440.
+  // Width 768 fails hard alone (hand-derived health 67, same fixture shape as
+  // the "unassessed group" test above); width 1440 matches perfectly alone
+  // (health 100). A CLI that reused perWidth[0].score (the R2 regression)
+  // would report 67/Revise; the correct renormalized-over-both-widths health
+  // is 83/Pass — see the derivation in the comment below.
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const refEl = () => el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } });
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 2, estimated: 0 },
+    widths: { 768: [refEl()], 1440: [refEl()] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: {
+      768: [el('hero.0', { type: { size: 40 }, fill: { color: '#000000' } })], // fails hard: health 67 alone
+      1440: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })], // perfect: health 100 alone
+    },
+    how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const deltas = JSON.parse(readFileSync(join(dir, 'deltas.json'), 'utf8'));
+  // Derivation: geometry rows across both widths all pass (box defaults match
+  // on both sides) -> per.geometry = 5. colour: fill.color passes at both
+  // widths -> per.colour = 5. typography: type.size passes at 1440, fails at
+  // 768 -> credit (1+0)/2 = 0.5 -> per.typography = 2.5. structure: no rows
+  // at either width -> null, excluded from the denominator.
+  // weightSum(assessed) = 30 + 25 + 20 = 75
+  // health = round(((5/5*30) + (2.5/5*25) + (5/5*20)) / 75 * 100)
+  //        = round((30 + 12.5 + 20) / 75 * 100) = round(83.333...) = 83
+  assert.equal(deltas.score.health, 83,
+    'health must be renormalized over BOTH widths\' rows combined, not width 768\'s alone (67) or width 1440\'s alone (100)');
+  assert.equal(deltas.score.band, 'Pass');
+  const summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
+  assert.equal(summary.score.health, 83, 'summary.json must carry the SAME renormalized score as deltas.json');
+});
+
+test('the validation report lists every assessed width, ascending, never a nonexistent spec.widths[0]', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const refEl = () => el('hero.0', { type: { size: 56 } });
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 2, estimated: 0 },
+    widths: { 768: [refEl()], 1440: [refEl()] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 768: [refEl()], 1440: [refEl()] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
+  assert.match(md, /\*\*Widths:\*\* 768, 1440/,
+    'meta.widths must be the ARRAY of assessed widths (renderValidationReport calls .join on it) — ' +
+    'spec.widths on disk is the widths-keyed OBJECT, so spec.widths[0] would read a nonexistent key');
+  // Only fidelity-report.html embeds the images block (validation-report.md
+  // never prints image paths) — check the primary width landed there, not a
+  // literal "undefined.png" from an unindexable spec.widths[0].
+  const html = readFileSync(join(dir, 'fidelity-report.html'), 'utf8');
+  assert.match(html, /reference\/768\.png/, 'the images block must key off a real assessed width, not undefined');
+  assert.doesNotMatch(html, /undefined\.png/);
+});
+
+test('a pixdiff.json in the artifact dir surfaces the pixel-diff percentage in the report', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  writeFileSync(join(dir, 'pixdiff.json'), JSON.stringify({ mismatch: 4.2, reported: true, out: 'diff/iter-1-1440.png' }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
+  assert.match(md, /\*\*Pixel diff:\*\* 4\.2% of pixels differ\./);
+});
+
+test('without a pixdiff.json the report renders cleanly with no pixel-diff line', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
+  assert.doesNotMatch(md, /Pixel diff/, 'the existsSync guard must skip the pixel line, not crash, when pixdiff.json is absent');
+});
+
+test('an unassessed run (nothing comparable) reports "not assessed" on stderr, never a literal null', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', ref: 'x' },
+    provenance: { measured: 0, estimated: 0 },
+    widths: { 1440: [] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({ widths: { 1440: [] }, how: 'test' }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  assert.match(res.stderr, /not assessed/);
+  assert.doesNotMatch(res.stderr, /null/i, `stderr must not leak a literal null: ${res.stderr}`);
+  const deltas = JSON.parse(readFileSync(join(dir, 'deltas.json'), 'utf8'));
+  assert.equal(deltas.score.health, null);
 });

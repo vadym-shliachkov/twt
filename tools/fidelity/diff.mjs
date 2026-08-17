@@ -6,8 +6,12 @@
 // build: its accuracy degrades exactly as layout drift grows, so it is least
 // trustworthy when it matters most. Every heuristic pair is flagged as such.
 'use strict';
-import { PROPERTY_GROUPS } from './spec.mjs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { PROPERTY_GROUPS, isEstimated, reportBasenames } from './spec.mjs';
 import { compareProperty, TOLERANCES } from './tolerance.mjs';
+import { renderValidationReport, renderHtml } from './report.mjs';
 
 export const SUMMARY_MAX_ROWS = 120;
 const HEURISTIC_ACCEPT = 0.55;
@@ -208,4 +212,108 @@ export function toSummary(diff, { maxRows = SUMMARY_MAX_ROWS } = {}) {
     rows: kept,
     truncated: Math.max(0, interesting.length - kept.length),
   };
+}
+
+// --- CLI entrypoint --------------------------------------------------------
+//
+// A SKILL.md is prose executed by a model: it runs Bash and file tools, never
+// library functions. This is the diff/render half of that same gap — reads
+// the reference spec + measured.json off disk, joins them, and writes
+// deltas.json, summary.json, and both human-facing reports via report.mjs.
+//
+// Usage:
+//   node tools/fidelity/diff.mjs --dir <artifact-dir> --mode <system|strict> --iteration <n>
+// Exit: 0 ok | 3 no reference spec in --dir, or a measured width the
+// reference never captured (measured widths must be a SUBSET of the
+// reference's captured widths — comparing a width the reference never saw
+// would silently score against nothing). Both conditions are deterministic
+// and trivially reachable from a real subprocess test (a missing file, a
+// width absent from a hand-built fixture) — unlike pixdiff.mjs's exit-2
+// branch, nothing here needs an availability probe or a pure classifier to
+// be testable; the guards below are the whole contract.
+const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+if (isMain) {
+  const arg = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i === -1 ? d : process.argv[i + 1]; };
+  const dir = arg('dir');
+  const mode = arg('mode', 'system');
+  const iteration = Number(arg('iteration', '1'));
+
+  const specPath = ['reference-spec.json', 'reference-spec-estimated.json']
+    .map((f) => join(dir, f)).find(existsSync);
+  if (!specPath) {
+    process.stderr.write(`no reference spec in ${dir}\n`);
+    process.exit(3);
+  }
+
+  const spec = JSON.parse(readFileSync(specPath, 'utf8'));
+  const measured = JSON.parse(readFileSync(join(dir, 'measured.json'), 'utf8'));
+
+  // Pair the reference and the build BY WIDTH. The reference spec on disk is
+  // a widths-keyed MAP (`{ "1440": [...elements] }`) — exactly like
+  // measured.json — not the flat `elements` array that spec.mjs's makeSpec()
+  // test-fixture helper produces (that shape is a unit-test convenience for
+  // diffSpec()/toSummary(), called directly with one width's slice; it is
+  // NOT what twt-fidelity-fetch writes to disk). An earlier version of this
+  // plan gave the on-disk spec a single flat `elements` array, which cannot
+  // represent a reference captured at 1440/768/390 — three measured widths
+  // would have been compared against one reference set.
+  const perWidth = Object.entries(measured.widths).map(([w, els]) => {
+    const refEls = spec.widths?.[w];
+    if (!refEls) {
+      process.stderr.write(`reference has no width ${w} — measured widths must be a subset of captured ones\n`);
+      process.exit(3);
+    }
+    // diffSpec takes { elements } — hand it this width's slice, not the whole spec.
+    return diffSpec({ ...spec, elements: refEls }, els, { mode, width: Number(w) });
+  });
+  const merged = {
+    rows: perWidth.flatMap((d) => d.rows),
+    counts: perWidth.reduce((acc, d) => {
+      for (const [k, v] of Object.entries(d.counts)) acc[k] = (acc[k] ?? 0) + v;
+      return acc;
+    }, { pass: 0, warn: 0, fail: 0 }),
+    mode,
+    target: spec.target,
+  };
+  // Score across EVERY width, not perWidth[0]: the default is three widths, so
+  // reusing one width's score would report a number for 1440 under a header
+  // claiming 1440/768/390.
+  merged.score = scoreOf(merged.rows);
+
+  // The widths actually assessed this run, as an ARRAY of numbers — derived
+  // from measured.json's own keys (== perWidth's widths), never from
+  // `spec.widths` directly. report.mjs's renderValidationReport calls
+  // `.join()` on meta.widths and every caller of it (fidelity-report.test.mjs
+  // included) passes an array — but the on-disk spec's `widths` field is the
+  // widths-keyed OBJECT, not an array, so `spec.widths[0]` (an earlier draft
+  // of this CLI) would read a nonexistent key "0" off that map and undefined
+  // would flow into `${undefined}.png` while `meta.widths.join` threw outright.
+  const widthsArr = perWidth.map((d) => d.width);
+
+  const names = reportBasenames(spec);
+  const meta = {
+    target: spec.target, source: spec.source, widths: widthsArr,
+    provenance: spec.provenance, mode, iteration,
+    pixdiff: existsSync(join(dir, 'pixdiff.json'))
+      ? JSON.parse(readFileSync(join(dir, 'pixdiff.json'), 'utf8')) : null,
+    images: {
+      reference: `reference/${widthsArr[0]}.png`,
+      built: `built/iter-${iteration}-${widthsArr[0]}.png`,
+      diff: `diff/iter-${iteration}-${widthsArr[0]}.png`,
+    },
+  };
+
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'deltas.json'), JSON.stringify(merged, null, 2));
+  writeFileSync(join(dir, 'summary.json'), JSON.stringify(toSummary(merged, {}), null, 2));
+  writeFileSync(join(dir, names.md), renderValidationReport(merged, meta));
+  writeFileSync(join(dir, names.html), renderHtml(merged, meta));
+  // Route Health through the same null-safe formatting report.mjs's renderer
+  // uses (fmtHealth) rather than interpolating diff.score.health directly —
+  // an unassessed run (score.health === null) must never leak the literal
+  // string "null" here either, the same defect class Task 6 found twice in
+  // report.mjs itself.
+  const healthStr = merged.score.health === null ? 'not assessed' : `${merged.score.health}/100`;
+  process.stderr.write(
+    `fidelity: ${merged.counts.fail} fail / ${merged.counts.warn} warn — ${merged.score.band} ${healthStr}${isEstimated(spec) ? ' (ESTIMATED)' : ''}\n`);
 }
