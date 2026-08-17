@@ -14,7 +14,7 @@ const esc = (s) => String(s ?? '')
 const LABEL = { geometry: 'Geometry', typography: 'Typography',
                 structure: 'Structure', colour: 'Colour' };
 
-function severity(row, mode) {
+function severity(row) {
   if (row.status === 'fail') return 'BLOCKER';
   if (row.status === 'warn') return 'WARNING';
   return 'SUGGESTION';
@@ -79,9 +79,11 @@ export function renderValidationReport(diff, meta) {
     lines.push(`| ${LABEL[key]} | ${weight} | ${score} | ${evidence} |`);
   }
   lines.push('');
-  lines.push(diff.score.health === null
-    ? '**Health:** not assessed  '
-    : `**Health:** ${diff.score.health}/100 _(weighted over assessed categories only)_  `);
+  // Same null->"not assessed" decision as the Summary line below — both route
+  // through fmtHealth so the wording can only drift in the surrounding text,
+  // never in what counts as "unassessed" (the defect class this file has
+  // already shipped once).
+  lines.push(`**Health:** ${fmtHealth(diff.score.health)}${diff.score.health === null ? '' : ' _(weighted over assessed categories only)_'}  `);
   lines.push(`**Band:** ${diff.score.band}`, '');
   lines.push('_The Band is informational. The gate is the tolerance table, not this score._', '');
   if (meta.pixdiff?.reported) {
@@ -102,7 +104,7 @@ export function renderValidationReport(diff, meta) {
     .sort((a, b) => rank[a.status] - rank[b.status]);
   if (findings.length === 0) lines.push('_Every measured property is within tolerance._', '');
   for (const row of findings) {
-    lines.push(`### ${severity(row, meta.mode)} — \`${row.id}\` ${row.prop}`, '');
+    lines.push(`### ${severity(row)} — \`${row.id}\` ${row.prop}`, '');
     lines.push(`**Where:** \`${row.id}\` @${row.width}${row.how === 'heuristic' ? ' (matched heuristically — unstamped)' : ''}  `);
     const d = row.delta === null ? '' : ` (Δ${row.delta}${row.unit})`;
     lines.push(`**Problem:** ${row.prop} is ${JSON.stringify(row.got)} against a reference of ${JSON.stringify(row.ref)}${d}.${row.snapped ? ` ${row.snapped}.` : ''}  `);
