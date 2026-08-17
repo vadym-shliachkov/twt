@@ -42,7 +42,7 @@ const os = require('os');
 const BASH_UTILS = [
   'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
   'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext', 'pandoc',
-  'cd', 'sed', 'sort', 'uniq', 'bc', 'curl',
+  'cd', 'sed', 'sort', 'uniq', 'bc', 'curl', 'cp', 'rm',
 ];
 
 // Two read-only git invocations, narrowly scoped — not `git` wholesale. The

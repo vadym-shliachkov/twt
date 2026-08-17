@@ -117,6 +117,20 @@ const blocks = [
       "twt-content-validate",
     ],
   },
+  {
+    id: "fidelity",
+    name: "Fidelity",
+    kicker: "Standalone tool",
+    href: "blocks/fidelity.html",
+    status: "Ready",
+    description:
+      "Build or verify a block or page to measured fidelity against a Figma frame, a reference URL, or an image — an iterative fix loop gated by a deterministic tolerance check, never a model-judged score.",
+    skills: [
+      "twt-fidelity",
+      "twt-fidelity-fetch",
+      "twt-fidelity-measure",
+    ],
+  },
 ];
 
 const MAINTENANCE_NOTICE = "Under maintenance. These skills are being reviewed and may change. Verify their output before using it in production.";
@@ -158,6 +172,9 @@ const shortDescriptions = {
   "twt-export-pdf": "Convert Markdown into a polished, on-brand PDF document.",
   "twt-export-presentation": "Convert a Markdown deck into polished PPTX or PDF slides.",
   "twt-export-template-create": "Create a reusable export template from a brand brief, your own style notes, or both.",
+  "twt-fidelity": "Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image.",
+  "twt-fidelity-fetch": "Acquire a reference — Figma frame, live URL, or image — as a measured reference-spec.",
+  "twt-fidelity-measure": "Measure a built page against the reference spec and report every delta.",
   "twt-html-block-creator": "Build a static HTML page or section into your site, reusing partials and styling with tokens only.",
   "twt-html-site-creator": "Scaffold a dependency-free static HTML/CSS site with shared partials and mirrored design tokens.",
   "twt-ia-define": "Define the site structure — a sitemap with page purposes and CTAs, plus the functional scope.",
@@ -221,6 +238,9 @@ const longDescriptions = {
   "twt-export-pdf": "Turns a Markdown document into a polished, on-brand PDF. A reliable script does the conversion, so the result looks identical on every run.",
   "twt-export-presentation": "Turns a Markdown deck into polished slides — PowerPoint or PDF — using a presentation template. A quick way to spin up a clean, on-brand deck without leaving your writing.",
   "twt-export-template-create": "Builds a reusable export template that your future PDF, Word, and slide exports can pick from. Base it on a brand brief, your own style notes, or both — and everything you export later can match it.",
+  "twt-fidelity": "Turns 'close to the reference' into 'measured against it.' Acquires a Figma frame, a live URL, or an image as real numbers, has your usual builder build toward it, measures what actually got built, and re-dispatches with only what still misses — until every property is within tolerance or a hard iteration cap is hit. The stop signal is always a script-emitted measurement, never a model's opinion of how close it looks.",
+  "twt-fidelity-fetch": "Turns a reference — a Figma frame, a live page, or a plain image — into hard numbers: positions, sizes, colors, type, and spacing for every element that matters, plus reference screenshots. This spec is what the fidelity loop measures every build against.",
+  "twt-fidelity-measure": "Opens a built page, reads off the same properties the reference spec captured, and reports every delta against tolerance — pass, warn, or fail, per element and property. This is the deterministic gate the fidelity loop uses to decide whether to stop or fix and retry.",
   "twt-html-block-creator": "Adds a static HTML page or a single section to your site, reusing shared partials and styling with tokens only. It can promote a finished mockup or build fresh from Figma, screenshots, or notes.",
   "twt-html-site-creator": "Sets up a clean, dependency-free HTML/CSS site once per project, with shared header/footer partials and design tokens mirrored from your design system. Run it first so every page you build starts from the same base.",
   "twt-ia-define": "Maps your site's structure — every page, what it's for, and its main call to action — plus the features and integrations each page needs. It's the blueprint the rest of the design follows.",
@@ -971,6 +991,7 @@ function inferBlock(skill) {
   if (["html", "elementor", "develop"].includes(skill.category)) return blocks.find((block) => block.id === "develop");
   if (["design", "design-system", "component", "layout", "mockup"].includes(skill.category)) return blocks.find((block) => block.id === "design");
   if (["brand", "positioning", "ia", "curation", "spec", "content", "intake", "pre-design"].includes(skill.category)) return blocks.find((block) => block.id === "pre-design");
+  if (["fidelity"].includes(skill.category)) return blocks.find((block) => block.id === "fidelity");
   return blocks.find((block) => block.id === "general");
 }
 
@@ -1125,6 +1146,13 @@ function writeAltIndex() {
       ],
     },
     {
+      id: "fidelity",
+      kicker: "Standalone tool",
+      title: "Build to measured fidelity",
+      purpose: blocks.find((block) => block.id === "fidelity").description,
+      skills: blockSkillsOf("fidelity"),
+    },
+    {
       id: "utilities",
       kicker: "Purpose",
       title: "Standalone utilities",
@@ -1136,7 +1164,7 @@ function writeAltIndex() {
   // Every skill in SKILLS.md must appear exactly once: anything the groups
   // above don't name falls back to the group matching its inferred block.
   const grouped = new Set(groups.flatMap((group) => group.skills));
-  const fallbackGroupId = { general: "utilities", "pre-design": "pre-design", design: "design", develop: "develop", qa: "qa" };
+  const fallbackGroupId = { general: "utilities", "pre-design": "pre-design", design: "design", develop: "develop", qa: "qa", fidelity: "fidelity" };
   for (const skill of skills.values()) {
     if (grouped.has(skill.slug)) continue;
     const blockId = (skill.block ?? inferBlock(skill)).id;

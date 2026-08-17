@@ -2717,7 +2717,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, twt-fidelity, figma-mcp
 
 **Reads:**
 - .twt-artifacts/design/design-system/tokens.css

@@ -20,6 +20,7 @@ dependencies:
     - twt-inherit-block-creator
     - twt-content-approval-checklist
     - twt-figma-dev-audit
+    - twt-fidelity
     - figma-mcp
 reads:
   - .twt-artifacts/design/design-system/tokens.css
@@ -111,6 +112,7 @@ Record the choice as `<target>` and continue.
 | 3 | `/twt-inherit-define` | **collect-and-surface** — its Step 7 review gate is user-facing |
 | 4 | `/twt-html-block-creator`, `/twt-elementor-block-creator` | collect-and-surface |
 | 4 | `/twt-inherit-block-creator` | **collect-and-surface** — its Step 5 consolidated write approval is user-facing |
+| 4b | `/twt-fidelity` | **collect-and-surface** — opt-in per its own gate; skipped silently in collect mode or an unattended `auto` run |
 
 No inherit dispatch in this skill is left mode-unstated. A bare `(Agent tool)` on either inherit skill is a defect, not a shorthand.
 
@@ -171,6 +173,16 @@ Dispatch the matching builder (Agent tool) with `subagent-collect`, forwarding t
 - **Collect mode** (dispatched by `/twt-site` under Express): return the decisions block verbatim and leave the MODIFYs deferred; the orchestrator above surfaces it and re-dispatches you.
 
 Say plainly in Step 5 how many approvals an inherit build asked for: **one** for the inherited conventions (Step 3, first run only) plus **one per builder dispatch**. The builder's predictable MODIFY set — route registration, nav/menu config, the global stylesheet import — is shared across pages by construction, so the same file can appear in more than one prompt. A single cross-page consolidated plan is a recorded follow-up, not shipped behaviour.
+
+## Step 4b — Fidelity pass (opt-in)
+
+Only when a Figma URL was obtained in Step 0 **and** `<target>` is **html** — the only target the measured loop covers end-to-end without extra setup (per the Target descriptor table, `elementor` needs a live/staging `--url` to be measured at all, and `inherit`'s host-repo build isn't one of `/twt-fidelity`'s two supported builders).
+
+**Standalone interactive:** ask via **AskUserQuestion** (single-select, header "Fidelity"): **Run the fidelity pass** (measures the build against the Figma frame and fixes measured deltas; costs one or more extra builder passes) / **Skip** (recommended for a first pass) / **You decide** (defaults to Skip — the loop's extra builder passes are exactly the express-lane cost this step is opt-in to avoid by default). **Collect mode or an unattended `auto` run: skip silently** — an always-on pass would multiply the cost of every express run without being asked for.
+
+If run: dispatch `/twt-fidelity` (Agent tool) with `subagent-collect`, `WHY: measuring the built page against the Figma frame before calling this pass done`, passing the Figma URL as the reference source, `--build html`, the page Step 4's builder wrote (`<built>`), and `--mode system`. **Surface what it returns the same way Step 4 does for the builder** — if its report names a `decisions.md` path, Read it and present the open questions via **AskUserQuestion**; in auto mode resolve them yourself and log each one; in collect mode aggregate them into your own report.
+
+Record the resulting Band, Health, and remaining failure count — read from its own returned report, never by re-opening `summary.json` yourself (that file is `/twt-fidelity`'s own internal read, per its Step 5) — in the session log. Advisory — a remaining failure never blocks the run.
 
 ## Step 5 — Report & finalize the log
 **First** finalize the curated session log: ensure every question/answer and every dispatched skill is in the Timeline, then fill the run's **Outcome** block (steps completed · outstanding BLOCKERs · key artifact paths) in `.twt-artifacts/site-dev-log.md`. Do all `site-dev-log.md` edits **before** the next step (the summarizer appends to end-of-file).

@@ -241,6 +241,7 @@ flowchart TB
     twt_inherit_block_creator -.-> twt_site_dev
     twt_content_approval_checklist -.-> twt_site_dev
     twt_figma_dev_audit -.-> twt_site_dev
+    twt_fidelity -.-> twt_site_dev
     twt_spec_define -.-> twt_spec
     twt_spec_validate -.-> twt_spec
     twt_spec_define --> twt_spec_validate
@@ -1634,7 +1635,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-site-dev
 
 **Reads:**
 - .twt-artifacts/fidelity/<target-slug>/summary.json
@@ -2679,7 +2680,7 @@ flowchart TB
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp
+- Soft: twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, twt-fidelity, figma-mcp
 
 **Feeds into:**
 - Hard consumers: none
@@ -3063,7 +3064,7 @@ flowchart TB
 | /twt-seo-validate | twt-seo-define | none |
 | /twt-setup | none | none |
 | /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa |
-| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, figma-mcp |
+| /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, twt-fidelity, figma-mcp |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |

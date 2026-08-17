@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Measure an already-built page against the reference spec `/twt-fidelity-fetch` produced, diff the two, and write a deterministic, tolerance-gated repo">
+  <meta name="description" content="Opens a built page, reads off the same properties the reference spec captured, and reports every delta against tolerance — pass, warn, or fail, per el">
   <title>/twt-fidelity-measure | twt skills</title>
   <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,7 +26,7 @@
       </button>
       <nav class="main-nav" aria-label="Primary" data-nav>
         <a href="../index.html">Home</a>
-        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
       </nav>
     </header>
   <main>
@@ -34,13 +34,13 @@
       
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="../index.html">Home</a>
-      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-fidelity-measure</strong>
+      <span>/</span><a href="../blocks/fidelity.html">Fidelity</a><span>/</span><strong class="breadcrumb-command">/twt-fidelity-measure</strong>
     </nav>
       <section class="skill-hero docs-hero">
         <div class="reveal">
-          <p class="eyebrow">General · fidelity</p>
+          <p class="eyebrow">Fidelity · fidelity</p>
           <h1>/twt-fidelity-measure</h1>
-          <p class="lede">Measure an already-built page against the reference spec <code>/twt-fidelity-fetch</code> produced, diff the two, and write a deterministic, tolerance-gated report of every property that drifted...</p>
+          <p class="lede">Measure a built page against the reference spec and report every delta.</p>
           <div class="fact-row">
             <span>Version 1.0.1</span>
             <span>Arguments: yes</span>
@@ -55,7 +55,7 @@
       <section class="detail-grid">
         <section class="detail-panel wide reveal">
     <h2>Purpose</h2>
-    <p>Measure an already-built page against the reference spec <code>/twt-fidelity-fetch</code> produced, diff the two, and write a deterministic, tolerance-gated report of every property that drifted — so the fix loop this skill feeds has a real measurement to stop on, never a model's opinion.</p>
+    <p>Opens a built page, reads off the same properties the reference spec captured, and reports every delta against tolerance — pass, warn, or fail, per element and property. This is the deterministic gate the fidelity loop uses to decide whether to stop or fix and retry.</p>
   </section>
         
         <section class="detail-panel reveal">
