@@ -1,8 +1,8 @@
 ---
 name: twt-fidelity-fetch
 category: fidelity
-description: Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
-version: 1.0.0
+description: (v1.0.1) Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - A Figma URL, a site URL, or a local image path

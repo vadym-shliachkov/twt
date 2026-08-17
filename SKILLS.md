@@ -40,6 +40,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
+| [/twt-fidelity-fetch](#twt-fidelity-fetch) | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
@@ -1428,6 +1429,44 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 - Creates `.twt-artifacts/export/themes/<theme-slug>/preview-notes.md`
 - Theme names are human-distinguishable and combine context, style direction, and scope where possible
 - With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-theme-create.mjs`
+
+---
+
+## /twt-fidelity-fetch
+
+**Category:** fidelity
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Turn a reference — a Figma frame, a live URL, or an image — into `reference-spec.json` (or `reference-spec-estimated.json`) plus reference PNGs, so `/twt-fidelity`'s diff loop has something concrete to measure a build against.
+
+**Inputs:**
+- A Figma URL, a site URL, or a local image path
+- --name <target-slug>, --root <selector-or-node>, --widths <csv>
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Reads:**
+- $ARGUMENTS (reference source, --name, --root, --widths)
+
+**Writes:**
+- .twt-artifacts/fidelity/<target-slug>/reference-spec.json
+- .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
+- .twt-artifacts/fidelity/<target-slug>/reference/
+- .twt-artifacts/fidelity/<target-slug>/decisions.md
+
+**Non-goals:**
+- Does not build anything — it only acquires and records a reference
+- Does not judge design quality — it captures numbers and pixels, not opinions
+- Never writes outside `.twt-artifacts/fidelity/<target-slug>/`
+
+**Success criteria:**
+- Exactly one of `reference-spec.json` / `reference-spec-estimated.json` exists for the target slug, and its name is never wrong about whether the numbers inside it were measured or guessed
+- Every captured width has a matching `reference/<width>.png`
+- A Figma file with only one usable frame produces a spec that says it captured one width — never three
+- Re-run with the same `--name` overwrites cleanly (this skill has no refinement mode of its own; `/twt-fidelity` owns re-acquisition decisions)
 
 ---
 

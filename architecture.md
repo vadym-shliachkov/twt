@@ -46,6 +46,7 @@ flowchart TB
     twt_export_pdf["/twt-export-pdf"]:::skill
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
+    twt_fidelity_fetch["/twt-fidelity-fetch"]:::skill
     twt_figma_design_system["/twt-figma-design-system"]:::skill
     twt_figma_dev_audit["/twt-figma-dev-audit"]:::skill
     twt_figma_mockup["/twt-figma-mockup"]:::skill
@@ -324,6 +325,10 @@ flowchart TB
 - /twt-export-pdf - Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
 - /twt-export-presentation - Convert Markdown to PPTX or PDF slides via the presentation export script
 - /twt-export-template-create - Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
+
+### fidelity
+
+- /twt-fidelity-fetch - Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
 
 ### figma-export
 
@@ -1605,6 +1610,34 @@ flowchart TB
 | .twt-artifacts/export/themes/<theme-slug>/reference/* |  |
 | .twt-artifacts/export/themes/<theme-slug>/preview/preview.html |  |
 | .twt-artifacts/export/themes/<theme-slug>/preview-notes.md |  |
+
+### /twt-fidelity-fetch
+
+**Category:** fidelity
+**Version:** 1.0.1
+
+**Inputs:**
+- A Figma URL, a site URL, or a local image path
+- --name <target-slug>, --root <selector-or-node>, --widths <csv>
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS (reference source, --name, --root, --widths)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/fidelity/<target-slug>/reference-spec.json |  |
+| .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json |  |
+| .twt-artifacts/fidelity/<target-slug>/reference/ |  |
+| .twt-artifacts/fidelity/<target-slug>/decisions.md |  |
 
 ### /twt-figma-design-system
 
@@ -2923,6 +2956,7 @@ flowchart TB
 | /twt-export-pdf | none | none |
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
+| /twt-fidelity-fetch | none | figma-mcp |
 | /twt-figma-design-system | none | figma-mcp |
 | /twt-figma-dev-audit | none | figma-mcp, twt-design-system-audit |
 | /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |
@@ -2978,6 +3012,7 @@ flowchart TB
   design/
   elementor-theme/
   export/
+  fidelity/
   figma-dev-audit/
   figma-export/
   html-site/
