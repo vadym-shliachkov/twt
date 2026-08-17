@@ -6,7 +6,7 @@
 // build: its accuracy degrades exactly as layout drift grows, so it is least
 // trustworthy when it matters most. Every heuristic pair is flagged as such.
 'use strict';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PROPERTY_GROUPS, isEstimated, reportBasenames } from './spec.mjs';
@@ -194,7 +194,13 @@ export function scoreOf(rows) {
 
 // Failures survive truncation before warnings do — a cap that shed the
 // failures would hand the model a clean-looking summary of a broken build.
-export function toSummary(diff, { maxRows = SUMMARY_MAX_ROWS } = {}) {
+//
+// `pixdiff` (the { mismatch, reported, out } object, or null) is folded in
+// here rather than left for the model to open pixdiff.json separately — the
+// skill's own contract is "read summary.json and nothing else", and that can
+// only be literally true if the one file it reads already carries every
+// number a report needs, pixel diff included.
+export function toSummary(diff, { maxRows = SUMMARY_MAX_ROWS, pixdiff = null } = {}) {
   const rank = { fail: 0, warn: 1, pass: 2 };
   const interesting = diff.rows
     .filter((r) => r.status !== 'pass')
@@ -211,6 +217,7 @@ export function toSummary(diff, { maxRows = SUMMARY_MAX_ROWS } = {}) {
     score: diff.score,
     rows: kept,
     truncated: Math.max(0, interesting.length - kept.length),
+    pixdiff,
   };
 }
 
@@ -238,6 +245,17 @@ if (isMain) {
   const mode = arg('mode', 'system');
   const iteration = Number(arg('iteration', '1'));
 
+  // Both guards below exist so a missing --dir / a --dir with no measured.json
+  // (Step 2 of the skill was skipped, or the caller passed the wrong path)
+  // reports the documented exit 3 with a clean stderr line — the same
+  // contract the skill promises ("report the stderr message verbatim") for
+  // every other failure this CLI can hit. Without them, `existsSync(undefined)`
+  // or a JSON.parse on a nonexistent file throws a raw Node stack instead.
+  if (!dir || !existsSync(dir)) {
+    process.stderr.write(`--dir not found: ${dir ?? '(not given)'}\n`);
+    process.exit(3);
+  }
+
   const specPath = ['reference-spec.json', 'reference-spec-estimated.json']
     .map((f) => join(dir, f)).find(existsSync);
   if (!specPath) {
@@ -245,8 +263,14 @@ if (isMain) {
     process.exit(3);
   }
 
+  const measuredPath = join(dir, 'measured.json');
+  if (!existsSync(measuredPath)) {
+    process.stderr.write(`no measured.json in ${dir} — run the measure step first\n`);
+    process.exit(3);
+  }
+
   const spec = JSON.parse(readFileSync(specPath, 'utf8'));
-  const measured = JSON.parse(readFileSync(join(dir, 'measured.json'), 'utf8'));
+  const measured = JSON.parse(readFileSync(measuredPath, 'utf8'));
 
   // Pair the reference and the build BY WIDTH. The reference spec on disk is
   // a widths-keyed MAP (`{ "1440": [...elements] }`) — exactly like
@@ -290,22 +314,57 @@ if (isMain) {
   // would flow into `${undefined}.png` while `meta.widths.join` threw outright.
   const widthsArr = perWidth.map((d) => d.width);
 
+  // report.mjs's renderValidationReport reads meta.source.kind + meta.source.ref
+  // (`**Source:** ${kind} \`${ref}\``), but twt-fidelity-fetch never writes a
+  // `ref` field — its source object shape is `{kind, url, root}` (url adapter),
+  // `{kind, url}` (figma), or `{kind, path}` (image). Passing spec.source
+  // through unexamined (an earlier draft of this CLI) rendered every report's
+  // Source line as "url `undefined`" — the exact same class of bug already
+  // fixed once in this file for meta.widths: rebuild the field from the real
+  // on-disk shape rather than assume it matches what a renderer expects.
+  const source = { kind: spec.source?.kind, ref: spec.source?.url ?? spec.source?.path };
+
+  // The "primary" width used for the HTML report's three-up (reference/built/
+  // diff) image block. widthsArr is ascending (JS integer-like object keys
+  // always iterate that way), so widthsArr[0] is the NARROWEST width — on the
+  // default 1440/768/390 run that heals the mobile frame as the headline
+  // comparison, which is backwards for a design-fidelity report. Use the
+  // widest captured width instead — the desktop/primary frame is the one a
+  // reviewer expects to see first.
+  const primaryWidth = Math.max(...widthsArr);
+
+  // The reference screenshot's extension varies by adapter (twt-fidelity-fetch
+  // writes .png for url/figma, the source image's own extension — jpg/jpeg/webp
+  // — for the image adapter; see that skill's Step 2c). Resolve it from what is
+  // actually on disk rather than hardcoding .png, which is exactly the mistake
+  // this skill's own Step 2b prose warns against ("never assume .png") for the
+  // Bash calls that build these same paths.
+  const referenceDir = join(dir, 'reference');
+  const referenceFile = existsSync(referenceDir)
+    ? readdirSync(referenceDir).find((f) => f.startsWith(`${primaryWidth}.`))
+    : null;
+
+  const pixdiffPath = join(dir, 'pixdiff.json');
+  const pixdiff = existsSync(pixdiffPath) ? JSON.parse(readFileSync(pixdiffPath, 'utf8')) : null;
+
   const names = reportBasenames(spec);
   const meta = {
-    target: spec.target, source: spec.source, widths: widthsArr,
+    target: spec.target, source, widths: widthsArr,
     provenance: spec.provenance, mode, iteration,
-    pixdiff: existsSync(join(dir, 'pixdiff.json'))
-      ? JSON.parse(readFileSync(join(dir, 'pixdiff.json'), 'utf8')) : null,
+    pixdiff,
     images: {
-      reference: `reference/${widthsArr[0]}.png`,
-      built: `built/iter-${iteration}-${widthsArr[0]}.png`,
-      diff: `diff/iter-${iteration}-${widthsArr[0]}.png`,
+      reference: `reference/${referenceFile ?? `${primaryWidth}.png`}`,
+      built: `built/iter-${iteration}-${primaryWidth}.png`,
+      diff: `diff/iter-${iteration}-${primaryWidth}.png`,
     },
   };
 
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'deltas.json'), JSON.stringify(merged, null, 2));
-  writeFileSync(join(dir, 'summary.json'), JSON.stringify(toSummary(merged, {}), null, 2));
+  // pixdiff folds into summary.json itself — the skill's contract is "read
+  // summary.json and nothing else"; that can only be literally true if the
+  // pixel-diff percentage doesn't require opening a second file.
+  writeFileSync(join(dir, 'summary.json'), JSON.stringify(toSummary(merged, { pixdiff }), null, 2));
   writeFileSync(join(dir, names.md), renderValidationReport(merged, meta));
   writeFileSync(join(dir, names.html), renderHtml(merged, meta));
   // Route Health through the same null-safe formatting report.mjs's renderer

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,7 +56,7 @@ test('heuristic matching refuses a pair that is nowhere near', () => {
 
 test('diffSpec produces one row per compared property with its group', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.title.0', { type: { size: 56, lineHeight: 64, family: 'Inter' } })],
   });
   const got = [el('hero.title.0', { type: { size: 48, lineHeight: 64, family: 'Inter' } })];
@@ -71,7 +71,7 @@ test('diffSpec produces one row per compared property with its group', () => {
 
 test('a missing element is a structural failure, not a silent skip', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.title.0'), el('hero.cta.0')],
   });
   const { rows, counts } = diffSpec(spec, [el('hero.title.0')], { mode: 'system', width: 1440 });
@@ -83,7 +83,7 @@ test('a missing element is a structural failure, not a silent skip', () => {
 
 test('reordered children fail even when every child is styled identically', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { children: ['hero.title.0', 'hero.cta.0'] })],
   });
   const got = [el('hero.0', { children: ['hero.cta.0', 'hero.title.0'] })];
@@ -96,7 +96,7 @@ test('reordered children fail even when every child is styled identically', () =
 
 test('identical children order produces no structural row at all', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { children: ['hero.title.0', 'hero.cta.0'] })],
   });
   const got = [el('hero.0', { children: ['hero.title.0', 'hero.cta.0'] })];
@@ -106,7 +106,7 @@ test('identical children order produces no structural row at all', () => {
 
 test('system mode downgrades a token-snap delta to warn and labels it', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [92, 0, 92, 0] } })],
   });
   const got = [el('hero.0', {
@@ -123,7 +123,7 @@ test('system mode downgrades a token-snap delta to warn and labels it', () => {
 
 test('strict mode promotes that same snap to a failure', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [92, 0, 92, 0] } })],
   });
   const got = [el('hero.0', {
@@ -138,7 +138,7 @@ test('strict mode promotes that same snap to a failure', () => {
 
 test('the same delta is reported in both modes - only severity differs', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [92, 0, 92, 0] } })],
   });
   const got = [el('hero.0', {
@@ -152,7 +152,7 @@ test('the same delta is reported in both modes - only severity differs', () => {
 
 test('score weights are geometry 30 / typography 25 / structure 25 / colour 20', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
   });
   const perfect = diffSpec(spec, [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
@@ -165,7 +165,7 @@ test('score weights are geometry 30 / typography 25 / structure 25 / colour 20',
 
 test('toSummary caps rows and never carries markup', () => {
   const elements = Array.from({ length: 400 }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   const got = elements.map((e) => el(e.id, { type: { size: 12 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), {});
   assert.ok(summary.rows.length <= SUMMARY_MAX_ROWS, `got ${summary.rows.length}`);
@@ -175,12 +175,28 @@ test('toSummary caps rows and never carries markup', () => {
 
 test('toSummary keeps failures before warnings when it truncates', () => {
   const elements = Array.from({ length: 300 }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   // First 5 drift far (fail); the rest drift by 1px (warn).
   const got = elements.map((e, i) => el(e.id, { type: { size: i < 5 ? 8 : 19 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), {});
   const kept = summary.rows.filter((r) => r.status === 'fail').length;
   assert.equal(kept, 5, 'every failure must survive truncation');
+});
+
+test('toSummary defaults pixdiff to null when the caller supplies none', () => {
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
+    elements: [el('hero.0', { type: { size: 56 } })] });
+  const summary = toSummary(diffSpec(spec, [el('hero.0', { type: { size: 56 } })], { mode: 'system', width: 1440 }), {});
+  assert.equal(summary.pixdiff, null);
+  assert.ok(Object.keys(summary).includes('pixdiff'), 'pixdiff must be an explicit null key, not simply absent');
+});
+
+test('toSummary carries a caller-supplied pixdiff through unchanged', () => {
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
+    elements: [el('hero.0', { type: { size: 56 } })] });
+  const pixdiff = { mismatch: 2.5, reported: true, out: 'diff/iter-1-1440.png' };
+  const summary = toSummary(diffSpec(spec, [el('hero.0', { type: { size: 56 } })], { mode: 'system', width: 1440 }), { pixdiff });
+  assert.deepEqual(summary.pixdiff, pixdiff);
 });
 
 // --- Extra boundary + regression coverage beyond the brief -----------------
@@ -229,7 +245,7 @@ test('heuristic matcher accepts a pair scoring exactly at the 0.55 accept thresh
 
 test('toSummary keeps every row exactly at the SUMMARY_MAX_ROWS cap with nothing truncated', () => {
   const elements = Array.from({ length: SUMMARY_MAX_ROWS }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   const got = elements.map((e) => el(e.id, { type: { size: 12 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), {});
   assert.equal(summary.rows.length, SUMMARY_MAX_ROWS);
@@ -238,7 +254,7 @@ test('toSummary keeps every row exactly at the SUMMARY_MAX_ROWS cap with nothing
 
 test('toSummary truncates exactly one row over the SUMMARY_MAX_ROWS cap', () => {
   const elements = Array.from({ length: SUMMARY_MAX_ROWS + 1 }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   const got = elements.map((e) => el(e.id, { type: { size: 12 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), {});
   assert.equal(summary.rows.length, SUMMARY_MAX_ROWS);
@@ -247,7 +263,7 @@ test('toSummary truncates exactly one row over the SUMMARY_MAX_ROWS cap', () => 
 
 test('a caller-supplied maxRows below the default is honoured and reported as truncated', () => {
   const elements = Array.from({ length: 10 }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   const got = elements.map((e) => el(e.id, { type: { size: 12 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), { maxRows: 3 });
   assert.equal(summary.rows.length, 3);
@@ -260,7 +276,7 @@ test('all failures survive truncation even when they are interleaved after warni
   // than a fail-before-warn sort) would silently drop the failure.
   const n = SUMMARY_MAX_ROWS + 20;
   const elements = Array.from({ length: n }, (_, i) => el(`row.${i}`, { type: { size: 20 } }));
-  const spec = makeSpec({ target: 't', source: { kind: 'url', ref: 'x' }, widths: [1440], elements });
+  const spec = makeSpec({ target: 't', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440], elements });
   // Every element warns (1px drift) except the very last one, which fails hard.
   const got = elements.map((e, i) => el(e.id, { type: { size: i === n - 1 ? 2 : 19 } }));
   const summary = toSummary(diffSpec(spec, got, { mode: 'system', width: 1440 }), {});
@@ -280,7 +296,7 @@ test('an unassessed group (zero rows) is null, not a free 5, and Health is renor
   //   health = round(((5/5*30) + (0/5*25) + (5/5*20)) / 75 * 100)
   //          = round((30 + 0 + 20) / 75 * 100) = round(66.666...) = 67
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
   });
   const got = [el('hero.0', { type: { size: 40 }, fill: { color: '#000000' } })];
@@ -305,7 +321,7 @@ test('a group that entirely fails drops Health by that group\'s renormalized sha
   // 27 points here — not colour's raw 20-point weight, and not 25 (its share
   // of the un-renormalized 100), because the denominator shrank to 75 too.
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } })],
   });
   const got = [el('hero.0', { type: { size: 56 }, fill: { color: '#ffffff' } })];
@@ -329,7 +345,7 @@ test('asymmetric array snap labels the index that actually drifted, not always i
   // A buggy snapLabel that always reads index 0 would report "92 -> 92, d0"
   // even though the worst-side reduce correctly picked index 2 (92 -> 96).
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [92, 0, 92, 0] } })],
   });
   const got = [el('hero.0', {
@@ -346,7 +362,7 @@ test('asymmetric array snap labels the index that actually drifted, not always i
 
 test('diffSpec carries the reference spec\'s target through to the returned diff', () => {
   const spec = makeSpec({
-    target: 'hero-section', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero-section', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { type: { size: 56 } })],
   });
   const got = [el('hero.0', { type: { size: 56 } })];
@@ -358,7 +374,7 @@ test('diffSpec carries the reference spec\'s target through to the returned diff
 
 test('a length-mismatched array pair is a definite fail, not an undefined-status row', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [10, 20] } })],
   });
   const got = [el('hero.0', { spacing: { padding: [10, 20, 30] } })];
@@ -372,7 +388,7 @@ test('a length-mismatched array pair is a definite fail, not an undefined-status
 
 test('a zero-length array pair on both sides produces no row (nothing to compare) rather than an undefined-status row', () => {
   const spec = makeSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' }, widths: [1440],
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' }, widths: [1440],
     elements: [el('hero.0', { spacing: { padding: [] } })],
   });
   const got = [el('hero.0', { spacing: { padding: [] } })];
@@ -386,7 +402,7 @@ test('a zero-length array pair on both sides produces no row (nothing to compare
 test('the diff CLI writes deltas, summary and both reports', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 1, estimated: 0 },
     widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
   });
@@ -406,7 +422,7 @@ test('the diff CLI writes deltas, summary and both reports', () => {
 test('the diff CLI honours the estimated filenames', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-est-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'image', ref: 'r.png' },
+    target: 'hero', source: { kind: 'image', path: 'r.png' },
     provenance: { measured: 0, estimated: 1 },
     widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
   });
@@ -446,7 +462,7 @@ test('no reference spec in --dir exits 3, not 0, and writes nothing', () => {
 test('a measured width the reference never captured exits 3, not a silent pass', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 1, estimated: 0 },
     widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
   });
@@ -473,7 +489,7 @@ test('the score is computed across every measured width, not just the first (Rul
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const refEl = () => el('hero.0', { type: { size: 56 }, fill: { color: '#000000' } });
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 2, estimated: 0 },
     widths: { 768: [refEl()], 1440: [refEl()] },
   });
@@ -507,7 +523,7 @@ test('the validation report lists every assessed width, ascending, never a nonex
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const refEl = () => el('hero.0', { type: { size: 56 } });
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 2, estimated: 0 },
     widths: { 768: [refEl()], 1440: [refEl()] },
   });
@@ -522,17 +538,104 @@ test('the validation report lists every assessed width, ascending, never a nonex
     'meta.widths must be the ARRAY of assessed widths (renderValidationReport calls .join on it) — ' +
     'spec.widths on disk is the widths-keyed OBJECT, so spec.widths[0] would read a nonexistent key');
   // Only fidelity-report.html embeds the images block (validation-report.md
-  // never prints image paths) — check the primary width landed there, not a
-  // literal "undefined.png" from an unindexable spec.widths[0].
+  // never prints image paths). The primary width must be the WIDEST captured
+  // width (1440), not widthsArr[0] (768, the narrowest — JS integer-like
+  // object keys always iterate ascending) — a mobile frame is the wrong
+  // headline comparison for a design-fidelity report.
   const html = readFileSync(join(dir, 'fidelity-report.html'), 'utf8');
-  assert.match(html, /reference\/768\.png/, 'the images block must key off a real assessed width, not undefined');
+  assert.match(html, /reference\/1440\.png/, 'the images block must use the WIDEST assessed width, not the first key');
+  assert.doesNotMatch(html, /reference\/768\.png/, 'must not fall back to the narrowest width either');
   assert.doesNotMatch(html, /undefined\.png/);
+});
+
+test('meta.source is rebuilt from the real on-disk shape (source.url), never a literal "undefined"', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', url: 'https://example.test/hero', root: '.hero' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
+  // report.mjs reads meta.source.kind + meta.source.ref. twt-fidelity-fetch's
+  // real on-disk shape has no `ref` field at all (url/root, or path) — a CLI
+  // that passed spec.source through unexamined renders "url `undefined`".
+  assert.match(md, /\*\*Source:\*\* url `https:\/\/example\.test\/hero`/);
+  assert.doesNotMatch(md, /`undefined`/, 'the Source line must never render the literal string undefined');
+});
+
+test('meta.source resolves source.path for the image adapter, the same rebuild rule as the url adapter', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'image', path: 'ref-shots/hero.jpg' },
+    provenance: { measured: 0, estimated: 1 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 }, provenance: 'estimated' })] },
+  });
+  writeFileSync(join(dir, 'reference-spec-estimated.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const md = readFileSync(join(dir, 'validation-report-estimated.md'), 'utf8');
+  assert.match(md, /\*\*Source:\*\* image `ref-shots\/hero\.jpg`/);
+  assert.doesNotMatch(md, /`undefined`/);
+});
+
+test('the images block resolves the actual reference-file extension on disk, never a hardcoded .png', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'image', path: 'r.jpg' },
+    provenance: { measured: 0, estimated: 1 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 }, provenance: 'estimated' })] },
+  });
+  writeFileSync(join(dir, 'reference-spec-estimated.json'), JSON.stringify(spec));
+  writeFileSync(join(dir, 'measured.json'), JSON.stringify({
+    widths: { 1440: [el('hero.title.0', { type: { size: 48 } })] }, how: 'test',
+  }));
+  // The image adapter copies the reference under its OWN extension (twt-fidelity-fetch
+  // Step 2c) — simulate that here with a real .jpg on disk, no .png anywhere.
+  mkdirSync(join(dir, 'reference'), { recursive: true });
+  writeFileSync(join(dir, 'reference', '1440.jpg'), 'not a real jpg, just bytes');
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir, '--mode', 'system', '--iteration', '1'], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
+  const html = readFileSync(join(dir, 'fidelity-report-estimated.html'), 'utf8');
+  assert.match(html, /reference\/1440\.jpg/, 'must resolve the real .jpg on disk, not assume .png');
+  assert.doesNotMatch(html, /reference\/1440\.png/);
+});
+
+test('an absent --dir exits 3 with a clean message, not a raw Node stack', () => {
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', join(tmpdir(), 'fid-does-not-exist-' + Date.now())], { encoding: 'utf8' });
+  assert.equal(res.status, 3, `expected exit 3, got ${res.status}`);
+  assert.match(res.stderr, /--dir not found/);
+  assert.doesNotMatch(res.stderr, /at Object/, 'must not leak a raw Node stack trace');
+});
+
+test('a --dir with a spec but no measured.json exits 3 with a clean message, not a raw Node stack', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const spec = onDiskSpec({
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
+    provenance: { measured: 1, estimated: 0 },
+    widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
+  });
+  writeFileSync(join(dir, 'reference-spec.json'), JSON.stringify(spec));
+  // measured.json deliberately absent — Step 2 (measure) was never run.
+  const res = spawnSync(process.execPath, [DIFF_CLI, '--dir', dir], { encoding: 'utf8' });
+  assert.equal(res.status, 3, `expected exit 3, got ${res.status}`);
+  assert.match(res.stderr, /no measured\.json/);
+  assert.doesNotMatch(res.stderr, /at Object/, 'must not leak a raw Node stack trace');
+  assert.doesNotMatch(res.stderr, /ENOENT/, 'the guard must fire before the raw fs error would');
 });
 
 test('a pixdiff.json in the artifact dir surfaces the pixel-diff percentage in the report', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 1, estimated: 0 },
     widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
   });
@@ -545,12 +648,18 @@ test('a pixdiff.json in the artifact dir surfaces the pixel-diff percentage in t
   assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
   const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
   assert.match(md, /\*\*Pixel diff:\*\* 4\.2% of pixels differ\./);
+  // The skill's contract is "read summary.json and nothing else" — that is
+  // only literally true if pixdiff.json's content is folded into summary.json
+  // itself, not left as a second file the model must separately open.
+  const summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
+  assert.deepEqual(summary.pixdiff, { mismatch: 4.2, reported: true, out: 'diff/iter-1-1440.png' },
+    'summary.json must carry pixdiff.json\'s content directly, not require a second read');
 });
 
-test('without a pixdiff.json the report renders cleanly with no pixel-diff line', () => {
+test('without a pixdiff.json the report renders cleanly with no pixel-diff line, and summary.json.pixdiff is null', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 1, estimated: 0 },
     widths: { 1440: [el('hero.title.0', { type: { size: 56 } })] },
   });
@@ -562,12 +671,14 @@ test('without a pixdiff.json the report renders cleanly with no pixel-diff line'
   assert.equal(res.status, 0, `expected exit 0, stderr: ${res.stderr}`);
   const md = readFileSync(join(dir, 'validation-report.md'), 'utf8');
   assert.doesNotMatch(md, /Pixel diff/, 'the existsSync guard must skip the pixel line, not crash, when pixdiff.json is absent');
+  const summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
+  assert.equal(summary.pixdiff, null, 'summary.json must carry an explicit null, never an omitted key, when no pixdiff.json was written');
 });
 
 test('an unassessed run (nothing comparable) reports "not assessed" on stderr, never a literal null', () => {
   const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
   const spec = onDiskSpec({
-    target: 'hero', source: { kind: 'url', ref: 'x' },
+    target: 'hero', source: { kind: 'url', url: 'https://x.test/hero' },
     provenance: { measured: 0, estimated: 0 },
     widths: { 1440: [] },
   });
