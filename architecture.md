@@ -1622,7 +1622,7 @@ flowchart TB
 ### /twt-fidelity
 
 **Category:** fidelity
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - A Figma URL, site URL, or image path
@@ -1645,6 +1645,7 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | .twt-artifacts/fidelity/<target-slug>/iterations.md |  |
+| .twt-artifacts/fidelity/<target-slug>/decisions.md |  |
 
 ### /twt-fidelity-fetch
 

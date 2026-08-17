@@ -1437,7 +1437,7 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 ## /twt-fidelity
 
 **Category:** fidelity
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Turn "close to the reference" into "measured against it." Acquire a reference (a Figma frame, a live URL, or an image) as numbers, dispatch the project's existing builder toward it, measure what actually got built, diff the two, and re-dispatch with only what still fails — until every property is within tolerance or a hard iteration cap is reached. The continue/stop signal is always a deterministic measurement written by `tools/fidelity/diff.mjs`, never a model's opinion of how close the build looks.
@@ -1457,6 +1457,7 @@ Turn "close to the reference" into "measured against it." Acquire a reference (a
 
 **Writes:**
 - .twt-artifacts/fidelity/<target-slug>/iterations.md
+- .twt-artifacts/fidelity/<target-slug>/decisions.md
 
 **Non-goals:**
 - Does not author tokens directly — a value `strict` mode needs added to `tokens.css` goes through `/twt-design-system-define`, the design-system spine's only writer (CONVENTIONS §2). This skill only tells the builder to make that call; it never edits `tokens.css` itself.
@@ -1471,6 +1472,7 @@ Turn "close to the reference" into "measured against it." Acquire a reference (a
 - `.twt-artifacts/fidelity/<target-slug>/iterations.md` records every pass's before/after fail-warn counts and what changed, and the final report never implies the target was met when the cap was reached with failures still open — the remaining failures are named, by `id` and `prop`, not just counted.
 - `data-fid` stamps survive by default after the run ends — they make a later re-check free. Only `--strip`, applied after the final measurement, removes them, and the report says so when it happens.
 - `--build elementor` with no `--url` supplied never renders a fidelity score — it states plainly that nothing was measured and points at the NOT VERIFIED report (Step 7).
+- When this skill is itself dispatched with `subagent-collect` (e.g. a future `/twt-site-dev` integration), every AskUserQuestion site has a collect-mode passthrough instead: Step 1's `--build` default and Step 2's decisions-surfacing both record to `decisions.md` and return it for the parent to surface, rather than prompting where no prompt can land (CONVENTIONS §13).
 
 ---
 
