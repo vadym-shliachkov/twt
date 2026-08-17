@@ -1,8 +1,8 @@
 ---
-name: twt-fidelity-validate
+name: twt-fidelity-measure
 category: fidelity
-description: (v1.0.1) Measure a built page against the reference spec and report every delta
-version: 1.0.1
+description: (v1.0.0) Measure a built page against the reference spec and report every delta
+version: 1.0.0
 accepts_arguments: true
 inputs:
   - --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
@@ -13,6 +13,7 @@ reads:
   - .twt-artifacts/fidelity/<target-slug>/reference-spec.json
   - .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
   - .twt-artifacts/fidelity/<target-slug>/reference/
+  - .twt-artifacts/fidelity/<target-slug>/summary.json
 writes:
   - .twt-artifacts/fidelity/<target-slug>/measured.json
   - .twt-artifacts/fidelity/<target-slug>/deltas.json
@@ -26,7 +27,7 @@ writes:
   - .twt-artifacts/fidelity/<target-slug>/fidelity-report-estimated.html
 ---
 
-# /twt-fidelity-validate
+# /twt-fidelity-measure
 
 ## Intent
 
@@ -40,7 +41,7 @@ writes:
 - Never renders a score for a run it could not measure (Step 2's NOT VERIFIED path).
 
 **Success criteria:**
-- Every run produces exactly one of: a full measured/estimated report pair (`validation-report(-estimated).md` + `fidelity-report(-estimated).html`), or — on the unverified path — a `validation-report.md` that says NOT VERIFIED and emits no score, and no `.html` file at all.
+- Every run produces exactly one of: a full measured/estimated report pair (`validation-report(-estimated).md` + `fidelity-report(-estimated).html`), or — on the unverified path — a single `validation-report(-estimated).md`, filename chosen the same way the measured path chooses it, that says NOT VERIFIED and emits no score, and no `.html` file at all.
 - An estimated reference (`reference-spec-estimated.json`) never produces a report under the measured filenames (`validation-report.md` / `fidelity-report.html`) — that ambiguity is exactly what `spec.mjs`'s `reportBasenames()` exists to prevent, applied by the CLI itself since `spec.mjs` has no CLI of its own.
 - The model's own context never holds `deltas.json` or `measured.json` — only `summary.json` (capped, markup-free) and, when a pixel finding cannot be expressed numerically, a single heatmap screenshot.
 - A missing reference spec, a measurement failure, or a diff-CLI failure each stop the run with the tool's own stderr message reported verbatim — never a guessed explanation.
@@ -54,7 +55,7 @@ Glob `.twt-artifacts/fidelity/<target-slug>/reference-spec.json`. If absent, Glo
 Read whichever one exists (Read tool — it is a small structured artifact, not the banned exhaustive kind; see Step 4 for what actually is banned). From it, note:
 - **The widths captured** — the keys of its `widths` object (e.g. `1440`, `768`, `390`). These are the widths Step 2 measures; never measure a width the reference never captured — the diff CLI (Step 3) rejects that combination outright (exit 3) rather than silently comparing against nothing.
 - **`source.kind`** (`url` / `figma` / `image`) — informs how Step 5 frames the report (an `image` source is always estimated; its pixel diff, not its numbers, is the arbiter).
-- Whether it is the estimated file — if so, every number in this run's report is a guess; say so plainly in Step 5.
+- **Whether it is estimated** — read this from the spec's own `provenance.estimated` field (`> 0` means estimated), the same signal `spec.mjs`'s `isEstimated()` uses, never from which of the two filenames the Glob matched. In practice the two agree for every adapter `/twt-fidelity-fetch` ships (url/figma are always pure-measured, image always pure-estimated), but `provenance` is the actual contract and is what Step 2's unverified path and Step 3's diff CLI both key off — checking the same signal everywhere means this skill can never disagree with itself about which report filename is correct. Call this flag **`estimated`** below; if true, every number in this run's report is a guess — say so plainly in Step 5.
 
 ## Step 2 — Measure the build
 
@@ -74,7 +75,7 @@ Interpret the exit code — these are deliberately distinct failure modes, never
 - **Exit 2** — Playwright/Chromium is genuinely unavailable. Report the install line verbatim (`npm install playwright && npx playwright install chromium`) and stop.
 - **Exit 3** — the measurement itself failed (bad `--root` selector, navigation error, timeout). Report the stderr message verbatim, suggest checking the selector and the `--built` value, and stop.
 
-**Unverified path** — no measurement is taken; `measured.json` is never written. Write `.twt-artifacts/fidelity/<target-slug>/validation-report.md` (Write tool) with exactly this content, mirroring `report.mjs`'s own `renderValidationReport(null, meta)` contract so a human or a later script reading it sees the identical shape either way:
+**Unverified path** — no measurement is taken; `measured.json` is never written. Write the report under **the same filename the estimated flag from Step 1 dictates** — `validation-report-estimated.md` if `estimated` is true, `validation-report.md` otherwise — never hardcode the measured name. This matters even here: a later measured re-run of a target whose reference is estimated writes `validation-report-estimated.md`, and an unverified run that ignored the flag would leave a stale `validation-report.md` stub sitting beside it — exactly the measured/estimated ambiguity `reportBasenames()` exists to prevent everywhere else in this skill. Write it (Write tool) with exactly this content, mirroring `report.mjs`'s own `renderValidationReport(null, meta)` contract so a human or a later script reading it sees the identical shape either way:
 ```markdown
 # Fidelity — <target-slug>
 
@@ -83,7 +84,7 @@ Interpret the exit code — these are deliberately distinct failure modes, never
 No score is reported because none was measured. Supply a local or staging URL
 via `--url` and re-run to get a measured report.
 ```
-Write nothing else — no `fidelity-report.html` (its renderer dereferences fields a null diff never has and is never safe to call here), no `deltas.json`, no `summary.json`, no `built/`/`diff/` screenshots. Go straight to Step 5 and report the NOT VERIFIED outcome; skip Steps 2b–4 entirely.
+Write nothing else — no `fidelity-report.html` / `fidelity-report-estimated.html` (the renderer dereferences fields a null diff never has and is never safe to call here), no `deltas.json`, no `summary.json`, no `built/`/`diff/` screenshots. Go straight to Step 5 and report the NOT VERIFIED outcome; skip Steps 2b–4 entirely.
 
 ## Step 2b — Capture and pixel-diff
 
@@ -119,22 +120,20 @@ This one call reads the reference spec and `measured.json`, pairs them by width,
 
 ## Step 4 — Read only the summary
 
-**Read `summary.json` (Read tool) and nothing else from this pair.** It is capped (at most 120 rows, failures surviving truncation before warnings) and markup-free by construction — this is the one file built for a model to read.
+**Read `summary.json` (Read tool) and nothing else.** It is capped (at most 120 rows, failures surviving truncation before warnings) and markup-free by construction — this is the one file built for a model to read. It carries a `pixdiff` field (`{mismatch, reported, out}`, or `null` when Step 2b never ran a comparison) — the diff CLI (Step 3) folds `pixdiff.json`'s content into it itself, so the pixel-diff percentage is already inside the one file this step reads. Do not open `pixdiff.json` separately; it exists on disk only for the diff CLI's own script-to-script use.
 
 **`deltas.json` and `measured.json` are script-to-script and must never be read into model context.** They hold every property of every element, uncapped — the same hard token budget `/twt-block-map` established and `/twt-figma-dev-audit`'s first live run violated by aiming a 75MB payload at model context. Do not Read, Grep, or otherwise inspect either file.
 
-Also read `pixdiff.json` if it exists (Read tool) — it is a three-field summary (`mismatch`, `reported`, `out`), not exhaustive per-element data, and it is the only place the pixel-diff percentage lives outside the human-facing reports.
-
-**Screenshots reach the model only when a pixel finding cannot be expressed numerically**, and then only the single heatmap PNG named in `pixdiff.json`'s `out` field (or the relevant `diff/iter-<n>-<width>.png`) — never the reference or built screenshots side by side, never every width's heatmap at once.
+**Screenshots reach the model only when a pixel finding cannot be expressed numerically**, and then only the single heatmap PNG named in `summary.json`'s `pixdiff.out` field (or the relevant `diff/iter-<n>-<width>.png`) — never the reference or built screenshots side by side, never every width's heatmap at once.
 
 ## Step 5 — Report
 
-**On the unverified path (Step 2):** state plainly that no measurement was taken, why (the reason written into `validation-report.md`), and what would unblock it (a `--url`). No Band, no Health, no findings — there is nothing to report them from.
+**On the unverified path (Step 2):** state plainly that no measurement was taken, why (the reason written into the `validation-report(-estimated).md` file actually written — name which one), and what would unblock it (a `--url`). No Band, no Health, no findings — there is nothing to report them from.
 
 **On the measured path**, state:
 - **Band** and **Health** from `summary.json`'s `score` (health may be `null` / "not assessed" if nothing was comparable — say so, never print the literal word "null").
 - **Fail / warn counts** from `summary.json`'s `counts`.
 - **The top failing rows** — `summary.json`'s `rows` are already sorted failures-first; name the worst two or three by `id` and `prop`.
-- **The pixel-diff percentage**, from `pixdiff.json`, when present — and whether it crossed the reportable floor.
+- **The pixel-diff percentage**, from `summary.json`'s `pixdiff` field, when non-null — and whether it crossed the reportable floor.
 - **Every artifact path written this run**: `measured.json`, `deltas.json`, `summary.json`, `built/`, `diff/`, `pixdiff.json`, and whichever report pair (measured or estimated) was written — say explicitly which pair, so a reader never opens the wrong filename expecting the other provenance.
 - If the spec was estimated, repeat the warning: these numbers are guesses; the pixel diff, not this report, is the arbiter.

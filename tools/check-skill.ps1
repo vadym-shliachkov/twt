@@ -123,19 +123,7 @@ if (-not $tplExempt) {
 
 # Validator write-scoping (CONVENTIONS section 11):
 # a *-validate skill may write ONLY its sibling validation-report.md.
-# Exemption: the fidelity category has no *-define step at all (the reference
-# is fetched once by twt-fidelity-fetch; the build itself is produced
-# elsewhere, by the orchestrator's builder dispatch, not by a dialogue this
-# skill drives) — so twt-fidelity-validate is not a rubric critic re-reading
-# an existing canonical artifact, the shape section 11 protects. It is the
-# deterministic measure-plus-diff step of a fetch/validate pair, structurally
-# closer to section 8's audit-only exception (which grants a read-only skill
-# with no fetch/define counterpart a name WITHOUT the -validate suffix) than
-# to a define/validate critic — this plan kept the -validate suffix for
-# fetch/validate symmetry instead of adopting that naming escape, so the
-# exemption lives here rather than in the name.
-$writeScopeExempt = @('twt-fidelity-validate')
-if ($expectedName -match '-validate$' -and ($writeScopeExempt -notcontains $expectedName)) {
+if ($expectedName -match '-validate$') {
     $writes = Get-YamlList -Lines $fmLines -Key 'writes' -KeyIndent 0
     $bad = $writes | Where-Object { $_ -notmatch 'validation-report\.md$' }
     if ($bad) {
