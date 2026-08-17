@@ -8,7 +8,7 @@
 'use strict';
 import { writeFileSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { loadPlaywright } from '../lib/resolve-playwright.mjs';
+import { loadPlaywright, detectPlaywright } from '../lib/resolve-playwright.mjs';
 
 // Screenshot helper — used by tests and by the orchestrator's built/ captures.
 export async function shoot({ url, file, root, width = 1440, out }) {
@@ -95,4 +95,74 @@ export async function pixdiff({ a, b, out, floor = 0.5 }) {
     // rejection.
     if (browser) { try { await browser.close(); } catch { /* already gone */ } }
   }
+}
+
+// --- CLI entrypoint --------------------------------------------------------
+//
+// A SKILL.md is prose executed by a model: it runs Bash and file tools, never
+// library functions. Without an isMain guard here, pixdiff() was reachable
+// from Node callers and tests only — the same trap the `inherit` plan hit
+// with adapters.mjs, and Task 7 of this plan hit again when it had to
+// substitute tools/ds-block-preview.mjs for reference screenshots because
+// shoot() (also exported here) had no CLI either. shoot() stays exported and
+// CLI-less on purpose — ds-block-preview.mjs already covers that job and the
+// brief for this task is explicit: do not duplicate a working CLI.
+//
+// Usage:
+//   node tools/fidelity/pixdiff.mjs --a <ref.png> --b <built.png> --out <diff.png> [--floor 0.5] [--json <path>]
+// Exit: 0 ok | 2 playwright/chromium unavailable | 3 the comparison failed
+// (missing/unreadable input file, decode failure, ...).
+//
+// pixdiff() itself collapses BOTH failure classes into a single `null`
+// return (its one try/catch spans the browser launch and the actual
+// comparison) — unlike measure.mjs, which has a dedicated `_launch` seam to
+// tell "Chromium binary missing" apart from "the measurement itself broke".
+// Reproducing that split inside pixdiff() would go beyond "add a CLI" and
+// touch a landed, reviewed function. Instead this CLI probes real
+// availability itself, once, via detectPlaywright() (package resolves AND
+// chromium launches) — before ever calling pixdiff() — so the 2-vs-3 choice
+// is grounded in an independent check, not in guessing what a bare `null`
+// meant. The one-line classifier below is exported and tested directly,
+// because the "genuinely unavailable" branch (exit 2) cannot be exercised by
+// spawning the real CLI in this environment: every dev/CI box that runs this
+// suite already has Chromium installed (the identical constraint that made
+// Task 4/measure.mjs's tests use an injection seam rather than rely on the
+// environment lacking Chromium for real).
+export function classifyPixdiffExit({ playwrightOk, result }) {
+  if (!playwrightOk) return 2;
+  if (!result) return 3;
+  return 0;
+}
+
+const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+if (isMain) {
+  const arg = (name, dflt) => {
+    const i = process.argv.indexOf(`--${name}`);
+    return i === -1 ? dflt : process.argv[i + 1];
+  };
+  const a = arg('a');
+  const b = arg('b');
+  const out = arg('out');
+  const floor = Number(arg('floor', '0.5'));
+  const jsonPath = arg('json');
+
+  const { playwright, chromium } = await detectPlaywright();
+  const playwrightOk = playwright && chromium;
+  const result = playwrightOk ? await pixdiff({ a, b, out, floor }) : null;
+  const code = classifyPixdiffExit({ playwrightOk, result });
+
+  if (code === 2) {
+    process.stderr.write('playwright unavailable — npm install playwright && npx playwright install chromium\n');
+    process.exit(2);
+  }
+  if (code === 3) {
+    process.stderr.write(`pixel comparison failed: could not compare "${a}" and "${b}"\n`);
+    process.exit(3);
+  }
+
+  const payload = JSON.stringify(result, null, 2);
+  if (jsonPath) writeFileSync(jsonPath, payload);
+  else process.stdout.write(payload + '\n');
+  const health = result.reported ? 'reported' : 'not reported';
+  process.stderr.write(`pixdiff: ${result.mismatch}% mismatch (${health}) -> ${result.out}\n`);
 }

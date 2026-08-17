@@ -4,9 +4,12 @@ import { mkdtempSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pixdiff } from '../tools/fidelity/pixdiff.mjs';
+import { spawnSync } from 'node:child_process';
+import { pixdiff, classifyPixdiffExit } from '../tools/fidelity/pixdiff.mjs';
 import { shoot } from '../tools/fidelity/pixdiff.mjs';
 import { detectPlaywright } from '../tools/lib/resolve-playwright.mjs';
+
+const CLI = fileURLToPath(new URL('../tools/fidelity/pixdiff.mjs', import.meta.url));
 
 const FIX = fileURLToPath(new URL('./fixtures/fidelity-pair/', import.meta.url));
 
@@ -198,4 +201,80 @@ test('the output heatmap is sized to the union of the two inputs, in either argu
   const s2 = pngSize(d2);
   assert.equal(s2.width, wantW, 'union must hold with the smaller image passed as `a`');
   assert.equal(s2.height, wantH, 'union must hold with the smaller image passed as `a`');
+});
+
+// --- classifyPixdiffExit: pure boundary coverage ---------------------------
+//
+// The CLI's exit-2 branch ("Playwright/Chromium is genuinely unavailable")
+// cannot be exercised by spawning the real CLI in this environment — every
+// box that runs this suite already has Chromium installed, the identical
+// constraint Task 4/measure.mjs hit for its launch-classification tests.
+// classifyPixdiffExit is the CLI's actual branching decision (isMain calls
+// it, does not reimplement it), so pinning it here with fabricated inputs
+// tests the real logic, not a parallel copy of it.
+
+test('classifyPixdiffExit: playwright unavailable is always exit 2, even with a legitimate result', () => {
+  assert.equal(classifyPixdiffExit({ playwrightOk: false, result: null }), 2);
+  assert.equal(classifyPixdiffExit({ playwrightOk: false, result: { mismatch: 0, reported: false, out: 'x' } }), 2,
+    'unavailable must win over a truthy result — the CLI never calls pixdiff() when playwrightOk is false, but the classifier must not depend on that call order to be correct');
+});
+
+test('classifyPixdiffExit: playwright available but pixdiff() returned null is exit 3', () => {
+  assert.equal(classifyPixdiffExit({ playwrightOk: true, result: null }), 3);
+});
+
+test('classifyPixdiffExit: playwright available and a real result is exit 0', () => {
+  assert.equal(classifyPixdiffExit({ playwrightOk: true, result: { mismatch: 1.2, reported: true, out: 'd.png' } }), 0);
+});
+
+// --- CLI entrypoint (subprocess) -------------------------------------------
+
+test('the pixdiff CLI writes the heatmap and the JSON, and the summary line reports the mismatch percentage', async (t) => {
+  if (!(await chromiumAvailable())) return t.skip('playwright/chromium unavailable');
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const a = join(dir, 'a.png'), b = join(dir, 'b.png'), out = join(dir, 'd.png'), jsonPath = join(dir, 'r.json');
+  const okA = await shoot({ file: FIX + 'reference.html', root: '.hero', width: 1440, out: a });
+  const okB = await shoot({ file: FIX + 'drifted.html', root: '.hero', width: 1440, out: b });
+  assert.ok(okA && okB, 'chromium was independently confirmed available — shoot() must not fail');
+
+  const res = spawnSync(process.execPath, [CLI, '--a', a, '--b', b, '--out', out, '--json', jsonPath], { encoding: 'utf8' });
+  assert.equal(res.status, 0, `expected exit 0, got ${res.status}; stderr: ${res.stderr}`);
+  assert.ok(existsSync(out), 'a heatmap PNG must be written');
+  assert.ok(existsSync(jsonPath), 'the --json result file must be written');
+
+  const result = JSON.parse(readFileSync(jsonPath, 'utf8'));
+  assert.ok(result.mismatch > 1, `expected a visible difference, got ${result.mismatch}%`);
+  assert.equal(result.reported, true);
+  assert.equal(result.out, out);
+  assert.match(res.stderr, /%/, 'the summary line on stderr must report the mismatch percentage');
+  assert.match(res.stderr, new RegExp(String(result.mismatch).replace('.', '\\.')),
+    'the stderr summary must report the SAME mismatch number written to --json, not a different computation');
+});
+
+test('without --json the result is written to stdout as JSON', async (t) => {
+  if (!(await chromiumAvailable())) return t.skip('playwright/chromium unavailable');
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const a = join(dir, 'a.png'), out = join(dir, 'd.png');
+  const okA = await shoot({ file: FIX + 'reference.html', root: '.hero', width: 1440, out: a });
+  assert.ok(okA, 'chromium was independently confirmed available — shoot() must not fail');
+
+  const res = spawnSync(process.execPath, [CLI, '--a', a, '--b', a, '--out', out], { encoding: 'utf8' });
+  assert.equal(res.status, 0);
+  const parsed = JSON.parse(res.stdout);
+  assert.equal(parsed.mismatch, 0);
+  assert.equal(parsed.reported, false);
+});
+
+test('a missing input file exits 3, not 0', async (t) => {
+  if (!(await chromiumAvailable())) return t.skip('playwright/chromium unavailable');
+  const dir = mkdtempSync(join(tmpdir(), 'fid-cli-'));
+  const missing = join(dir, 'does-not-exist.png');
+  const b = join(dir, 'b.png');
+  const okB = await shoot({ file: FIX + 'reference.html', root: '.hero', width: 1440, out: b });
+  assert.ok(okB, 'chromium was independently confirmed available — shoot() must not fail');
+
+  const res = spawnSync(process.execPath, [CLI, '--a', missing, '--b', b, '--out', join(dir, 'd.png')], { encoding: 'utf8' });
+  assert.equal(res.status, 3, `expected exit 3 for a missing input file, got ${res.status}; stderr: ${res.stderr}`);
+  assert.notEqual(res.status, 0, 'a missing input file must never report a false success');
+  assert.match(res.stderr, /comparison failed/i);
 });
