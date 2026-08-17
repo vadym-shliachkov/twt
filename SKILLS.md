@@ -1435,7 +1435,7 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 ## /twt-fidelity-fetch
 
 **Category:** fidelity
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Turn a reference — a Figma frame, a live URL, or an image — into `reference-spec.json` (or `reference-spec-estimated.json`) plus reference PNGs, so `/twt-fidelity`'s diff loop has something concrete to measure a build against.
@@ -1464,9 +1464,9 @@ Turn a reference — a Figma frame, a live URL, or an image — into `reference-
 
 **Success criteria:**
 - Exactly one of `reference-spec.json` / `reference-spec-estimated.json` exists for the target slug, and its name is never wrong about whether the numbers inside it were measured or guessed
-- Every captured width has a matching `reference/<width>.png`
+- Every captured width has a matching `reference/<width>.png` (url, figma) or `reference/<width>.<ext>` matching the source image's own extension (image adapter)
 - A Figma file with only one usable frame produces a spec that says it captured one width — never three
-- Re-run with the same `--name` overwrites cleanly (this skill has no refinement mode of its own; `/twt-fidelity` owns re-acquisition decisions)
+- Re-run with the same `--name` overwrites cleanly, including across a different adapter — never leaves both `reference-spec.json` and `reference-spec-estimated.json` on disk for the same target slug at once (this skill has no refinement mode of its own; `/twt-fidelity` owns re-acquisition decisions)
 
 ---
 

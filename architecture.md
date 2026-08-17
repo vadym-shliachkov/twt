@@ -1614,7 +1614,7 @@ flowchart TB
 ### /twt-fidelity-fetch
 
 **Category:** fidelity
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - A Figma URL, a site URL, or a local image path
