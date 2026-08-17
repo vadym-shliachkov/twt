@@ -41,6 +41,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | [/twt-fidelity-fetch](#twt-fidelity-fetch) | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
+| [/twt-fidelity-validate](#twt-fidelity-validate) | fidelity | Measure a built page against the reference spec and report every delta |
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
@@ -1467,6 +1468,53 @@ Turn a reference — a Figma frame, a live URL, or an image — into `reference-
 - Every captured width has a matching `reference/<width>.png` (url, figma) or `reference/<width>.<ext>` matching the source image's own extension (image adapter)
 - A Figma file with only one usable frame produces a spec that says it captured one width — never three
 - Re-run with the same `--name` overwrites cleanly, including across a different adapter — never leaves both `reference-spec.json` and `reference-spec-estimated.json` on disk for the same target slug at once (this skill has no refinement mode of its own; `/twt-fidelity` owns re-acquisition decisions)
+
+---
+
+## /twt-fidelity-validate
+
+**Category:** fidelity
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Measure an already-built page against the reference spec `/twt-fidelity-fetch` produced, diff the two, and write a deterministic, tolerance-gated report of every property that drifted — so the fix loop this skill feeds has a real measurement to stop on, never a model's opinion.
+
+**Inputs:**
+- --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- .twt-artifacts/fidelity/<target-slug>/reference-spec.json
+- .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
+- .twt-artifacts/fidelity/<target-slug>/reference/
+
+**Writes:**
+- .twt-artifacts/fidelity/<target-slug>/measured.json
+- .twt-artifacts/fidelity/<target-slug>/deltas.json
+- .twt-artifacts/fidelity/<target-slug>/summary.json
+- .twt-artifacts/fidelity/<target-slug>/built/
+- .twt-artifacts/fidelity/<target-slug>/diff/
+- .twt-artifacts/fidelity/<target-slug>/pixdiff.json
+- .twt-artifacts/fidelity/<target-slug>/validation-report.md
+- .twt-artifacts/fidelity/<target-slug>/validation-report-estimated.md
+- .twt-artifacts/fidelity/<target-slug>/fidelity-report.html
+- .twt-artifacts/fidelity/<target-slug>/fidelity-report-estimated.html
+
+**Non-goals:**
+- Writes nothing outside `.twt-artifacts/fidelity/<target-slug>/`.
+- Never edits the build. It only reads it.
+- Never re-runs the builder — producing or updating the build is the orchestrator's job (`/twt-fidelity`); this skill is handed a finished `--built` target and measures it as-is.
+- Never reads `deltas.json` or `measured.json` into model context. They are script-to-script artifacts — see Step 4.
+- Never renders a score for a run it could not measure (Step 2's NOT VERIFIED path).
+
+**Success criteria:**
+- Every run produces exactly one of: a full measured/estimated report pair (`validation-report(-estimated).md` + `fidelity-report(-estimated).html`), or — on the unverified path — a `validation-report.md` that says NOT VERIFIED and emits no score, and no `.html` file at all.
+- An estimated reference (`reference-spec-estimated.json`) never produces a report under the measured filenames (`validation-report.md` / `fidelity-report.html`) — that ambiguity is exactly what `spec.mjs`'s `reportBasenames()` exists to prevent, applied by the CLI itself since `spec.mjs` has no CLI of its own.
+- The model's own context never holds `deltas.json` or `measured.json` — only `summary.json` (capped, markup-free) and, when a pixel finding cannot be expressed numerically, a single heatmap screenshot.
+- A missing reference spec, a measurement failure, or a diff-CLI failure each stop the run with the tool's own stderr message reported verbatim — never a guessed explanation.
 
 ---
 

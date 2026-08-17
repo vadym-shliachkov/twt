@@ -47,6 +47,7 @@ flowchart TB
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
     twt_fidelity_fetch["/twt-fidelity-fetch"]:::skill
+    twt_fidelity_validate["/twt-fidelity-validate"]:::skill
     twt_figma_design_system["/twt-figma-design-system"]:::skill
     twt_figma_dev_audit["/twt-figma-dev-audit"]:::skill
     twt_figma_mockup["/twt-figma-mockup"]:::skill
@@ -329,6 +330,7 @@ flowchart TB
 ### fidelity
 
 - /twt-fidelity-fetch - Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
+- /twt-fidelity-validate - Measure a built page against the reference spec and report every delta
 
 ### figma-export
 
@@ -1638,6 +1640,41 @@ flowchart TB
 | .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json |  |
 | .twt-artifacts/fidelity/<target-slug>/reference/ |  |
 | .twt-artifacts/fidelity/<target-slug>/decisions.md |  |
+
+### /twt-fidelity-validate
+
+**Category:** fidelity
+**Version:** 1.0.1
+
+**Inputs:**
+- --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/fidelity/<target-slug>/reference-spec.json
+- .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
+- .twt-artifacts/fidelity/<target-slug>/reference/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/fidelity/<target-slug>/measured.json |  |
+| .twt-artifacts/fidelity/<target-slug>/deltas.json |  |
+| .twt-artifacts/fidelity/<target-slug>/summary.json |  |
+| .twt-artifacts/fidelity/<target-slug>/built/ |  |
+| .twt-artifacts/fidelity/<target-slug>/diff/ |  |
+| .twt-artifacts/fidelity/<target-slug>/pixdiff.json |  |
+| .twt-artifacts/fidelity/<target-slug>/validation-report.md |  |
+| .twt-artifacts/fidelity/<target-slug>/validation-report-estimated.md |  |
+| .twt-artifacts/fidelity/<target-slug>/fidelity-report.html |  |
+| .twt-artifacts/fidelity/<target-slug>/fidelity-report-estimated.html |  |
 
 ### /twt-figma-design-system
 
@@ -2957,6 +2994,7 @@ flowchart TB
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
 | /twt-fidelity-fetch | none | figma-mcp |
+| /twt-fidelity-validate | none | none |
 | /twt-figma-design-system | none | figma-mcp |
 | /twt-figma-dev-audit | none | figma-mcp, twt-design-system-audit |
 | /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |

@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-17 **v1.0.111** — twt-fidelity-validate → 1.0.1
 - 2026-08-17 **v1.0.110** — twt-fidelity-fetch → 1.0.2
 - 2026-08-17 **v1.0.109** — twt-fidelity-fetch → 1.0.1
 - 2026-08-16 **v1.0.108** — twt-inherit-block-creator.md → 1.0.4, twt-develop.md → 1.3.14, twt-site.md → 1.13.8, twt-site-dev.md → 1.5.13
