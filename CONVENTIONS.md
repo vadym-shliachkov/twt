@@ -146,6 +146,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 - Every `*-validate` skill may write **only** its own sibling `validation-report.md` — no other side effects
 - **Fold-in exception (§9 collect mode):** when an orchestrator folds validation into `define` (orchestrated/collect runs), `define` performs the validator's §12 rubric self-check and writes that same `validation-report.md` in the validator's place — so downstream synthesis can still aggregate BLOCKERs. The standalone `*-validate` skill itself stays read-only.
+- **Exception — `twt-fidelity-validate`.** The fidelity category has no `*-define` step (the reference is fetched once by `twt-fidelity-fetch`; the build itself is produced elsewhere, by the orchestrator's builder dispatch, not by dialogue this skill drives), so it is not a rubric critic re-reading an existing canonical artifact — it is the deterministic measure-plus-diff step of a fetch/validate pair, structurally closer to §8's audit-only exception (a read-only skill with no fetch/define counterpart, named without the `-validate` suffix) than to a define/validate critic. It keeps the `-validate` suffix for fetch/validate symmetry instead, so it is named as an explicit exemption here rather than by dropping the suffix. It may write `measured.json`, `deltas.json`, `summary.json`, `pixdiff.json`, its `built/`/`diff/` screenshot dirs, and its validation report pair (measured or estimated filenames) — see its frontmatter for the exact list.
 
 ## 12. Validation report format
 
