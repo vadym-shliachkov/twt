@@ -42,7 +42,7 @@
           <h1>/twt-fidelity-fetch</h1>
           <p class="lede">Turn a reference — a Figma frame, a live URL, or an image — into <code>reference-spec.json</code> (or <code>reference-spec-estimated.json</code>) plus reference PNGs, so <code>/twt-fidelity</code>'s diff loop has...</p>
           <div class="fact-row">
-            <span>Version 1.0.1</span>
+            <span>Version 1.0.2</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--mid token-usage--compact" data-token-usage="mid" aria-label="Token usage: Mid">
     <span class="token-usage__label">Token usage</span>
@@ -76,7 +76,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>Exactly one of <code>reference-spec.json</code> / <code>reference-spec-estimated.json</code> exists for the target slug, and its name is never wrong about whether the numbers inside it were measured or guessed</li><li>Every captured width has a matching <code>reference/&lt;width&gt;.png</code></li><li>A Figma file with only one usable frame produces a spec that says it captured one width — never three</li><li>Re-run with the same <code>--name</code> overwrites cleanly (this skill has no refinement mode of its own; <code>/twt-fidelity</code> owns re-acquisition decisions)</li></ul>
+    <ul><li>Exactly one of <code>reference-spec.json</code> / <code>reference-spec-estimated.json</code> exists for the target slug, and its name is never wrong about whether the numbers inside it were measured or guessed</li><li>Every captured width has a matching <code>reference/&lt;width&gt;.png</code> (url, figma) or <code>reference/&lt;width&gt;.&lt;ext&gt;</code> matching the source image's own extension (image adapter)</li><li>A Figma file with only one usable frame produces a spec that says it captured one width — never three</li><li>Re-run with the same <code>--name</code> overwrites cleanly, including across a different adapter — never leaves both <code>reference-spec.json</code> and <code>reference-spec-estimated.json</code> on disk for the same target slug at once (this skill has no refinement mode of its own; <code>/twt-fidelity</code> owns re-acquisition decisions)</li></ul>
   </section>
       </section>
   </main>

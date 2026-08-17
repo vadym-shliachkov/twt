@@ -47,7 +47,7 @@ flowchart TB
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
     twt_fidelity_fetch["/twt-fidelity-fetch"]:::skill
-    twt_fidelity_validate["/twt-fidelity-validate"]:::skill
+    twt_fidelity_measure["/twt-fidelity-measure"]:::skill
     twt_figma_design_system["/twt-figma-design-system"]:::skill
     twt_figma_dev_audit["/twt-figma-dev-audit"]:::skill
     twt_figma_mockup["/twt-figma-mockup"]:::skill
@@ -330,7 +330,7 @@ flowchart TB
 ### fidelity
 
 - /twt-fidelity-fetch - Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
-- /twt-fidelity-validate - Measure a built page against the reference spec and report every delta
+- /twt-fidelity-measure - Measure a built page against the reference spec and report every delta
 
 ### figma-export
 
@@ -1641,10 +1641,10 @@ flowchart TB
 | .twt-artifacts/fidelity/<target-slug>/reference/ |  |
 | .twt-artifacts/fidelity/<target-slug>/decisions.md |  |
 
-### /twt-fidelity-validate
+### /twt-fidelity-measure
 
 **Category:** fidelity
-**Version:** 1.0.1
+**Version:** 1.0.0
 
 **Inputs:**
 - --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
@@ -1661,6 +1661,7 @@ flowchart TB
 - .twt-artifacts/fidelity/<target-slug>/reference-spec.json
 - .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
 - .twt-artifacts/fidelity/<target-slug>/reference/
+- .twt-artifacts/fidelity/<target-slug>/summary.json
 
 **Writes:**
 | Path | Notes |
@@ -2994,7 +2995,7 @@ flowchart TB
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
 | /twt-fidelity-fetch | none | figma-mcp |
-| /twt-fidelity-validate | none | none |
+| /twt-fidelity-measure | none | none |
 | /twt-figma-design-system | none | figma-mcp |
 | /twt-figma-dev-audit | none | figma-mcp, twt-design-system-audit |
 | /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |

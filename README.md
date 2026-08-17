@@ -75,7 +75,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-export-presentation | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | /twt-export-template-create | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | /twt-fidelity-fetch | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
-| /twt-fidelity-validate | fidelity | Measure a built page against the reference spec and report every delta |
+| /twt-fidelity-measure | fidelity | Measure a built page against the reference spec and report every delta |
 | /twt-figma-design-system | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | /twt-figma-dev-audit | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | /twt-figma-mockup | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
