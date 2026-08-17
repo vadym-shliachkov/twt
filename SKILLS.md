@@ -1437,7 +1437,7 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 ## /twt-fidelity
 
 **Category:** fidelity
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Turn "close to the reference" into "measured against it." Acquire a reference (a Figma frame, a live URL, or an image) as numbers, dispatch the project's existing builder toward it, measure what actually got built, diff the two, and re-dispatch with only what still fails — until every property is within tolerance or a hard iteration cap is reached. The continue/stop signal is always a deterministic measurement written by `tools/fidelity/diff.mjs`, never a model's opinion of how close the build looks.
