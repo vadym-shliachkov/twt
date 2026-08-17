@@ -71,6 +71,7 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-export-pdf': 'low',
   'twt-export-presentation': 'low',
   'twt-export-template-create': 'mid',
+  'twt-fidelity': 'high',
   'twt-fidelity-fetch': 'mid',
   'twt-fidelity-measure': 'mid',
   'twt-figma-design-system': 'high',
