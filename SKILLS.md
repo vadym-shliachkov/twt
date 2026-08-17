@@ -2706,7 +2706,7 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 ## /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.13
+**Version:** 1.5.14
 **Accepts arguments:** yes
 
 The short path. From a Figma link, create or update the cross-phase design-system spine, create the content approval workbook as a parallel confirmation artifact, auto-scaffold the chosen target if needed, then jump straight to page/block development using current Figma content. Skips the full Phase-1/Phase-2 pipeline. With the first token `auto`, runs fully unattended — every choice inferred from the provided context, zero questions.
