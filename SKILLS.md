@@ -40,6 +40,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
+| [/twt-fidelity](#twt-fidelity) | fidelity | Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image |
 | [/twt-fidelity-fetch](#twt-fidelity-fetch) | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
 | [/twt-fidelity-measure](#twt-fidelity-measure) | fidelity | Measure a built page against the reference spec and report every delta |
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
@@ -1430,6 +1431,46 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 - Creates `.twt-artifacts/export/themes/<theme-slug>/preview-notes.md`
 - Theme names are human-distinguishable and combine context, style direction, and scope where possible
 - With no `$ARGUMENTS`, gathers choices through menus and free-text prompts before running `tools/export-theme-create.mjs`
+
+---
+
+## /twt-fidelity
+
+**Category:** fidelity
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Turn "close to the reference" into "measured against it." Acquire a reference (a Figma frame, a live URL, or an image) as numbers, dispatch the project's existing builder toward it, measure what actually got built, diff the two, and re-dispatch with only what still fails — until every property is within tolerance or a hard iteration cap is reached. The continue/stop signal is always a deterministic measurement written by `tools/fidelity/diff.mjs`, never a model's opinion of how close the build looks.
+
+**Inputs:**
+- A Figma URL, site URL, or image path
+- --name <target-slug>, --build html|elementor, --mode system|strict, --widths <csv>, --root <selector-or-node>, --max-iter <n>, --url <built-url>, --strip
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-fidelity-fetch, twt-fidelity-measure, twt-html-block-creator, twt-elementor-block-creator, figma-mcp
+
+**Reads:**
+- .twt-artifacts/fidelity/<target-slug>/summary.json
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/html-site/conventions.md
+
+**Writes:**
+- .twt-artifacts/fidelity/<target-slug>/iterations.md
+
+**Non-goals:**
+- Does not author tokens directly — a value `strict` mode needs added to `tokens.css` goes through `/twt-design-system-define`, the design-system spine's only writer (CONVENTIONS §2). This skill only tells the builder to make that call; it never edits `tokens.css` itself.
+- Does not replace the builders — `/twt-html-block-creator` and `/twt-elementor-block-creator` do the actual building (CONVENTIONS §5: dispatch, never reproduce). This skill only measures what they produced and re-dispatches them with a narrower instruction.
+- Never loops on a model-judged score. Band and Health (`summary.json`'s `score` field) are informational only and never gate an iteration — see Step 5. This is the one skill in the marketplace permitted to iterate past a single pass at all, and only because its stop signal is script-emitted, not model-judged (the CONVENTIONS §9 amendment this family exists under).
+
+**Success criteria:**
+- A reference is acquired as `reference-spec.json` (or `-estimated.json`) plus reference screenshots before anything is built (Step 2); the loop never starts building against a reference that doesn't exist on disk yet.
+- Every build dispatch — the first one and every fix re-dispatch — carries the `data-fid` stamping instruction verbatim and the correct `<mode>` semantics (Step 3, Step 5), so correspondence between reference and build stays on the reliable stamped path rather than falling back to heuristic matching.
+- The gate (Step 5) reads `summary.json`'s `counts.fail` only — zero `fail` rows stops the loop as PASS; a positive `fail` count with iterations left re-dispatches the builder with **only the failing rows**, never the whole spec; the cap stops the loop regardless of how many rows still fail. Band/Health never drives this decision, at any point.
+- Every re-dispatch is a compact fix list (typically well under the 120-row cap `summary.json` itself enforces) — never a re-send of `reference-spec.json`, never a re-read of the mockup or the design.
+- `.twt-artifacts/fidelity/<target-slug>/iterations.md` records every pass's before/after fail-warn counts and what changed, and the final report never implies the target was met when the cap was reached with failures still open — the remaining failures are named, by `id` and `prop`, not just counted.
+- `data-fid` stamps survive by default after the run ends — they make a later re-check free. Only `--strip`, applied after the final measurement, removes them, and the report says so when it happens.
+- `--build elementor` with no `--url` supplied never renders a fidelity score — it states plainly that nothing was measured and points at the NOT VERIFIED report (Step 7).
 
 ---
 

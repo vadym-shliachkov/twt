@@ -46,6 +46,7 @@ flowchart TB
     twt_export_pdf["/twt-export-pdf"]:::skill
     twt_export_presentation["/twt-export-presentation"]:::skill
     twt_export_template_create["/twt-export-template-create"]:::skill
+    twt_fidelity["/twt-fidelity"]:::skill
     twt_fidelity_fetch["/twt-fidelity-fetch"]:::skill
     twt_fidelity_measure["/twt-fidelity-measure"]:::skill
     twt_figma_design_system["/twt-figma-design-system"]:::skill
@@ -170,6 +171,10 @@ flowchart TB
     twt_export_presentation -.-> twt_export
     twt_export_template_create -.-> twt_export
     twt_brand_define -.-> twt_export_template_create
+    twt_fidelity_fetch -.-> twt_fidelity
+    twt_fidelity_measure -.-> twt_fidelity
+    twt_html_block_creator -.-> twt_fidelity
+    twt_elementor_block_creator -.-> twt_fidelity
     twt_design_system_audit -.-> twt_figma_dev_audit
     twt_figma_design_system -.-> twt_figma_mockup
     twt_html_site_creator --> twt_html_block_creator
@@ -329,6 +334,7 @@ flowchart TB
 
 ### fidelity
 
+- /twt-fidelity - Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image
 - /twt-fidelity-fetch - Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
 - /twt-fidelity-measure - Measure a built page against the reference spec and report every delta
 
@@ -1363,7 +1369,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-implement, twt-develop, twt-site-dev
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-fidelity, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/elementor-theme/conventions.md
@@ -1613,6 +1619,33 @@ flowchart TB
 | .twt-artifacts/export/themes/<theme-slug>/preview/preview.html |  |
 | .twt-artifacts/export/themes/<theme-slug>/preview-notes.md |  |
 
+### /twt-fidelity
+
+**Category:** fidelity
+**Version:** 1.0.1
+
+**Inputs:**
+- A Figma URL, site URL, or image path
+- --name <target-slug>, --build html|elementor, --mode system|strict, --widths <csv>, --root <selector-or-node>, --max-iter <n>, --url <built-url>, --strip
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-fidelity-fetch, twt-fidelity-measure, twt-html-block-creator, twt-elementor-block-creator, figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- .twt-artifacts/fidelity/<target-slug>/summary.json
+- .twt-artifacts/design/design-system/tokens.css
+- .twt-artifacts/html-site/conventions.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/fidelity/<target-slug>/iterations.md |  |
+
 ### /twt-fidelity-fetch
 
 **Category:** fidelity
@@ -1628,7 +1661,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-fidelity
 
 **Reads:**
 - $ARGUMENTS (reference source, --name, --root, --widths)
@@ -1655,7 +1688,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: none
+- Soft consumers: twt-fidelity
 
 **Reads:**
 - .twt-artifacts/fidelity/<target-slug>/reference-spec.json
@@ -1783,7 +1816,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-content-approval-implement, twt-develop, twt-site-dev
+- Soft consumers: twt-content-approval-implement, twt-develop, twt-fidelity, twt-site-dev
 
 **Reads:**
 - .twt-artifacts/html-site/conventions.md
@@ -2994,6 +3027,7 @@ flowchart TB
 | /twt-export-pdf | none | none |
 | /twt-export-presentation | none | none |
 | /twt-export-template-create | none | twt-brand-define |
+| /twt-fidelity | none | twt-fidelity-fetch, twt-fidelity-measure, twt-html-block-creator, twt-elementor-block-creator, figma-mcp |
 | /twt-fidelity-fetch | none | figma-mcp |
 | /twt-fidelity-measure | none | none |
 | /twt-figma-design-system | none | figma-mcp |
