@@ -1474,7 +1474,7 @@ Turn a reference — a Figma frame, a live URL, or an image — into `reference-
 ## /twt-fidelity-measure
 
 **Category:** fidelity
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Accepts arguments:** yes
 
 Measure an already-built page against the reference spec `/twt-fidelity-fetch` produced, diff the two, and write a deterministic, tolerance-gated report of every property that drifted — so the fix loop this skill feeds has a real measurement to stop on, never a model's opinion.

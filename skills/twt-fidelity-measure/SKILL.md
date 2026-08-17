@@ -1,8 +1,8 @@
 ---
 name: twt-fidelity-measure
 category: fidelity
-description: (v1.0.0) Measure a built page against the reference spec and report every delta
-version: 1.0.0
+description: (v1.0.1) Measure a built page against the reference spec and report every delta
+version: 1.0.1
 accepts_arguments: true
 inputs:
   - --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>

@@ -1644,7 +1644,7 @@ flowchart TB
 ### /twt-fidelity-measure
 
 **Category:** fidelity
-**Version:** 1.0.0
+**Version:** 1.0.1
 
 **Inputs:**
 - --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
