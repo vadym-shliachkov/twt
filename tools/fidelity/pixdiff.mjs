@@ -25,7 +25,11 @@ export async function shoot({ url, file, root, width = 1440, out }) {
   } catch {
     return false;
   } finally {
-    if (browser) await browser.close();
+    // A browser whose process already died (e.g. after a goto timeout) can
+    // make close() itself throw. That must not replace whatever try/catch
+    // above was about to return — including a legitimate success — with an
+    // unhandled rejection the caller has no top-level handler for.
+    if (browser) { try { await browser.close(); } catch { /* already gone */ } }
   }
 }
 
@@ -69,7 +73,7 @@ export async function pixdiff({ a, b, out, floor = 0.5 }) {
         const dg = Math.abs(da.data[i + 1] - db.data[i + 1]);
         const dbl = Math.abs(da.data[i + 2] - db.data[i + 2]);
         const dAlpha = Math.abs(da.data[i + 3] - db.data[i + 3]);
-        const changed = dr + dg + dbl + dAlpha > 24;   // per-channel AA slack
+        const changed = dr + dg + dbl + dAlpha > 24;   // AA slack: sum of all four channel deltas, not any single channel
         if (changed) diff++;
         od.data[i] = changed ? 255 : da.data[i];
         od.data[i + 1] = changed ? 0 : da.data[i + 1];
@@ -86,6 +90,9 @@ export async function pixdiff({ a, b, out, floor = 0.5 }) {
   } catch {
     return null;
   } finally {
-    if (browser) await browser.close();
+    // Same rationale as shoot()'s finally: a dead browser process making
+    // close() throw must not clobber a legitimate result with an unhandled
+    // rejection.
+    if (browser) { try { await browser.close(); } catch { /* already gone */ } }
   }
 }
