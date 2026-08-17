@@ -42,7 +42,7 @@ const os = require('os');
 const BASH_UTILS = [
   'ls', 'cat', 'grep', 'rg', 'echo', 'mkdir', 'wc', 'find', 'head', 'tail',
   'node', 'npx', 'python', 'python3', 'pdfinfo', 'pdftotext', 'pandoc',
-  'cd', 'sed', 'sort', 'uniq', 'bc', 'curl', 'cp', 'rm',
+  'cd', 'sed', 'sort', 'uniq', 'bc', 'curl', 'cp',
 ];
 
 // Two read-only git invocations, narrowly scoped — not `git` wholesale. The
@@ -51,6 +51,30 @@ const BASH_UTILS = [
 // to detect pre-existing changes before it runs; neither writes anything. No
 // git command is otherwise pre-authorized, and this stays that way.
 const GIT_READONLY = ['git check-ignore', 'git status --porcelain'];
+
+// `rm`, scoped to the one path a shipped skill legitimately deletes under —
+// not `rm` wholesale (unlike `cp` above, `rm` can destroy data, and this
+// allowlist is merged into every target project's settings.json permanently).
+// There is no Delete tool. The one caller is twt-fidelity-fetch's collect-mode
+// stale-sibling-spec cleanup (skills/twt-fidelity-fetch/SKILL.md, "Check for a
+// stale sibling from a different adapter"): it removes exactly one file with
+// the literal, single, unchained Bash call
+//   rm ".twt-artifacts/fidelity/<target-slug>/<stale-filename>"
+// — always that quoted form, never a flag, never a different directory.
+// Anchoring the grant on that literal prefix keeps anything else (a different
+// path, `-rf`, an unquoted argument, `rm` on its own) unmatched and still
+// prompting — the same class of narrowing GIT_READONLY uses above.
+//
+// This is NOT a path sandbox. Claude Code's Bash permission matcher does
+// literal-prefix + wildcard string matching on the whole command line, not
+// path-resolved argument validation (confirmed against the current docs
+// before adding this: a mid-pattern `*` matches arbitrary text, but nothing
+// here canonicalizes the result) — a `..` segment folded into the matched
+// suffix (e.g. `rm ".twt-artifacts/fidelity/../../elsewhere"`) would still
+// match this prefix and would not be caught. A true "resolves under
+// .twt-artifacts/" restriction isn't expressible by this matcher; this is
+// the narrowest approximation it can express, not a guarantee.
+const RM_SCOPED = 'Bash(rm ".twt-artifacts/fidelity/*)';
 
 // Playwright browser MCP tools (portable — plain tool names, never a path).
 // Live QA, /twt-block-preview, and the DS audit drive a browser to inspect,
@@ -109,6 +133,7 @@ const ALLOW = [
   ...BASH_UTILS.map((c) => `Bash(${c} *)`),
   ...GIT_READONLY.map((c) => `Bash(${c}:*)`),
   ...GIT_READONLY.map((c) => `Bash(${c} *)`),
+  RM_SCOPED,
   ...PLAYWRIGHT_READS,
   ...PLUGIN_READS,
   ...SCRATCH_ACCESS,

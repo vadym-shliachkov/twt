@@ -70,3 +70,28 @@ test('seeding is idempotent for permissions (second run adds nothing)', () => {
   assert.match(out, /already present/);
   assert.equal(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8'), first);
 });
+
+test('rm is scoped to the fidelity artifact tree, never granted wholesale', () => {
+  const dir = newProject();
+  run(join(dir, '.claude'));
+  const settings = JSON.parse(readFileSync(join(dir, '.claude', 'settings.json'), 'utf8'));
+  const allow = settings.permissions.allow;
+
+  // The one caller (twt-fidelity-fetch's stale-sibling-spec cleanup) issues
+  // exactly this literal command; the scoped grant must match it.
+  assert.ok(
+    allow.includes('Bash(rm ".twt-artifacts/fidelity/*)'),
+    'the fidelity-scoped rm grant must be present'
+  );
+
+  // `cp` can only ever add data, so it stays unscoped — but `rm` can destroy
+  // it, and this allowlist is merged into every target project permanently.
+  // A bare `rm` grant here would silently re-widen that on the next edit.
+  for (const entry of allow) {
+    assert.ok(
+      !/^Bash\(rm[: ]\*\)$/.test(entry),
+      `rm must never be granted wholesale, found: ${entry}`
+    );
+  }
+  assert.ok(allow.includes('Bash(cp:*)'), 'cp stays unscoped (copy-only, cannot destroy data)');
+});
