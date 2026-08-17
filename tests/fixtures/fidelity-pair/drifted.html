@@ -13,8 +13,11 @@
           flex-direction: column; gap: 24px; align-items: flex-start; width: 1000px; }
   /* DRIFT 2: font-size 56 -> 48 (delta -8, fail: >1) */
   /* DRIFT 3: line-height 64 -> 56 (delta -8, fail: >1) */
+  /* align-self: stretch — kept in lockstep with reference.html; see the
+     comment there. Without it, box.w drifts as a side effect of font-size
+     and is not one of the documented four. */
   .hero__title { font-size: 48px; line-height: 56px; font-weight: 700;
-                 letter-spacing: -1.12px; color: rgb(255, 255, 255); }
+                 letter-spacing: -1.12px; color: rgb(255, 255, 255); align-self: stretch; }
   /* DRIFT 4: background E8FF5A -> E0F550 (small but real dE) */
   .hero__cta { font-size: 16px; line-height: 24px; font-weight: 600;
                padding: 16px 32px; border-radius: 28px;
