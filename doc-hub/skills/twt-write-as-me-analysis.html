@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, includi">
+  <title>/twt-write-as-me-analysis | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-write-as-me-analysis</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · voice</p>
+          <h1>/twt-write-as-me-analysis</h1>
+          <p class="lede">Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices...</p>
+          <div class="fact-row">
+            <span>Version 1.0.4</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i class="is-filled"></i><i></i></span>
+    <strong>High</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices *and* recurring unintentional habits — so that another model can later reproduce the voice without ever seeing the original samples.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>Writing samples — file paths, a folder, <code>--from &lt;path&gt;</code>, or pasted text</li><li>Optional <code>--profile &lt;path&gt;</code> to write the profile somewhere other than the default</li><li>Optional <code>--label &lt;name&gt;</code> to name the author the profile represents</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>the writing samples the user names</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>.twt-artifacts/write-as-me/writing-style-profile.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/write-as-me/evidence-log.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/write-as-me/writing-style-profile.md</code><span class="file-desc">A Markdown document.</span></li><li><code>.twt-artifacts/write-as-me/evidence-log.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li><strong>Does not evaluate whether the writing is good or bad.</strong> No quality score, no &quot;areas for improvement&quot;, no editorial verdict.</li><li><strong>Does not correct grammar.</strong> Imperfections are evidence, not errors. They are measured and documented, never fixed.</li><li><strong>Does not produce a tone-of-voice blurb.</strong> &quot;Friendly, casual, concise&quot; is a failure of this skill, not an output of it.</li><li>Does not generate or rewrite text in the author's voice — that is <code>/twt-write-as-me</code>.</li><li>Does not fetch samples from URLs, PDFs, or Figma. Run <code>/twt-content-fetch</code> first to turn those into Markdown, then point this skill at the result.</li><li>Does not read anything outside the current project, and never searches the disk for writing samples (CONVENTIONS §14). It reads exactly the paths the user names.</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>The profile is built <strong>from an evidence log first</strong> — every trait in every summary section traces back to counted observations, and no section is written before the log exists.</li><li>Every characteristic in profile sections 1 through 8 carries four attributes: <strong>frequency</strong>, <strong>consistency</strong>, <strong>context-dependence</strong>, and <strong>confidence</strong>.</li><li>Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.</li><li>Recurring habits are documented as <strong>rate-governed firing rules</strong> (when it fires, at what rate, where it must *not* fire) — never as a vague label like &quot;sometimes drops articles&quot; — and every such rule is copied into the single self-contained §10 table that the generator reads.</li><li>The profile explicitly separates <strong>style</strong> from <strong>noise</strong>, and states what a generator must <strong>never</strong> do.</li><li>The final self-check in Step 7 passes all seven questions before the profile is returned.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

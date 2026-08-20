@@ -109,6 +109,12 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-wiki': 'high',
   'twt-wiki-fetch': 'mid',
   'twt-wiki-query': 'mid',
+  // Reads the profile plus the target text, drafts, and self-checks once. Bounded
+  // output, no sub-skill dispatch on the normal path.
+  'twt-write-as-me': 'mid',
+  // Reads every sample twice and enumerates counts across the whole corpus, then
+  // writes both the profile and a full evidence log.
+  'twt-write-as-me-analysis': 'high',
 });
 
 export function tokenUsageFor(slug) {

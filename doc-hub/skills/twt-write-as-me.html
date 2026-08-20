@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. T">
+  <title>/twt-write-as-me | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-write-as-me</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · voice</p>
+          <h1>/twt-write-as-me</h1>
+          <p class="lede">Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in <code>writing-style-profile.md</code>. The single objective is **style...</p>
+          <div class="fact-row">
+            <span>Version 1.0.5</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--mid token-usage--compact" data-token-usage="mid" aria-label="Token usage: Mid">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i></i><i></i></span>
+    <strong>Mid</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in <code>writing-style-profile.md</code>. The single objective is <strong>style fidelity</strong>.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>What to write, or the text/file path to rewrite</li><li>Optional <code>--profile &lt;path&gt;</code> to use a profile outside the default location</li><li>Optional <code>--register &lt;name&gt;</code> to pick a context register defined in the profile</li><li>Optional <code>--fidelity full|natural|clean</code> to control how much of the author's error behavior gets reproduced (default <code>natural</code>)</li><li>Optional <code>--report</code> to append the style audit; without it the response is the text alone</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>$ARGUMENTS</code><span class="file-desc">Whatever you type after the command name.</span></li><li><code>.twt-artifacts/write-as-me/writing-style-profile.md</code><span class="file-desc">A Markdown document.</span></li><li><code>the file to rewrite, when one is given</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>the file given as input, when the input is a file</code><span class="file-desc">A value you provide when you run the command.</span></li><li><code>a sibling `&lt;name&gt;.as-me.&lt;ext&gt;` beside the input file, when the user picks that option</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>perfect English</li><li>professional editing</li><li>maximum clarity</li><li>maximum conciseness</li><li>native-level phrasing</li><li>generic &quot;humanization&quot;</li><li>random imperfection</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>No usable profile → the run stops and points the user at <code>/twt-write-as-me-analysis</code>, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.</li><li>Usable profile → its directives bind the output; every &quot;Never&quot; is respected and no &quot;tell of a fake&quot; appears.</li><li>Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and <strong>spread across the piece</strong> — never sprinkled at random, never applied uniformly, never clustered.</li><li><code>--fidelity</code> scales the author's <strong>error</strong> behavior without weakening anything else. At every level the voice, structure, vocabulary, rhythm and discourse moves are reproduced in full; the levels differ only in how much of what a copy-editor would fix survives. The default output reads as <strong>the author with their English corrected</strong>, never as a simulation of the author typing fast.</li><li>No manufactured misspellings unless the user explicitly asked for <code>full</code>. A generated typo is the one habit the reader cannot tell was deliberate, so it reads as a caricature of the author rather than as the author.</li><li><strong>File in → the file is rewritten, and the response is a one-line confirmation. Text or a topic in → the response is the text, alone.</strong> No process commentary either way unless <code>--report</code> was passed.</li><li>Meaning, facts, names, numbers, and links survive a rewrite untouched.</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>
