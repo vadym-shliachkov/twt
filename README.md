@@ -112,6 +112,8 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-wiki | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | /twt-wiki-fetch | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox |
 | /twt-wiki-query | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
+| /twt-write-as-me | voice | Generate or rewrite text in the author's own voice using their writing-style profile |
+| /twt-write-as-me-analysis | voice | Extract a reproducible writing-fingerprint profile from the author's own text samples |
 <!-- TWT_SKILLS_TABLE_END -->
 
 ---

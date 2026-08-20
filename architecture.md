@@ -92,6 +92,8 @@ flowchart TB
     twt_wiki_fetch["/twt-wiki-fetch"]:::skill
     twt_wiki_query["/twt-wiki-query"]:::skill
     twt_wiki_validate["/twt-wiki-validate"]:::skill
+    twt_write_as_me["/twt-write-as-me"]:::skill
+    twt_write_as_me_analysis["/twt-write-as-me-analysis"]:::skill
     twt_layout_define -.-> twt_assets_produce
     twt_mockup_define -.-> twt_assets_produce
     twt_block_preview -.-> twt_assets_produce
@@ -253,6 +255,8 @@ flowchart TB
     twt_content_fetch -.-> twt_wiki_fetch
     twt_wiki -.-> twt_wiki_query
     twt_wiki_define -.-> twt_wiki_validate
+    twt_write_as_me_analysis -.-> twt_write_as_me
+    twt_content_fetch -.-> twt_write_as_me_analysis
 
     classDef skill fill:#0D1B2A,stroke:#1DB89C,stroke-width:2px,color:#FAFAF8;
 ```
@@ -427,6 +431,11 @@ flowchart TB
 ### status
 
 - /twt-status - Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
+
+### voice
+
+- /twt-write-as-me - Generate or rewrite text in the author's own voice using their writing-style profile
+- /twt-write-as-me-analysis - Extract a reproducible writing-fingerprint profile from the author's own text samples
 
 ### wiki
 
@@ -875,7 +884,7 @@ flowchart TB
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-audience-define, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-seo-define, twt-wiki-fetch
+- Soft consumers: twt-audience-define, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-seo-define, twt-wiki-fetch, twt-write-as-me-analysis
 
 **Reads:**
 - <provided sources>
@@ -2987,6 +2996,63 @@ flowchart TB
 |------|-------|
 | .project-wiki/validation-report.md |  |
 
+### /twt-write-as-me
+
+**Category:** voice
+**Version:** 1.0.1
+
+**Inputs:**
+- What to write, or the text/file path to rewrite
+- Optional `--profile <path>` to use a profile outside the default location
+- Optional `--register <name>` to pick a context register defined in the profile
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-write-as-me-analysis
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- $ARGUMENTS
+- .twt-artifacts/write-as-me/writing-style-profile.md
+- the file to rewrite, when one is given
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| the file given as input, when the input is a file (rewritten in place) |  |
+
+### /twt-write-as-me-analysis
+
+**Category:** voice
+**Version:** 1.0.1
+
+**Inputs:**
+- Writing samples — file paths, a folder, `--from <path>`, or pasted text
+- Optional `--profile <path>` to write the profile somewhere other than the default
+- Optional `--label <name>` to name the author the profile represents
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-write-as-me
+
+**Reads:**
+- $ARGUMENTS
+- the writing samples the user names (project-relative paths or pasted text)
+- .twt-artifacts/write-as-me/writing-style-profile.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/write-as-me/writing-style-profile.md |  |
+| .twt-artifacts/write-as-me/evidence-log.md |  |
+
 ## Cross-skill dependency table
 
 | Skill | Hard deps | Soft deps |
@@ -3075,6 +3141,8 @@ flowchart TB
 | /twt-wiki-fetch | none | twt-content-fetch |
 | /twt-wiki-query | none | twt-wiki |
 | /twt-wiki-validate | none | twt-wiki-define |
+| /twt-write-as-me | none | twt-write-as-me-analysis |
+| /twt-write-as-me-analysis | none | twt-content-fetch |
 
 ## Artifact namespace summary
 
@@ -3102,4 +3170,5 @@ flowchart TB
   site-dev-log.md/
   site-instruction.md/
   site-log.md/
+  write-as-me/
 ```

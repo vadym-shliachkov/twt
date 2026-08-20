@@ -78,6 +78,8 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
 | [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox |
 | [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
+| [/twt-write-as-me](#twt-write-as-me) | voice | Generate or rewrite text in the author's own voice using their writing-style profile |
+| [/twt-write-as-me-analysis](#twt-write-as-me-analysis) | voice | Extract a reproducible writing-fingerprint profile from the author's own text samples |
 
 ---
 ## /twt-assets-produce
@@ -2974,3 +2976,89 @@ Answer a question about the project from its durable memory — including the qu
 - Every claim in the answer carries a citation to a wiki page, source, or artifact path.
 - Gaps are stated plainly as gaps, not filled with plausible invention.
 - Stale or contested pages are flagged when they were used.
+
+---
+
+## /twt-write-as-me
+
+**Category:** voice
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. The single objective is **style fidelity**.
+
+**Inputs:**
+- What to write, or the text/file path to rewrite
+- Optional `--profile <path>` to use a profile outside the default location
+- Optional `--register <name>` to pick a context register defined in the profile
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-write-as-me-analysis
+
+**Reads:**
+- $ARGUMENTS
+- .twt-artifacts/write-as-me/writing-style-profile.md
+- the file to rewrite, when one is given
+
+**Writes:**
+- the file given as input, when the input is a file (rewritten in place)
+
+**Non-goals:**
+- perfect English
+- professional editing
+- maximum clarity
+- maximum conciseness
+- native-level phrasing
+- generic "humanization"
+- random imperfection
+
+**Success criteria:**
+- No profile present → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
+- Profile present → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
+- Rate-governed imperfections land inside their stated bands, placed at genuine opportunities the profile names — never sprinkled at random, never applied uniformly.
+- **File in → the file is rewritten. Text or a topic in → the text comes back in chat.**
+- Meaning, facts, names, numbers, and links survive a rewrite untouched.
+
+---
+
+## /twt-write-as-me-analysis
+
+**Category:** voice
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices *and* recurring unintentional habits — so that another model can later reproduce the voice without ever seeing the original samples.
+
+**Inputs:**
+- Writing samples — file paths, a folder, `--from <path>`, or pasted text
+- Optional `--profile <path>` to write the profile somewhere other than the default
+- Optional `--label <name>` to name the author the profile represents
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Reads:**
+- $ARGUMENTS
+- the writing samples the user names (project-relative paths or pasted text)
+- .twt-artifacts/write-as-me/writing-style-profile.md
+
+**Writes:**
+- .twt-artifacts/write-as-me/writing-style-profile.md
+- .twt-artifacts/write-as-me/evidence-log.md
+
+**Non-goals:**
+- **Does not evaluate whether the writing is good or bad.** No quality score, no "areas for improvement", no editorial verdict.
+- **Does not correct grammar.** Imperfections are evidence, not errors. They are measured and documented, never fixed.
+- **Does not produce a tone-of-voice blurb.** "Friendly, casual, concise" is a failure of this skill, not an output of it.
+- Does not generate or rewrite text in the author's voice — that is `/twt-write-as-me`.
+- Does not fetch samples from URLs, PDFs, or Figma. Run `/twt-content-fetch` first to turn those into Markdown, then point this skill at the result.
+- Does not read anything outside the current project, and never searches the disk for writing samples (CONVENTIONS §14). It reads exactly the paths the user names.
+
+**Success criteria:**
+- The profile is built **from an evidence log first** — every trait in every summary section traces back to counted observations, and no section is written before the log exists.
+- Every important characteristic carries four attributes: **frequency**, **consistency**, **context-dependence**, and **confidence**.
+- Recurring grammatical imperfections are documented as **rate-governed firing rules** (when it fires, at what rate, where it must *not* fire) — never as a vague label like "sometimes drops articles".
+- The profile explicitly separates **style** from **noise**, and states what a generator must **never** do.
+- The final self-check in Step 7 passes all six questions before the profile is returned.
