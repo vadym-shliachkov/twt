@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-20 **v1.0.122** — twt-write-as-me.md → 1.0.6, twt-write-as-me-analysis.md → 1.0.5
 - 2026-08-20 **v1.0.121** — twt-write-as-me.md → 1.0.5, twt-write-as-me-analysis.md → 1.0.4
 - 2026-08-20 **v1.0.120** — twt-write-as-me.md → 1.0.4
 - 2026-08-20 **v1.0.119** — twt-write-as-me.md → 1.0.3, twt-write-as-me-analysis.md → 1.0.3

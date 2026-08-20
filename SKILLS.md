@@ -2982,15 +2982,17 @@ Answer a question about the project from its durable memory — including the qu
 ## /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
-Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. The single objective is **style fidelity**.
+Produce text that reads as if the author described in `writing-style-profile.md` wrote it themselves. When there is a source text, the target is **author reconstruction**, not sentence-by-sentence paraphrase:
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
 - Optional `--profile <path>` to use a profile outside the default location
+- Optional `--mode preserve|author|free` to control how much of the source's own structure survives a rewrite (default `author`)
 - Optional `--register <name>` to pick a context register defined in the profile
+- Optional `--medium`, `--effort`, `--function` to set a context axis explicitly instead of inferring it
 - Optional `--fidelity full|natural|clean` to control how much of the author's error behavior gets reproduced (default `natural`)
 - Optional `--report` to append the style audit; without it the response is the text alone
 
@@ -3013,30 +3015,26 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 - maximum clarity
 - maximum conciseness
 - native-level phrasing
-- generic "humanization"
+- generic "humanization" — nothing is stripped because it "sounds like AI"; things are stripped because the profile shows this author does not do them
 - random imperfection
+- local paraphrase of the source
 
 **Success criteria:**
-- No usable profile → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
-- Usable profile → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
-- Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and **spread across the piece** — never sprinkled at random, never applied uniformly, never clustered.
-- `--fidelity` scales the author's **error** behavior without weakening anything else. At every level the voice, structure, vocabulary, rhythm and discourse moves are reproduced in full; the levels differ only in how much of what a copy-editor would fix survives. The default output reads as **the author with their English corrected**, never as a simulation of the author typing fast.
-- No manufactured misspellings unless the user explicitly asked for `full`. A generated typo is the one habit the reader cannot tell was deliberate, so it reads as a caricature of the author rather than as the author.
-- **File in → the file is rewritten, and the response is a one-line confirmation. Text or a topic in → the response is the text, alone.** No process commentary either way unless `--report` was passed.
-- Meaning, facts, names, numbers, and links survive a rewrite untouched.
+
 
 ---
 
 ## /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** yes
 
 Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices *and* recurring unintentional habits — so that another model can later reproduce the voice without ever seeing the original samples.
 
 **Inputs:**
 - Writing samples — file paths, a folder, `--from <path>`, or pasted text
+- Optional **paired samples** — a source text plus the author's own rewrite of it, marked up as `## Pair N` / `### Source` / `### Author version`
 - Optional `--profile <path>` to write the profile somewhere other than the default
 - Optional `--label <name>` to name the author the profile represents
 
@@ -3068,4 +3066,6 @@ Analyze texts written by one author and extract a detailed, operational model of
 - Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.
 - Recurring habits are documented as **rate-governed firing rules** (when it fires, at what rate, where it must *not* fire) — never as a vague label like "sometimes drops articles" — and every such rule is copied into the single self-contained §10 table that the generator reads.
 - The profile explicitly separates **style** from **noise**, and states what a generator must **never** do.
-- The final self-check in Step 7 passes all seven questions before the profile is returned.
+- **§3b information shaping is measured, not asserted** — how many claims land in a sentence, which supporting evidence survives, how metrics are treated, how abstract the language runs, whether the author ranks things explicitly. Every finding carries counts like every other section.
+- **§3c transformation fingerprint is built only from paired samples.** With no pairs it reads `N/A — no source → author pairs in corpus` and nothing is inferred. A transformation rule guessed from unpaired writing is fabrication, and it sits at the top of the generator's priority order where fabrication does the most damage.
+- The final self-check in Step 7 passes all nine questions before the profile is returned.

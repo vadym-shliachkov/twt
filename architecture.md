@@ -2999,12 +2999,14 @@ flowchart TB
 ### /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
 - Optional `--profile <path>` to use a profile outside the default location
+- Optional `--mode preserve|author|free` to control how much of the source's own structure survives a rewrite (default `author`)
 - Optional `--register <name>` to pick a context register defined in the profile
+- Optional `--medium`, `--effort`, `--function` to set a context axis explicitly instead of inferring it
 - Optional `--fidelity full|natural|clean` to control how much of the author's error behavior gets reproduced (default `natural`)
 - Optional `--report` to append the style audit; without it the response is the text alone
 
@@ -3030,10 +3032,11 @@ flowchart TB
 ### /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - Writing samples — file paths, a folder, `--from <path>`, or pasted text
+- Optional **paired samples** — a source text plus the author's own rewrite of it, marked up as `## Pair N` / `### Source` / `### Author version`
 - Optional `--profile <path>` to write the profile somewhere other than the default
 - Optional `--label <name>` to name the author the profile represents
 
