@@ -2982,7 +2982,7 @@ Answer a question about the project from its durable memory — including the qu
 ## /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. The single objective is **style fidelity**.
@@ -2991,6 +2991,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 - What to write, or the text/file path to rewrite
 - Optional `--profile <path>` to use a profile outside the default location
 - Optional `--register <name>` to pick a context register defined in the profile
+- Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
 
 **Dependencies:**
 - Hard: none
@@ -3003,6 +3004,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 
 **Writes:**
 - the file given as input, when the input is a file (rewritten in place)
+- a sibling `<name>.as-me.<ext>` beside the input file, when the user picks that option
 
 **Non-goals:**
 - perfect English
@@ -3014,9 +3016,10 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 - random imperfection
 
 **Success criteria:**
-- No profile present → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
-- Profile present → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
-- Rate-governed imperfections land inside their stated bands, placed at genuine opportunities the profile names — never sprinkled at random, never applied uniformly.
+- No usable profile → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
+- Usable profile → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
+- Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and **spread across the piece** — never sprinkled at random, never applied uniformly, never clustered.
+- `--fidelity` filters which classes of habit fire without weakening anything else: `clean` still writes in the author's voice, structure, and vocabulary — it only stops reproducing what a reader would call an error.
 - **File in → the file is rewritten. Text or a topic in → the text comes back in chat.**
 - Meaning, facts, names, numbers, and links survive a rewrite untouched.
 
@@ -3025,7 +3028,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 ## /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices *and* recurring unintentional habits — so that another model can later reproduce the voice without ever seeing the original samples.
@@ -3043,6 +3046,7 @@ Analyze texts written by one author and extract a detailed, operational model of
 - $ARGUMENTS
 - the writing samples the user names (project-relative paths or pasted text)
 - .twt-artifacts/write-as-me/writing-style-profile.md
+- .twt-artifacts/write-as-me/evidence-log.md
 
 **Writes:**
 - .twt-artifacts/write-as-me/writing-style-profile.md
@@ -3058,7 +3062,8 @@ Analyze texts written by one author and extract a detailed, operational model of
 
 **Success criteria:**
 - The profile is built **from an evidence log first** — every trait in every summary section traces back to counted observations, and no section is written before the log exists.
-- Every important characteristic carries four attributes: **frequency**, **consistency**, **context-dependence**, and **confidence**.
-- Recurring grammatical imperfections are documented as **rate-governed firing rules** (when it fires, at what rate, where it must *not* fire) — never as a vague label like "sometimes drops articles".
+- Every characteristic in profile sections 1 through 8 carries four attributes: **frequency**, **consistency**, **context-dependence**, and **confidence**.
+- Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.
+- Recurring habits are documented as **rate-governed firing rules** (when it fires, at what rate, where it must *not* fire) — never as a vague label like "sometimes drops articles" — and every such rule is copied into the single self-contained §10 table that the generator reads.
 - The profile explicitly separates **style** from **noise**, and states what a generator must **never** do.
 - The final self-check in Step 7 passes all six questions before the profile is returned.

@@ -1,13 +1,14 @@
 ---
 name: twt-write-as-me
 category: voice
-description: (v1.0.1) Generate or rewrite text in the author's own voice using their writing-style profile
-version: 1.0.1
+description: (v1.0.2) Generate or rewrite text in the author's own voice using their writing-style profile
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - What to write, or the text/file path to rewrite
   - Optional `--profile <path>` to use a profile outside the default location
   - Optional `--register <name>` to pick a context register defined in the profile
+  - Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
 dependencies:
   hard: []
   soft:
@@ -18,6 +19,7 @@ reads:
   - the file to rewrite, when one is given
 writes:
   - the file given as input, when the input is a file (rewritten in place)
+  - a sibling `<name>.as-me.<ext>` beside the input file, when the user picks that option
 ---
 
 # /twt-write-as-me
@@ -38,9 +40,10 @@ writes:
 The output reproduces the author's actual writing behavior as the profile describes it — including the parts a copy-editor would flag. This skill also does not build or update the profile (that is `/twt-write-as-me-analysis`), does not invent facts to fill out a draft, and does not silently drop content when rewriting.
 
 **Success criteria:**
-- No profile present → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
-- Profile present → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
-- Rate-governed imperfections land inside their stated bands, placed at genuine opportunities the profile names — never sprinkled at random, never applied uniformly.
+- No usable profile → the run stops and points the user at `/twt-write-as-me-analysis`, with concrete advice on how much text to feed it. It never quietly falls back to a generic voice.
+- Usable profile → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
+- Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and **spread across the piece** — never sprinkled at random, never applied uniformly, never clustered.
+- `--fidelity` filters which classes of habit fire without weakening anything else: `clean` still writes in the author's voice, structure, and vocabulary — it only stops reproducing what a reader would call an error.
 - **File in → the file is rewritten. Text or a topic in → the text comes back in chat.**
 - Meaning, facts, names, numbers, and links survive a rewrite untouched.
 
@@ -58,12 +61,14 @@ Check (Glob/Read — never a shell command) that `.claude/settings.json` exists 
 
 Resolve the path: `--profile <path>` if given, else `.twt-artifacts/write-as-me/writing-style-profile.md`. Check with **Glob/Read**, never a shell command (CONVENTIONS §15).
 
-**If no profile exists, stop and say so.** Do not proceed with a generic voice — the whole point of the skill is the profile, and text written without one is worse than no text, because it looks like it succeeded.
+**Existence is not enough — check the shape.** A file at that path may be a stub, a half-written artifact from an interrupted run, or a hand-typed "friendly, casual, concise" note, which is the exact thing the analyzer's Non-goals call a failure. Grep the file for the headings `## 10. Reproduction directives` and `## 6.`. **If either is missing, treat the profile as absent** and take the branch below. A profile that passes the gate but carries no directives produces generic prose while reporting success — the worst available outcome, because it looks like it worked.
+
+**If there is no usable profile, stop and say so.** Do not proceed with a generic voice.
 
 Tell the user:
 
 ```
-No writing-style profile found at <path>.
+No usable writing-style profile found at <path>.
 
 Run /twt-write-as-me-analysis first, and give it as much of your own writing as you can.
 Volume and variety both matter: aim for 5+ separate pieces, 1500+ words total, across at
@@ -72,12 +77,14 @@ polished — anything a copy-editor touched will blur the fingerprint this depen
 ```
 
 Then offer via **AskUserQuestion** (single-select, header "Profile"):
-- **Run the analysis now** (recommended) — dispatch `/twt-write-as-me-analysis` (Agent tool, CONVENTIONS §5), let it collect samples, then continue this run with the profile it produced
-- **Point me at a profile** — plain-text prompt for a path, then re-resolve
+- **Build the profile now** (recommended)
+- **Point me at a profile** — plain-text prompt for a path, then re-resolve and re-check the shape
 - **Cancel** — stop here
 - **You decide**
 
-If a profile exists but is marked `Corpus band: Thin` or `Profile confidence: Low`, proceed — but say once, up front, that fidelity will be rough and more samples would fix it. Do not repeat the warning after the output.
+**On "Build the profile now": collect the samples here, in the main thread, before dispatching.** Ask the plain-text question above and wait for the answer. Only then dispatch `/twt-write-as-me-analysis` (Agent tool, CONVENTIONS §5) with the sample paths or pasted text **embedded in the dispatch prompt**, plus `subagent-collect`. The analyzer gathers samples by asking the user, and a subagent has nobody to ask — dispatching it empty makes it stall or, worse, write a profile from nothing. When it returns, re-resolve and re-check the shape before continuing.
+
+If the profile is usable but marked `Corpus band: Thin` or `Profile confidence: Low`, proceed — but say once, up front, that fidelity will be rough and more samples would fix it. Do not repeat the warning after the output.
 
 ## Step 2 — Determine mode and target
 
@@ -85,7 +92,7 @@ Read `$ARGUMENTS` and classify:
 
 | Input | Mode | Output goes to |
 |-------|------|----------------|
-| A path that resolves to a file | **Rewrite file** | that file, rewritten in place |
+| A path that resolves to a **prose** file | **Rewrite file** | that file, rewritten in place |
 | Pasted text to rework | **Rewrite text** | chat |
 | A topic, brief, or instruction ("write a follow-up to X") | **Generate** | chat |
 
@@ -93,7 +100,9 @@ If `$ARGUMENTS` is empty, ask one plain-text question: what to write, or what to
 
 If the classification is genuinely ambiguous — say a path-like string that does not resolve — ask via **AskUserQuestion** (header "Mode") rather than guessing, because the two modes differ in whether a file gets overwritten.
 
-**Rewrite-file mode.** Read the file first. Before writing, confirm the overwrite via **AskUserQuestion** (header "Overwrite"): **Rewrite in place** (recommended) · **Write beside it as `<name>.as-me.<ext>`** · **Show in chat only** · **You decide**. Preserve the file's structure exactly — headings, list nesting, code fences, front matter, links, and any markup stay put; only the prose inside them changes. Never touch code blocks.
+**Rewrite-file mode is prose-only.** Accept `.md`, `.markdown`, `.txt`, `.rst`, and front-matter-bearing content files. **Anything else — `.js`, `.css`, `.json`, `.py`, `.html` — is not prose.** Say the target is a code or data file, and offer (AskUserQuestion, header "Target"): **Rewrite only its comments and user-facing strings** · **Cancel** · **You decide**. Never treat a source file as an essay: the instruction to preserve structure and rewrite "the prose inside" has no referent there, and a well-meaning rewrite of a `.js` file breaks it.
+
+Read the file first. Before writing, confirm the overwrite via **AskUserQuestion** (header "Overwrite"): **Rewrite in place** (recommended) · **Write beside it as `<name>.as-me.<ext>`** · **Show in chat only** · **You decide**. Preserve the file's structure exactly — headings, list nesting, code fences, front matter, links, and any markup stay put; only the prose inside them changes. Never touch code blocks.
 
 **Preserve substance in both rewrite modes.** Every fact, number, name, date, link, and commitment in the source must appear in the output. This skill changes how something is said, never what is said. If the source contains a claim you believe is wrong, leave it alone and mention it in the report.
 
@@ -101,13 +110,14 @@ If the classification is genuinely ambiguous — say a path-like string that doe
 
 Read the whole profile and treat it as instructions for this run, not as background reading. Section references below (`§2`, `§6`, `§10`, …) point at the **profile's** sections, not this repo's CONVENTIONS. Extract, before drafting:
 
+- **`## Manual overrides`** — the user's own hand-written directives. These outrank everything measured below them. Apply them first; where one contradicts a measured rule, the override wins.
 - **§10 Always / Never / Tells of a fake** — the hard constraints
-- **§10 Rate-governed table** and **§6** — the firing rules, with their must-NOT-fire conditions
+- **§10 Rate-governed table** — the *single* source for every habit you will reproduce, with its class, firing condition, rate, opportunity type, and exclusion all in one row. Read it and nothing else for this purpose; §6 is the human-readable companion, not a second lookup you must join against.
 - **§2 sentence architecture** — the target median, range, and opening-move distribution
-- **§3 reasoning flow** — the opening move, argument order, and closing move to imitate
-- **§4 lexicon** — words to reach for, and the negative lexicon to avoid
+- **§3 reasoning flow** — the opening move, argument order, and closing move to imitate. Weight each by its `[Frequency · Consistency · Context · Confidence]` suffix; a `Low` confidence move is a hint, not a rule.
+- **§4 lexicon** — words to reach for at their stated per-1000-words rates, and the negative lexicon to avoid
 - **§5 punctuation** and **§8 formatting**
-- **§11 calibration passage** — read this last and closest; it is the worked example, and matching its feel is a better target than satisfying the rules one at a time
+- **§11 calibration passage** — read this last and closest. It is the worked example, and matching its feel is a better target than satisfying the rules one at a time. Its annotation is also the only guide to *where* habits sit in a piece rather than how many there are.
 
 **Pick the register (§7).** Use `--register <name>` if given. Otherwise infer from the target medium and say which you chose. If the profile has no register matching the medium, use the **invariant core** the profile names and say so — do not extrapolate a register from a context the corpus never covered.
 
@@ -119,19 +129,33 @@ Write the draft applying the profile. Discipline that matters:
 
 **Structure first, surface second.** Match §2 sentence lengths and §3 reasoning flow before worrying about vocabulary. A paragraph with the author's words in a generic shape reads more fake than the reverse — shape is what people actually recognize.
 
-**Do the rate arithmetic; do not improvise it.** For each rule in the §10 rate-governed table:
-1. Count the **opportunities** the draft contains for that rule.
+**Set the fidelity level first — it decides which rows are live.** Read `--fidelity` from `$ARGUMENTS`; default `full`. It filters the §10 table by each row's **Class**:
+
+| `--fidelity` | Live classes | Use it for |
+|--------------|--------------|-----------|
+| `full` (default) | `grammar` · `punctuation` · `lexicon` · `spelling` | Anything meant to read exactly like the author |
+| `habits` | `grammar` · `punctuation` · `lexicon` | Their voice without reinserted misspellings — client email, anything public |
+| `clean` | `lexicon` | Their vocabulary and structure with nothing a reader would call an error |
+
+Filtering happens **only here**. Every non-rate part of the profile still binds at every level: §2 sentence architecture, §3 reasoning flow, §4 negative lexicon, §8 formatting, §10 Always/Never, and the tells-of-a-fake list. `clean` is still the author's voice — it is not a licence to write generic prose.
+
+If a level suppresses every row, say so in the report rather than silently producing flat output.
+
+**Do the rate arithmetic; do not improvise it.** For each **live** row of the §10 rate-governed table:
+1. Count the **opportunities** the draft contains, using that row's "opportunity type".
 2. Multiply by the stated rate and round to the nearest whole number — that is the target count.
-3. Place exactly that many, at opportunities matching the §6 "fires when" column.
-4. Never place one where the "must NOT fire" column excludes it.
+3. Place exactly that many, at opportunities matching the row's "fires when".
+4. Never place one where the row's "must NOT fire when" excludes it.
 
-If the arithmetic rounds to **zero** — common in a short piece — then zero is correct. Do not force an imperfection in to make the text look authentic. A clean three-sentence message from an author who drops articles 20% of the time is a perfectly plausible three-sentence message.
+**Spread them; do not cluster.** With 8 matching opportunities and a target of 4, take them across the whole piece rather than the first four in a row — clustering is as unnatural as randomness. §11's annotation shows how the analyzer distributed them; follow that shape.
 
-**Never invent an imperfection that is not in §6.** Errors outside the documented set are not fidelity, they are damage. This is the difference between reproducing a fingerprint and roughing text up.
+**When the arithmetic rounds to zero.** Zero is usually correct — a clean three-sentence message from an author who drops articles 20% of the time is perfectly plausible, and forcing an imperfection in to look authentic is the failure this whole design exists to prevent. One exception: if the piece contains **three or more opportunities across all live rules combined** and every row still rounds to zero, place a single instance at the highest-rate live rule. Otherwise every short output — the dominant case — comes out deterministically cleaner than the author ever writes.
+
+**Never invent a habit that is not in the §10 table.** Errors outside the documented set are not fidelity, they are damage. This is the difference between reproducing a fingerprint and roughing text up.
 
 **Never reproduce anything in §9.** Those are noise the analysis explicitly demoted.
 
-**Explicit user instructions win.** If the user asks for something the profile contradicts — "make this one more formal", "keep it under 100 words" — follow the user, keep every profile rule the instruction does not touch, and note the deviation in the report.
+**Explicit user instructions win.** If the user asks for something the profile contradicts — "make this one more formal", "keep it under 100 words", "no typos in this one" — follow the user, keep every profile rule the instruction does not touch, and note the deviation in the report.
 
 ## Step 5 — Fidelity self-check
 
@@ -139,9 +163,10 @@ Before delivering, audit the draft against the profile. One revision pass, then 
 
 - **Never-list:** does the draft contain anything from §10 Never or the §4 negative lexicon? Remove it.
 - **Tells of a fake:** walk the §10 list item by item against the actual draft. This is where generic prose survives — the em-dash clause pair, the tricolon, the tidy summarizing close. Cut what you find.
-- **Rate audit:** for each §6 rule, recount opportunities and placements in the finished draft. Inside the band? Over-application reads as parody; under-application reads as an editor got there first.
+- **Rate audit:** for each **live** row of the §10 table, recount opportunities and placements in the finished draft. Inside the band? Over-application reads as parody; under-application reads as an editor got there first. Check distribution too, not just the count. Then confirm no *suppressed* class leaked in — at `habits` or `clean`, a misspelling you produced from memory rather than from the table is a bug.
 - **Sentence metrics:** is the median length near §2's? Is the length *variance* right? Uniform sentence length is itself a tell, even at the correct median.
 - **Opening and closing:** do they use the §3 moves, or the moves a model defaults to?
+- **Manual overrides:** is every one of them honoured?
 - **Rewrite modes only:** is every fact, number, name, link, and commitment from the source still present?
 
 ## Step 6 — Deliver and report
@@ -151,8 +176,8 @@ Before delivering, audit the draft against the profile. One revision pass, then 
 **Rewrite-text and Generate modes:** return the text in chat, as the finished text only — no preamble, no "here's your text in your voice", no commentary above it.
 
 Then, below the output or after the file path, report briefly:
-- Profile used (path), its confidence band, and the register applied
-- Which rate-governed rules fired, how many times, against how many opportunities
-- Any deviation from the profile the user's own instructions caused
+- Profile used (path), its confidence band, the register applied, and the `--fidelity` level in force (say so even at the `full` default, so the user knows the lever exists)
+- Which §10 rules fired, how many times, against how many opportunities — and which classes were suppressed by the fidelity level
+- Any deviation from the profile the user's own instructions caused, and any Manual override applied
 - Any coverage gap the request fell into
 - For rewrites: anything preserved deliberately (a claim you doubted, an awkward line that is actually the author's habit)

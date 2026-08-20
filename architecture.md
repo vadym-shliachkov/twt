@@ -2999,12 +2999,13 @@ flowchart TB
 ### /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
 - Optional `--profile <path>` to use a profile outside the default location
 - Optional `--register <name>` to pick a context register defined in the profile
+- Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
 
 **Dependencies:**
 - Hard: none
@@ -3023,11 +3024,12 @@ flowchart TB
 | Path | Notes |
 |------|-------|
 | the file given as input, when the input is a file (rewritten in place) |  |
+| a sibling `<name>.as-me.<ext>` beside the input file, when the user picks that option |  |
 
 ### /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Writing samples — file paths, a folder, `--from <path>`, or pasted text
@@ -3046,6 +3048,7 @@ flowchart TB
 - $ARGUMENTS
 - the writing samples the user names (project-relative paths or pasted text)
 - .twt-artifacts/write-as-me/writing-style-profile.md
+- .twt-artifacts/write-as-me/evidence-log.md
 
 **Writes:**
 | Path | Notes |
