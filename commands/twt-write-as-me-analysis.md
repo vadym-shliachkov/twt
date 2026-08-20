@@ -1,8 +1,8 @@
 ---
 name: twt-write-as-me-analysis
 category: voice
-description: (v1.0.3) Extract a reproducible writing-fingerprint profile from the author's own text samples
-version: 1.0.3
+description: (v1.0.4) Extract a reproducible writing-fingerprint profile from the author's own text samples
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - Writing samples — file paths, a folder, `--from <path>`, or pasted text
@@ -42,7 +42,7 @@ writes:
 - Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.
 - Recurring habits are documented as **rate-governed firing rules** (when it fires, at what rate, where it must *not* fire) — never as a vague label like "sometimes drops articles" — and every such rule is copied into the single self-contained §10 table that the generator reads.
 - The profile explicitly separates **style** from **noise**, and states what a generator must **never** do.
-- The final self-check in Step 7 passes all six questions before the profile is returned.
+- The final self-check in Step 7 passes all seven questions before the profile is returned.
 
 ---
 
@@ -169,7 +169,15 @@ Only now, with counts in hand, write §2–§8 of the profile. Every claim must 
 
 Two derivations need explicit method:
 
-**Negative lexicon (§4).** Find it two ways. *Absence:* common words and constructions the author had clear opportunity to use and never did. *Contrast:* for a handful of the author's actual sentences, write how a competent generic model would have phrased the same thing, and record the differences — those are the words to ban.
+**Negative lexicon (§4).** Find it three ways. *Absence:* common words and constructions the author had clear opportunity to use and never did. *Contrast:* for a handful of the author's actual sentences, write how a competent generic model would have phrased the same thing, and record the differences — those are the words to ban.
+
+*Attested sets:* a ban list can never enumerate every word the author does not use, so for the three slots where a generator reaches hardest, record the **closed set the corpus actually attests** instead of a list of prohibitions. Write them into §4 as closed sets, verbatim, with counts:
+
+- **Intensifiers** — every word the author uses to grade an adjective ("pretty", "definitely", "really"). State the set and add: *any intensifier outside this set is out of range.*
+- **Evaluative adverbs and judgment words** — how they say something is good, bad, hard, or surprising.
+- **Hedges** — the exact softeners they use, since §3 tells the generator when to hedge but not with which words.
+
+Without this, a generator picks a defensible word the author has never written in their life — "genuinely", "notably", "arguably" — and the author reads their own profile's output and does not recognise the vocabulary. That is a fidelity failure the ban list structurally cannot catch, because the word is not slop and there is nothing wrong with it except that it is not theirs.
 
 **Tells of a fake (§10).** Take the standard register of LLM prose and check each item against the samples, keeping only the ones the author genuinely never does: em-dash-balanced clause pairs · "It's not just X, it's Y" · rule-of-three lists · "Let's dive in" / "In today's fast-paced world" · a tidy topic sentence opening every paragraph · uniformly even paragraph lengths · hedging softeners before every claim · a summarizing final sentence that restates the opening · flawless article and preposition use · bolded key phrases scattered through prose. Do not assume — if the author does use tricolons, that belongs in §2, not here.
 
@@ -179,7 +187,12 @@ Two derivations need explicit method:
 
 **Noise (§9).** List the demoted one-offs, plus anything attributable to the medium or the topic rather than the person. This section exists so a future generator does not reproduce them.
 
-**Calibration passage (§11).** Write one short paragraph (60–120 words) in the author's voice on a neutral topic not covered by the samples, then annotate it line by line with which rule fired where — including which imperfections you placed, why those spots, and **how you spread them across the passage**. This is the worked example that makes the profile usable once the samples are gone, and it is the generator's only guide to *placement* as opposed to *count*.
+**Calibration passages (§11) — write two.** Both cover the same short paragraph (60–120 words) in the author's voice, on a neutral topic not covered by the samples.
+
+1. **Full-fidelity passage.** Every live rule at its measured rate. Annotate it line by line with which rule fired where — including which imperfections you placed, why those spots, and **how you spread them across the passage**. This is the generator's only guide to *placement* as opposed to *count*.
+2. **Natural-fidelity passage.** The same content, with every `slip` row scaled to a quarter of its rate and every `spelling` row off — the author with their English corrected. Then answer one question under it in a sentence or two: **what still makes this recognisably them once the errors are gone?**
+
+The second passage is not decoration. `natural` is the generator's default, so a profile that only ever demonstrates the full-fidelity texture has left its most common output mode unworked — and the failure mode it guards against is specific: strip the errors carelessly and the voice collapses into competent generic prose, which is the same failure as never having had a profile. Naming what survives is what stops that.
 
 ## Step 6 — Write the profile
 
@@ -246,6 +259,7 @@ Same attribute suffix on every bullet.
 - **Discourse markers and fillers:** <verbatim · raw count · rate per 1000 words>
 - **Register and jargon density:** <observed, not judged>
 - **Contractions, abbreviations, casing of terms:** <rates>
+- **ATTESTED SETS — the closed vocabulary for the three slots a generator reaches hardest.** Intensifiers: <verbatim set · counts>. Evaluative / judgment words: <verbatim set · counts>. Hedges: <verbatim set · counts>. **Anything outside a set is out of range for that slot, whether or not it appears in the negative lexicon below.**
 - **NEGATIVE LEXICON — never uses:** <words and constructions with clear opportunity and zero occurrences>
 
 ## 5. Punctuation and typography
@@ -302,11 +316,32 @@ One row for every §6 pattern, every §5 feature that carries a rate, and every 
 phrase or filler (expressed per 1000 words). A habit that is not in this table will not be
 reproduced.
 
-Every row carries a **Class**, which is what lets the generator's `--fidelity` setting
-suppress error-shaped habits without touching voice:
-`grammar` (§6 L1-transfer and syntax patterns) · `punctuation` (§5 rated features) ·
-`lexicon` (§4 signature phrases and fillers) · `spelling` (consistent misspellings and
-repeated typo classes). Classify by what a reader would perceive, not by source section.
+Every row carries a **Class** and a **Nature**, and they do different jobs.
+
+**Class** says where the habit lives: `grammar` (§6 L1-transfer and syntax patterns) ·
+`punctuation` (§5 rated features) · `lexicon` (§4 signature phrases and fillers) ·
+`spelling` (consistent misspellings and repeated typo classes). Classify by what a reader
+would perceive, not by source section.
+
+**Nature** is the axis the generator's `--fidelity` setting actually scales, and it is the
+one that decides whether the output reads as the author or as a caricature of them:
+
+- **`voice`** — a habit a copy-editor would leave alone. It is a *choice* between valid
+  forms: which contraction, which dash, which intensifier, where the emoji sits, how an
+  estimate is formatted, how a sentence opens.
+- **`slip`** — a habit a copy-editor would fix. Something is *omitted, misplaced, or wrong*:
+  a dropped article, a missing terminal period, a run-on, an agreement error, a substituted
+  preposition, a misspelling.
+
+Class does not imply Nature and must be judged separately. `punctuation` in particular
+splits down the middle — "writes *it is*, never *it's*" and "omits the terminal period" are
+both `punctuation`, and the first is pure `voice` while the second is pure `slip`. Every
+`spelling` row is a `slip`; every `lexicon` row is `voice`; `grammar` rows are almost
+always `slip`, but a construction the author *prefers* rather than *gets wrong* is `voice`.
+
+Get this column right and a downstream `--fidelity natural` run can drop the errors and
+keep the person. Get it wrong — mark a slip as voice — and the generator reproduces a
+misspelling in a piece the user is about to send to a client.
 
 **Every row needs a denominator the generator can actually count.** Where the habit
 attaches to a construction (a clause, an article slot, a sentence boundary), the
@@ -325,19 +360,28 @@ by feel at generation time, which is the failure this table exists to prevent.
   rather than voice, and unlike a grammar pattern the reader has no way to tell it is
   deliberate.
 
-| ID | Class | Rule | Fires when | Rate | Opportunity type | Must NOT fire when |
-|----|-------|------|-----------|------|------------------|--------------------|
-| R1 | grammar | <verbatim from §6/§5/§4> | <condition> | 45% | <what counts as one opportunity> | <exclusion> |
+| ID | Class | Nature | Rule | Fires when | Rate | Opportunity type | Must NOT fire when |
+|----|-------|--------|------|-----------|------|------------------|--------------------|
+| R1 | grammar | slip | <verbatim from §6/§5/§4> | <condition> | 45% | <what counts as one opportunity> | <exclusion> |
 
 ### Tells of a fake — a generator doing any of these has failed
 - <thing a generic model would do that this author demonstrably never does>
 
-## 11. Calibration passage
+## 11. Calibration passages
+
+### 11a. Full fidelity — every rule at its measured rate
 
 <60–120 words in the author's voice on a neutral topic>
 
 **Rules that fired:** <line-by-line annotation: which rules, where, and how they were spread
 across the passage rather than clustered>
+
+### 11b. Natural fidelity — slip rows at ×0.25, spelling off (the generator's default)
+
+<the same passage, errors corrected, voice intact>
+
+**What still makes this him:** <one or two sentences naming the traits that survive the
+correction — this is what the generator must not lose when it drops the errors>
 
 ## 12. Self-check
 
@@ -346,6 +390,7 @@ across the passage rather than clustered>
 | Could another model reproduce sentence structure from this alone? | PASS/FAIL | §2, §11 |
 | Could it reproduce the reasoning flow? | PASS/FAIL | §3 |
 | Could it reproduce the imperfections without randomly degrading the text? | PASS/FAIL | §10 table, §6 |
+| Does the voice survive with the errors removed? | PASS/FAIL | §11b, §10 Nature column |
 | Does the profile distinguish style from noise? | PASS/FAIL | §9 |
 | Does it describe what NOT to do? | PASS/FAIL | §4, §10 |
 | Are High-confidence claims backed by repeated evidence? | PASS/FAIL | §1 |
@@ -353,18 +398,20 @@ across the passage rather than clustered>
 
 ## Step 7 — Final quality check (must pass before you report)
 
-Reread the profile **as if the samples had been deleted** — that is the actual usage condition. Answer the six questions in §12 honestly:
+Reread the profile **as if the samples had been deleted** — that is the actual usage condition. Answer the seven questions in §12 honestly:
 
 1. **Sentence structure reproducible?** FAIL if §2 says "varied sentence length" instead of naming a median, a range, and how many sentences were measured to get them.
 2. **Reasoning flow reproducible?** FAIL if §3 describes what the author writes about rather than how they move from one idea to the next, or if its bullets lack the attribute suffix.
-3. **Imperfections reproducible without random degradation?** FAIL if any row of the §10 rate-governed table lacks a class, a firing condition, a rate, an opportunity type, or a must-not-fire column — or if any §6 pattern, rated §5 feature, or §4 signature phrase is missing from that table. This is the check most likely to be skimmed, and a half-filled table makes the generator sprinkle errors at random, which is the worst possible output.
-4. **Style separated from noise?** FAIL if §9 is empty on a corpus of 3+ samples. Real corpora always contain one-offs; an empty §9 means the promotion threshold was not applied.
-5. **What not to do described?** FAIL if the negative lexicon or the tells-of-a-fake list is empty.
-6. **High confidence earned?** FAIL if any `High` sits on fewer than 5 occurrences across 3 samples, or exceeds the Step 1 corpus ceiling.
+3. **Imperfections reproducible without random degradation?** FAIL if any row of the §10 rate-governed table lacks a class, a **nature**, a firing condition, a rate, an opportunity type, or a must-not-fire column — or if any §6 pattern, rated §5 feature, or §4 signature phrase is missing from that table. This is the check most likely to be skimmed, and a half-filled table makes the generator sprinkle errors at random, which is the worst possible output.
+   Then check the Nature column specifically, row by row, because it is new and it is the one the generator scales: does every `spelling` row read `slip`? Does every `punctuation` row get judged on its own — omission and misplacement as `slip`, choice-between-valid-forms as `voice` — rather than all being stamped the same? A `punctuation` column that is uniformly `slip` or uniformly `voice` was not judged, it was filled in.
+4. **Voice survives without the errors?** FAIL if §11b is missing, if it is the full-fidelity passage with the typos deleted and nothing else considered, or if "what still makes this him" names only traits that are themselves slips. The generator's default output mode is this one; a profile that never demonstrates it is untested where it is used most.
+5. **Style separated from noise?** FAIL if §9 is empty on a corpus of 3+ samples. Real corpora always contain one-offs; an empty §9 means the promotion threshold was not applied.
+6. **What not to do described?** FAIL if the negative lexicon or the tells-of-a-fake list is empty.
+7. **High confidence earned?** FAIL if any `High` sits on fewer than 5 occurrences across 3 samples, or exceeds the Step 1 corpus ceiling.
 
 Then one check that is not in §12, because it catches fabrication rather than omission: **every number in the profile must trace to quoted instances in the evidence log.** Any rate you cannot point at instances for gets deleted or downgraded to prose — do not keep it because it looks precise.
 
-Fix every FAIL inline and re-check. Only report once all six read PASS — or, where the corpus genuinely cannot support one (a Thin single-context corpus cannot support §7), mark it `N/A — corpus`, state that in the profile, and say so in the report.
+Fix every FAIL inline and re-check. Only report once all seven read PASS — or, where the corpus genuinely cannot support one (a Thin single-context corpus cannot support §7), mark it `N/A — corpus`, state that in the profile, and say so in the report.
 
 ## Step 8 — Report
 
