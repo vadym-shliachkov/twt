@@ -2999,13 +2999,14 @@ flowchart TB
 ### /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
 - Optional `--profile <path>` to use a profile outside the default location
 - Optional `--register <name>` to pick a context register defined in the profile
 - Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
+- Optional `--report` to append the style audit; without it the response is the text alone
 
 **Dependencies:**
 - Hard: none

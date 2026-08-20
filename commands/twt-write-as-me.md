@@ -1,14 +1,15 @@
 ---
 name: twt-write-as-me
 category: voice
-description: (v1.0.3) Generate or rewrite text in the author's own voice using their writing-style profile
-version: 1.0.3
+description: (v1.0.4) Generate or rewrite text in the author's own voice using their writing-style profile
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - What to write, or the text/file path to rewrite
   - Optional `--profile <path>` to use a profile outside the default location
   - Optional `--register <name>` to pick a context register defined in the profile
   - Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
+  - Optional `--report` to append the style audit; without it the response is the text alone
 dependencies:
   hard: []
   soft:
@@ -44,7 +45,7 @@ The output reproduces the author's actual writing behavior as the profile descri
 - Usable profile → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
 - Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and **spread across the piece** — never sprinkled at random, never applied uniformly, never clustered.
 - `--fidelity` filters which classes of habit fire without weakening anything else: `clean` still writes in the author's voice, structure, and vocabulary — it only stops reproducing what a reader would call an error.
-- **File in → the file is rewritten. Text or a topic in → the text comes back in chat.**
+- **File in → the file is rewritten, and the response is a one-line confirmation. Text or a topic in → the response is the text, alone.** No process commentary either way unless `--report` was passed.
 - Meaning, facts, names, numbers, and links survive a rewrite untouched.
 
 ---
@@ -84,7 +85,7 @@ Then offer via **AskUserQuestion** (single-select, header "Profile"):
 
 **On "Build the profile now": collect the samples here, in the main thread, before dispatching.** Ask the plain-text question above and wait for the answer. Only then dispatch `/twt-write-as-me-analysis` (Agent tool, CONVENTIONS §5) with the sample paths or pasted text **embedded in the dispatch prompt**, plus `subagent-collect`. The analyzer gathers samples by asking the user, and a subagent has nobody to ask — dispatching it empty makes it stall or, worse, write a profile from nothing. When it returns, re-resolve and re-check the shape before continuing.
 
-If the profile is usable but marked `Corpus band: Thin` or `Profile confidence: Low`, proceed — but say once, up front, that fidelity will be rough and more samples would fix it. Do not repeat the warning after the output.
+If the profile is usable but marked `Corpus band: Thin` or `Profile confidence: Low`, proceed — and add **one line** after the output saying fidelity will be rough and more samples would fix it. Once, one line, never before the text and never repeated on later runs in the same conversation.
 
 ## Step 2 — Determine mode and target
 
@@ -104,7 +105,7 @@ If the classification is genuinely ambiguous — say a path-like string that doe
 
 Read the file first. Before writing, confirm the overwrite via **AskUserQuestion** (header "Overwrite"): **Rewrite in place** (recommended) · **Write beside it as `<name>.as-me.<ext>`** · **Show in chat only** · **You decide**. Preserve the file's structure exactly — headings, list nesting, code fences, front matter, links, and any markup stay put; only the prose inside them changes. Never touch code blocks.
 
-**Preserve substance in both rewrite modes.** Every fact, number, name, date, link, and commitment in the source must appear in the output. This skill changes how something is said, never what is said. If the source contains a claim you believe is wrong, leave it alone and mention it in the report.
+**Preserve substance in both rewrite modes.** Every fact, number, name, date, link, and commitment in the source must appear in the output. This skill changes how something is said, never what is said. If the source contains a claim you believe is wrong, leave it alone — and flag it in the one content-integrity line Step 6 allows, since the user is about to send it.
 
 **Preservation outranks the §3 discourse moves — always.** The profile records how the author opens and closes a piece. In a rewrite, imitate those moves **only by reshaping sentences the source already has**. Never add a sentence that introduces a claim, recommendation, cost estimate, question, caveat, or offer the source does not make, however characteristic that closing move is. If the author habitually ends with an open question and the source ends on a flat assertion, the rewrite ends on the assertion. A "voice-accurate" ending that says something the author never said is a fabrication wearing their handwriting, and it is the single most damaging thing this skill can produce — the user will send it believing they wrote it.
 
@@ -123,9 +124,9 @@ Read the whole profile and treat it as instructions for this run, not as backgro
 - **§5 punctuation** and **§8 formatting**
 - **§11 calibration passage** — read this last and closest. It is the worked example, and matching its feel is a better target than satisfying the rules one at a time. Its annotation is also the only guide to *where* habits sit in a piece rather than how many there are.
 
-**Pick the register (§7).** Use `--register <name>` if given. Otherwise infer from the target medium and say which you chose. If the profile has no register matching the medium, use the **invariant core** the profile names and say so — do not extrapolate a register from a context the corpus never covered.
+**Pick the register (§7).** Use `--register <name>` if given, otherwise infer it from the target medium. If the profile has no register matching the medium, fall back to the **invariant core** the profile names — never extrapolate a register from a context the corpus never covered. Which register you picked is `--report` material; do not announce it otherwise.
 
-**Note the coverage gaps** recorded in the profile's Evidence base. If the request falls into a gap, flag it once in the report; the output there is an extrapolation.
+**Note the coverage gaps** recorded in the profile's Evidence base. If the request falls into one, the output there is an extrapolation — record that for `--report`, and stay silent about it otherwise.
 
 ## Step 4 — Draft for fidelity
 
@@ -143,7 +144,7 @@ Write the draft applying the profile. Discipline that matters:
 
 Filtering happens **only here**. Every non-rate part of the profile still binds at every level: §2 sentence architecture, §3 reasoning flow, §4 negative lexicon, §8 formatting, §10 Always/Never, and the tells-of-a-fake list. `clean` is still the author's voice — it is not a licence to write generic prose.
 
-If a level suppresses every row, say so in the report rather than silently producing flat output.
+If a level suppresses every row, that is what the user asked for — produce the text without comment, and note it for `--report`.
 
 **Do the rate arithmetic; do not improvise it.** For each **live** row of the §10 rate-governed table:
 1. Count the **opportunities** the draft contains, using that row's "opportunity type". For rules whose opportunity type is the text itself rather than a countable construction — typo classes, fillers, signature phrases — the denominator is **words**, and the rate is per 1000 words.
@@ -163,7 +164,7 @@ If a level suppresses every row, say so in the report rather than silently produ
 
 **Never reproduce anything in §9.** Those are noise the analysis explicitly demoted.
 
-**Explicit user instructions win.** If the user asks for something the profile contradicts — "make this one more formal", "keep it under 100 words", "no typos in this one" — follow the user, keep every profile rule the instruction does not touch, and note the deviation in the report.
+**Explicit user instructions win.** If the user asks for something the profile contradicts — "make this one more formal", "keep it under 100 words", "no typos in this one" — follow the user, and keep every profile rule the instruction does not touch. They asked for the deviation, so do not announce it back to them — record it for `--report`.
 
 ## Step 5 — Fidelity self-check
 
@@ -179,21 +180,22 @@ Before delivering, audit the draft against the profile. One revision pass, then 
 - **Rewrite modes only — nothing added.** Read the draft's sentences against the source one by one. Does any sentence introduce a claim, number, recommendation, cost, question, or offer the source does not contain? Delete it. Pay closest attention to the **final one or two sentences**, which is where an imitated closing move invents content, and to any sentence that carries a rate-governed placement — a manufactured opportunity looks like style from the inside.
 - **Rewrite modes only:** is every fact, number, name, link, and commitment from the source still present?
 
-## Step 6 — Deliver and report
+## Step 6 — Deliver
 
-**Rewrite-file mode:** write the file (Edit or Write per the Step 2 choice), then report the path and confirm whether it was rewritten in place or written beside the original.
+**Rewrite-text and Generate modes:** the response is the finished text, and only the finished text. No preamble, no "here's your text in your voice", no framing line above it, no summary below it. Start at the first word of the piece.
 
-**Rewrite-text and Generate modes:** return the text in chat, as the finished text only — no preamble, no "here's your text in your voice", no commentary above it.
+**Rewrite-file mode:** write the file (Edit or Write per the Step 2 choice), then say in one or two lines what happened to it — the path, and whether it was rewritten in place or written beside the original. That confirmation *is* the response; do not also paste the text back.
 
-Then report — and **keep the report shorter than the text it describes.** The deliverable is the writing; a rate audit longer than the draft buries it. Two compact parts, nothing else:
+### Say nothing else
 
-**One header line:** profile path · confidence band · register · `--fidelity` level (name it even at the `full` default, so the user learns the lever exists) · sentence median over n measured.
+**The deliverable is the writing. By default the response contains the text and nothing else.**
 
-**One line per fired rule**, in a single list — `R<n> <name> — <placed>/<opportunities> (<rate>%)`. Nothing per rule beyond that; no per-rule commentary, no ASCII rules between entries. Then one short line naming the rules that rounded to zero, and one for any class the fidelity level suppressed.
+The audit from Step 5 is work you do, not work you show. The user called this skill to get a piece of writing, not a report on how it was made — and every line of process commentary pushes the thing they actually wanted further up the scrollback.
 
-Then, only when there is something to say, at most one sentence each:
-- A deviation the user's own instructions caused, or a Manual override applied
-- A coverage gap the request fell into
-- **For rewrites: anything you deliberately left alone** — a claim you doubted, an internal contradiction you carried through rather than reconciling, an awkward line that is actually the author's habit. Flag these; they are the ones the user must check before sending.
+So, unless `--report` was passed, **do not** print: the profile path, the confidence band, the register you picked, the `--fidelity` level, which rules fired, how many opportunities there were, what rounded to zero, sentence medians, structural choices you made, what you dropped, or why any of it was right. All of that is invisible by default.
 
-Say nothing about structural choices that went well, and do not explain your reasoning for rules that behaved normally. If every part is unremarkable, the header line and the rule list are the whole report.
+Exactly one thing still surfaces without being asked for, because it is about the content rather than the process: **if you deliberately left something the user would otherwise send unknowingly** — a factual contradiction in the source, a claim you doubted, a number that disagrees with another number — add **one line** after the text, after a blank line. One line, no header, no elaboration. Nothing else ever earns an unsolicited line.
+
+### With `--report`
+
+Append the audit below the text, after a `---` separator: a header line (profile · band · register · fidelity level · sentence median over n measured), then one line per fired rule — `R<n> <name> — <placed>/<opportunities> (<rate>%)` — then one line for rules that rounded to zero and one for any class the fidelity level suppressed. No per-rule commentary, no explanation of rules that behaved normally.

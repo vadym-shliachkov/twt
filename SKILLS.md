@@ -2982,7 +2982,7 @@ Answer a question about the project from its durable memory — including the qu
 ## /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. The single objective is **style fidelity**.
@@ -2992,6 +2992,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 - Optional `--profile <path>` to use a profile outside the default location
 - Optional `--register <name>` to pick a context register defined in the profile
 - Optional `--fidelity full|habits|clean` to control which classes of habit get reproduced (default `full`)
+- Optional `--report` to append the style audit; without it the response is the text alone
 
 **Dependencies:**
 - Hard: none
@@ -3020,7 +3021,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 - Usable profile → its directives bind the output; every "Never" is respected and no "tell of a fake" appears.
 - Rate-governed habits land inside their stated bands, placed at genuine opportunities the profile names and **spread across the piece** — never sprinkled at random, never applied uniformly, never clustered.
 - `--fidelity` filters which classes of habit fire without weakening anything else: `clean` still writes in the author's voice, structure, and vocabulary — it only stops reproducing what a reader would call an error.
-- **File in → the file is rewritten. Text or a topic in → the text comes back in chat.**
+- **File in → the file is rewritten, and the response is a one-line confirmation. Text or a topic in → the response is the text, alone.** No process commentary either way unless `--report` was passed.
 - Meaning, facts, names, numbers, and links survive a rewrite untouched.
 
 ---
