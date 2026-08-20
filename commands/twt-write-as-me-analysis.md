@@ -1,8 +1,8 @@
 ---
 name: twt-write-as-me-analysis
 category: voice
-description: (v1.0.2) Extract a reproducible writing-fingerprint profile from the author's own text samples
-version: 1.0.2
+description: (v1.0.3) Extract a reproducible writing-fingerprint profile from the author's own text samples
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - Writing samples — file paths, a folder, `--from <path>`, or pasted text
@@ -307,6 +307,23 @@ suppress error-shaped habits without touching voice:
 `grammar` (§6 L1-transfer and syntax patterns) · `punctuation` (§5 rated features) ·
 `lexicon` (§4 signature phrases and fillers) · `spelling` (consistent misspellings and
 repeated typo classes). Classify by what a reader would perceive, not by source section.
+
+**Every row needs a denominator the generator can actually count.** Where the habit
+attaches to a construction (a clause, an article slot, a sentence boundary), the
+opportunity type names that construction. Where it does not — typo classes, fillers,
+signature phrases — the denominator is **words**, and the rate is stated **per 1000
+words**. A row whose opportunity type is vague ("sometimes", "throughout") will be placed
+by feel at generation time, which is the failure this table exists to prevent.
+
+**Split the two kinds of misspelling; they reproduce differently.**
+- **Fixed misspelling** — a specific word the author reliably gets wrong ("overal"). The
+  generator reproduces *that word*, at its own rate. Give one row per word.
+- **Typo class** — a recurring *mechanism* (transposition, dropped vowel, collapsed
+  double letter). The generator produces fresh instances of the mechanism, so the row must
+  state the mechanism, the per-1000-words rate, and which word shapes it favours. Rate
+  these conservatively: a class rate over-set by a factor of two reads as carelessness
+  rather than voice, and unlike a grammar pattern the reader has no way to tell it is
+  deliberate.
 
 | ID | Class | Rule | Fires when | Rate | Opportunity type | Must NOT fire when |
 |----|-------|------|-----------|------|------------------|--------------------|

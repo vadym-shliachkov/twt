@@ -1,8 +1,8 @@
 ---
 name: twt-write-as-me
 category: voice
-description: (v1.0.2) Generate or rewrite text in the author's own voice using their writing-style profile
-version: 1.0.2
+description: (v1.0.3) Generate or rewrite text in the author's own voice using their writing-style profile
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - What to write, or the text/file path to rewrite
@@ -106,6 +106,10 @@ Read the file first. Before writing, confirm the overwrite via **AskUserQuestion
 
 **Preserve substance in both rewrite modes.** Every fact, number, name, date, link, and commitment in the source must appear in the output. This skill changes how something is said, never what is said. If the source contains a claim you believe is wrong, leave it alone and mention it in the report.
 
+**Preservation outranks the §3 discourse moves — always.** The profile records how the author opens and closes a piece. In a rewrite, imitate those moves **only by reshaping sentences the source already has**. Never add a sentence that introduces a claim, recommendation, cost estimate, question, caveat, or offer the source does not make, however characteristic that closing move is. If the author habitually ends with an open question and the source ends on a flat assertion, the rewrite ends on the assertion. A "voice-accurate" ending that says something the author never said is a fabrication wearing their handwriting, and it is the single most damaging thing this skill can produce — the user will send it believing they wrote it.
+
+The same applies in reverse: the source's own opening and closing content stays. Reshape it, do not replace it.
+
 ## Step 3 — Load the profile as binding instructions
 
 Read the whole profile and treat it as instructions for this run, not as background reading. Section references below (`§2`, `§6`, `§10`, …) point at the **profile's** sections, not this repo's CONVENTIONS. Extract, before drafting:
@@ -142,10 +146,14 @@ Filtering happens **only here**. Every non-rate part of the profile still binds 
 If a level suppresses every row, say so in the report rather than silently producing flat output.
 
 **Do the rate arithmetic; do not improvise it.** For each **live** row of the §10 rate-governed table:
-1. Count the **opportunities** the draft contains, using that row's "opportunity type".
+1. Count the **opportunities** the draft contains, using that row's "opportunity type". For rules whose opportunity type is the text itself rather than a countable construction — typo classes, fillers, signature phrases — the denominator is **words**, and the rate is per 1000 words.
 2. Multiply by the stated rate and round to the nearest whole number — that is the target count.
 3. Place exactly that many, at opportunities matching the row's "fires when".
 4. Never place one where the row's "must NOT fire when" excludes it.
+
+**Write the denominator down for every live rule before you place anything.** A rule you place from feel rather than from a count is not fidelity — it is the sprinkling this design exists to prevent, and it hides successfully because the output still reads plausibly. If you cannot state a denominator for a rule, you did not measure it: either count properly or leave that rule unfired and say so. The rules most likely to be improvised are exactly the ones with fuzzy opportunity types, so they need the count most.
+
+**Opportunities are counted in the content as given. Never manufacture one.** If a rule's target lands above what the text can carry, place fewer — do not add a clause, a sentence, or an aside to create somewhere for it to go. Extending the text to hit a rate target is how invented content gets in, and the added material is exactly where it hides.
 
 **Spread them; do not cluster.** With 8 matching opportunities and a target of 4, take them across the whole piece rather than the first four in a row — clustering is as unnatural as randomness. §11's annotation shows how the analyzer distributed them; follow that shape.
 
@@ -167,6 +175,8 @@ Before delivering, audit the draft against the profile. One revision pass, then 
 - **Sentence metrics:** is the median length near §2's? Is the length *variance* right? Uniform sentence length is itself a tell, even at the correct median.
 - **Opening and closing:** do they use the §3 moves, or the moves a model defaults to?
 - **Manual overrides:** is every one of them honoured?
+- **Denominators:** does every fired rule have a stated `placed / opportunities`? A bare count means that rule was never measured — fix it or drop the rule.
+- **Rewrite modes only — nothing added.** Read the draft's sentences against the source one by one. Does any sentence introduce a claim, number, recommendation, cost, question, or offer the source does not contain? Delete it. Pay closest attention to the **final one or two sentences**, which is where an imitated closing move invents content, and to any sentence that carries a rate-governed placement — a manufactured opportunity looks like style from the inside.
 - **Rewrite modes only:** is every fact, number, name, link, and commitment from the source still present?
 
 ## Step 6 — Deliver and report
@@ -175,9 +185,15 @@ Before delivering, audit the draft against the profile. One revision pass, then 
 
 **Rewrite-text and Generate modes:** return the text in chat, as the finished text only — no preamble, no "here's your text in your voice", no commentary above it.
 
-Then, below the output or after the file path, report briefly:
-- Profile used (path), its confidence band, the register applied, and the `--fidelity` level in force (say so even at the `full` default, so the user knows the lever exists)
-- Which §10 rules fired, how many times, against how many opportunities — and which classes were suppressed by the fidelity level
-- Any deviation from the profile the user's own instructions caused, and any Manual override applied
-- Any coverage gap the request fell into
-- For rewrites: anything preserved deliberately (a claim you doubted, an awkward line that is actually the author's habit)
+Then report — and **keep the report shorter than the text it describes.** The deliverable is the writing; a rate audit longer than the draft buries it. Two compact parts, nothing else:
+
+**One header line:** profile path · confidence band · register · `--fidelity` level (name it even at the `full` default, so the user learns the lever exists) · sentence median over n measured.
+
+**One line per fired rule**, in a single list — `R<n> <name> — <placed>/<opportunities> (<rate>%)`. Nothing per rule beyond that; no per-rule commentary, no ASCII rules between entries. Then one short line naming the rules that rounded to zero, and one for any class the fidelity level suppressed.
+
+Then, only when there is something to say, at most one sentence each:
+- A deviation the user's own instructions caused, or a Manual override applied
+- A coverage gap the request fell into
+- **For rewrites: anything you deliberately left alone** — a claim you doubted, an internal contradiction you carried through rather than reconciling, an awkward line that is actually the author's habit. Flag these; they are the ones the user must check before sending.
+
+Say nothing about structural choices that went well, and do not explain your reasoning for rules that behaved normally. If every part is unremarkable, the header line and the rule list are the whole report.

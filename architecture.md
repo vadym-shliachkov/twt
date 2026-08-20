@@ -2999,7 +2999,7 @@ flowchart TB
 ### /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
@@ -3029,7 +3029,7 @@ flowchart TB
 ### /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Writing samples — file paths, a folder, `--from <path>`, or pasted text

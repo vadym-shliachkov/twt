@@ -2982,7 +2982,7 @@ Answer a question about the project from its durable memory — including the qu
 ## /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Generate new text, or rewrite existing text, so that it reads as if it were naturally written by the author described in `writing-style-profile.md`. The single objective is **style fidelity**.
@@ -3028,7 +3028,7 @@ Generate new text, or rewrite existing text, so that it reads as if it were natu
 ## /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices *and* recurring unintentional habits — so that another model can later reproduce the voice without ever seeing the original samples.
