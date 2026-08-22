@@ -42,7 +42,7 @@
           <h1>/twt-write-as-me-analysis</h1>
           <p class="lede">Analyze texts written by one author and extract a detailed, operational model of how that person actually writes — the individual fingerprint, including intentional stylistic choices...</p>
           <div class="fact-row">
-            <span>Version 1.0.4</span>
+            <span>Version 1.0.5</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
     <span class="token-usage__label">Token usage</span>
@@ -60,7 +60,7 @@
         
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <ul><li>Writing samples — file paths, a folder, <code>--from &lt;path&gt;</code>, or pasted text</li><li>Optional <code>--profile &lt;path&gt;</code> to write the profile somewhere other than the default</li><li>Optional <code>--label &lt;name&gt;</code> to name the author the profile represents</li></ul>
+    <ul><li>Writing samples — file paths, a folder, <code>--from &lt;path&gt;</code>, or pasted text</li><li>Optional <strong>paired samples</strong> — a source text plus the author's own rewrite of it, marked up as <code>## Pair N</code> / <code>### Source</code> / <code>### Author version</code></li><li>Optional <code>--profile &lt;path&gt;</code> to write the profile somewhere other than the default</li><li>Optional <code>--label &lt;name&gt;</code> to name the author the profile represents</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
@@ -76,7 +76,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>
-    <ul><li>The profile is built <strong>from an evidence log first</strong> — every trait in every summary section traces back to counted observations, and no section is written before the log exists.</li><li>Every characteristic in profile sections 1 through 8 carries four attributes: <strong>frequency</strong>, <strong>consistency</strong>, <strong>context-dependence</strong>, and <strong>confidence</strong>.</li><li>Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.</li><li>Recurring habits are documented as <strong>rate-governed firing rules</strong> (when it fires, at what rate, where it must *not* fire) — never as a vague label like &quot;sometimes drops articles&quot; — and every such rule is copied into the single self-contained §10 table that the generator reads.</li><li>The profile explicitly separates <strong>style</strong> from <strong>noise</strong>, and states what a generator must <strong>never</strong> do.</li><li>The final self-check in Step 7 passes all seven questions before the profile is returned.</li></ul>
+    <ul><li>The profile is built <strong>from an evidence log first</strong> — every trait in every summary section traces back to counted observations, and no section is written before the log exists.</li><li>Every characteristic in profile sections 1 through 8 carries four attributes: <strong>frequency</strong>, <strong>consistency</strong>, <strong>context-dependence</strong>, and <strong>confidence</strong>.</li><li>Every measurement is one a careful reader can actually make and show: counts with a stated denominator and quoted instances. Nothing is estimated and then presented as measured.</li><li>Recurring habits are documented as <strong>rate-governed firing rules</strong> (when it fires, at what rate, where it must *not* fire) — never as a vague label like &quot;sometimes drops articles&quot; — and every such rule is copied into the single self-contained §10 table that the generator reads.</li><li>The profile explicitly separates <strong>style</strong> from <strong>noise</strong>, and states what a generator must <strong>never</strong> do.</li><li><strong>§3b information shaping is measured, not asserted</strong> — how many claims land in a sentence, which supporting evidence survives, how metrics are treated, how abstract the language runs, whether the author ranks things explicitly. Every finding carries counts like every other section.</li><li><strong>§3c transformation fingerprint is built only from paired samples.</strong> With no pairs it reads <code>N/A — no source → author pairs in corpus</code> and nothing is inferred. A transformation rule guessed from unpaired writing is fabrication, and it sits at the top of the generator's priority order where fabrication does the most damage.</li><li>The final self-check in Step 7 passes all nine questions before the profile is returned.</li></ul>
   </section>
       </section>
   </main>

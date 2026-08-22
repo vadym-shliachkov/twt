@@ -37,17 +37,23 @@ writes:
      never reference a templates/… path. Read only inside the current project; never reach into
      sibling projects or the home directory for templates, conventions, or format examples. -->
 
-<!-- User-facing commands (everything in commands/ except twt-setup, twt-marketplace-docs,
-     twt-status, and dispatched sub-variants) must open with the Step 0 setup gate below.
-     Its body is auto-synced from templates/blocks/setup-gate.md by /twt-marketplace-docs —
-     keep the heading, don't hand-edit the body. Sub-skills in skills/ omit it. -->
+<!-- Every user-facing command (everything in commands/ except twt-setup, twt-marketplace-docs,
+     twt-status, twt-eval-smoke, and the dispatched sub-variants) carries the Bash-call-shape
+     block below. It is what keeps this run's Bash calls matchable against the allowlist
+     /twt-setup seeds, so it applies whether or not the command carries the setup gate.
+     Body auto-synced from templates/blocks/bash-shape.md — keep the heading, don't hand-edit. -->
+
+## Bash call shape — keep every call allowlist-matchable
+<!-- body synced by /twt-marketplace-docs -->
+
+<!-- The Step 0 setup gate belongs ONLY to the pipeline entry points — /twt-site, /twt-site-dev,
+     /twt-pre-design, /twt-design, /twt-develop, /twt-qa (the $gateRequired list in
+     tools/check-skill.ps1). Everything else is reached by dispatch from one of them, or relies
+     on the user having run /twt-setup once for the project; a gate elsewhere is a CI failure.
+     Delete this section unless you are adding a new entry point. Sub-skills in skills/ omit it. -->
 
 ## Step 0·setup — Ensure the permission allowlist (run /twt-setup first if absent)
-Before any project work, make sure this project is set up so the run isn't interrupted by per-call permission prompts. **Use Glob/Read — never a shell command** — to check whether `.claude/settings.json` exists at the project root (`$CLAUDE_PROJECT_DIR/.claude/settings.json`).
-- **Missing + running interactively in the main thread:** ask via the **AskUserQuestion** tool (single-select, header "Setup") — **Run /twt-setup now** (recommended — merges the curated allowlist so routine Bash/WebFetch/Figma-read calls stop prompting) · **Skip** (continue; expect per-call prompts) · **You decide**. On **Run /twt-setup now**, dispatch `/twt-setup` (Agent tool), wait for it to finish, then continue.
-- **Missing + running unattended** (auto mode, or dispatched as a subagent that must not prompt): seed silently instead of asking — `node "${CLAUDE_PLUGIN_ROOT}/tools/seed-permissions.js" "$CLAUDE_PROJECT_DIR/.claude"` — note it, and continue.
-- **Already present:** continue without asking (the seeder is idempotent; re-running `/twt-setup` stays safe if prompts persist).
-- If the plugin root or seeder isn't available (global install without bundled tools), warn once and continue — **never block the run**.
+<!-- body synced by /twt-marketplace-docs -->
 
 ## Step 1 — <name>
 

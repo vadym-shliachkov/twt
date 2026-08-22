@@ -91,20 +91,34 @@ function Get-YamlList {
     return $items
 }
 
-# Setup-gate presence (setup-gate convention): every user-facing command must
-# open with the "Step 0 ... permission allowlist" gate. Excluded: the meta
-# skills (twt-setup, twt-marketplace-docs, twt-status) and dispatched
-# sub-variants (twt-content-fetch-*, twt-export-*), which run under a gated
-# parent. Sub-skills in skills/ never carry the gate. The gate BODY is synced
-# by gen-docs.mjs from templates/blocks/setup-gate.md; this only checks presence.
+# Setup-gate presence (setup-gate convention): the permission-allowlist gate
+# lives ONLY on the pipeline entry points listed below — the commands a run
+# actually starts from. Every other command is reached by dispatch from one of
+# them (or expects the user to have run /twt-setup once for the project), so it
+# carries no gate. The gate BODY is synced by gen-docs.mjs from
+# templates/blocks/setup-gate.md; this only checks presence.
+#
+# The Bash-call-shape rule is separate and applies to EVERY user-facing command,
+# gated or not: it is what keeps calls matchable against a seeded allowlist, so
+# dropping the gate must not drop it. Excluded from both: the meta skills and
+# the dispatched sub-variants (twt-content-fetch-*, twt-export-*). Sub-skills in
+# skills/ carry neither.
 $isCommand = (Split-Path $resolvedPath -Leaf) -ine 'SKILL.md'
-$gateExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke')
-$gateExemptPrefix = @('twt-content-fetch-','twt-export-')
+$gateRequired = @('twt-site','twt-site-dev','twt-pre-design','twt-design','twt-develop','twt-qa')
+$blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke')
+$blockExemptPrefix = @('twt-content-fetch-','twt-export-')
 if ($isCommand) {
-    $exempt = ($gateExempt -contains $expectedName) -or
-              (($gateExemptPrefix | Where-Object { $expectedName.StartsWith($_) }).Count -gt 0)
-    if (-not $exempt -and $text -notmatch '(?im)^## Step 0.*permission allowlist') {
-        Fail "MISSING SETUP GATE in ${Path}: user-facing commands must open with the Step 0 permission-allowlist gate (see SKILL_TEMPLATE.md); if this command is a meta skill or dispatched sub-variant, add it to the exempt list in tools/check-skill.ps1"
+    $hasGate = $text -match '(?im)^## Step 0.*permission allowlist'
+    if (($gateRequired -contains $expectedName) -and -not $hasGate) {
+        Fail "MISSING SETUP GATE in ${Path}: pipeline entry points must open with the Step 0 permission-allowlist gate (see SKILL_TEMPLATE.md); the entry-point list is gateRequired in tools/check-skill.ps1"
+    }
+    if (-not ($gateRequired -contains $expectedName) -and $hasGate) {
+        Fail "UNEXPECTED SETUP GATE in ${Path}: only the pipeline entry points carry the Step 0 permission-allowlist gate; dispatched and standalone commands rely on the entry point (or a one-time /twt-setup). Remove the gate, or add this command to gateRequired in tools/check-skill.ps1"
+    }
+    $exempt = ($blockExempt -contains $expectedName) -or
+              (($blockExemptPrefix | Where-Object { $expectedName.StartsWith($_) }).Count -gt 0)
+    if (-not $exempt -and $text -notmatch '(?im)^## Bash call shape') {
+        Fail "MISSING BASH-SHAPE BLOCK in ${Path}: every user-facing command must carry the Bash call shape block (synced from templates/blocks/bash-shape.md) so its Bash calls stay matchable against the seeded allowlist; if this command is a meta skill or dispatched sub-variant, add it to blockExempt in tools/check-skill.ps1"
     }
 }
 

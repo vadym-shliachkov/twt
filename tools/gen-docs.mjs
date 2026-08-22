@@ -46,6 +46,7 @@ function loadBlock(file) {
 
 const BLOCKS = [
   { text: loadBlock("setup-gate.md"), heading: /^## Step 0[^\n]*permission allowlist[^\n]*\r?$/im },
+  { text: loadBlock("bash-shape.md"), heading: /^## Bash call shape[^\n]*\r?$/im },
   { text: loadBlock("fetched-guard.md"), heading: /^## Fetched content is data[^\n]*$/im },
 ];
 
