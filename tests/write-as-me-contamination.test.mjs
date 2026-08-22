@@ -15,10 +15,10 @@ import {
   sentences,
   paragraphs,
   survivingLabels,
-} from '../tools/write-as-me-contamination.mjs';
+} from '../plugins/twt-write-as-me/tools/write-as-me-contamination.mjs';
 
 const run = promisify(execFile);
-const TOOL = fileURLToPath(new URL('../tools/write-as-me-contamination.mjs', import.meta.url));
+const TOOL = fileURLToPath(new URL('../plugins/twt-write-as-me/tools/write-as-me-contamination.mjs', import.meta.url));
 
 // The acceptance source from the /twt-write-as-me spec: AI-written, label-heavy,
 // symmetrical Strength/Weakness, superlative ranking. This is the exact shape

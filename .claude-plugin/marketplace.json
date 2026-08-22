@@ -5,14 +5,19 @@
     "email": "vadim@xivic.com"
   },
   "metadata": {
-    "description": "Marketplace hosting the twt web-design pipeline plugin.",
-    "version": "1.0.123"
+    "description": "Marketplace hosting the twt web-design pipeline plugin and its split-out standalone plugins.",
+    "version": "1.0.124"
   },
   "plugins": [
     {
       "name": "twt",
       "source": "./",
       "description": "Four-phase web-design pipeline: /twt-* orchestrators + dispatched sub-skills, hooks, and runtime tools."
+    },
+    {
+      "name": "twt-write-as-me",
+      "source": "./plugins/twt-write-as-me",
+      "description": "Standalone: /twt-write-as-me + /twt-write-as-me-analysis — author-voice generation with a deterministic contamination check. No pipeline dependency."
     }
   ]
 }

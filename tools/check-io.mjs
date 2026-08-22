@@ -25,6 +25,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { skillFiles } from './lib/plugin-roots.mjs';
 import assert from 'node:assert/strict';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -91,13 +92,13 @@ export function covers(a, b) {
 
 function collect() {
   const entries = { reads: [], writes: [] }; // { path, skill }
-  const files = [];
-  for (const f of readdirSync(join(ROOT, 'commands'))) {
-    if (f.endsWith('.md') && f !== 'README.md') files.push({ id: `commands/${f}`, p: join(ROOT, 'commands', f) });
-  }
-  for (const d of readdirSync(join(ROOT, 'skills'))) {
-    files.push({ id: `skills/${d}`, p: join(ROOT, 'skills', d, 'SKILL.md') });
-  }
+  // Spans every plugin in the marketplace, not just the monolith: artifacts are a
+  // shared namespace, so a split-out plugin's reads must still resolve against
+  // writes declared anywhere in the repo.
+  const files = skillFiles(ROOT).map(({ path: p, expectedName, source }) => ({
+    id: source === 'commands' ? `commands/${expectedName}.md` : `skills/${expectedName}`,
+    p,
+  }));
   for (const { id, p } of files) {
     let text;
     try { text = readFileSync(p, 'utf8'); } catch (e) { continue; }

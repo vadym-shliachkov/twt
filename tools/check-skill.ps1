@@ -31,6 +31,43 @@ function Get-RepoRootFromPath {
     return Split-Path $parent -Parent
 }
 
+# The marketplace root is the repo: the nearest ancestor carrying
+# .claude-plugin/marketplace.json. It differs from $repoRoot (the owning PLUGIN's
+# root) as soon as a plugin is split out under ./plugins/<name>. Cross-file
+# checks — name uniqueness, dependency resolution, CONVENTIONS citations — are
+# marketplace-wide: a skill may legitimately depend on one shipped by a sibling
+# plugin, and CONVENTIONS.md lives once at the repo root.
+function Get-MarketplaceRootFromPath {
+    param([string]$StartDir)
+    $dir = $StartDir
+    while ($dir) {
+        if (Test-Path (Join-Path $dir '.claude-plugin/marketplace.json')) { return $dir }
+        $parent = Split-Path $dir -Parent
+        if ($parent -eq $dir) { break }
+        $dir = $parent
+    }
+    return $StartDir
+}
+
+function Get-AllPluginSkillFiles {
+    param([string]$MarketplaceRoot)
+    $manifest = Join-Path $MarketplaceRoot '.claude-plugin/marketplace.json'
+    $roots = @()
+    if (Test-Path $manifest) {
+        try {
+            $json = Get-Content $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($p in $json.plugins) {
+                $src = if ($p.source) { $p.source } else { './' }
+                $roots += (Join-Path $MarketplaceRoot $src)
+            }
+        } catch { $roots = @($MarketplaceRoot) }
+    }
+    if (-not $roots) { $roots = @($MarketplaceRoot) }
+    $files = @()
+    foreach ($r in $roots) { $files += Get-NativeSkillFiles $r }
+    return $files
+}
+
 function Get-NativeSkillFiles {
     param([string]$RepoRoot)
     $files = @()
@@ -49,6 +86,7 @@ if (-not (Test-Path $Path)) { Fail "MISSING FILE: $Path" }
 $resolvedPath = (Resolve-Path $Path).Path
 $expectedName = Get-SkillNameFromPath $resolvedPath
 $repoRoot = Get-RepoRootFromPath $resolvedPath
+$marketplaceRoot = Get-MarketplaceRootFromPath $repoRoot
 
 # Read as UTF-8 so the section-sign (U+00A7) in CONVENTIONS citations is intact.
 $text = Get-Content $Path -Raw -Encoding UTF8
@@ -146,8 +184,8 @@ if ($expectedName -match '-validate$') {
 }
 
 # Cross-file checks (need the whole native plugin skill tree)
-if (Test-Path $repoRoot) {
-    $allFiles = Get-NativeSkillFiles $repoRoot
+if (Test-Path $marketplaceRoot) {
+    $allFiles = Get-AllPluginSkillFiles $marketplaceRoot
 
     # Global skill-name uniqueness across commands/*.md and skills/*/SKILL.md.
     $dupes = @($allFiles | Where-Object { (Get-SkillNameFromPath $_.FullName) -eq $expectedName })
@@ -164,7 +202,7 @@ if (Test-Path $repoRoot) {
     $deps += Get-YamlList -Lines $fmLines -Key 'soft' -KeyIndent 2
     $dangling = $deps | Where-Object { $_ -and ($allNames -notcontains $_) -and ($KnownExternalDeps -notcontains $_) }
     if ($dangling) {
-        Fail "DANGLING DEPENDENCY in ${Path}: $($dangling -join ', ') (not a skill in $repoRoot and not a known external: $($KnownExternalDeps -join ', '))"
+        Fail "DANGLING DEPENDENCY in ${Path}: $($dangling -join ', ') (not a skill in any plugin under $marketplaceRoot and not a known external: $($KnownExternalDeps -join ', '))"
     }
 }
 
@@ -173,9 +211,9 @@ if (Test-Path $repoRoot) {
 # like the old phantom "13.1"). The section sign (U+00A7) is built at runtime via
 # [char]0x00A7 so this script's source stays pure ASCII (Windows PowerShell 5.1
 # mangles non-ASCII bytes in a no-BOM file).
-if ($repoRoot) {
-    if ([string]::IsNullOrEmpty($repoRoot)) { $repoRoot = '.' }
-    $convPath = Join-Path $repoRoot 'CONVENTIONS.md'
+if ($marketplaceRoot) {
+    if ([string]::IsNullOrEmpty($marketplaceRoot)) { $marketplaceRoot = '.' }
+    $convPath = Join-Path $marketplaceRoot 'CONVENTIONS.md'
     if (Test-Path $convPath) {
         $sectionSign = [char]0x00A7
         $conv = Get-Content $convPath -Raw -Encoding UTF8

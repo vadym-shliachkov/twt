@@ -216,3 +216,13 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - Markdown style nitpicks
 - Tool-use preferences
 - Anything that only one skill cares about
+
+## 19. Plugin packaging
+
+- **The repo hosts several plugins, not one.** `.claude-plugin/marketplace.json` `plugins[]` is the registry; each entry's `source` is that plugin's root. `twt` is the monolith (`source: "./"`); anything split out lives at `./plugins/<name>/` with its own `.claude-plugin/plugin.json`, `commands/`, `skills/`, and `tools/`. Nesting is safe: plugin discovery only reads `<root>/commands` and `<root>/skills`, so a plugin under `./plugins/` is invisible to the monolith's scan.
+- **A skill lives in exactly one plugin.** Never copy a command or tool into a second plugin to make it available there — that is the duplicate-file trap, and the two copies drift. Move it, or leave it where it is and accept the dependency.
+- **`${CLAUDE_PLUGIN_ROOT}` resolves to the OWNING plugin's root.** A split-out skill's `${CLAUDE_PLUGIN_ROOT}/tools/x.mjs` reference is unchanged by the move — but the file it names must travel with it. `gen-docs` verifies each reference against its owner's root, so a tool left behind fails the build.
+- **Cross-plugin dependencies are legal but only as `soft`.** A `soft` dep resolves at runtime or degrades gracefully, which is exactly the semantics of "the user may not have installed that plugin". A `hard` dep across a plugin boundary is an install-order bug: keep hard-dependent skills in the same plugin.
+- **Discover plugins, never glob.** Author-time tooling uses `tools/lib/plugin-roots.mjs` (`pluginRoots`, `skillFiles`, `owningPlugin`); CI enumerates via `tools/list-skill-files.mjs`. A new plugin is picked up by registering it in `marketplace.json` — no tooling or workflow edit.
+- **Versions are per plugin.** The bump hook advances the `plugin.json` of each plugin that owns a bumped skill, plus `marketplace.json`'s registry version. A `twt-write-as-me` fix no longer moves the pipeline's version.
+- **Hooks belong to the plugin that ships them.** `hooks/hooks.json` is the monolith's; a split-out plugin has none unless it ships its own copy — which means duplicating the hook script and double-firing when both plugins are installed. Decide this per plugin; do not copy hooks reflexively.

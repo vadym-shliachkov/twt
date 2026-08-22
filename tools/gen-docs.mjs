@@ -21,10 +21,9 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncSetupGate as syncBlocks, syncBlockquote } from "./lib/stamp-block.mjs";
+import { skillFiles } from "./lib/plugin-roots.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const COMMANDS_DIR = join(ROOT, "commands");
-const SKILLS_DIR = join(ROOT, "skills");
 
 const CHECK = process.argv.includes("--check");
 
@@ -164,27 +163,11 @@ function detectEol(text) {
 
 // ---- load, stamp, and index all skills --------------------------------------
 
-// Collect (path, expectedName, source) tuples from both locations.
-const sourceFiles = [];
-
-// commands/*.md  (skip README.md)
-if (existsSync(COMMANDS_DIR)) {
-  for (const f of readdirSync(COMMANDS_DIR)) {
-    if (!f.endsWith(".md") || f === "README.md") continue;
-    sourceFiles.push({ path: join(COMMANDS_DIR, f), expectedName: basename(f, ".md"), source: "commands" });
-  }
-}
-
-// skills/*/SKILL.md
-if (existsSync(SKILLS_DIR)) {
-  for (const entry of readdirSync(SKILLS_DIR, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const skillFile = join(SKILLS_DIR, entry.name, "SKILL.md");
-    if (existsSync(skillFile)) {
-      sourceFiles.push({ path: skillFile, expectedName: entry.name, source: "skills" });
-    }
-  }
-}
+// Every skill file across every plugin in .claude-plugin/marketplace.json —
+// the monolith (source "./") plus any split-out plugin under ./plugins/. Each
+// record carries its owning pluginRoot, which is what ${CLAUDE_PLUGIN_ROOT}
+// resolves to at runtime.
+const sourceFiles = skillFiles(ROOT);
 
 const skills = [];
 const warnings = [];
@@ -196,15 +179,15 @@ let stampStale = 0;
 // something else) otherwise breaks the skill at runtime with nothing catching
 // it, since the reference is just prose. Paths carrying a `<placeholder>` or a
 // glob can't be statically resolved, so they're skipped.
-function lintPluginRootRefs(text, path) {
+function lintPluginRootRefs(text, path, pluginRoot) {
   for (const m of text.matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/([^\s"'`)\]]+)/g)) {
     let ref = m[1].replace(/[.,;:]+$/, ""); // strip trailing prose punctuation
     if (/[<>*$]/.test(ref)) continue;       // placeholder / glob / nested var — unverifiable
-    if (!existsSync(join(ROOT, ref))) brokenRefs.push({ path, ref });
+    if (!existsSync(join(pluginRoot, ref))) brokenRefs.push({ path, ref });
   }
 }
 
-for (const { path, expectedName, source } of sourceFiles) {
+for (const { path, expectedName, source, plugin, pluginRoot } of sourceFiles) {
   // Read raw bytes, stamp, then write back if changed — preserving EOL.
   const rawBuf = readFileSync(path);
   const rawText = rawBuf.toString("utf8").replace(/^﻿/, ""); // strip BOM if present
@@ -233,7 +216,7 @@ for (const { path, expectedName, source } of sourceFiles) {
 
   // Parse the (now-stamped) text.
   const text = stamped;
-  lintPluginRootRefs(text, path);
+  lintPluginRootRefs(text, path, pluginRoot);
   const fm = parseFrontmatter(text);
   if (!fm) { warnings.push(`${path}: no frontmatter`); continue; }
   const intent = parseIntent(text);
@@ -247,7 +230,7 @@ for (const { path, expectedName, source } of sourceFiles) {
   if (fm.accepts_arguments === undefined) warnings.push(`${path}: missing field accepts_arguments`);
   // Name check: for commands it's file basename; for sub-skills it's parent dir name.
   if (fm.name !== expectedName) warnings.push(`${path}: name '${fm.name}' != expected '${expectedName}'`);
-  skills.push({ path, source, category: fm.category, ...fm, intent });
+  skills.push({ path, source, plugin, category: fm.category, ...fm, intent });
 }
 
 skills.sort((a, b) => a.name.localeCompare(b.name));

@@ -49,14 +49,50 @@ for (const fp of files) {
   } catch {}
 }
 
-// When any skill bumped this session, advance the plugin manifests once too.
+// When any skill bumped this session, advance the manifests once each.
+//
+// Which plugin.json to bump is no longer a constant: the repo hosts several
+// plugins (.claude-plugin/marketplace.json `plugins[]`, each with a `source`
+// dir), and a skill edited under ./plugins/<name>/ must bump THAT plugin's
+// version, not the monolith's. Longest matching source path wins, so a nested
+// plugin beats the monolith's "./". marketplace.json's own version tracks the
+// registry itself, so it advances whenever anything in it did.
 const pluginBumped = [];
+const manifestPaths = [];
 if (bumped.length) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const manifests = [
-    { file: path.join(root, '.claude-plugin', 'plugin.json'), key: ['version'] },
-    { file: path.join(root, '.claude-plugin', 'marketplace.json'), key: ['metadata', 'version'] },
-  ];
+  const mktPath = path.join(root, '.claude-plugin', 'marketplace.json');
+
+  let registry = [];
+  try {
+    const mkt = JSON.parse(fs.readFileSync(mktPath, 'utf8'));
+    registry = (mkt.plugins || []).map((p) => ({
+      name: p.name,
+      root: path.resolve(root, p.source || './'),
+    }));
+  } catch {}
+
+  const ownerOf = (fp) => {
+    const abs = path.resolve(fp);
+    return registry
+      .filter((p) => abs === p.root || abs.startsWith(p.root + path.sep))
+      .sort((a, b) => b.root.length - a.root.length)[0];
+  };
+
+  // Only the plugins that actually own a bumped file.
+  const touched = new Map();
+  for (const fp of files) {
+    const owner = ownerOf(fp);
+    if (owner) touched.set(owner.root, owner);
+  }
+
+  const manifests = [...touched.values()].map((p) => ({
+    file: path.join(p.root, '.claude-plugin', 'plugin.json'),
+    key: ['version'],
+  }));
+  // The registry version moves whenever any plugin in it did.
+  manifests.push({ file: mktPath, key: ['metadata', 'version'] });
+
   for (const { file, key } of manifests) {
     try {
       const json = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -68,8 +104,9 @@ if (bumped.length) {
       if (!sv) continue;
       const nextV = `${sv[1]}.${sv[2]}.${+sv[3] + 1}`;
       node[leaf] = nextV;
+      manifestPaths.push(file);
       fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
-      pluginBumped.push(`${path.basename(file)} → ${nextV}`);
+      pluginBumped.push(`${path.basename(path.dirname(path.dirname(file))) === path.basename(root) ? '' : path.basename(path.dirname(path.dirname(file))) + '/'}${path.basename(file)} \u2192 ${nextV}`);
     } catch {}
   }
 }
@@ -109,8 +146,7 @@ if (bumped.length) {
   try {
     const addTargets = [
       ...files,                                                          // bumped skill files
-      path.join(root, '.claude-plugin', 'plugin.json'),
-      path.join(root, '.claude-plugin', 'marketplace.json'),
+      ...manifestPaths,   // every plugin.json that moved, plus the registry
       path.join(root, 'SKILLS.md'),
       path.join(root, 'architecture.md'),
       path.join(root, 'README.md'),
