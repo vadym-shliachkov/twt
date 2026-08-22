@@ -160,6 +160,17 @@ if ($isCommand) {
     }
 }
 
+# Figma-read discipline: any skill that drives a Figma READ tool must carry the
+# "## Reading Figma" block (synced from templates/blocks/figma-read.md). The rule
+# is keyed off the tool names themselves rather than a maintained list, so a new
+# Figma reader cannot be added without the discipline coming with it. Skipping it
+# is what produced three different Figma-reading behaviours across this repo.
+# Applies to commands and sub-skills alike - either can drive the MCP directly.
+$figmaReadTools = 'get_design_context|get_variable_defs|get_screenshot|get_metadata'
+if (($text -match $figmaReadTools) -and ($text -notmatch '(?im)^## Reading Figma')) {
+    Fail "MISSING FIGMA-READ BLOCK in ${Path}: this skill calls a Figma read tool, so it must carry the '## Reading Figma' block (synced from templates/blocks/figma-read.md by /twt-marketplace-docs). Add the heading and regenerate."
+}
+
 # Runtime self-containment (CONVENTIONS section 14): skills must not reference
 # a templates/ path at runtime; formats are carried inline. Exception: the
 # export skills (twt-export*) genuinely load templates/themes + export styles,

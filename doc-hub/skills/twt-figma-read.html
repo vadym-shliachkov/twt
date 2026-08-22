@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Make one Figma read trustworthy, wherever it happens. The pipeline skills each read Figma as a step inside a larger job; this skill is the same discip">
+  <title>/twt-figma-read | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/general.html">General</a><span>/</span><strong class="breadcrumb-command">/twt-figma-read</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">General · figma</p>
+          <h1>/twt-figma-read</h1>
+          <p class="lede">Make one Figma read trustworthy, wherever it happens. The pipeline skills each read Figma as a step inside a larger job; this skill is the same discipline available on its own, for the...</p>
+          <div class="fact-row">
+            <span>Version 1.0.0</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--mid token-usage--compact" data-token-usage="mid" aria-label="Token usage: Mid">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i></i><i></i></span>
+    <strong>Mid</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Make one Figma read trustworthy, wherever it happens. The pipeline skills each read Figma as a step inside a larger job; this skill is the same discipline available on its own, for the far more common case — ordinary project work where someone points at a Figma frame and asks for it to be built. Without it, an ad-hoc read reaches for <code>get_design_context</code> and a screenshot, skips the file's variables entirely, and hands back hex codes and pixel numbers with no way to tell a design token from a one-off value.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>a Figma file, frame, or node URL (in $ARGUMENTS, or already in the conversation)</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <p>Nothing — it starts from what you give it, or asks you directly.</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <p>No files of its own — it orchestrates other skills or reports back to you.</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Does not write artifacts, and does not create a <code>.twt-artifacts/</code> tree — it is a reading discipline, not a pipeline phase</li><li>Does not implement the design; it hands back a faithful reading for whatever build step follows</li><li>Does not replace <code>figma:figma-design-to-code</code> — it loads it and adds to it</li><li>Does not measure a built page against the design (that is <code>/twt-fidelity</code>)</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Every value reported is traceable to a node in the tree or explicitly labelled an estimate</li><li>Variables are resolved to names wherever a value binds to one</li><li>The reply states plainly what was read and what was not (frames skipped, states not present, values guessed)</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

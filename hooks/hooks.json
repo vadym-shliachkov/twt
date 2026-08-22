@@ -18,6 +18,15 @@
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js\""
           }
         ]
+      },
+      {
+        "matcher": "mcp__plugin_figma_figma__(get_design_context|get_metadata|get_screenshot)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-figma-read-guard.js\""
+          }
+        ]
       }
     ],
     "PostToolUse": [

@@ -75,6 +75,13 @@ This skill:
 ## Bash call shape — keep every call allowlist-matchable
 The permission rules `/twt-setup` seeds match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`); a call that doesn't match forces a manual prompt even when the binary is allowlisted. So for **every** Bash call in this run: never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
+## Reading Figma — the measured read
+Before the first `get_design_context` call, load the `figma:figma-design-to-code` skill — it is a mandatory prerequisite, and this block composes with it rather than replacing it. Then, for any design you are about to read:
+- **`get_metadata` first.** It returns the cheap frame tree. Never open with `get_design_context` on a whole file — that is the call that blows the token budget on a large file and returns more than you can use.
+- **`get_variable_defs` on every frame you read, always.** Figma variables are the highest-confidence token source in the file: where a value binds to a variable, carry the variable name alongside the raw value. A read that skips this hands you hex codes and pixel numbers with no way to tell a token from a one-off.
+- **`get_design_context` for the node tree, `get_screenshot` only to corroborate.** A screenshot is evidence that your reading of the tree is right; it is never the measurement itself. Never infer a value from pixels that the node tree can state.
+- **Say which values you measured and which you guessed.** Anything not read from the node tree is estimated — label it, and never let an estimate travel onward as if it were measured. Do not fabricate breakpoints, widths, or states you did not actually read: one frame is one frame, even when three were asked for.
+
 ## Step 1 — Introduction
 
 Print on start:

@@ -52,6 +52,7 @@ flowchart TB
     twt_figma_design_system["/twt-figma-design-system"]:::skill
     twt_figma_dev_audit["/twt-figma-dev-audit"]:::skill
     twt_figma_mockup["/twt-figma-mockup"]:::skill
+    twt_figma_read["/twt-figma-read"]:::skill
     twt_html_block_creator["/twt-html-block-creator"]:::skill
     twt_html_site_creator["/twt-html-site-creator"]:::skill
     twt_ia_define["/twt-ia-define"]:::skill
@@ -342,6 +343,10 @@ flowchart TB
 - /twt-fidelity - Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image
 - /twt-fidelity-fetch - Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
 - /twt-fidelity-measure - Measure a built page against the reference spec and report every delta
+
+### figma
+
+- /twt-figma-read - Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest
 
 ### figma-export
 
@@ -1813,6 +1818,29 @@ flowchart TB
 | .twt-artifacts/figma-export/mockup-report.md |  |
 | .twt-artifacts/figma-export/decisions.md |  |
 
+### /twt-figma-read
+
+**Category:** figma
+**Version:** 1.0.0
+
+**Inputs:**
+- a Figma file, frame, or node URL (in $ARGUMENTS, or already in the conversation)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- (none)
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+
 ### /twt-html-block-creator
 
 **Category:** html
@@ -3108,6 +3136,7 @@ flowchart TB
 | /twt-figma-design-system | none | figma-mcp |
 | /twt-figma-dev-audit | none | figma-mcp, twt-design-system-audit |
 | /twt-figma-mockup | none | figma-mcp, twt-figma-design-system |
+| /twt-figma-read | none | figma-mcp |
 | /twt-html-block-creator | twt-html-site-creator | twt-design-system-define, figma-mcp |
 | /twt-html-site-creator | none | none |
 | /twt-ia-define | none | twt-positioning-define, twt-audience-define, twt-content-fetch |

@@ -80,6 +80,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-figma-design-system | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | /twt-figma-dev-audit | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | /twt-figma-mockup | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
+| /twt-figma-read | figma | Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |

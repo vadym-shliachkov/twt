@@ -46,6 +46,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
+| [/twt-figma-read](#twt-figma-read) | figma | Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
@@ -1694,6 +1695,40 @@ Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.htm
 - All frame content is the mockup's real copy — never lorem
 - `figma-map.md` gains/updates `### Pages` rows; `mockup-report.md` lists per-page results
 - Aborts with an actionable message when mockups or the Figma MCP are missing
+
+---
+
+## /twt-figma-read
+
+**Category:** figma
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+Make one Figma read trustworthy, wherever it happens. The pipeline skills each read Figma as a step inside a larger job; this skill is the same discipline available on its own, for the far more common case — ordinary project work where someone points at a Figma frame and asks for it to be built. Without it, an ad-hoc read reaches for `get_design_context` and a screenshot, skips the file's variables entirely, and hands back hex codes and pixel numbers with no way to tell a design token from a one-off value.
+
+**Inputs:**
+- a Figma file, frame, or node URL (in $ARGUMENTS, or already in the conversation)
+
+**Dependencies:**
+- Hard: none
+- Soft: figma-mcp
+
+**Reads:**
+- (none)
+
+**Writes:**
+- (none)
+
+**Non-goals:**
+- Does not write artifacts, and does not create a `.twt-artifacts/` tree — it is a reading discipline, not a pipeline phase
+- Does not implement the design; it hands back a faithful reading for whatever build step follows
+- Does not replace `figma:figma-design-to-code` — it loads it and adds to it
+- Does not measure a built page against the design (that is `/twt-fidelity`)
+
+**Success criteria:**
+- Every value reported is traceable to a node in the tree or explicitly labelled an estimate
+- Variables are resolved to names wherever a value binds to one
+- The reply states plainly what was read and what was not (frames skipped, states not present, values guessed)
 
 ---
 

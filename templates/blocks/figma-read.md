@@ -1,0 +1,6 @@
+## Reading Figma — the measured read
+Before the first `get_design_context` call, load the `figma:figma-design-to-code` skill — it is a mandatory prerequisite, and this block composes with it rather than replacing it. Then, for any design you are about to read:
+- **`get_metadata` first.** It returns the cheap frame tree. Never open with `get_design_context` on a whole file — that is the call that blows the token budget on a large file and returns more than you can use.
+- **`get_variable_defs` on every frame you read, always.** Figma variables are the highest-confidence token source in the file: where a value binds to a variable, carry the variable name alongside the raw value. A read that skips this hands you hex codes and pixel numbers with no way to tell a token from a one-off.
+- **`get_design_context` for the node tree, `get_screenshot` only to corroborate.** A screenshot is evidence that your reading of the tree is right; it is never the measurement itself. Never infer a value from pixels that the node tree can state.
+- **Say which values you measured and which you guessed.** Anything not read from the node tree is estimated — label it, and never let an estimate travel onward as if it were measured. Do not fabricate breakpoints, widths, or states you did not actually read: one frame is one frame, even when three were asked for.
