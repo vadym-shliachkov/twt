@@ -1,8 +1,8 @@
 ---
 name: twt-html-block-creator
 category: html
-description: (v1.1.2) Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
-version: 1.1.2
+description: (v1.1.3) Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - page or section description; optional Figma URL; optional Phase-2 mockup/layout; screenshots/notes

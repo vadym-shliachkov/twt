@@ -1,8 +1,8 @@
 ---
 name: twt-content-optimize
 category: content
-description: (v1.2.2) Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
-version: 1.2.2
+description: (v1.2.3) Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
+version: 1.2.3
 accepts_arguments: true
 inputs:
   - Optional subject (file path or pasted text); optional mode (auto|manual) and level (light|standard|aggressive)

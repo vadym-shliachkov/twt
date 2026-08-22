@@ -1,8 +1,8 @@
 ---
 name: twt-spec
 category: spec
-description: (v1.1.4) Orchestrate the spec define/validate skills in a single define→validate pass
-version: 1.1.4
+description: (v1.1.5) Orchestrate the spec define/validate skills in a single define→validate pass
+version: 1.1.5
 accepts_arguments: true
 inputs:
   - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive

@@ -1,8 +1,8 @@
 ---
 name: twt-launch-audit
 category: qa
-description: (v1.0.6) Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
-version: 1.0.6
+description: (v1.0.7) Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
+version: 1.0.7
 accepts_arguments: true
 inputs:
   - Optional http(s):// URL for the live checks; optional --skip-interview

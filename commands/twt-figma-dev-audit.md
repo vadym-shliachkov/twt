@@ -1,8 +1,8 @@
 ---
 name: twt-figma-dev-audit
 category: qa
-description: (v1.0.7) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
-version: 1.0.7
+description: (v1.0.8) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
+version: 1.0.8
 accepts_arguments: true
 inputs:
   - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes

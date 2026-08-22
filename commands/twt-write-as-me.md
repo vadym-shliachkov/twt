@@ -1,8 +1,8 @@
 ---
 name: twt-write-as-me
 category: voice
-description: (v1.0.6) Generate or rewrite text in the author's own voice using their writing-style profile
-version: 1.0.6
+description: (v1.0.7) Generate or rewrite text in the author's own voice using their writing-style profile
+version: 1.0.7
 accepts_arguments: true
 inputs:
   - What to write, or the text/file path to rewrite

@@ -1,8 +1,8 @@
 ---
 name: twt-pre-design
 category: pre-design
-description: (v1.3.1) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
-version: 1.3.1
+description: (v1.3.2) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
+version: 1.3.2
 accepts_arguments: true
 inputs:
   - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags

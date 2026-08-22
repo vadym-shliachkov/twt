@@ -1,8 +1,8 @@
 ---
 name: twt-block-preview
 category: design-system
-description: (v1.0.3) Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
-version: 1.0.3
+description: (v1.0.4) Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir
+version: 1.0.4
 model: haiku
 effort: low
 accepts_arguments: true

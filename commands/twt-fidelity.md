@@ -1,8 +1,8 @@
 ---
 name: twt-fidelity
 category: fidelity
-description: (v1.0.3) Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image
-version: 1.0.3
+description: (v1.0.4) Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image
+version: 1.0.4
 accepts_arguments: true
 inputs:
   - A Figma URL, site URL, or image path

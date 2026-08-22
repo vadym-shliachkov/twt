@@ -1,8 +1,8 @@
 ---
 name: twt-write-as-me-analysis
 category: voice
-description: (v1.0.5) Extract a reproducible writing-fingerprint profile from the author's own text samples
-version: 1.0.5
+description: (v1.0.6) Extract a reproducible writing-fingerprint profile from the author's own text samples
+version: 1.0.6
 accepts_arguments: true
 inputs:
   - Writing samples — file paths, a folder, `--from <path>`, or pasted text

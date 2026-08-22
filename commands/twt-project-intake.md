@@ -1,8 +1,8 @@
 ---
 name: twt-project-intake
 category: intake
-description: (v1.0.2) Normalize messy project notes into a clean site-instruction.md for /twt-site
-version: 1.0.2
+description: (v1.0.3) Normalize messy project notes into a clean site-instruction.md for /twt-site
+version: 1.0.3
 accepts_arguments: true
 inputs:
   - Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`

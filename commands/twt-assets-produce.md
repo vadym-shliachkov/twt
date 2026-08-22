@@ -1,8 +1,8 @@
 ---
 name: twt-assets-produce
 category: assets
-description: (v1.0.3) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
-version: 1.0.3
+description: (v1.0.4) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
+version: 1.0.4
 model: sonnet
 accepts_arguments: true
 inputs:

@@ -450,7 +450,7 @@ flowchart TB
 ### /twt-assets-produce
 
 **Category:** assets
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Optional path(s) to provided asset files/folders; optional row scope (filenames or a page slug)
@@ -487,7 +487,7 @@ flowchart TB
 ### /twt-audience
 
 **Category:** audience
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional; runs define then the single validate pass
@@ -568,7 +568,7 @@ flowchart TB
 ### /twt-block-map
 
 **Category:** design-system
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - A site URL, a local HTML directory, and/or a Figma file URL; optional --max, --depth, --static
@@ -599,7 +599,7 @@ flowchart TB
 ### /twt-block-preview
 
 **Category:** design-system
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - A URL (https://…) or local HTML file path, plus optional --selector, --width, --height, --wait, --out flags
@@ -629,7 +629,7 @@ flowchart TB
 ### /twt-brand
 
 **Category:** brand
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional brand source (forwarded to fetch) or none (define from scratch)
@@ -802,7 +802,7 @@ flowchart TB
 ### /twt-content-approval-checklist
 
 **Category:** content
-**Version:** 1.4.2
+**Version:** 1.4.3
 
 **Inputs:**
 - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
@@ -840,7 +840,7 @@ flowchart TB
 ### /twt-content-approval-implement
 
 **Category:** content
-**Version:** 1.1.7
+**Version:** 1.1.8
 
 **Inputs:**
 - Optional path to content-approval-checklist.xlsx; optional --target html|elementor|inherit
@@ -873,7 +873,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -998,7 +998,7 @@ flowchart TB
 ### /twt-content-optimize
 
 **Category:** content
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional mode (auto|manual) and level (light|standard|aggressive)
@@ -1119,7 +1119,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.7
+**Version:** 1.3.8
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -1157,7 +1157,7 @@ flowchart TB
 ### /twt-design-system
 
 **Category:** design-system
-**Version:** 1.3.2
+**Version:** 1.3.3
 
 **Inputs:**
 - Optional design sources (Figma/screenshots/URL) or none (greenfield from brand-brief)
@@ -1189,7 +1189,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.6.2
+**Version:** 1.6.3
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -1295,7 +1295,7 @@ flowchart TB
 ### /twt-develop
 
 **Category:** develop
-**Version:** 1.3.14
+**Version:** 1.3.15
 
 **Inputs:**
 - Optional --target html|elementor|inherit (else menu); optional page scope; optional continuation tokens `pilot-approved` and `modifications-approved` (Step 4, evaluated in that reverse order — see Continuation tokens)
@@ -1366,7 +1366,7 @@ flowchart TB
 ### /twt-elementor-block-creator
 
 **Category:** elementor
-**Version:** 1.2.3
+**Version:** 1.2.4
 
 **Inputs:**
 - widget description or page description
@@ -1404,7 +1404,7 @@ flowchart TB
 ### /twt-elementor-theme-creator
 
 **Category:** elementor
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - project name
@@ -1468,7 +1468,7 @@ flowchart TB
 ### /twt-export
 
 **Category:** export
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
@@ -1632,7 +1632,7 @@ flowchart TB
 ### /twt-fidelity
 
 **Category:** fidelity
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - A Figma URL, site URL, or image path
@@ -1724,7 +1724,7 @@ flowchart TB
 ### /twt-figma-design-system
 
 **Category:** figma-export
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional: a target Figma file URL, and/or a scope hint (foundations | full)
@@ -1754,7 +1754,7 @@ flowchart TB
 ### /twt-figma-dev-audit
 
 **Category:** qa
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 **Inputs:**
 - A Figma file URL (via $ARGUMENTS or prompt); optional --platform web|wordpress; optional --scope <page or frame name>; optional notes
@@ -1786,7 +1786,7 @@ flowchart TB
 ### /twt-figma-mockup
 
 **Category:** figma-export
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional: which page(s) to export and a breakpoint hint (desktop | all)
@@ -1816,7 +1816,7 @@ flowchart TB
 ### /twt-html-block-creator
 
 **Category:** html
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - page or section description; optional Figma URL; optional Phase-2 mockup/layout; screenshots/notes
@@ -1850,7 +1850,7 @@ flowchart TB
 ### /twt-html-site-creator
 
 **Category:** html
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - project name (asked); short slug (auto-derived, user confirms); output root (default ./site)
@@ -1942,7 +1942,7 @@ flowchart TB
 ### /twt-inherit-block-creator
 
 **Category:** inherit
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - page or block description; optional --exact; optional Figma URL; optional Phase-2 mockup/layout
@@ -2003,7 +2003,7 @@ flowchart TB
 ### /twt-launch-audit
 
 **Category:** qa
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - Optional http(s):// URL for the live checks; optional --skip-interview
@@ -2193,7 +2193,7 @@ flowchart TB
 ### /twt-positioning
 
 **Category:** positioning
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional; runs define then the bounded validate loop
@@ -2271,7 +2271,7 @@ flowchart TB
 ### /twt-pre-design
 
 **Category:** pre-design
-**Version:** 1.3.1
+**Version:** 1.3.2
 
 **Inputs:**
 - What's provided (URLs, PDFs, docs, brand book, Figma); optional --from/--only flags
@@ -2310,7 +2310,7 @@ flowchart TB
 ### /twt-project-intake
 
 **Category:** intake
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Messy project notes, URLs, Figma links, document paths, constraints, or `--from <path>`
@@ -2342,7 +2342,7 @@ flowchart TB
 ### /twt-qa
 
 **Category:** qa
-**Version:** 1.0.11
+**Version:** 1.0.12
 
 **Inputs:**
 - Optional http(s):// URL (live mode) or local path; else local auto-detect
@@ -2372,7 +2372,7 @@ flowchart TB
 ### /twt-qa-a11y
 
 **Category:** qa
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2398,7 +2398,7 @@ flowchart TB
 ### /twt-qa-content
 
 **Category:** qa
-**Version:** 1.2.3
+**Version:** 1.2.4
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2427,7 +2427,7 @@ flowchart TB
 ### /twt-qa-design
 
 **Category:** qa
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
 - Optional local path; a URL is rejected (source-only audit)
@@ -2457,7 +2457,7 @@ flowchart TB
 ### /twt-qa-elementor
 
 **Category:** qa
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional theme path; else auto-detect wp-content/themes/hello-elementor-*
@@ -2483,7 +2483,7 @@ flowchart TB
 ### /twt-qa-links
 
 **Category:** qa
-**Version:** 1.1.3
+**Version:** 1.1.4
 
 **Inputs:**
 - Optional local path or http(s):// URL; else auto-detect site/ then Phase-2 mockups
@@ -2510,7 +2510,7 @@ flowchart TB
 ### /twt-search-site
 
 **Category:** search
-**Version:** 1.1.2
+**Version:** 1.1.3
 
 **Inputs:**
 - Search string (first argument; wrap in quotes if it contains spaces)
@@ -2535,7 +2535,7 @@ flowchart TB
 ### /twt-seo
 
 **Category:** seo
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Optional; runs define then the single validate pass
@@ -2641,7 +2641,7 @@ flowchart TB
 ### /twt-site
 
 **Category:** site
-**Version:** 1.13.8
+**Version:** 1.13.9
 
 **Inputs:**
 - Optional `site-instruction.md` (project root or `.twt-artifacts/`) — pre-supplied brief that pre-fills intake/phases/target/per-phase guidance; the orchestrator asks only for what it omits
@@ -2681,7 +2681,7 @@ flowchart TB
 ### /twt-site-dev
 
 **Category:** site-dev
-**Version:** 1.5.14
+**Version:** 1.5.15
 
 **Inputs:**
 - Figma URL (via $ARGUMENTS or prompt); optional screenshots/notes; target chosen via menu
@@ -2714,7 +2714,7 @@ flowchart TB
 ### /twt-spec
 
 **Category:** spec
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
@@ -2816,7 +2816,7 @@ flowchart TB
 ### /twt-text-analysis
 
 **Category:** content
-**Version:** 1.4.2
+**Version:** 1.4.3
 
 **Inputs:**
 - Optional subject (file path or pasted text); optional scope hint
@@ -2844,7 +2844,7 @@ flowchart TB
 ### /twt-wiki
 
 **Category:** wiki
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 **Inputs:**
 - Optional sources to ingest, or a focus for curation; otherwise interactive
@@ -2947,7 +2947,7 @@ flowchart TB
 ### /twt-wiki-query
 
 **Category:** wiki
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - The question to ask; otherwise interactive
@@ -2999,7 +2999,7 @@ flowchart TB
 ### /twt-write-as-me
 
 **Category:** voice
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - What to write, or the text/file path to rewrite
@@ -3032,7 +3032,7 @@ flowchart TB
 ### /twt-write-as-me-analysis
 
 **Category:** voice
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - Writing samples — file paths, a folder, `--from <path>`, or pasted text

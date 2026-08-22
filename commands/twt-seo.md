@@ -1,8 +1,8 @@
 ---
 name: twt-seo
 category: seo
-description: (v1.0.1) Orchestrate the SEO define/validate skills in a single define→validate pass
-version: 1.0.1
+description: (v1.0.2) Orchestrate the SEO define/validate skills in a single define→validate pass
+version: 1.0.2
 accepts_arguments: true
 inputs:
   - Optional; runs define then the single validate pass

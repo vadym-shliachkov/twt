@@ -1,8 +1,8 @@
 ---
 name: twt-search-site
 category: search
-description: (v1.1.2) Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
-version: 1.1.2
+description: (v1.1.3) Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
+version: 1.1.3
 model: haiku
 effort: low
 accepts_arguments: true

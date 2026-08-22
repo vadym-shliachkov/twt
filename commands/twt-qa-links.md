@@ -1,8 +1,8 @@
 ---
 name: twt-qa-links
 category: qa
-description: (v1.1.3) Audit built or served pages for link integrity and declared responsive tiers
-version: 1.1.3
+description: (v1.1.4) Audit built or served pages for link integrity and declared responsive tiers
+version: 1.1.4
 model: sonnet
 accepts_arguments: true
 inputs:

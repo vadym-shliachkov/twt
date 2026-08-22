@@ -1,8 +1,8 @@
 ---
 name: twt-develop
 category: develop
-description: (v1.3.14) Phase 3 full path — promote the Phase-2 design into the chosen build target
-version: 1.3.14
+description: (v1.3.15) Phase 3 full path — promote the Phase-2 design into the chosen build target
+version: 1.3.15
 accepts_arguments: true
 inputs:
   - Optional --target html|elementor|inherit (else menu); optional page scope; optional continuation tokens `pilot-approved` and `modifications-approved` (Step 4, evaluated in that reverse order — see Continuation tokens)

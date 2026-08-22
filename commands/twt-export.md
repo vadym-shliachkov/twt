@@ -1,8 +1,8 @@
 ---
 name: twt-export
 category: export
-description: (v1.1.2) Orchestrate PDF, DOCX, PPTX, and theme-based exports
-version: 1.1.2
+description: (v1.1.3) Orchestrate PDF, DOCX, PPTX, and theme-based exports
+version: 1.1.3
 accepts_arguments: true
 inputs:
   - Optional export type, source Markdown path or source instructions, theme choice, aspect ratio, and force flag
