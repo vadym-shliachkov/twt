@@ -27,15 +27,22 @@ test('ground truth: the shipped write-as-me split has no contested files', () =>
   assert.match(verdict, /^(CLEAN|SPLITTABLE)/);
 });
 
-test('ground truth: the export cluster is blocked on templates/themes', () => {
+test('ground truth: the export cluster is contested on templates/themes', () => {
   // Found by hand: tools/theme.mjs and tools/house-style.mjs both need this
   // directory, and house-style backs four monolith report tools.
+  //
+  // The `contested` assertion is the real guard here and has not moved - it is
+  // what fails if closure() stops following computed data paths. Only the
+  // verdict changed: sync-kernel vendors shared files into each plugin from one
+  // canonical source, so contention is a cost to pay, not a wall. A hard
+  // dependency edge is now the only fatal verdict, since duplicating a SKILL
+  // (rather than a file) is the trap CONVENTIONS forbids.
   const { contested, verdict } = analyze(EXPORT);
   assert.ok(
     contested.some((f) => f === 'templates/themes' || f.startsWith('templates/themes/')),
     `expected templates/themes to be contested, got: ${JSON.stringify(contested)}`,
   );
-  assert.match(verdict, /^BLOCKED/);
+  assert.match(verdict, /^VENDORABLE/);
 });
 
 test('computed data paths are followed, not just import edges', () => {

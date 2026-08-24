@@ -168,10 +168,20 @@ export function analyze(members) {
     .filter((f) => theirs.some((t) => overlaps(f, t)))
     .sort();
 
+  // Contested files used to be the fatal verdict, on the reasoning that a file
+  // can live in exactly one plugin. tools/sync-kernel.mjs removed that
+  // constraint: shared files are vendored into each plugin that needs them from
+  // one canonical source, with CI comparing the copies byte-for-byte. So a
+  // contested file is now a COST (files to duplicate), not a blocker.
+  //
+  // A hard dependency edge is the one thing vendoring cannot fix, and is
+  // therefore now the only fatal verdict. Vendoring a FILE is fine; "vendoring"
+  // a skill would mean shipping two copies of it, which is the duplicate trap
+  // CONVENTIONS forbids. Hard edges are checked first for that reason.
   const hardEdges = [...inbound, ...outbound].filter((e) => e.kind === "hard");
   const verdict = missing.length ? "UNKNOWN (unresolved skill names)"
-    : contested.length ? "BLOCKED (contested files)"
     : hardEdges.length ? "BLOCKED (hard dependency across the boundary)"
+    : contested.length ? `VENDORABLE (${contested.length} contested file(s) - run sync-kernel)`
     : inbound.length + outbound.length ? "SPLITTABLE (soft edges only)"
     : "CLEAN";
 
@@ -193,7 +203,7 @@ function report(label, members) {
   edges(outbound, "outbound (cluster depending on outsiders)");
   if (!contested.length) console.log("  contested files: none");
   else {
-    console.log(`  contested files: ${contested.length} — each can live in only ONE plugin`);
+    console.log(`  contested files: ${contested.length} — shared; sync-kernel vendors them into both`);
     for (const f of contested) console.log(`    ${f}`);
   }
   return verdict;
