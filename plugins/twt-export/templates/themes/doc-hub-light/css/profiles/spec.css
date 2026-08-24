@@ -1,0 +1,18 @@
+/* doc-hub-light · profile layer: spec
+   Technical treatment for structural documents (sitemap, functional-scope,
+   tokens, components, conventions, layouts). No CSS section counters — spec
+   sources usually self-number their headings ("2.2 Text styles"); a counter
+   would double-number them. Sections separate with rules; tables tighten. */
+
+h2 { margin-top: 2.1em; padding-top: .9em; border-top: 1px solid var(--tx-rule); }
+h3 { color: var(--tx-ink); }
+
+/* long spec matrices: tighter type, roomier cells */
+table { font-size: .88em; }
+th { font-family: var(--tx-font-heading); }
+
+/* inline token names are load-bearing in specs — keep them from wrapping badly */
+code { overflow-wrap: anywhere; }
+
+li { margin-bottom: .3em; }
+li > ul { margin-top: .25em; }

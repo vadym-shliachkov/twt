@@ -14,7 +14,9 @@ A collection of Claude Code slash commands you can install once and use across a
 
 ```
 /plugin marketplace add vadym-shliachkov/twt
-/plugin install twt@twt-marketplace
+/plugin install twt@twt-marketplace                 # the full pipeline
+/plugin install twt-write-as-me@twt-marketplace     # or just the author-voice tool
+/plugin install twt-export@twt-marketplace          # or just the document/slide exports
 ```
 
 Then **restart Claude Code** (CLI or Desktop). All `/twt-*` commands are immediately available.

@@ -100,6 +100,22 @@ function assetPaths(abs, src) {
   return out;
 }
 
+// The dependency-spotting knowledge, shared rather than copied. sync-kernel
+// needs the same two edge types but resolves them against a DIFFERENT anchor
+// (a plugin root, not the repo root), so it takes the specifiers and does its
+// own resolution. Exporting the compiled /g regexes instead would share their
+// lastIndex state across callers - a real bug, not a style preference.
+export function depSpecifiers(src) {
+  const imports = [...src.matchAll(/(?:from\s*|import\s*\(\s*|require\(\s*)['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
+  const assets = [];
+  for (const m of src.matchAll(/(?:join|resolve)\(\s*(?:HERE|ROOT|__dirname|[A-Z][A-Z0-9_]*)\s*,\s*((?:['"][^'"]+['"]\s*,\s*)*['"][^'"]+['"])\s*\)/g)) {
+    const parts = [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
+    if (!parts.length || parts.some((x) => /[<>*${}]/.test(x))) continue;
+    assets.push(parts);
+  }
+  return { imports, assets };
+}
+
 function closure(startRefs) {
   const seen = new Set();
   const queue = [...startRefs];
@@ -133,6 +149,15 @@ function closure(startRefs) {
 // — a second copy of this walk would drift, and a drifted copy reports CLEAN.
 export { skills, closure };
 
+// Contention is directory containment, not string equality, and this is the
+// rule that decides it. Exported and unit-tested directly: it used to be proven
+// only through the export cluster's real data, and when export became its own
+// plugin that data stopped exercising the nested case at all. A pure rule
+// deserves a pure test that repo layout cannot quietly defeat.
+export function pathsOverlap(a, b) {
+  return a === b || a.startsWith(b + "/") || b.startsWith(a + "/");
+}
+
 // ---- report -----------------------------------------------------------------
 
 export function analyze(members) {
@@ -162,7 +187,7 @@ export function analyze(members) {
   // reaches "templates/themes" while tools/house-style.mjs reaches
   // "templates/themes/doc-hub-light/css" — different strings, one directory,
   // and it can still only live in one plugin. Compare both ways.
-  const overlaps = (a, b) => a === b || a.startsWith(b + "/") || b.startsWith(a + "/");
+  const overlaps = pathsOverlap;
   const theirs = [...theirClosure];
   const contested = [...mineClosure]
     .filter((f) => theirs.some((t) => overlaps(f, t)))

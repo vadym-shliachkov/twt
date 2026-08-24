@@ -1,0 +1,6 @@
+/* doc-hub-light · doctype layer: brand-brief (twt-brand-define)
+   The palette is the hero — larger swatches with real presence — and hex
+   values keep the mono voice. */
+
+.tx-swatch { width: 20px; height: 20px; border-radius: 6px; vertical-align: -5px; }
+td code { font-family: var(--tx-font-mono); }

@@ -10,46 +10,71 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { requiredForSkills, syncFiles } from '../tools/sync-kernel.mjs';
+import { vendorPlanFor, syncFiles } from '../tools/sync-kernel.mjs';
 
-const EXPORT = ['twt-export', 'twt-export-docx', 'twt-export-pdf', 'twt-export-presentation', 'twt-export-template-create'];
+const EXPORT_ROOT = 'plugins/twt-export';
+// The refs twt-export's skills actually make, as plugin-relative paths.
+const EXPORT_REFS = [
+  'tools/export-document.mjs', 'tools/export-presentation.mjs',
+  'tools/export-source-create.mjs', 'tools/export-theme-create.mjs',
+];
 
 // ---- half 1: deriving WHAT to vendor ---------------------------------------
 
-test('derivation follows computed data paths, not just imports', () => {
-  // This is the exact case that made the export split look clean and then fail.
-  // tools/theme.mjs reaches templates/themes through
-  //   join(HERE, '..', 'templates', 'themes')
-  // which no import edge reveals. If the walker regresses to imports-only, the
-  // export plugin ships without its themes and every export breaks at runtime.
-  const req = requiredForSkills(EXPORT);
-  assert.ok(req.some((f) => f === 'tools/theme.mjs'), 'theme.mjs must be required');
+test('derivation reaches a dependency of an OWNED file, not just of a missing one', () => {
+  // The bug that shipped a broken plugin. The first walker only followed the
+  // closure of refs the plugin was MISSING, so tools/theme.mjs - which the
+  // export plugin OWNS - was never opened, and the templates/themes tree it
+  // reaches was never vendored. sync-kernel reported "0 files to vendor" and
+  // every export would have died on a missing theme directory.
+  const { vendor } = vendorPlanFor(EXPORT_ROOT, EXPORT_REFS);
   assert.ok(
-    req.some((f) => f.startsWith('templates/themes')),
-    `templates/themes must be reached through the computed path, got: ${JSON.stringify(req.slice(0, 20))}`,
+    vendor.some((f) => f.startsWith('templates/themes')),
+    `themes must be vendored, got: ${JSON.stringify(vendor.slice(0, 10))}`,
   );
 });
 
-test('derivation expands a required directory to its files', () => {
-  // Vendoring copies files, so a directory reference has to become the files
-  // under it or the copy step silently does nothing.
-  const req = requiredForSkills(EXPORT);
-  const themeFiles = req.filter((f) => f.startsWith('templates/themes/'));
-  assert.ok(themeFiles.length > 1, `expected the themes tree expanded, got ${themeFiles.length}`);
-  for (const f of themeFiles) assert.ok(existsSync(join(process.cwd(), f)) || true);
+test('derivation follows computed data paths, not just imports', () => {
+  // tools/theme.mjs reaches templates/themes through
+  //   join(HERE, '..', 'templates', 'themes')
+  // which no import edge reveals. Regress to imports-only and the export plugin
+  // ships without its themes.
+  const { vendor } = vendorPlanFor(EXPORT_ROOT, EXPORT_REFS);
+  assert.ok(vendor.filter((f) => f.startsWith('templates/themes/')).length > 5,
+    'the themes tree must be reached through the computed path and expanded to files');
+});
+
+test('an already-vendored file stays classified as vendored, not owned', () => {
+  // The drift hole. Once a file has been copied in it exists inside the plugin,
+  // and the obvious "exists here, therefore owned" rule dropped it from the
+  // checked set -- so an EDITED vendored file passed --check reporting OK.
+  // templates/themes is present in the plugin right now; it must still be
+  // reported as vendored so every copy keeps getting compared.
+  const { vendor, owned } = vendorPlanFor(EXPORT_ROOT, EXPORT_REFS);
+  assert.ok(vendor.some((f) => f.startsWith('templates/themes')),
+    'a present vendored copy must remain in the vendored set');
+  assert.ok(!owned.some((f) => f.startsWith('templates/themes')),
+    'a file that also exists in the monolith is a copy, never owned');
+});
+
+test("a plugin's own moved-in files are owned, never vendored", () => {
+  // tools/theme.mjs moved OUT of the monolith, so it exists in one place only.
+  // If this flips to vendored, sync-kernel would try to copy a file that is not
+  // in the monolith and report it broken.
+  const { owned, vendor } = vendorPlanFor(EXPORT_ROOT, EXPORT_REFS);
+  assert.ok(owned.includes('tools/export-document.mjs'));
+  assert.ok(!vendor.includes('tools/export-document.mjs'));
 });
 
 test('a self-contained plugin needs nothing vendored', () => {
-  // Ground truth: twt-write-as-me already ships alone and works. If this starts
-  // reporting required files, the derivation has become over-eager and would
-  // bloat every plugin with files it does not use.
-  const req = requiredForSkills(['twt-write-as-me', 'twt-write-as-me-analysis']);
-  const foreign = req.filter((f) => !f.startsWith('plugins/twt-write-as-me/'));
-  assert.deepEqual(foreign, [], `write-as-me must need nothing from the monolith, got: ${JSON.stringify(foreign)}`);
+  // Ground truth: twt-write-as-me ships alone and works.
+  const { vendor } = vendorPlanFor('plugins/twt-write-as-me', ['tools/write-as-me-contamination.mjs']);
+  assert.deepEqual(vendor, [], `write-as-me must need nothing, got: ${JSON.stringify(vendor)}`);
 });
 
-test('unknown skill names contribute nothing rather than throwing', () => {
-  assert.deepEqual(requiredForSkills(['twt-not-a-real-skill']), []);
+test('a declared ref that exists nowhere is reported broken', () => {
+  const { broken } = vendorPlanFor(EXPORT_ROOT, ['tools/does-not-exist.mjs']);
+  assert.deepEqual(broken, ['tools/does-not-exist.mjs']);
 });
 
 // ---- half 2: copying, and detecting drift ----------------------------------

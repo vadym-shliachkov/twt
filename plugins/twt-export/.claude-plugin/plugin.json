@@ -1,0 +1,13 @@
+{
+  "name": "twt-export",
+  "version": "1.0.0",
+  "description": "Standalone: Markdown to polished PDF, DOCX, and PPTX/slide exports with themeable house styles. No pipeline dependency.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": ["export", "pdf", "docx", "pptx", "markdown", "claude-code"]
+}

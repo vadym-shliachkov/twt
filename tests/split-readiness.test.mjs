@@ -15,7 +15,7 @@
 // A false CLEAN here is worse than no tool at all, so both stay pinned.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze } from '../tools/split-readiness.mjs';
+import { analyze, pathsOverlap } from '../tools/split-readiness.mjs';
 
 const EXPORT = ['twt-export', 'twt-export-docx', 'twt-export-pdf', 'twt-export-presentation', 'twt-export-template-create'];
 const WRITE_AS_ME = ['twt-write-as-me', 'twt-write-as-me-analysis'];
@@ -27,39 +27,55 @@ test('ground truth: the shipped write-as-me split has no contested files', () =>
   assert.match(verdict, /^(CLEAN|SPLITTABLE)/);
 });
 
-test('ground truth: the export cluster is contested on templates/themes', () => {
-  // Found by hand: tools/theme.mjs and tools/house-style.mjs both need this
-  // directory, and house-style backs four monolith report tools.
+test('a cluster whose computed-path dependency is contested reports it', () => {
+  // This guard used to ride on the export cluster, which is now its own plugin
+  // with templates/themes vendored in -- so it is correctly no longer contested
+  // and could not keep proving anything. Retargeted, not deleted: the mechanism
+  // under test is unchanged.
   //
-  // The `contested` assertion is the real guard here and has not moved - it is
-  // what fails if closure() stops following computed data paths. Only the
-  // verdict changed: sync-kernel vendors shared files into each plugin from one
-  // canonical source, so contention is a cost to pay, not a wall. A hard
-  // dependency edge is now the only fatal verdict, since duplicating a SKILL
-  // (rather than a file) is the trap CONVENTIONS forbids.
-  const { contested, verdict } = analyze(EXPORT);
+  // tools/house-style.mjs reaches templates/themes/doc-hub-light/css through a
+  // computed join(), and backs six monolith skills. Split twt-launch-audit out
+  // and that directory is needed on both sides. If closure() stops following
+  // computed data paths this returns [] and the assertion fires.
+  const { contested, verdict } = analyze(['twt-launch-audit']);
   assert.ok(
     contested.some((f) => f === 'templates/themes' || f.startsWith('templates/themes/')),
-    `expected templates/themes to be contested, got: ${JSON.stringify(contested)}`,
+    `expected templates/themes contested via house-style, got: ${JSON.stringify(contested)}`,
   );
   assert.match(verdict, /^VENDORABLE/);
 });
 
-test('computed data paths are followed, not just import edges', () => {
-  // The specific mechanism behind the export block. If closure() stops following
-  // join(HERE, '..', ...) this assertion is what fails.
+test('a split-out cluster is no longer contested on what was vendored to it', () => {
+  // The other half of the same fact, and the payoff of the split: twt-export
+  // owns its tools and carries its own themes, so nothing is contested and it
+  // is cleanly separable. A regression that re-contested it would show here.
   const { contested } = analyze(EXPORT);
+  assert.deepEqual(contested, [], `export is its own plugin now, got: ${JSON.stringify(contested)}`);
+});
+
+test('computed data paths are followed, not just import edges', () => {
+  // If closure() stops following join(HERE, '..', ...) this is what fails.
+  // Anchored on launch-audit for the same reason as above -- export no longer
+  // exercises it now that it is split out.
+  const { contested } = analyze(['twt-launch-audit']);
   assert.ok(contested.length > 0, 'computed asset paths must reach templates/themes');
 });
 
 test('contested paths are compared by containment, not equality', () => {
-  // "templates/themes" vs "templates/themes/doc-hub-light/css" must collide.
-  const { contested } = analyze(EXPORT);
-  const exactMatchWouldMiss = !contested.includes('templates/themes/doc-hub-light/css');
-  assert.ok(
-    exactMatchWouldMiss || contested.includes('templates/themes'),
-    'containment comparison must catch the nested-directory case',
-  );
+  // "templates/themes" vs "templates/themes/doc-hub-light/css" must collide:
+  // different strings, one directory, and a directory travels as a unit.
+  //
+  // This used to be asserted through the export cluster's real contested list.
+  // When export became its own plugin that data stopped containing the nested
+  // case, and the test started passing for the wrong reason. Testing the rule
+  // itself is what the guard was always about.
+  assert.ok(pathsOverlap('templates/themes', 'templates/themes/doc-hub-light/css'));
+  assert.ok(pathsOverlap('templates/themes/doc-hub-light/css', 'templates/themes'));
+  assert.ok(pathsOverlap('tools/lib/sources.mjs', 'tools/lib/sources.mjs'));
+  // A shared prefix that is not a path boundary must NOT collide.
+  assert.ok(!pathsOverlap('templates/themes', 'templates/themes-old'));
+  assert.ok(!pathsOverlap('tools/lib', 'tools/library'));
+  assert.ok(!pathsOverlap('tools/a.mjs', 'tools/b.mjs'));
 });
 
 test('a single-skill cluster still reports its shared libraries', () => {

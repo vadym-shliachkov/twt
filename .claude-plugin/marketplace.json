@@ -18,6 +18,11 @@
       "name": "twt-write-as-me",
       "source": "./plugins/twt-write-as-me",
       "description": "Standalone: /twt-write-as-me + /twt-write-as-me-analysis — author-voice generation with a deterministic contamination check. No pipeline dependency."
+    },
+    {
+      "name": "twt-export",
+      "source": "./plugins/twt-export",
+      "description": "Standalone: /twt-export + the pdf/docx/presentation/theme sub-commands. Markdown to polished documents and slides. No pipeline dependency."
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "name": "Doc Hub Light",
+  "slug": "doc-hub-light",
+  "version": "1.0.0",
+  "type": "universal",
+  "description": "Built-in house theme: quiet editorial documents and slides, near-black ink, cool-grey body, tri-color accent.",
+  "styleDirection": "minimal editorial",
+  "brandSource": "",
+  "instructions": "",
+  "fonts": {
+    "strategy": "bundled",
+    "faces": [
+      { "family": "Inter", "weight": "400 700", "file": "fonts/inter-variable.woff2" },
+      { "family": "Montserrat", "weight": "600 800", "file": "fonts/montserrat-variable.woff2" },
+      { "family": "IBM Plex Mono", "weight": 400, "file": "fonts/ibm-plex-mono-400.woff2" },
+      { "family": "IBM Plex Mono", "weight": 500, "file": "fonts/ibm-plex-mono-500.woff2" }
+    ]
+  },
+  "createdAt": "2026-07-04T00:00:00.000Z"
+}

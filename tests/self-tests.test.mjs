@@ -18,14 +18,14 @@ import { fileURLToPath } from 'node:url';
 // immediately instead of quietly dropping coverage.
 const TOOLS = [
   'tools/check-brand-validation-report.mjs', 'tools/check-decisions.mjs', 'tools/check-io.mjs',
-  'tools/check-validation-report.mjs', 'tools/diff-tokens.mjs', 'tools/export-doctype.mjs',
-  'tools/export-document.mjs', 'tools/export-html.mjs', 'tools/export-presentation.mjs',
-  'tools/export-source-create.mjs', 'tools/export-theme-create.mjs', 'tools/export-transform.mjs',
+  'tools/check-validation-report.mjs', 'tools/diff-tokens.mjs', 'plugins/twt-export/tools/export-doctype.mjs',
+  'plugins/twt-export/tools/export-document.mjs', 'plugins/twt-export/tools/export-html.mjs', 'plugins/twt-export/tools/export-presentation.mjs',
+  'plugins/twt-export/tools/export-source-create.mjs', 'plugins/twt-export/tools/export-theme-create.mjs', 'plugins/twt-export/tools/export-transform.mjs',
   'skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs',
   'skills/twt-figma-dev-audit/tools/figma-dev-report.mjs',
-  'tools/gen-tokens-from-candidates.mjs', 'tools/house-style.mjs', 'tools/pdf-render.mjs',
+  'tools/gen-tokens-from-candidates.mjs', 'tools/house-style.mjs', 'plugins/twt-export/tools/pdf-render.mjs',
   'tools/scan-manifest.mjs', 'tools/score-rubric.mjs', 'tools/split-blocks.mjs',
-  'tools/theme.mjs', 'tools/wiki-facts-merge.mjs', 'tools/wiki-sources-mark.mjs',
+  'plugins/twt-export/tools/theme.mjs', 'tools/wiki-facts-merge.mjs', 'tools/wiki-sources-mark.mjs',
 ];
 
 for (const tool of TOOLS) {
