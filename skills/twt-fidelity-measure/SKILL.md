@@ -1,5 +1,6 @@
 ---
 name: twt-fidelity-measure
+surface: internal
 category: fidelity
 description: (v1.0.1) Measure a built page against the reference spec and report every delta
 version: 1.0.1

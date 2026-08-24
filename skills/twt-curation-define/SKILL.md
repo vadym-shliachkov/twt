@@ -1,5 +1,6 @@
 ---
 name: twt-curation-define
+surface: internal
 category: curation
 description: (v1.2.1) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
 version: 1.2.1

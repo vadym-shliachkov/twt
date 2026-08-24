@@ -1,5 +1,6 @@
 ---
 name: twt-wiki-fetch
+surface: internal
 category: wiki
 description: (v1.0.7) Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox
 version: 1.0.7

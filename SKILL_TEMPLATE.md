@@ -1,9 +1,11 @@
-<!-- Copy this file to commands/twt-<name>.md (orchestrator / standalone tool) or
-     skills/twt-<name>-<role>/SKILL.md (sub-skill) when creating a new skill. -->
+<!-- Copy this file to skills/twt-<name>/SKILL.md when creating a new skill.
+     Every skill is a directory, whatever its role - set `surface:` below to say
+     whether it is a user-facing entry point or dispatch-only. -->
 <!-- Replace every <placeholder>, then delete this comment block. -->
 
 ---
 name: twt-<category>-<name>
+surface: <command|internal>   # command = user-facing entry point; internal = dispatch-only (*-define, *-validate, *-fetch)
 category: <category>
 description: <one-line description, under ~100 chars>
 version: 1.0.0
@@ -37,7 +39,7 @@ writes:
      never reference a templates/… path. Read only inside the current project; never reach into
      sibling projects or the home directory for templates, conventions, or format examples. -->
 
-<!-- Every user-facing command (everything in commands/ except twt-setup, twt-marketplace-docs,
+<!-- Every user-facing skill (every surface: command except twt-setup, twt-marketplace-docs,
      twt-status, twt-eval-smoke, and the dispatched sub-variants) carries the Bash-call-shape
      block below. It is what keeps this run's Bash calls matchable against the allowlist
      /twt-setup seeds, so it applies whether or not the command carries the setup gate.

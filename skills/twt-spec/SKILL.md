@@ -1,0 +1,59 @@
+---
+name: twt-spec
+surface: command
+category: spec
+description: (v1.1.5) Orchestrate the spec define/validate skills in a single define→validate pass
+version: 1.1.5
+accepts_arguments: true
+inputs:
+  - Optional starting notes or a Figma URL (forwarded to define); otherwise interactive
+dependencies:
+  hard: []
+  soft:
+    - twt-spec-define
+    - twt-spec-validate
+reads:
+  - .twt-artifacts/pre-design/spec/specification.md
+  - .twt-artifacts/pre-design/spec/validation-report.md
+writes: []
+---
+
+# /twt-spec
+
+> **Trace self-logging (when dispatched).** If this skill is running in collect mode (`subagent-collect` in `$ARGUMENTS`, i.e. dispatched by an orchestrator), the main-thread trace hooks cannot see your tool calls. So **immediately before every Agent/Skill dispatch or external-skill load** (figma, design-taste-frontend, emil-design-eng, superpowers, …), run this one Bash line so the complete skill-call tree reaches the run log:
+> `node "${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js" --event "dispatch <skill-name> | <one-line why>"`
+> It is a silent no-op when no trace is armed (standalone runs). Keep `<one-line why>` plain text — no quotes, braces, or shell metacharacters — so it never trips a permission prompt.
+
+## Intent
+
+**Purpose:** One-call spec workflow: define (interview into the north-star `specification.md`) → validate in one pass (§9 — no iteration loop).
+
+**Non-goals:**
+- Doesn't reproduce sub-skill logic — dispatches via the Agent tool (rule 5)
+- Doesn't loop unbounded or auto-downgrade severity
+- Not required for standalone use — every sub-skill works on its own
+
+**Success criteria:**
+- Produces/refines `specification.md` and a current `validation-report.md`
+- Honors the §9 single-pass policy: one define + one validate (folded into define under orchestration), at most one BLOCKER-driven re-run, no score-chasing loop; reports final Band + Health and surfaces open decisions per §13 (or bubbles them up in collect mode)
+- On exit, states whether BLOCKERs remain
+
+---
+
+## Bash call shape — keep every call allowlist-matchable
+The permission rules `/twt-setup` seeds match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`); a call that doesn't match forces a manual prompt even when the binary is allowlisted. So for **every** Bash call in this run: never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
+
+## Step 1 — Detect state
+If `specification.md` exists, ask via the **AskUserQuestion** tool (single-select, header "Spec state") whether to **Use as-is** (keep the existing spec unchanged), **Refine** (address validation findings or update specific sections), **Rebuild** (start the spec over from scratch), or **You decide** (I pick: Refine if a validation-report flags findings, else Use as-is). Pass the choice to the dispatched define skill. If `specification.md` is missing, proceed to define.
+
+## Step 2 — Define → surface → validate · single pass (CONVENTIONS §9 + §13)
+Detect whether THIS orchestrator is in **collect mode**: `$ARGUMENTS` contains `subagent-collect` (dispatched by a parent orchestrator). In collect mode it must NOT call AskUserQuestion — it bubbles decisions upward (step 2).
+
+Run **one** define → validate cycle — no iteration loop (§9):
+1. **Define (subagent):** dispatch `/twt-spec-define` (Agent tool), **always including `subagent-collect`** (plus the refine/rebuild choice from Step 1 and any answers already gathered). **In collect mode, fold validation in:** instruct define to self-check against the `/twt-spec-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+2. **Surface (main thread only):** read `.twt-artifacts/pre-design/spec/decisions.md`. If `status: open` with entries AND this orchestrator is NOT in collect mode, present each open question / proposed rule via the **AskUserQuestion** tool, collect answers, and re-dispatch define **once** to finalize (`status: resolved`). If this orchestrator IS in collect mode, do NOT ask — merge the child `decisions.md` upward for the parent to surface (nested-subagent bubbling).
+3. **Validate (standalone only):** when NOT in collect mode, dispatch `/twt-spec-validate` (Agent tool) once; read the Scorecard **Band**, **Health**, BLOCKER count. (In collect mode the Step-1 fold-in already produced the report.)
+4. **Stop — no score-chasing loop.** Only one further re-run of define is permitted, and only to fix unresolved **BLOCKERs** when new information makes them fixable; the sub-step 2 finalize counts as that re-run. Never re-run on WARNING/SUGGESTION, never more than once.
+
+## Step 3 — Report
+State the final **Band + Health** and BLOCKER/WARNING/SUGGESTION counts, plus the exit reason (Pass+resolved / cap reached / no-progress). If decisions remain unresolved or Band < Pass, present them and the human-decision options (answer the open questions / accept and edit directly / defer) — never auto-fix.

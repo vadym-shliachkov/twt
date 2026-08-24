@@ -1,5 +1,6 @@
 ---
 name: twt-direction-define
+surface: internal
 category: direction
 description: (v1.0.1) Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md
 version: 1.0.1

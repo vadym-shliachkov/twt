@@ -95,8 +95,8 @@ function collect() {
   // Spans every plugin in the marketplace, not just the monolith: artifacts are a
   // shared namespace, so a split-out plugin's reads must still resolve against
   // writes declared anywhere in the repo.
-  const files = skillFiles(ROOT).map(({ path: p, expectedName, source }) => ({
-    id: source === 'commands' ? `commands/${expectedName}.md` : `skills/${expectedName}`,
+  const files = skillFiles(ROOT).map(({ path: p, expectedName }) => ({
+    id: `skills/${expectedName}`,
     p,
   }));
   for (const { id, p } of files) {

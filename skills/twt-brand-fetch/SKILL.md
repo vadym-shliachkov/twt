@@ -1,5 +1,6 @@
 ---
 name: twt-brand-fetch
+surface: internal
 category: brand
 description: (v1.1.4) Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
 version: 1.1.4

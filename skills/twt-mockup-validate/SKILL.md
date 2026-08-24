@@ -1,5 +1,6 @@
 ---
 name: twt-mockup-validate
+surface: internal
 category: mockup
 description: (v1.2.3) Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y)
 version: 1.2.3

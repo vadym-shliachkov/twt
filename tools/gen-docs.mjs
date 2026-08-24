@@ -2,10 +2,10 @@
 // Regenerate SKILLS.md, architecture.md, and the README.md marked block from
 // skill frontmatter + Intent blocks. Also re-stamps shared inline blocks
 // (the Step 0 setup gate, canonical text in templates/blocks/setup-gate.md)
-// into every commands/*.md that carries one, so the §14 inline copies can't drift.
+// into every skills/*/SKILL.md that carries one, so the §14 inline copies can't drift.
 //
 // Skills now live in TWO places (native plugin layout):
-//   commands/*.md          — 39 orchestrator/standalone skills
+//   skills/*/SKILL.md      — every skill (surface: command | internal)
 //   skills/<name>/SKILL.md — 20 sub-skills
 // Category comes from the `category:` frontmatter field, NOT from a folder name.
 //
@@ -30,7 +30,7 @@ const CHECK = process.argv.includes("--check");
 // ---- shared-block sync --------------------------------------------------------
 // CONVENTIONS §14 forces every command to carry the Step 0 setup gate inline,
 // which invites copy drift. Canonical text for each such block lives on disk
-// (one file per block); any commands/*.md or skills/*/SKILL.md that carries a
+// (one file per block); any skills/*/SKILL.md that carries a
 // matching heading gets that section's body re-stamped from the canonical
 // block here. Files without a given heading are untouched by that block.
 //
@@ -110,7 +110,7 @@ function parseFrontmatter(text) {
       if (["inputs", "reads", "writes"].includes(key)) { ctx = key; continue; }
       if (key === "dependencies") { ctx = null; continue; }
       ctx = null;
-      if (key === "name" || key === "category" || key === "description" || key === "version") fm[key] = val.trim();
+      if (["name", "surface", "category", "description", "version"].includes(key)) fm[key] = val.trim();
       else if (key === "accepts_arguments") fm.accepts_arguments = val.trim() === "true";
       continue;
     }
@@ -172,6 +172,8 @@ const sourceFiles = skillFiles(ROOT);
 
 const skills = [];
 const warnings = [];
+// Failures that must break CI, unlike `warnings` which are advisory only.
+const hardErrors = [];
 const brokenRefs = [];
 let stampStale = 0;
 
@@ -197,7 +199,7 @@ for (const { path, expectedName, source, plugin, pluginRoot } of sourceFiles) {
   let stamped = stampVersion(rawText);
   // Every registered block only touches a file that carries its own heading
   // (syncBlock no-ops otherwise), so it's safe to run this on both sources —
-  // e.g. the setup-gate heading only ever appears in commands/*.md.
+  // e.g. the setup-gate heading only ever appears on surface: command skills.
   stamped = syncSetupGate(stamped);
   // Restore CRLF if that was the original EOL (stamping/sync insert LF), then
   // compare final bytes — comparing pre-restore text flags files as changed
@@ -229,8 +231,21 @@ for (const { path, expectedName, source, plugin, pluginRoot } of sourceFiles) {
     }
   }
   if (fm.accepts_arguments === undefined) warnings.push(`${path}: missing field accepts_arguments`);
-  // Name check: for commands it's file basename; for sub-skills it's parent dir name.
+  // `surface:` replaced the commands/ vs skills/ folder split as the record of
+  // whether a skill is a user-facing entry point. check-skill.ps1 keys the
+  // setup-gate and bash-shape rules off it, so a missing or bogus value would
+  // silently switch those rules off across the repo — hence hard-fail, not warn.
+  if (!["command", "internal"].includes(fm.surface)) {
+    hardErrors.push(`${path}: surface must be "command" or "internal" (got ${JSON.stringify(fm.surface)})`);
+  }
+  // Name check: the skill's name must equal its parent directory name.
   if (fm.name !== expectedName) warnings.push(`${path}: name '${fm.name}' != expected '${expectedName}'`);
+  // The flat commands/*.md tier is retired. plugin-roots still enumerates it so
+  // a leftover surfaces here instead of silently dropping out of every
+  // downstream consumer (SKILLS.md, check-io, the CI lint sweep).
+  if (source === "commands") {
+    hardErrors.push(`${path}: commands/ is retired — move it to skills/${expectedName}/SKILL.md`);
+  }
   skills.push({ path, source, plugin, category: fm.category, ...fm, intent });
 }
 
@@ -456,10 +471,18 @@ if (brokenRefs.length) {
   for (const b of brokenRefs) console.error(`  - ${b.path} → \${CLAUDE_PLUGIN_ROOT}/${b.ref} (not found)`);
 }
 
+// Structural violations (retired commands/ tier, bad `surface:`). Like
+// brokenRefs these fail in BOTH --check and write mode: regenerating the docs
+// must not paper over a skill the lint can no longer classify.
+if (hardErrors.length) {
+  console.error(`\nStructural errors (${hardErrors.length}):`);
+  for (const e of hardErrors) console.error(`  - ${e}`);
+}
+
 const totalStale = stale + stampStale;
 if (CHECK && totalStale) {
   console.log(`\n${totalStale} file(s) stale — run: node tools/gen-docs.mjs`);
   process.exit(1);
 }
-if (brokenRefs.length) process.exit(1);
+if (brokenRefs.length || hardErrors.length) process.exit(1);
 if (!CHECK) console.log(`\n${stale} file(s) ${stale ? "regenerated" : "already current"}.`);

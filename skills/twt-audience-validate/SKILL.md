@@ -1,5 +1,6 @@
 ---
 name: twt-audience-validate
+surface: internal
 category: audience
 description: (v1.0.1) Critique personas.md — segment traceability, value-prop linkage, journey actionability; write validation-report.md
 version: 1.0.1

@@ -1,5 +1,6 @@
 ---
 name: twt-figma-read
+surface: internal
 category: figma
 description: (v1.0.0) Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest
 version: 1.0.0

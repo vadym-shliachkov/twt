@@ -1,5 +1,6 @@
 ---
 name: twt-positioning-validate
+surface: internal
 category: positioning
 description: (v1.0.2) Critique positioning.md against brand and content signal; write validation-report.md
 version: 1.0.2

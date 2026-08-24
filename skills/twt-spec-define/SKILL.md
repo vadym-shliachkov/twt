@@ -1,5 +1,6 @@
 ---
 name: twt-spec-define
+surface: internal
 category: spec
 description: (v1.1.4) Interview the user (brainstorming-style) into a north-star specification.md
 version: 1.1.4

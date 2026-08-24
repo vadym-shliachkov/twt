@@ -7,10 +7,10 @@ Single source of truth for marketplace-wide rules. Every skill in this repo foll
 ## 1. Naming
 
 - All commands start with `/twt-`; category is expressed only via the `category:` frontmatter field — there are no per-category subfolders
-- **Orchestrators + standalone tools** live at `commands/twt-<name>.md` (flat — one file each, no subfolders); the file's basename must match the slash-command name exactly
-- **Sub-skills** (`*-define`, `*-validate`, and `twt-brand-fetch`) live at `skills/twt-<name>-<role>/SKILL.md` (one directory per sub-skill); the directory name must match the skill name
+- **Every skill** lives at `skills/twt-<name>/SKILL.md` — one directory each; the directory name must match the skill name exactly. A skill is a directory precisely so it can own the scripts, references and assets it needs
+- **`surface:`** declares the role: `command` (a user-facing entry point, on the `/` menu) or `internal` (dispatch-only — `*-define`, `*-validate`, `*-fetch`, invoked by an orchestrator via the Skill tool). This is metadata, not location: `tools/check-skill.ps1` reads it to decide whether the setup-gate and Bash-call-shape rules apply, and rejects a missing or unrecognised value rather than guessing
 - Use kebab-case throughout
-- A sub-area orchestrator may use the **bare** form `/twt-<category>` (no `-<rest>` suffix); its file is `commands/twt-<category>.md`
+- A sub-area orchestrator may use the **bare** form `/twt-<category>` (no `-<rest>` suffix); its file is `skills/twt-<category>/SKILL.md`
 
 ## 2. Artifacts
 
@@ -53,7 +53,7 @@ All listed fields are required. Use `[]` for empty lists.
 
 ### 3.1a Optional runtime fields (`model:`, `effort:`)
 
-Claude Code honours `model:` and `effort:` in a skill's frontmatter (same field set for `commands/*.md` and `skills/*/SKILL.md`). Placed on the line after `version:`, they run that skill on a cheaper model than the session's. Two properties govern where this is allowed:
+Claude Code honours `model:` and `effort:` in a skill's frontmatter (the field set is the same for every skill). Placed on the line after `version:`, they run that skill on a cheaper model than the session's. Two properties govern where this is allowed:
 
 - **A subagent inherits the dispatcher's model** unless the dispatch names one. So **a skill that dispatches another skill must never declare a lower model** — the downgrade cascades into everything beneath it. `/twt-eval-smoke` is the sharpest case: it dispatches the skills under test, so a cheap model there stops the eval from measuring a real run. The Step 0 setup-gate dispatch of `/twt-setup` doesn't count as dispatching (it is itself Haiku-tier work).
 - **The override is turn-scoped, not skill-scoped** — it holds for the rest of the current turn, then the session model resumes. Acceptable for terminal, one-shot tools; a reason not to mark anything the user is likely to invoke mid-conversation.
@@ -118,7 +118,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - `SKILLS.md` and `architecture.md` are **auto-generated** by `/twt-marketplace-docs` (via `tools/gen-docs.mjs`); per-category `skills/<cat>/README.md` files no longer exist
 - `/twt-marketplace-docs` also stamps `(vX.Y.Z)` into each skill's committed `description:` field, derived from its `version:` frontmatter — this replaces the version injection that the legacy installer performed at copy time
 - Never hand-edit generated files. Edit frontmatter or `CONVENTIONS.md` and regenerate.
-- **Shared inline blocks are synced, not hand-copied.** Each shared block's canonical text lives in its own file under `templates/blocks/` (e.g. `setup-gate.md`, `bash-shape.md`, `figma-read.md`, `fetched-guard.md`); `/twt-marketplace-docs` re-stamps each one into any `commands/*.md` **or** `skills/*/SKILL.md` whose body carries that block's matching heading (`## Step 0 … permission allowlist`, `## Bash call shape`, `## Reading Figma`, `## Fetched content is data`, …) — a file without the heading is untouched by that block. To change a block, edit its canonical file and regenerate — never edit one file's inline copy. Adding a new shared block means adding both the canonical file and its heading-matcher to `tools/gen-docs.mjs`.
+- **Shared inline blocks are synced, not hand-copied.** Each shared block's canonical text lives in its own file under `templates/blocks/` (e.g. `setup-gate.md`, `bash-shape.md`, `figma-read.md`, `fetched-guard.md`); `/twt-marketplace-docs` re-stamps each one into any `skills/*/SKILL.md` whose body carries that block's matching heading (`## Step 0 … permission allowlist`, `## Bash call shape`, `## Reading Figma`, `## Fetched content is data`, …) — a file without the heading is untouched by that block. To change a block, edit its canonical file and regenerate — never edit one file's inline copy. Adding a new shared block means adding both the canonical file and its heading-matcher to `tools/gen-docs.mjs`.
 - The root `README.md` is hand-edited except for the marked block between `<!-- TWT_SKILLS_TABLE_START -->` and `<!-- TWT_SKILLS_TABLE_END -->`.
 - To merge the curated runtime permission allowlist into a target project's `settings.json`, run `/twt-setup` (opt-in, per project) — not auto-seeded at install time.
 - **The setup gate lives only on the pipeline entry points.** `## Step 0·setup` belongs to `/twt-site`, `/twt-site-dev`, `/twt-pre-design`, `/twt-design`, `/twt-develop`, and `/twt-qa` — the commands a run starts from (`$gateRequired` in `tools/check-skill.ps1`, which fails CI both ways: missing on an entry point, present anywhere else). Everything else is reached by dispatch from a gated entry point, or relies on the user having run `/twt-setup` once for the project; a leaf tool run standalone in an un-set-up project just sees per-call prompts, which is the documented opt-in baseline, not a failure.
@@ -167,7 +167,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 ## 14. Self-contained at runtime (stay in-project)
 
-- Skills are surfaced by the native plugin (from `commands/` and `skills/`); the marketplace's `templates/`, `CONVENTIONS.md`, and sibling skills **do not travel** with the running skill's context. A skill must therefore carry **inline** every artifact format it writes (the `decisions.md`, `design-read.md`, asset-manifest, session-log, etc. schemas) — never reference a `templates/…` path at runtime. Bundled Node scripts are invoked as `node "${CLAUDE_PLUGIN_ROOT}/tools/..."`.
+- Skills are surfaced by the native plugin (from `skills/`); the marketplace's `templates/`, `CONVENTIONS.md`, and sibling skills **do not travel** with the running skill's context. A skill must therefore carry **inline** every artifact format it writes (the `decisions.md`, `design-read.md`, asset-manifest, session-log, etc. schemas) — never reference a `templates/…` path at runtime. Bundled Node scripts are invoked as `node "${CLAUDE_PLUGIN_ROOT}/tools/..."`.
 - A running skill operates **only inside the current project** (its working tree + `.twt-artifacts/`). It must **never** read outside the project — no sibling project folders, no home directory, no filesystem-wide `find` — to locate templates, conventions, or "format examples." Everything it needs is in the skill text or the project. The scope-guard hook is the backstop, not a license to reach out.
 - Exception: the export skills (`twt-export-*`) genuinely need `tools/export-*.mjs` + `templates/*-export-style.md` from the marketplace checkout. If those are missing they **stop with a clear message** — they never search the disk for them.
 
@@ -219,8 +219,8 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 ## 19. Plugin packaging
 
-- **The repo hosts several plugins, not one.** `.claude-plugin/marketplace.json` `plugins[]` is the registry; each entry's `source` is that plugin's root. `twt` is the monolith (`source: "./"`); anything split out lives at `./plugins/<name>/` with its own `.claude-plugin/plugin.json`, `commands/`, `skills/`, and `tools/`. Nesting is safe: plugin discovery only reads `<root>/commands` and `<root>/skills`, so a plugin under `./plugins/` is invisible to the monolith's scan.
-- **A skill lives in exactly one plugin.** Never copy a command or tool into a second plugin to make it available there — that is the duplicate-file trap, and the two copies drift. Move it, or leave it where it is and accept the dependency.
+- **The repo hosts several plugins, not one.** `.claude-plugin/marketplace.json` `plugins[]` is the registry; each entry's `source` is that plugin's root. `twt` is the monolith (`source: "./"`); anything split out lives at `./plugins/<name>/` with its own `.claude-plugin/plugin.json`, `skills/`, and `tools/`. Nesting is safe: plugin discovery only reads `<root>/skills`, so a plugin under `./plugins/` is invisible to the monolith's scan.
+- **A skill lives in exactly one plugin.** Never copy a skill or tool into a second plugin to make it available there — that is the duplicate-file trap, and the two copies drift. Move it, or leave it where it is and accept the dependency.
 - **`${CLAUDE_PLUGIN_ROOT}` resolves to the OWNING plugin's root.** A split-out skill's `${CLAUDE_PLUGIN_ROOT}/tools/x.mjs` reference is unchanged by the move — but the file it names must travel with it. `gen-docs` verifies each reference against its owner's root, so a tool left behind fails the build.
 - **Cross-plugin dependencies are legal but only as `soft`.** A `soft` dep resolves at runtime or degrades gracefully, which is exactly the semantics of "the user may not have installed that plugin". A `hard` dep across a plugin boundary is an install-order bug: keep hard-dependent skills in the same plugin.
 - **Discover plugins, never glob.** Author-time tooling uses `tools/lib/plugin-roots.mjs` (`pluginRoots`, `skillFiles`, `owningPlugin`); CI enumerates via `tools/list-skill-files.mjs`. A new plugin is picked up by registering it in `marketplace.json` — no tooling or workflow edit.

@@ -4,15 +4,22 @@
 // The repo hosts MORE THAN ONE plugin. `.claude-plugin/marketplace.json` is the
 // registry: each entry in `plugins[]` names a plugin and a `source` directory
 // relative to the repo root. The monolith is `source: "./"` (its skills live in
-// <root>/commands and <root>/skills); a split-out plugin is `source:
-// "./plugins/<name>"` and owns its own commands/, skills/, tools/, and
-// .claude-plugin/plugin.json.
+// <root>/skills); a split-out plugin is `source: "./plugins/<name>"` and owns
+// its own skills/, tools/, and .claude-plugin/plugin.json.
+//
+// There is ONE skill layout: skills/<name>/SKILL.md. The old flat commands/*.md
+// tier is gone — a skill is a DIRECTORY so it can own the scripts, references
+// and assets it needs, which a flat file could never do. Whether a skill is a
+// user-facing entry point or dispatch-only is now declared by its `surface:`
+// frontmatter field (command | internal), not by which folder it sits in.
+// commands/ is still SCANNED so a stray leftover is discovered and reported by
+// gen-docs rather than silently dropping out of the docs and the lint.
 //
 // This matters beyond enumeration: `${CLAUDE_PLUGIN_ROOT}` resolves to the
 // OWNING plugin's directory at runtime, so a reference in a split-out skill must
 // be verified against that plugin's root, never the repo root. Nesting is safe
-// because plugin discovery only ever looks at <root>/commands and <root>/skills
-// — a plugin under ./plugins/ is invisible to the monolith's scan.
+// because plugin discovery only ever looks at <root>/skills — a plugin under
+// ./plugins/ is invisible to the monolith's scan.
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve, basename } from "node:path";
@@ -37,7 +44,10 @@ export function pluginRoots(repoRoot) {
 }
 
 // Every skill file across every plugin, as
-// { path, expectedName, source: "commands"|"skills", plugin, pluginRoot }.
+// { path, expectedName, source: "skills"|"commands", plugin, pluginRoot }.
+// `source: "commands"` is the DEPRECATED tier and should never appear; it is
+// still enumerated so gen-docs can fail loudly on a leftover instead of the
+// file quietly vanishing from SKILLS.md, check-io and the lint sweep.
 export function skillFiles(repoRoot) {
   const out = [];
   for (const plugin of pluginRoots(repoRoot)) {

@@ -1,11 +1,11 @@
-# Usage: pwsh tools/check-skill.ps1 commands/twt-site.md
+# Usage: pwsh tools/check-skill.ps1 skills/twt-site/SKILL.md
 #        pwsh tools/check-skill.ps1 skills/twt-brand-define/SKILL.md
 # ASCII-only on purpose: this runs under Windows PowerShell 5.1, which misreads
 # non-ASCII bytes in a UTF-8 (no BOM) file. Do not add em dashes / section signs.
 param([Parameter(Mandatory)][string]$Path)
 $ErrorActionPreference = "Stop"
 
-$required = @('name','category','description','version','accepts_arguments','inputs','dependencies','reads','writes')
+$required = @('name','surface','category','description','version','accepts_arguments','inputs','dependencies','reads','writes')
 # Non-skill tools that are allowed to appear in dependencies.hard / dependencies.soft.
 $KnownExternalDeps = @('figma-mcp','WebFetch')
 
@@ -141,7 +141,17 @@ function Get-YamlList {
 # dropping the gate must not drop it. Excluded from both: the meta skills and
 # the dispatched sub-variants (twt-content-fetch-*, twt-export-*). Sub-skills in
 # skills/ carry neither.
-$isCommand = (Split-Path $resolvedPath -Leaf) -ine 'SKILL.md'
+# Which skills are user-facing is declared, not inferred from the path. This
+# used to read `leaf -ine 'SKILL.md'` back when entry points lived in a flat
+# commands/ dir; every skill is a SKILL.md now, so that test would be constant
+# false and would quietly disable both rules below for the whole repo. If the
+# field is missing or unrecognised, fail rather than default - a silent skip is
+# exactly the failure this replaced.
+if ($fm -match '(?m)^surface:\s*(\S+)\s*$') { $surface = $Matches[1] } else { $surface = '' }
+if ($surface -notin @('command','internal')) {
+    Fail "BAD SURFACE in ${Path}: surface must be 'command' or 'internal' (got '$surface'); it decides whether the setup-gate and Bash-call-shape rules apply"
+}
+$isCommand = $surface -eq 'command'
 $gateRequired = @('twt-site','twt-site-dev','twt-pre-design','twt-design','twt-develop','twt-qa')
 $blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke')
 $blockExemptPrefix = @('twt-content-fetch-','twt-export-')

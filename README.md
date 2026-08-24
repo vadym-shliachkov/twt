@@ -126,7 +126,7 @@ twt/
 ├── README.md              ← you are here
 ├── SKILLS.md              ← full command reference (auto-generated)
 ├── architecture.md        ← skill graph (auto-generated)
-├── commands/              ← orchestrators + standalone tools (slash commands)
+├── skills/                ← every skill, one directory each (surface: command | internal)
 │   └── twt-*.md           ← one file per command, flat — no subfolders
 ├── skills/                ← sub-skills (model-invoked only, not in / menu)
 │   └── twt-<name>-<role>/ ← one directory per sub-skill
@@ -142,7 +142,7 @@ Category is expressed only via the `category:` frontmatter field — there are n
 
 ## Adding a new skill
 
-1. **Orchestrator / standalone tool:** create `commands/twt-<name>.md`
+1. Create `skills/twt-<name>/SKILL.md` and set `surface: command` (entry point) or `surface: internal` (dispatch-only)
 2. **Sub-skill** (`*-define`, `*-validate`, or `*-fetch`): create `skills/twt-<name>-<role>/SKILL.md`
 3. Fill all frontmatter fields (none are optional; use `[]` for empty lists)
 4. Write the Intent block (Purpose / Non-goals / Success criteria), then `## Step N` body
