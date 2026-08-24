@@ -1,6 +1,7 @@
 ---
 name: twt-brand-define
 surface: internal
+user-invocable: false
 category: brand
 description: (v1.1.5) Build or refine the canonical brand-brief.md through guided dialogue
 version: 1.1.5

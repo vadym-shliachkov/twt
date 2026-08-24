@@ -1,6 +1,7 @@
 ---
 name: twt-inherit-define
 surface: internal
+user-invocable: false
 category: inherit
 description: (v1.0.3) Discover an existing project's architecture and derive build conventions from it
 version: 1.0.3

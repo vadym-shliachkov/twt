@@ -1,6 +1,7 @@
 ---
 name: twt-content-validate
 surface: internal
+user-invocable: false
 category: content
 description: (v1.1.2) Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 version: 1.1.2

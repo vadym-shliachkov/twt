@@ -1,6 +1,7 @@
 ---
 name: twt-design-system-define
 surface: internal
+user-invocable: false
 category: design-system
 description: (v1.8.17) Define or analyse a design system into tokens.md, tokens.css, and a script-generated tokens-only preview.html (WCAG contrast gate); the component catalog is produced by /twt-component-define
 version: 1.8.17

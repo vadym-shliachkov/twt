@@ -1,6 +1,7 @@
 ---
 name: twt-brand-validate
 surface: internal
+user-invocable: false
 category: brand
 description: (v1.2.3) Critique brand-brief.md and write a validation-report.md (read-only critic)
 version: 1.2.3

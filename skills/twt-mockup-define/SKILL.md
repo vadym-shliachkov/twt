@@ -1,6 +1,7 @@
 ---
 name: twt-mockup-define
 surface: internal
+user-invocable: false
 category: mockup
 description: (v1.3.7) Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger
 version: 1.3.7

@@ -1,6 +1,7 @@
 ---
 name: twt-seo-validate
 surface: internal
+user-invocable: false
 category: seo
 description: (v1.0.1) Critique seo-map.md — coverage, slug/keyword integrity, meta limits, redirect completeness; write validation-report.md
 version: 1.0.1

@@ -77,6 +77,45 @@ function stampVersion(text) {
     (_, rest) => `description: (v${ver}) ${rest}`.trimEnd());
 }
 
+// ---- user-invocable stamping ------------------------------------------------
+//
+// `surface:` already declares whether a skill is a user-facing entry point or a
+// dispatch-only sub-skill. Claude Code reads a separate `user-invocable:` field
+// straight from SKILL.md frontmatter: it filters the slash-command list ONLY —
+// model dispatch is gated by an independent `disable-model-invocation` flag —
+// so `user-invocable: false` keeps a skill fully reachable through the Skill and
+// Agent tools while dropping /twt-brand-define and its 30-odd siblings out of
+// the user's command palette, where they only ever added noise next to their
+// orchestrator. Derived here rather than hand-written so `surface:` stays the
+// single source of truth; hand-editing the field would let the two disagree.
+
+function stampUserInvocable(text) {
+  const lines = text.split("\n");
+  if (lines[0].trim() !== "---") return text;
+  let end = -1;
+  for (let i = 1; i < lines.length; i++) if (lines[i].trim() === "---") { end = i; break; }
+  if (end === -1) return text;
+
+  let surfaceAt = -1, surface = null;
+  for (let i = 1; i < end; i++) {
+    const m = lines[i].match(/^surface:\s*(\S+)\s*$/);
+    if (m) { surfaceAt = i; surface = m[1]; break; }
+  }
+  // No surface: gen-docs already hard-errors on that; don't guess here.
+  if (surfaceAt === -1) return text;
+
+  // Drop every existing user-invocable line, then re-add the one the surface
+  // implies. Rewriting beats patching in place: it also clears a stale `false`
+  // left behind when a skill is promoted from internal to surface: command.
+  const kept = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (i > 0 && i < end && /^user-invocable:\s*/.test(lines[i])) continue;
+    kept.push(lines[i]);
+    if (i === surfaceAt && surface === "internal") kept.push("user-invocable: false");
+  }
+  return kept.join("\n");
+}
+
 // Strip (vX.Y.Z) prefix from description for use in rendered docs.
 const cleanDesc = (d) => (d || "").replace(/^\(v[^)]*\)\s*/, "");
 
@@ -103,7 +142,7 @@ function parseFrontmatter(text) {
       continue;
     }
     // top-level key
-    let m = line.match(/^([a-z_]+):\s*(.*)$/);
+    let m = line.match(/^([a-z_-]+):\s*(.*)$/);
     if (m) {
       const key = m[1], val = m[2];
       inDeps = key === "dependencies";
@@ -197,6 +236,7 @@ for (const { path, expectedName, source, plugin, pluginRoot } of sourceFiles) {
   const eol = detectEol(rawText);
 
   let stamped = stampVersion(rawText);
+  stamped = stampUserInvocable(stamped);
   // Every registered block only touches a file that carries its own heading
   // (syncBlock no-ops otherwise), so it's safe to run this on both sources —
   // e.g. the setup-gate heading only ever appears on surface: command skills.

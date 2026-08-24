@@ -1,6 +1,7 @@
 ---
 name: twt-fidelity-fetch
 surface: internal
+user-invocable: false
 category: fidelity
 description: (v1.0.2) Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec
 version: 1.0.2

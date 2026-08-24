@@ -1,6 +1,7 @@
 ---
 name: twt-wiki-define
 surface: internal
+user-invocable: false
 category: wiki
 description: (v1.0.12) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
 version: 1.0.12

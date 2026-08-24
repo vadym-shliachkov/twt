@@ -1,6 +1,7 @@
 ---
 name: twt-layout-validate
 surface: internal
+user-invocable: false
 category: layout
 description: (v1.0.2) Read-only critique of per-page layout specs into validation-report.md
 version: 1.0.2

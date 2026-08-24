@@ -1,6 +1,7 @@
 ---
 name: twt-layout-define
 surface: internal
+user-invocable: false
 category: layout
 description: (v1.3.2) Define per-page layout specs (section order, component slots, content map, breakpoints)
 version: 1.3.2

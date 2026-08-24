@@ -1,6 +1,7 @@
 ---
 name: twt-positioning-define
 surface: internal
+user-invocable: false
 category: positioning
 description: (v1.0.3) Build or refine positioning.md — audience, value props, promotion priorities
 version: 1.0.3

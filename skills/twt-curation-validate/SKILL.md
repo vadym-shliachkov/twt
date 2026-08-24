@@ -1,6 +1,7 @@
 ---
 name: twt-curation-validate
 surface: internal
+user-invocable: false
 category: curation
 description: (v1.2.3) Critique curation against brand voice, IA, and the facts ledger; write validation-report.md
 version: 1.2.3
