@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   SEVERITIES, OWNERS, CATEGORIES, CATEGORY_TITLES,
   validateFinding, finding, verdictFor,
-} from '../tools/launch-audit.mjs';
+} from '../skills/twt-launch-audit/tools/launch-audit.mjs';
 
 const ok = {
   rule: 'DISC001', category: 'discoverability', severity: 'LAUNCH-BLOCKER',

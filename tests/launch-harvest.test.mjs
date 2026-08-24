@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { harvest } from '../tools/launch-audit/harvest.mjs';
+import { harvest } from '../skills/twt-launch-audit/tools/launch-audit/harvest.mjs';
 
 const CHECKLIST_XLSX = fileURLToPath(new URL('../tools/checklist-xlsx.py', import.meta.url));
 // The workbook read path needs python + openpyxl; self-skip rather than fail

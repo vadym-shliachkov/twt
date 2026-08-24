@@ -4,7 +4,7 @@
 // which engine produced its input. The DOM is serialized inside the browser
 // and crosses back as one plain object; it never reaches model context.
 'use strict';
-import { loadPlaywright } from '../lib/resolve-playwright.mjs';
+import { loadPlaywright } from '../../../../tools/lib/resolve-playwright.mjs';
 
 // Tags dropped from the walked tree entirely — NOT the same thing parse.mjs
 // does with the same tag names, just harmless enough that the difference

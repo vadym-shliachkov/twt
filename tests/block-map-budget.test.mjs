@@ -6,10 +6,10 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { GRAY_CAP } from '../tools/block-map/identity.mjs';
+import { GRAY_CAP } from '../skills/twt-block-map/tools/block-map/identity.mjs';
 
 const run = promisify(execFile);
-const TOOL = fileURLToPath(new URL('../tools/block-map.mjs', import.meta.url));
+const TOOL = fileURLToPath(new URL('../skills/twt-block-map/tools/block-map.mjs', import.meta.url));
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site', import.meta.url));
 
 // ~4 chars per token is the conventional rough ratio; 15k tokens ~= 60k chars.

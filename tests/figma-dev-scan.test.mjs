@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 // fileURLToPath, not a manual .pathname regex: this repo lives under
 // "C:\Work\~marketplace" and Node percent-encodes "~" in import.meta.url.
-const SCAN = fileURLToPath(new URL('../tools/figma-dev-audit/scan.js', import.meta.url));
+const SCAN = fileURLToPath(new URL('../skills/twt-figma-dev-audit/tools/figma-dev-audit/scan.js', import.meta.url));
 
 // scan.js is stringified into the Figma sandbox, so it cannot use ESM.
 // We load it the same way the sandbox does: as a function body.
@@ -205,7 +205,7 @@ test('collectFacts skips invisible subtrees but records the hidden node itself',
 // serialise to roughly 75 MB, use_figma never came back, and the audit
 // silently continued on model judgment with a clean-looking report. ---
 
-import { evaluate } from '../tools/figma-dev-audit.mjs';
+import { evaluate } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs';
 
 function loadScanWith(optsLiteral) {
   const src = readFileSync(SCAN, 'utf8');

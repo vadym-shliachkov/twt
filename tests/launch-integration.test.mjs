@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const T = (n) => fileURLToPath(new URL(`../tools/${n}`, import.meta.url));
+const T = (n) => fileURLToPath(new URL(`../skills/twt-launch-audit/tools/${n}`, import.meta.url));
 const FIX = (n) => fileURLToPath(new URL(`./fixtures/${n}`, import.meta.url));
 const node = (tool, args) => execFileSync(process.execPath, [tool, ...args], { encoding: 'utf8' });
 

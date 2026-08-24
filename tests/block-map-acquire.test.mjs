@@ -6,7 +6,7 @@ import { writeFileSync, mkdtempSync, mkdirSync, readdirSync, existsSync } from '
 import { join, relative, sep, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import http from 'node:http';
-import { fromDir, fromUrl, fromFigmaExport } from '../tools/block-map/acquire.mjs';
+import { fromDir, fromUrl, fromFigmaExport } from '../skills/twt-block-map/tools/block-map/acquire.mjs';
 
 // Spins up a throwaway HTTP server on an OS-assigned loopback port. Used to
 // probe fromUrl's redirect handling without touching the real network or

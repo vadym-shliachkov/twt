@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
-import { checkLive } from '../tools/launch-audit/live.mjs';
+import { checkLive } from '../skills/twt-launch-audit/tools/launch-audit/live.mjs';
 
 // Fixed, long-expiry self-signed cert/key for 127.0.0.1, generated once with
 // `openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=127.0.0.1"`.

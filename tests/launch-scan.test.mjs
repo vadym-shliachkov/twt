@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const SCAN = fileURLToPath(new URL('../tools/launch-scan.mjs', import.meta.url));
+const SCAN = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-scan.mjs', import.meta.url));
 const run = (args) => execFileSync(process.execPath, [SCAN, ...args], { encoding: 'utf8' });
 const newProject = () => mkdtempSync(join(tmpdir(), 'twt-launch-'));
 function put(p, content) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, content, 'utf8'); }

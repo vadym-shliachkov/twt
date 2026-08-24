@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RULES, QUESTIONS } from '../tools/launch-audit/rules/index.mjs';
-import { SEVERITIES, OWNERS, CATEGORIES, validateFinding, verdictFor } from '../tools/launch-audit.mjs';
+import { RULES, QUESTIONS } from '../skills/twt-launch-audit/tools/launch-audit/rules/index.mjs';
+import { SEVERITIES, OWNERS, CATEGORIES, validateFinding, verdictFor } from '../skills/twt-launch-audit/tools/launch-audit.mjs';
 
 const base = {
   layers: { scan: 'ok', harvest: 'ok', live: 'skipped' },

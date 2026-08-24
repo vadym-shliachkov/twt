@@ -14,7 +14,17 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const TOOLS = dirname(dirname(fileURLToPath(import.meta.url)));   // …/tools
+// The two child processes below (checklist-xlsx.py, status-scan.mjs) are SHARED
+// tools - several skills use them - so they stayed in the repo-level tools/ when
+// this skill's own scripts moved under skills/twt-launch-audit/tools/. This
+// anchor therefore has to climb out of the skill directory: from
+// skills/<skill>/tools/launch-audit/ that is four levels to the repo root.
+// It used to be dirname(dirname(...)), which resolved to the repo tools/ only
+// because this file lived at tools/launch-audit/. After the move that spelling
+// pointed at the skill's own tools/, where neither child exists - the harvest
+// silently degraded to status 'partial' instead of failing loudly.
+const REPO = dirname(dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url))))));
+const TOOLS = join(REPO, 'tools');
 
 // Node's default execFileSync maxBuffer is 1MB, and BOTH child processes below
 // print a JSON document whose size scales with the project.

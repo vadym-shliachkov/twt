@@ -83,7 +83,7 @@ If `<OUT>/readiness-report.md` **or** `<OUT>/readiness-report-provisional.md` al
 
 Load the `figma-use` skill first - it is a mandatory prerequisite for every `use_figma` call and skipping it causes hard-to-debug failures.
 
-Read `${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit/scan.js` with the Read tool and pass its **contents verbatim** as the code payload to `use_figma` against the file URL. Do not paraphrase, trim, or regenerate it - a scan that drifts between runs produces findings that drift between runs.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-audit/scan.js` with the Read tool and pass its **contents verbatim** as the code payload to `use_figma` against the file URL. Do not paraphrase, trim, or regenerate it - a scan that drifts between runs produces findings that drift between runs.
 
 **When `<SCOPE>` is set**, prepend exactly one line ahead of those contents and change nothing else:
 
@@ -152,7 +152,7 @@ Then continue at Step 4. The renderer detects `method !== "rule-engine"` and wri
 
 One Bash call, literal paths, no env vars (CONVENTIONS — keep every Bash call allowlist-matchable):
 
-`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit.mjs" "<OUT>/facts.json" --out "<OUT>" --platform <platform> --url "<figma-url>"`
+`node "${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs" "<OUT>/facts.json" --out "<OUT>" --platform <platform> --url "<figma-url>"`
 
 Add `--ds-audit "<DS>"` when a ds-audit report was detected, and `--scope "<SCOPE>"` when a scope was given.
 
@@ -225,7 +225,7 @@ Write the enriched structure back to `<OUT>/findings.json`.
 
 One Bash call:
 
-`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-lint.mjs" "<OUT>" --fix`
+`node "${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-lint.mjs" "<OUT>" --fix`
 
 `--fix` fills in the six derived fields and re-sorts the array by severity (the renderer's per-category cap is a priority queue, so an unsorted High buried behind five Mediums is the one that gets withheld). It then checks everything it cannot derive and **exits 1** naming each finding:
 
@@ -260,11 +260,11 @@ The report renders each shot as a **200x150 thumbnail cropped to the top of the 
 
 Two Bash calls. The first is Step 4c again, without `--fix`, now that Step 5 has set the `shot` fields — a screenshot saved under a name no finding points at is one the report silently drops:
 
-`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-lint.mjs" "<OUT>"`
+`node "${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-lint.mjs" "<OUT>"`
 
 Then render:
 
-`node "${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-report.mjs" "<OUT>/findings.json" --out "<OUT>"`
+`node "${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-report.mjs" "<OUT>/findings.json" --out "<OUT>"`
 
 Confirm both rendered files exist. The renderer chooses their names from `meta.method`: a rule-engine run writes `readiness-report.{md,html}`, a model-only run writes **`readiness-report-provisional.{md,html}`** and prints which it did. Report the path it actually wrote — never rename the provisional pair to the measured pair's name, and if a stale `readiness-report.md` from an earlier attempt is sitting beside a new provisional one, say so in Step 7 rather than leaving the reader to pick.
 

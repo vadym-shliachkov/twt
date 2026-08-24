@@ -6,7 +6,7 @@
 // attributes on links that leave the site.
 import { existsSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { listFiles } from '../../lib/sources.mjs';
+import { listFiles } from '../../../../../tools/lib/sources.mjs';
 
 export function run(ctx) {
   const counts = { error_page: false, external_links: 0, unsafe_external: 0 };

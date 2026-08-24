@@ -6,7 +6,7 @@
 'use strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
-import { normUrl, sameHost, fetchUrl, extractLinks, collectCss, looksJsRendered } from '../lib/site-fetch.mjs';
+import { normUrl, sameHost, fetchUrl, extractLinks, collectCss, looksJsRendered } from '../../../../tools/lib/site-fetch.mjs';
 
 const pageId = (i) => 'P' + String(i + 1).padStart(2, '0');
 

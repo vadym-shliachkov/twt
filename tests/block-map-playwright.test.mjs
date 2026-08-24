@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { fileURLToPath } from 'node:url';
 import { loadPlaywright } from '../tools/lib/resolve-playwright.mjs';
-import { walkWithPlaywright } from '../tools/block-map/playwright-walk.mjs';
-import { parseHtml } from '../tools/block-map/parse.mjs';
-import { extractBlocks } from '../tools/block-map/extract.mjs';
+import { walkWithPlaywright } from '../skills/twt-block-map/tools/block-map/playwright-walk.mjs';
+import { parseHtml } from '../skills/twt-block-map/tools/block-map/parse.mjs';
+import { extractBlocks } from '../skills/twt-block-map/tools/block-map/extract.mjs';
 import { readFileSync } from 'node:fs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));

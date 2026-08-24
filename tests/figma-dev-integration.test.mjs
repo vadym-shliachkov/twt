@@ -15,11 +15,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { evaluate } from '../tools/figma-dev-audit.mjs';
+import { evaluate } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs';
 
 // fileURLToPath, not a manual .pathname regex: this repo lives under
 // "C:\Work\~marketplace" and Node percent-encodes "~" in import.meta.url.
-const SCAN = fileURLToPath(new URL('../tools/figma-dev-audit/scan.js', import.meta.url));
+const SCAN = fileURLToPath(new URL('../skills/twt-figma-dev-audit/tools/figma-dev-audit/scan.js', import.meta.url));
 
 // Loaded exactly as the Figma sandbox loads it: as a function body, no ESM.
 function loadScan() {

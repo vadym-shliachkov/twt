@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const LINT = fileURLToPath(new URL('../tools/launch-lint.mjs', import.meta.url));
+const LINT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-lint.mjs', import.meta.url));
 const newOut = () => { const d = mkdtempSync(join(tmpdir(), 'twt-lint-')); mkdirSync(d, { recursive: true }); return d; };
 const write = (dir, payload) => writeFileSync(join(dir, 'findings.json'), JSON.stringify(payload, null, 2), 'utf8');
 const read = (dir) => JSON.parse(readFileSync(join(dir, 'findings.json'), 'utf8'));

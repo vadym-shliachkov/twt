@@ -12,7 +12,7 @@ import { finding } from '../../figma-dev-audit.mjs';
 // string returns NaN, and NaN >= min is false, so every text node would be
 // reported as failing contrast. Always parseColor() first and skip when it
 // returns null (it does not parse gradients, hsl, or keywords).
-import { ratio, parseColor } from '../../lib/contrast.mjs';
+import { ratio, parseColor } from '../../../../../tools/lib/contrast.mjs';
 
 const CAT_FN = 'Fonts';
 const CAT_A11Y = 'Content flexibility & a11y risk';

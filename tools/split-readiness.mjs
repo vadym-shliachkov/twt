@@ -7,7 +7,7 @@
 //     templates/themes/doc-hub-light, which tools/house-style.mjs also reads at
 //     runtime for four monolith report tools;
 //   - twt-figma-dev-audit looked standalone until six other commands turned out
-//     to invoke ${CLAUDE_PLUGIN_ROOT}/tools/figma-dev-audit.mjs directly;
+//     to invoke ${CLAUDE_PLUGIN_ROOT}/skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs directly;
 //   - the content cluster carried 16 inbound dependency edges.
 // The common thread: what blocks a split is usually not the skills, it is the
 // FILES underneath them, reachable only through the transitive import graph.
@@ -125,6 +125,13 @@ function closure(startRefs) {
   }
   return seen;
 }
+
+// The skill graph and the closure walker are the expensive, correctness-critical
+// part of this file (see the two blind spots pinned in tests/split-readiness).
+// tools/skill-ownership.mjs needs both to work out which bundled files a single
+// skill exclusively owns, so they are exported rather than reimplemented there
+// — a second copy of this walk would drift, and a drifted copy reports CLEAN.
+export { skills, closure };
 
 // ---- report -----------------------------------------------------------------
 

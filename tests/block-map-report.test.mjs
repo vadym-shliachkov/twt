@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import {
   renderReport, matrixHtml, warnBanner, skeletonMermaid, neighborhoodMermaid,
   variantSection, markdownFor, blockPageHtml, pageFile, NEIGHBOR_CAP, DARK,
-} from '../tools/block-map/report.mjs';
+} from '../skills/twt-block-map/tools/block-map/report.mjs';
 
 // WCAG 2.1 relative-luminance / contrast-ratio formulas, used only to check
 // the dark-mode palette actually shipped in report.mjs (via the exported

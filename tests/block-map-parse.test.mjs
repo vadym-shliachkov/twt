@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseHtml } from '../tools/block-map/parse.mjs';
+import { parseHtml } from '../skills/twt-block-map/tools/block-map/parse.mjs';
 
 test('builds a nested tree', () => {
   const root = parseHtml('<div class="a"><p>hi</p><span>yo</span></div>');

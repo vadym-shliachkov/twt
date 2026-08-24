@@ -5,7 +5,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { listFiles } from '../../lib/sources.mjs';
+import { listFiles } from '../../../../../tools/lib/sources.mjs';
 import { NONPROD_URL_ANYWHERE } from './lib/patterns.mjs';
 
 // Files that must never be in a repo that ships.

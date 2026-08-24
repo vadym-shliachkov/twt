@@ -18,12 +18,12 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { RULES } from '../tools/launch-audit/rules/index.mjs';
-import { QUESTIONS } from '../tools/launch-audit/rules/questions.mjs';
-import { verdictFor } from '../tools/launch-audit.mjs';
-import { runChild } from '../tools/launch-audit/harvest.mjs';
+import { RULES } from '../skills/twt-launch-audit/tools/launch-audit/rules/index.mjs';
+import { QUESTIONS } from '../skills/twt-launch-audit/tools/launch-audit/rules/questions.mjs';
+import { verdictFor } from '../skills/twt-launch-audit/tools/launch-audit.mjs';
+import { runChild } from '../skills/twt-launch-audit/tools/launch-audit/harvest.mjs';
 
-const T = (n) => fileURLToPath(new URL(`../tools/${n}`, import.meta.url));
+const T = (n) => fileURLToPath(new URL(`../skills/twt-launch-audit/tools/${n}`, import.meta.url));
 const SCAN = T('launch-scan.mjs');
 const AUDIT = T('launch-audit.mjs');
 const REPORT = T('launch-report.mjs');

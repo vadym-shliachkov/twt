@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { loadPlaywright } from '../tools/lib/resolve-playwright.mjs';
 
 const run = promisify(execFile);
-const TOOL = fileURLToPath(new URL('../tools/block-map.mjs', import.meta.url));
+const TOOL = fileURLToPath(new URL('../skills/twt-block-map/tools/block-map.mjs', import.meta.url));
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site', import.meta.url));
 const { pw } = await loadPlaywright();
 

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const REPORT = fileURLToPath(new URL('../tools/launch-report.mjs', import.meta.url));
+const REPORT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-report.mjs', import.meta.url));
 const newOut = () => mkdtempSync(join(tmpdir(), 'twt-rep-'));
 const has = (dir, f) => existsSync(join(dir, f));
 const txt = (dir, f) => readFileSync(join(dir, f), 'utf8');

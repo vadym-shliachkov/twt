@@ -77,7 +77,7 @@ All three are genuinely auditable and the scanner handles each: with no built HT
 ## Step 2 — Run the deterministic scan
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/launch-scan.mjs" "$CLAUDE_PROJECT_DIR"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-launch-audit/tools/launch-scan.mjs" "$CLAUDE_PROJECT_DIR"
 ```
 
 With a URL, append `--url <the url>`. **Read the `layers` block in the output.** If `layers.scan` is anything but `ok`, note it — Step 7 will produce a provisional report and the verdict is capped at `NO-GO — evidence incomplete`. Never work around a failed scan by reading the source files yourself; a model-read substitute for a scan is exactly the silent skip this discipline exists to prevent.
@@ -102,7 +102,7 @@ If `--skip-interview` is set or this is an unattended dispatch, skip the questio
 ## Step 4 — Apply the rules
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/launch-audit.mjs" ".twt-artifacts/launch/facts.json" --out ".twt-artifacts/launch"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-launch-audit/tools/launch-audit.mjs" ".twt-artifacts/launch/facts.json" --out ".twt-artifacts/launch"
 ```
 
 It reads `answers.json` from the same directory when one exists (pass `--answers <path>` to point elsewhere), and writes `findings.json` with every deterministic finding, the verdict, and the `interview[]` catalogue. Do not restate or re-severity these findings — they are measured.
@@ -146,8 +146,8 @@ Now add what the rules cannot reach, and only that:
 Then:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/launch-lint.mjs" ".twt-artifacts/launch" --fix
-node "${CLAUDE_PLUGIN_ROOT}/tools/launch-lint.mjs" ".twt-artifacts/launch"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-launch-audit/tools/launch-lint.mjs" ".twt-artifacts/launch" --fix
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-launch-audit/tools/launch-lint.mjs" ".twt-artifacts/launch"
 ```
 
 `--fix` derives `id`, `blocking`, `source`, the sort order, and the verdict. The second call must exit 0. If it reports errors, fix the named findings and re-run — do not render past a failing lint.
@@ -155,7 +155,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/launch-lint.mjs" ".twt-artifacts/launch"
 ## Step 7 — Render
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/launch-report.mjs" ".twt-artifacts/launch/findings.json" --out ".twt-artifacts/launch"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-launch-audit/tools/launch-report.mjs" ".twt-artifacts/launch/findings.json" --out ".twt-artifacts/launch"
 ```
 
 The renderer chooses the filename from `layers.scan`: `launch-report.md` on a complete scan, `launch-report-provisional.md` otherwise. **Never rename a provisional file to the measured name.**

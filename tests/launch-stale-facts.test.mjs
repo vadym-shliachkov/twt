@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-const AUDIT = fileURLToPath(new URL('../tools/launch-audit.mjs', import.meta.url));
+const AUDIT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-audit.mjs', import.meta.url));
 const SCANNED_AT = new Date('2026-08-05T08:00:00.000Z');
 
 function project({ qaPresent = false, qaWrittenAt = null } = {}) {

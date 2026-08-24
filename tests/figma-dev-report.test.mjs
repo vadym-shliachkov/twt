@@ -5,9 +5,9 @@ import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readiness, applyCaps, renderMarkdown, renderHtml, verdict, provenance, ROW_CATEGORIES, ROW_LABELS } from '../tools/figma-dev-report.mjs';
+import { readiness, applyCaps, renderMarkdown, renderHtml, verdict, provenance, ROW_CATEGORIES, ROW_LABELS } from '../skills/twt-figma-dev-audit/tools/figma-dev-report.mjs';
 
-const TOOL = fileURLToPath(new URL('../tools/figma-dev-report.mjs', import.meta.url));
+const TOOL = fileURLToPath(new URL('../skills/twt-figma-dev-audit/tools/figma-dev-report.mjs', import.meta.url));
 
 const f = (o) => ({
   id: o.id || 'X-1', rule: o.rule || 'X', title: o.title || 'T',

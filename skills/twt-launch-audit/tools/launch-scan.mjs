@@ -12,7 +12,7 @@
 'use strict';
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { locate, locateTheme, rel as relTo } from './lib/sources.mjs';
+import { locate, locateTheme, rel as relTo } from '../../../tools/lib/sources.mjs';
 import { pageKey, hrefKey, deployPrefix } from './launch-audit/scan/lib/html.mjs';
 import { harvest } from './launch-audit/harvest.mjs';
 import { checkLive } from './launch-audit/live.mjs';

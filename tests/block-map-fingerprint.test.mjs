@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { parseHtml } from '../tools/block-map/parse.mjs';
-import { extractBlocks } from '../tools/block-map/extract.mjs';
-import { fingerprint, similarity } from '../tools/block-map/fingerprint.mjs';
-import { MERGE_AT } from '../tools/block-map/identity.mjs';
+import { parseHtml } from '../skills/twt-block-map/tools/block-map/parse.mjs';
+import { extractBlocks } from '../skills/twt-block-map/tools/block-map/extract.mjs';
+import { fingerprint, similarity } from '../skills/twt-block-map/tools/block-map/fingerprint.mjs';
+import { MERGE_AT } from '../skills/twt-block-map/tools/block-map/identity.mjs';
 
 const FIX = fileURLToPath(new URL('./fixtures/block-map-site/', import.meta.url));
 const flatten = (bs) => bs.flatMap((b) => [b, ...flatten(b.children)]);

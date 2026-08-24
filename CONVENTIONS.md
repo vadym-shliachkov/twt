@@ -230,7 +230,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
   |---|---|---|
   | `write-as-me` | SPLITTABLE — **shipped** | one soft edge to `twt-content-fetch` |
   | `export` | BLOCKED | `templates/themes` — `tools/theme.mjs` (export) and `tools/house-style.mjs` (four monolith report tools) both read it at runtime |
-  | `figma-dev-audit` | BLOCKED | `tools/lib/contrast.mjs`; also six commands invoke `tools/figma-dev-audit.mjs` directly |
+  | `figma-dev-audit` | BLOCKED | `tools/lib/contrast.mjs`; also six commands invoke `skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs` directly |
   | `audit` | BLOCKED | 9 contested files, 10 outbound edges into the pipeline |
   | `content` | BLOCKED | 5 contested files, 17 inbound edges from 15 skills |
 - **Unblocking a cluster means breaking a file's shared ownership first, as its own change.** Do not bundle that into a packaging commit: splitting `export` requires either duplicating `doc-hub-light`'s CSS or refactoring what the four report tools use for styling, and the second changes generated report appearance. Land that visibly, then split.

@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { CATEGORIES, CATEGORY_TITLES, SEVERITIES, OWNERS } from './launch-audit.mjs';
-import { readHouseCss } from './house-style.mjs';
+import { readHouseCss } from '../../../tools/house-style.mjs';
 
 const MAX_BLOCKS = 5;
 

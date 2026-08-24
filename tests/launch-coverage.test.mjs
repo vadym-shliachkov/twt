@@ -14,9 +14,9 @@ import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { coverageFor } from '../tools/launch-audit/coverage.mjs';
+import { coverageFor } from '../skills/twt-launch-audit/tools/launch-audit/coverage.mjs';
 
-const REPORT = fileURLToPath(new URL('../tools/launch-report.mjs', import.meta.url));
+const REPORT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-report.mjs', import.meta.url));
 const txt = (dir, f) => readFileSync(join(dir, f), 'utf8');
 
 function render(doc) {

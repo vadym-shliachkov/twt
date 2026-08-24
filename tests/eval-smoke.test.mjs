@@ -111,10 +111,10 @@ test('launch: seed → check fails (no scan yet) → real scan+audit+lint+report
   assert.throws(() => run(['check', dir, '--scope', 'launch']), /missing facts\.json/);
 
   // simulate what /twt-launch-audit's pipeline (scan → audit → judge → lint --fix → report) produces
-  const SCAN = fileURLToPath(new URL('../tools/launch-scan.mjs', import.meta.url));
-  const AUDIT = fileURLToPath(new URL('../tools/launch-audit.mjs', import.meta.url));
-  const LINT = fileURLToPath(new URL('../tools/launch-lint.mjs', import.meta.url));
-  const REPORT = fileURLToPath(new URL('../tools/launch-report.mjs', import.meta.url));
+  const SCAN = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-scan.mjs', import.meta.url));
+  const AUDIT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-audit.mjs', import.meta.url));
+  const LINT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-lint.mjs', import.meta.url));
+  const REPORT = fileURLToPath(new URL('../skills/twt-launch-audit/tools/launch-report.mjs', import.meta.url));
   const out = join(dir, '.twt-artifacts', 'launch');
   execFileSync(process.execPath, [SCAN, dir], { encoding: 'utf8' });
   execFileSync(process.execPath, [AUDIT, join(out, 'facts.json'), '--out', out], { encoding: 'utf8' });

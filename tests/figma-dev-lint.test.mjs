@@ -5,10 +5,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalise, lint } from '../tools/figma-dev-lint.mjs';
-import { evaluate } from '../tools/figma-dev-audit.mjs';
+import { normalise, lint } from '../skills/twt-figma-dev-audit/tools/figma-dev-lint.mjs';
+import { evaluate } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs';
 
-const TOOL = fileURLToPath(new URL('../tools/figma-dev-lint.mjs', import.meta.url));
+const TOOL = fileURLToPath(new URL('../skills/twt-figma-dev-audit/tools/figma-dev-lint.mjs', import.meta.url));
 const URL_ = 'https://figma.com/design/K/T';
 
 // A finding as the model writes one: judgment fields only.

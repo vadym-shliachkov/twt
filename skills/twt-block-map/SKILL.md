@@ -94,7 +94,7 @@ One entry per frame. Set `<source>` for Step 3 to this file's path.
 
 One Bash call, allowlist-matchable, literal paths, no `VAR=` prefixes and no shell variables:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-block-map/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20
 ```
 `--max 20` is the default shown above — if Step 1 detected an explicit `--max <n>` in `$ARGUMENTS`, substitute that literal value instead of 20 (never drop it). Add `--depth <n>` and/or `--static` too if the user specified them in Step 1 (still one flat command — substitute the literal values, don't build the command string in a variable). `<source>` is the site URL, local directory, or `figma-export.json` path resolved above.
 
@@ -114,7 +114,7 @@ One entry per adjudicated pair (both `same` and `different` verdicts — `differ
 
 Then re-run the mapper with `--decisions` so the rulings are actually applied — pass the exact same `<source>`/`--out`/`--max`/`--depth`/`--static` values used in Step 3 (whatever those resolved to there, not necessarily the defaults shown below) plus the new flag:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20 --decisions ".twt-artifacts/block-map/gray-band-decisions.json"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-block-map/tools/block-map.mjs" "<source>" --out ".twt-artifacts/block-map" --max 20 --decisions ".twt-artifacts/block-map/gray-band-decisions.json"
 ```
 This regenerates every artifact with the merges folded in. The CLI only applies a ruling whose `{a,b}` pair still appears in *this* run's gray band — a re-run from scratch can renumber blocks (e.g. a live site returning a different page set), which would otherwise let a stale ruling silently merge the wrong pair. If stdout reports any rulings skipped as stale, say so in Step 6 rather than treating the adjudication as fully applied. From here on, **read `summary.json`, never `block-map.json`** — `block-map.json` carries full markup per variant and exists only for the deterministic HTML renderer; reading it into model context defeats the entire token-budget design of this skill.
 

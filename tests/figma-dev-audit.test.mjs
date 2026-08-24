@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, finding, CATEGORIES, SEVERITIES, OWNERS } from '../tools/figma-dev-audit.mjs';
+import { evaluate, finding, CATEGORIES, SEVERITIES, OWNERS } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs';
 
 // This fixture mirrors the frozen Task 1 facts contract field-for-field.
 // Tasks 3-6 all build their rule tests on it, so a field that drifts from
@@ -156,7 +156,7 @@ test('meta.scope falls back to the scope the scan actually walked', () => {
 });
 
 test('validateFinding is the single implementation both layers call', async () => {
-  const { validateFinding } = await import('../tools/figma-dev-audit.mjs');
+  const { validateFinding } = await import('../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs');
   assert.throws(() => validateFinding({ id: 'M-1', severity: 'High', confidence: 'Low',
     owner: 'Designer', category: CATEGORIES[0] }), /M-1: bad confidence/);
   assert.throws(() => validateFinding({ id: 'M-2', severity: 'Urgent', confidence: 'High',
@@ -171,8 +171,8 @@ test('exported vocabularies are exactly the spec vocabularies', () => {
   assert.equal(CATEGORIES.length, 12);
 });
 
-import { evaluate as ev2 } from '../tools/figma-dev-audit.mjs';
-import { screenKey } from '../tools/figma-dev-audit/rules/layout.mjs';
+import { evaluate as ev2 } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs';
+import { screenKey } from '../skills/twt-figma-dev-audit/tools/figma-dev-audit/rules/layout.mjs';
 
 const byRule = (out, rule) => out.findings.filter((f) => f.rule === rule);
 
