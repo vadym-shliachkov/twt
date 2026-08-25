@@ -97,6 +97,8 @@ function usage(msg) {
   console.error("       transcribe-video.mjs run <url-or-path> [--out-dir <dir>] [--model base]");
   console.error("           [--language auto] [--title <name>] [--slug <slug>] [--python <exe>]");
   console.error("           [--keep-source] [--force] [--descriptive] [--max-frames 60]");
+  console.error("           [--captions <url-or-path>]");
+  console.error("       transcribe-video.mjs verify <transcript-dir>");
   console.error("           [--frame-gap 4] [--frame-width 960]");
   console.error("       transcribe-video.mjs slice <transcript-dir> [--window <n> | --from <t> --to <t>]");
   console.error("           [--window-seconds 300]");
@@ -413,9 +415,17 @@ export function titleFrom(slug, explicit) {
     .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w)).join(" ") || "Transcript";
 }
 
-export function buildIndexMd({ source, slug, title, result, fetchedAt }) {
+// index.md is what the rest of the pipeline reads — curation, the fact ledger,
+// every define skill downstream. So it carries the best text available, not
+// whichever text this tool happened to produce: where the publisher shipped a
+// caption track, those are the words, and the recognizer's attempt stays in
+// segments.json and the report. `text_source` says which one a reader is holding,
+// because "the machine guessed this" and "the publisher wrote this" are not the
+// same claim and must not look alike.
+export function buildIndexMd({ source, slug, title, result, fetchedAt, captionSegments: captions }) {
   const forceHours = (result.duration || 0) >= 3600;
-  const paras = paragraphize(result.segments);
+  const fromCaptions = Boolean(captions && captions.length);
+  const paras = paragraphize(fromCaptions ? captions : result.segments);
   const name = titleFrom(slug, title);
   const body = paras.length
     ? paras.map((p) => `**[${fmtTime(p.start, forceHours)}]** ${p.text}`).join("\n\n")
@@ -429,11 +439,46 @@ export function buildIndexMd({ source, slug, title, result, fetchedAt }) {
     `language: ${result.language || "unknown"}`,
     "engine: faster-whisper",
     `model: ${result.model}`,
+    `text_source: ${fromCaptions ? "publisher-captions" : "speech-recognition"}`,
+    fromCaptions ? `captions: ${CAPTIONS_FILE}` : null,
     `segments: ${result.segments.length}`,
     `fetched_at: ${fetchedAt}`,
     "---",
-  ].join("\n");
-  return `${fm}\n\n# ${name}\n\n${body}\n`;
+  ].filter((l) => l !== null).join("\n");
+  const note = fromCaptions
+    ? "_The text below is the publisher's own caption track — written by a person, not guessed "
+      + "from the audio. The speech-recognition attempt, and every place the two disagree, are "
+      + "in `transcript.txt`._\n\n"
+    : "";
+  return `${fm}\n\n# ${name}\n\n${note}${body}\n`;
+}
+
+// The settings the decode actually ran with. They are recorded rather than
+// assumed because the same file, model and machine can still come back as 24
+// segments one run and 31 the next: CTranslate2's CPU kernels vary with thread
+// count, so pinned settings narrow the drift without abolishing it. Saying which
+// build produced the file matters for the same reason — whether the payload
+// carries confidence scores at all is a property of the build, not the audio.
+function decodeLines(result) {
+  const d = result.decode;
+  const out = [];
+  if (d) {
+    const bits = [];
+    if (d.beam_size != null) bits.push(`beam_size ${d.beam_size}`);
+    if (d.temperature != null) bits.push(`temperature ${d.temperature}`);
+    if (d.condition_on_previous_text != null) {
+      bits.push(`condition_on_previous_text ${d.condition_on_previous_text ? "on" : "off"}`);
+    }
+    if (d.vad_filter != null) bits.push(`VAD ${d.vad_filter ? "on" : "off"}`);
+    if (bits.length) out.push(`- **Decode:** ${bits.join(", ")}`);
+  }
+  if (result.faster_whisper) out.push(`- **Engine build:** faster-whisper ${result.faster_whisper}`);
+  if (out.length) {
+    out.push("- **Reproducibility:** pinned decode settings make two runs comparable, but they are "
+      + "not guaranteed to reproduce byte for byte — CPU kernels vary with thread count, so a re-run "
+      + "can segment the same speech differently.");
+  }
+  return out;
 }
 
 export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive }) {
@@ -467,6 +512,7 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
     `- **Language:** ${result.language || "unknown"} (detection confidence ${result.language_probability})`,
     `- **Segments:** ${result.segments.length}`,
     `- **Transcription wall time:** ${result.transcribe_seconds}s`,
+    ...decodeLines(result),
     ...extras,
     "",
     "## Warnings",
@@ -520,18 +566,32 @@ function commonPrefix(a, b) {
 // acronyms anywhere. Skipping position 0 of each sentence is what keeps "The",
 // "We" and every other ordinary sentence opener out of the name list.
 //
-// Each run yields the run itself *and* its individual words. Both are needed: a
-// title carries one long uninterrupted run ("New York Life Foundation's
-// Grief-Sensitive Schools Initiative") that would never line up with the shorter
-// run a speaker says, while its individual words line up exactly — which is how
-// "Grief-Sensitive" in the title meets "Grief Sensitive" in the speech.
+// Each run yields its individual words *and* the phrases inside it. Both are
+// needed: individual words are how "Grief-Sensitive" in the title meets "Grief
+// Sensitive" in the speech, while phrases are how a mangled multi-word name meets
+// its correct spelling — "Grief Senses Schools Initiative" only ever looks wrong
+// next to "Grief-Sensitive Schools Initiative", never one word at a time
+// ("Senses" and "Sensitive" are too far apart to pair on their own).
+//
+// A run longer than the cap yields every window up to the cap rather than
+// nothing. A title is one long uninterrupted run ("New York Life Foundation's
+// Grief-Sensitive Schools Initiative"), and dropping it whole used to leave the
+// title contributing single words only — so the one comparison that matters, the
+// publisher's own spelling of the program against the recognizer's, never
+// happened.
 export const MAX_PHRASE_TOKENS = 5;
 
 export function properPhrases(text) {
   const found = [];
   const emit = (run) => {
-    if (run.length <= MAX_PHRASE_TOKENS && run.length > 1) found.push(run.join(" "));
     for (const tok of run) found.push(tok);
+    if (run.length <= MAX_PHRASE_TOKENS) {
+      if (run.length > 1) found.push(run.join(" "));
+      return;
+    }
+    for (let n = 2; n <= MAX_PHRASE_TOKENS; n++) {
+      for (let i = 0; i + n <= run.length; i++) found.push(run.slice(i, i + n).join(" "));
+    }
   };
   for (const sentence of String(text || "").split(/(?<=[.!?…])\s+/)) {
     // ® and ™ are deliberately outside the token: a title's "Initiative®" and a
@@ -648,6 +708,16 @@ export function detectIssues({ segments = [], duration = 0, language_probability
   if (!segments.length && !warnings.some((w) => /no speech was detected/i.test(w))) {
     run.push("No speech was detected at all — the transcript is empty.");
   }
+  // A build that reports no confidence at all produces an empty flagged-lines
+  // section, which is exactly what a clean transcript produces. Saying so at the
+  // run level is what keeps "nothing was flagged" from reading as "nothing is
+  // wrong" when in truth nothing was ever checked.
+  const scored = segments.some((s) => typeof s.avg_logprob === "number");
+  if (segments.length && !scored && !warnings.some((w) => /no per-segment confidence/i.test(w))) {
+    run.push("The recognizer returned no per-segment confidence scores, so no line could be "
+      + "flagged mechanically — the empty section below means unchecked, not clean. The review "
+      + "is the only thing standing between this transcript and an undetected mishearing.");
+  }
   if (typeof langProb === "number" && langProb < 0.75) {
     run.push(`Language detection was not confident (${langProb}) — if the language is wrong, everything downstream of it is too. Re-run with --language <code>.`);
   }
@@ -664,7 +734,7 @@ export function detectIssues({ segments = [], duration = 0, language_probability
     run,
     truncated: Math.max(0, flagged.size - MAX_FLAGGED_SEGMENTS),
     counts: { ...bySeverity, variants: variants.length, run: run.length },
-    scored: segments.some((s) => typeof s.avg_logprob === "number"),
+    scored,
   };
 }
 
@@ -705,7 +775,7 @@ function part(n, heading) { return [RULE, `PART ${n} - ${heading}`, RULE, ""]; }
 // what about it should not be trusted. PART 1 deliberately carries no timestamps —
 // it is the version you read; PART 2 is the version you cite.
 export function buildReportTxt({ source, slug, title, result, warnings = [], issues,
-  fetchedAt, bytes, descriptive, review }) {
+  fetchedAt, bytes, descriptive, review, captionDiff }) {
   const name = titleFrom(slug, title);
   const src = redactUrl(source);
   const forceHours = (result.duration || 0) >= 3600;
@@ -759,6 +829,7 @@ export function buildReportTxt({ source, slug, title, result, warnings = [], iss
   L.push(...part(3, "POSSIBLE ISSUES (verify before quoting)"));
   L.push(...wrapText("Nothing below is a correction — the transcript is left exactly as the "
     + "recognizer produced it. These are the places most likely to be wrong."), "");
+  L.push(...renderCaptionDiff(captionDiff));
   L.push(...renderIssues(issues, result));
   L.push("", THIN, REVIEW_HEADING, THIN, "");
   L.push(...(review ? wrapReview(review) : [REVIEW_PENDING,
@@ -783,6 +854,32 @@ function whereList(where) {
   const more = times.length > keep ? ` and ${times.length - keep} more` : "";
   if (!times.length) return "from the title";
   return `${title ? "from the title, and " : ""}spoken at ${shown}${more}`;
+}
+
+// The strongest finding in the report when it exists, so it goes first: unlike
+// everything below it, each line here is a second account of the same audio
+// disagreeing with the first. That is the only mechanical check that can catch a
+// mishearing the recognizer was confident about.
+function renderCaptionDiff(diff) {
+  if (!diff) return [];
+  const L = ["THE PUBLISHER'S OWN CAPTIONS DISAGREE HERE", ""];
+  if (!diff.length) {
+    L.push(...wrapText("The publisher's caption track and the recognizer agree on every word "
+      + "(punctuation and casing aside). That is the strongest signal in this report — two "
+      + "independent accounts of the same audio saying the same thing."), "");
+    return L;
+  }
+  L.push(...wrapText(`${diff.length} place${diff.length > 1 ? "s" : ""} where the two differ. The `
+    + "captions were written by a person and the transcript was guessed from audio, so where they "
+    + "disagree the captions are usually right — and `index.md` already carries the caption "
+    + "wording. PARTS 1 and 2 above deliberately still show what the recognizer said."), "");
+  for (const f of diff) {
+    L.push(`  [${f.at}]`);
+    L.push(...wrapText(`recognizer: ${f.asr ? `"${f.asr}"` : "(nothing — it dropped this)"}`, REPORT_WIDTH, "        "));
+    L.push(...wrapText(`captions:   ${f.captions ? `"${f.captions}"` : "(nothing — the recognizer added this)"}`, REPORT_WIDTH, "        "));
+    L.push("");
+  }
+  return L;
 }
 
 function renderIssues(issues, result) {
@@ -817,7 +914,7 @@ function renderIssues(issues, result) {
         + "lines score badly the problem is usually the audio or the model size, not "
         + "individual words — re-run with a larger model."), "");
     }
-  } else if (!issues.scored) {
+  } else if (!issues.scored && !issues.run.some((r) => /no per-segment confidence/i.test(r))) {
     L.push(...wrapText("The recognizer returned no per-segment confidence scores in this run, "
       + "so no lines could be flagged mechanically."), "");
   } else if (!issues.variants.length && !issues.run.length) {
@@ -856,6 +953,386 @@ export function spliceReview(report, notes) {
   const j = report.lastIndexOf(tail);
   if (i === -1 || j === -1 || j < i) return null;
   return report.slice(0, i + head.length) + wrapReview(notes).join("\n") + "\n" + report.slice(j);
+}
+
+// ---- publisher captions --------------------------------------------------------
+// A caption track the publisher shipped is human-authored, not guessed, so where
+// it exists it outranks the recognizer outright. Two things follow. It becomes
+// the text `index.md` carries, because that is the file the rest of the pipeline
+// reads and it should read the true words. And the disagreement between the two
+// becomes a *mechanical* finding: "by depth" for "by death" is a fluent mishearing
+// that scores perfectly and no confidence threshold can see, but a second opinion
+// on the same audio spots it without anyone reading a word.
+
+export const CAPTIONS_FILE = "publisher-captions.vtt";
+
+const CUE_TIME = /(\d{1,2}:)?(\d{1,2}):(\d{2})[.,](\d{1,3})\s*-->\s*(\d{1,2}:)?(\d{1,2}):(\d{2})[.,](\d{1,3})/;
+
+function cueSeconds(h, m, sec, frac) {
+  const t = (Number(h ? h.slice(0, -1) : 0) * 3600) + (Number(m) * 60) + Number(sec)
+    + (Number(frac) / 10 ** frac.length);
+  // Rounded to the millisecond the caption file actually states: binary floats
+  // otherwise turn 2.845 into 2.8449999999999998, which then reads as a real
+  // difference when these times are compared with the recognizer's.
+  return Math.round(t * 1000) / 1000;
+}
+
+// WebVTT and SRT, which is everything a publisher hands over in practice. Cue
+// ids, WebVTT settings (align:, line:, position:) and inline tags are dropped;
+// a cue wrapped over several lines is one cue, because a caption break is a
+// display decision and has nothing to do with where a sentence ends.
+export function parseCaptions(text) {
+  const raw = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  if (!raw.trim() || !CUE_TIME.test(raw)) return null;
+  const format = /^WEBVTT/.test(raw.trim()) ? "vtt" : "srt";
+  const cues = [];
+  for (const block of raw.split(/\n{2,}/)) {
+    const lines = block.split("\n");
+    const i = lines.findIndex((l) => CUE_TIME.test(l));
+    if (i === -1) continue;
+    const m = lines[i].match(CUE_TIME);
+    const body = lines.slice(i + 1)
+      .map((l) => l.replace(/<[^>]*>/g, "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!body) continue;
+    cues.push({ start: cueSeconds(m[1], m[2], m[3], m[4]), end: cueSeconds(m[5], m[6], m[7], m[8]), text: body });
+  }
+  return cues.length ? { format, cues } : null;
+}
+
+// Cues are cut to fit a caption box — "In 2008, the New" / "York Life Foundation"
+// — so they are rejoined and re-cut at sentence ends. Each sentence keeps the
+// start time of the cue it began in, which is what makes the timestamps citable.
+export function captionSegments(cues) {
+  const out = [];
+  let text = "";
+  let start = null;
+  let end = 0;
+  const flush = () => {
+    const body = text.trim();
+    if (body) out.push({ start: start ?? 0, end, text: body });
+    text = ""; start = null;
+  };
+  for (const cue of cues || []) {
+    if (start === null) start = cue.start;
+    end = cue.end;
+    text += (text ? " " : "") + cue.text;
+    // A gap long enough to be a new thought also ends the segment, so a caption
+    // track with no terminal punctuation still yields more than one block.
+    if (/[.!?…]["')\]]?$/.test(cue.text)) flush();
+  }
+  flush();
+  return out;
+}
+
+// ---- comparing two accounts of the same audio ----------------------------------
+
+// One entry per *comparable* word. A hyphenated token yields one entry per part,
+// because "grief-sensitive" and "grief sensitive" are the same two words written
+// two ways and flagging that pair would bury the handful of findings that are
+// really about what was said. Each entry remembers the whole token it came from,
+// so a difference inside one is still reported as the whole word.
+function diffWords(segments) {
+  const out = [];
+  for (const seg of segments || []) {
+    for (const token of String(seg.text || "").split(/\s+/).filter(Boolean)) {
+      for (const part of token.split(/[-–—/]+/)) {
+        const norm = normWord(part);
+        if (norm) out.push({ norm, at: seg.start, src: token });
+      }
+    }
+  }
+  return out;
+}
+
+// The original tokens a run of differing entries came from, each named once —
+// two halves of one hyphenated word must not print that word twice.
+function spanText(words) {
+  const out = [];
+  for (const w of words) if (out[out.length - 1] !== w.src) out.push(w.src);
+  return out.join(" ");
+}
+
+// Myers' O(ND) diff. The two accounts are near-identical, so D — the number of
+// edits — is small and this stays fast on an hour of speech, where a full
+// dynamic-programming table would not.
+function editScript(a, b) {
+  const n = a.length, m = b.length;
+  const max = n + m;
+  const trace = [];
+  let v = new Map([[1, 0]]);
+  for (let d = 0; d <= max; d++) {
+    trace.push(new Map(v));
+    for (let k = -d; k <= d; k += 2) {
+      let x = (k === -d || (k !== d && (v.get(k - 1) ?? 0) < (v.get(k + 1) ?? 0)))
+        ? (v.get(k + 1) ?? 0) : (v.get(k - 1) ?? 0) + 1;
+      let y = x - k;
+      while (x < n && y < m && a[x] === b[y]) { x++; y++; }
+      v.set(k, x);
+      if (x >= n && y >= m) return backtrack(trace, a, b, d);
+    }
+    v = new Map(v);
+  }
+  return [];
+}
+
+function backtrack(trace, a, b, d) {
+  const ops = [];
+  let x = a.length, y = b.length;
+  for (let step = d; step > 0; step--) {
+    const v = trace[step];
+    const k = x - y;
+    const down = k === -step || (k !== step && (v.get(k - 1) ?? -1) < (v.get(k + 1) ?? -1));
+    const prevK = down ? k + 1 : k - 1;
+    const prevX = v.get(prevK) ?? 0;
+    const prevY = prevX - prevK;
+    while (x > prevX && y > prevY) { x--; y--; ops.push({ op: "=", ai: x, bi: y }); }
+    if (down) { y--; ops.push({ op: "+", ai: x, bi: y }); }
+    else { x--; ops.push({ op: "-", ai: x, bi: y }); }
+  }
+  while (x > 0 && y > 0) { x--; y--; ops.push({ op: "=", ai: x, bi: y }); }
+  return ops.reverse();
+}
+
+export const MAX_CAPTION_FINDINGS = 60;
+
+// Where the recognizer and the publisher's captions tell different stories.
+// Comparison is on normalized words, so punctuation, casing and hyphenation drop
+// out — those are transcription style, not disagreements about what was said,
+// and reporting them would bury the handful of findings that matter.
+export function diffTranscripts(asrSegments, capSegments) {
+  const a = diffWords(asrSegments);
+  const b = diffWords(capSegments);
+  if (!a.length || !b.length) return [];
+  const ops = editScript(a.map((x) => x.norm), b.map((x) => x.norm));
+
+  const findings = [];
+  let block = null;
+  const close = () => {
+    if (!block) return;
+    if (block.asr.length || block.captions.length) {
+      findings.push({
+        at: fmtTime(block.at, false),
+        seconds: block.at,
+        asr: spanText(block.asr),
+        captions: spanText(block.captions),
+      });
+    }
+    block = null;
+  };
+  let lastAt = a[0].at;
+  for (const op of ops) {
+    if (op.op === "=") { lastAt = a[op.ai]?.at ?? lastAt; close(); continue; }
+    if (!block) block = { at: (op.op === "-" ? a[op.ai]?.at : undefined) ?? lastAt, asr: [], captions: [] };
+    if (op.op === "-") block.asr.push(a[op.ai]);
+    else block.captions.push(b[op.bi]);
+  }
+  close();
+  return findings.slice(0, MAX_CAPTION_FINDINGS);
+}
+
+// Fetch (or read) the publisher's caption track, store it verbatim, and record
+// where it and the recognizer disagree. A failure here is a warning, never a
+// stopped run: a transcript with no second opinion is worse than one with it, but
+// it is still a transcript, and losing the whole run over an unreachable caption
+// URL helps nobody.
+export async function ingestCaptions({ captionsUrl, outDir, asrSegments, warnings = [] }) {
+  if (!captionsUrl) return { captions: null, diff: null };
+  try {
+    const raw = /^https?:\/\//i.test(captionsUrl)
+      ? await fetchText(captionsUrl, "caption track")
+      : readFileSync(resolve(captionsUrl), "utf8");
+    const parsed = parseCaptions(raw);
+    if (!parsed) throw new Error("the file is neither WebVTT nor SRT");
+    writeFileSync(join(outDir, CAPTIONS_FILE), raw, "utf8");
+    const captions = captionSegments(parsed.cues);
+    const diff = diffTranscripts(asrSegments, captions);
+    writeFileSync(join(outDir, "caption-diff.json"), JSON.stringify({
+      captions: CAPTIONS_FILE, format: parsed.format, cues: parsed.cues.length, differences: diff,
+    }, null, 2), "utf8");
+    if (diff.length) {
+      warnings.push(`The publisher's caption track disagrees with the recognizer in ${diff.length} place(s) — each one is listed in PART 3, and \`index.md\` carries the caption wording rather than the recognizer's.`);
+    }
+    return { captions, diff, cues: parsed.cues.length, format: parsed.format };
+  } catch (err) {
+    warnings.push(`The caption track could not be used (${err.message}) — the transcript is the recognizer's alone, with nothing to check it against.`);
+    return { captions: null, diff: null };
+  }
+}
+
+// ---- Brightcove ----------------------------------------------------------------
+// The one player page worth resolving in-tool. It is what a client hands over
+// when they say "here is the video", the media behind it is a plain MP4, and the
+// account usually carries a caption track next to it — so resolving it here is
+// what turns a run that only worked because someone improvised into one that
+// repeats. Everything else (YouTube, Vimeo, Loom) still needs a real downloader.
+export async function fetchText(url, what = "file") {
+  const r = await fetch(url, { redirect: "follow" });
+  if (!r.ok) throw new Error(`${what}: HTTP ${r.status}`);
+  return await r.text();
+}
+
+// The policy key is a public, embeddable credential baked into the player bundle
+// — the same one the page itself uses to call the Playback API from a browser.
+export async function resolveBrightcove(ref) {
+  const bundle = await fetchText(
+    `https://players.brightcove.net/${ref.account}/${ref.player}/index.min.js`, "player bundle");
+  const key = (bundle.match(/policyKey\s*:\s*["']([^"']+)["']/)
+    || bundle.match(/["']policyKey["']\s*:\s*["']([^"']+)["']/)
+    || bundle.match(/(BCpkADaw[A-Za-z0-9_\-.]+)/) || [])[1];
+  if (!key) throw new Error("no policy key in the player bundle — the player may be configured differently");
+  const r = await fetch(
+    `https://edge.api.brightcove.com/playback/v1/accounts/${ref.account}/videos/${ref.videoId}`,
+    { headers: { Accept: `application/json;pk=${key}` } });
+  if (!r.ok) throw new Error(`Playback API: HTTP ${r.status}${r.status === 403 ? " — the video may be geo- or domain-restricted" : ""}`);
+  const j = await r.json();
+  // Biggest MP4 wins: this is a transcription source, and the audio in the top
+  // rendition is the audio the descriptive pass reads frames against.
+  const mp4 = (j.sources || [])
+    .filter((x) => x.src && /mp4/i.test(x.container || x.type || "") && /^https?:/i.test(x.src))
+    .sort((a, b) => (b.size || 0) - (a.size || 0))[0];
+  if (!mp4) throw new Error("the Playback API returned no MP4 rendition for this video");
+  const track = (j.text_tracks || []).find((t) => t.kind === "captions" && t.src);
+  return {
+    media: mp4.src,
+    captions: track ? track.src : null,
+    captionsLang: track ? track.srclang : null,
+    title: j.name || null,
+    description: j.description || null,
+  };
+}
+
+export function brightcoveRef(source) {
+  if (!/^https?:\/\//i.test(source || "")) return null;
+  let u;
+  try { u = new URL(source); } catch { return null; }
+  if (!/(^|\.)brightcove\.net$/i.test(u.hostname)) return null;
+  const path = u.pathname.match(/^\/(\d+)\/([^/]+)\//);
+  const videoId = u.searchParams.get("videoId") || u.searchParams.get("videoid");
+  if (!path || !videoId) return null;
+  return { account: path[1], player: path[2], videoId };
+}
+
+// ---- artifact verification -----------------------------------------------------
+// A run is only finished when the whole declared set is on disk and the files
+// agree with each other. This exists because they can come apart: output written
+// to one directory and copied to another arrives piecemeal, a re-run against a
+// stale directory leaves half of an older run in place, and a report written by
+// hand instead of by the script passes every eyeball check while carrying none of
+// the recognizer's own doubts. Each of those looks like success from the outside.
+
+export const REQUIRED_FILES = ["index.md", "segments.json", "_meta.md", "transcript.txt"];
+// The scaffolding buildReportTxt always emits. A report missing any of it was not
+// produced by this script, whatever it says at the top.
+const REPORT_MARKERS = ["PART 1 - ", "PART 2 - ", "PART 3 - POSSIBLE ISSUES", REVIEW_HEADING, "END OF REPORT"];
+
+function countIn(text, re) {
+  const m = String(text || "").match(re);
+  return m ? Number(m[1]) : null;
+}
+
+export function verifyArtifacts(dir) {
+  const problems = [];
+  const notes = [];
+  const read = (name) => {
+    try { return readFileSync(join(dir, name), "utf8"); } catch { return null; }
+  };
+  const present = (name) => existsSync(join(dir, name));
+
+  const descriptive = ["transcript.md", "media.json", "frames.json", "outline.json"].some(present);
+  const required = [...REQUIRED_FILES, ...(descriptive ? ["media.json", "outline.json"] : [])];
+
+  for (const name of required) {
+    if (!present(name)) { problems.push(`${name} is missing — the run did not finish, or only part of it was copied into place.`); continue; }
+    let size = 0;
+    try { size = statSync(join(dir, name)).size; } catch { /* treated as empty below */ }
+    if (!size) problems.push(`${name} is empty.`);
+  }
+
+  const report = read("transcript.txt");
+  if (report) {
+    const absent = REPORT_MARKERS.filter((m) => !report.includes(m));
+    if (absent.length) {
+      problems.push(`transcript.txt is missing ${absent.map((a) => `"${a.trim()}"`).join(", ")} — `
+        + "it was written by hand rather than produced by the script, so PARTS 1 and 2 are not "
+        + "guaranteed to match segments.json and the recognizer's own findings are not in it.");
+    }
+  }
+
+  // The four places the segment count is written down must agree. They disagree
+  // exactly when a directory holds files from two different runs.
+  const seg = read("segments.json");
+  let counts = null;
+  if (seg) {
+    let parsed = null;
+    try { parsed = JSON.parse(seg); } catch { problems.push("segments.json is not valid JSON."); }
+    if (parsed) {
+      counts = {
+        "segments.json": (parsed.segments || []).length,
+        "index.md": countIn(read("index.md"), /^segments:\s*(\d+)\s*$/m),
+        "_meta.md": countIn(read("_meta.md"), /\*\*Segments:\*\*\s*(\d+)/),
+        "transcript.txt": countIn(report, /PART 2 - TIMESTAMPED SEGMENTS \(all (\d+) items\)/),
+      };
+      const seen = new Map();
+      for (const [where, n] of Object.entries(counts)) {
+        if (n === null) continue;
+        if (!seen.has(n)) seen.set(n, []);
+        seen.get(n).push(where);
+      }
+      if (seen.size > 1) {
+        problems.push("The segment count disagrees between files ("
+          + [...seen].map(([n, where]) => `${where.join(", ")}: ${n}`).join("; ")
+          + ") — these files are from different runs.");
+      }
+    }
+  }
+
+  if (descriptive) {
+    const media = (() => { try { return JSON.parse(read("media.json")); } catch { return null; } })();
+    if (media && media.has_video) {
+      if (!present("frames.json")) {
+        problems.push("frames.json is missing although the source has a video stream — the descriptive pass had no visuals to describe from.");
+      } else {
+        const listed = (() => { try { return (JSON.parse(read("frames.json")).frames || []).length; } catch { return null; } })();
+        let onDisk = null;
+        try { onDisk = readdirSync(join(dir, "frames")).length; } catch { onDisk = 0; }
+        if (listed !== null && listed !== onDisk) {
+          problems.push(`frames.json lists ${listed} keyframes but frames/ holds ${onDisk} — the descriptive pass cited frames that are not there.`);
+        }
+      }
+    }
+    if (!present("transcript.md")) {
+      notes.push("No transcript.md yet — the descriptive pass has not been assembled.");
+    }
+  }
+
+  // The caption files travel together, and index.md's provenance line has to
+  // match what is actually on disk: a directory holding a diff but no captions,
+  // or captions that index.md does not claim, is a partly-copied run.
+  const hasDiff = present("caption-diff.json");
+  const hasVtt = present(CAPTIONS_FILE);
+  if (hasDiff && !hasVtt) {
+    problems.push(`caption-diff.json is here but ${CAPTIONS_FILE} is missing — the transcript cites a caption track that is not in the directory.`);
+  }
+  if (hasVtt || hasDiff) {
+    const index = read("index.md") || "";
+    if (!/^text_source:\s*publisher-captions\s*$/m.test(index)) {
+      problems.push("A publisher caption track is present but index.md still declares "
+        + "`text_source: speech-recognition` — downstream would read the recognizer's guess "
+        + "while the publisher's own wording sits unused beside it.");
+    }
+  }
+
+  const reviewed = Boolean(report) && !report.includes(REVIEW_PENDING);
+  if (report && !reviewed) {
+    notes.push("PART 3's review half is still pending — run `review`, then `annotate`. "
+      + "Nothing mechanical can catch a fluent mishearing, so an unreviewed report is an unchecked one.");
+  }
+
+  return { ok: problems.length === 0, problems, notes, reviewed, descriptive, counts };
 }
 
 // ---- descriptive pass: deterministic extraction --------------------------------
@@ -1120,6 +1597,15 @@ function doAnnotate() {
   console.log(JSON.stringify({ ok: true, report: reportPath, reviewed: true }, null, 2));
 }
 
+function doVerify() {
+  const dir = firstPositional();
+  if (!dir) usage("Missing <transcript-dir>.");
+  if (!existsSync(dir)) { console.error(`No such directory: ${dir}`); process.exit(2); }
+  const v = verifyArtifacts(dir);
+  console.log(JSON.stringify(v, null, 2));
+  process.exit(v.ok ? 0 : 1);
+}
+
 // ---- run -----------------------------------------------------------------------
 
 async function doRun() {
@@ -1137,14 +1623,42 @@ async function doRun() {
     process.exit(3);
   }
 
-  const isUrl = /^https?:\/\//i.test(source);
-  if (!isUrl && !existsSync(source)) {
-    console.error(`No such file: ${source}`);
+  // A Brightcove player page is the one watch page resolved in-tool: it is what a
+  // client hands over, the media behind it is a plain MP4, and the account
+  // usually carries the publisher's caption track right next to it. Resolving it
+  // here is what makes such a run repeatable instead of dependent on somebody
+  // improvising the Playback API call by hand.
+  const bcRef = brightcoveRef(source);
+  let mediaUrl = source;
+  let captionsUrl = flag("--captions", null);
+  let resolvedTitle = null;
+  if (bcRef) {
+    console.error(`resolving Brightcove video ${bcRef.videoId} (account ${bcRef.account}) …`);
+    try {
+      const bc = await resolveBrightcove(bcRef);
+      mediaUrl = bc.media;
+      resolvedTitle = bc.title;
+      if (!captionsUrl && bc.captions) {
+        captionsUrl = bc.captions;
+        console.error(`found the publisher's ${bc.captionsLang || "default"} caption track`);
+      }
+    } catch (err) {
+      console.error(`Could not resolve the Brightcove player page: ${err.message}`);
+      console.error("Supply the direct MP4 URL or a downloaded file instead.");
+      process.exit(1);
+    }
+  }
+
+  const isUrl = /^https?:\/\//i.test(mediaUrl);
+  if (!isUrl && !existsSync(mediaUrl)) {
+    console.error(`No such file: ${mediaUrl}`);
     process.exit(2);
   }
 
-  const rawName = (isUrl ? nameFromUrl(source) : basename(source)).replace(MEDIA_EXT, "");
-  const title = flag("--title", null);
+  const rawName = (isUrl ? nameFromUrl(mediaUrl) : basename(mediaUrl)).replace(MEDIA_EXT, "");
+  // The page URL is the durable reference; the signed CDN link behind it expires.
+  const sourceRef = bcRef ? source : mediaUrl;
+  const title = flag("--title", null) || resolvedTitle;
   // --slug wins, then --title, then the filename. Naming is an *input* so that a
   // re-run lands on the same directory: a slug corrected by hand afterwards makes
   // the exists-check below look in the wrong place and silently duplicate the run.
@@ -1163,16 +1677,16 @@ async function doRun() {
   }
   const keepSource = has("--keep-source");
   let tempDir = null;
-  let mediaPath = isUrl ? null : resolve(source);
+  let mediaPath = isUrl ? null : resolve(mediaUrl);
   let bytes = mediaPath ? statSync(mediaPath).size : 0;
 
   try {
     if (isUrl) {
       const target = keepSource ? outDir : (tempDir = mkdtempSync(join(tmpdir(), "twt-video-")));
-      console.error(`downloading ${source} …`);
+      console.error(`downloading ${redactUrl(mediaUrl).url} …`);
       let dl;
       try {
-        dl = await downloadTo(source, target);
+        dl = await downloadTo(mediaUrl, target);
       } catch (err) {
         // A dead host, a redirect to a login page, or a watch page instead of a
         // file — all user-fixable. Report the cause, not a Node stack trace.
@@ -1208,9 +1722,27 @@ async function doRun() {
     if (result.duration >= 1800 && ["tiny", "base"].includes(result.model)) {
       warnings.push(`Long recording transcribed with the \`${result.model}\` model — re-run with --model small (or medium) if accuracy matters.`);
     }
+    // Surfaced here as well as in the report so `_meta.md` and the JSON summary
+    // carry it: a caller that reads only the summary must still learn that the
+    // mechanical check had nothing to work from.
+    if (result.segments.length && !result.segments.some((s) => typeof s.avg_logprob === "number")) {
+      warnings.push("This faster-whisper build returned no per-segment confidence scores, so no "
+        + "line could be flagged mechanically — the report's PART 3 is empty for reasons that have "
+        + "nothing to do with the audio being clean.");
+    }
 
     const fetchedAt = new Date().toISOString().slice(0, 10);
-    writeFileSync(indexPath, buildIndexMd({ source, slug, title, result, fetchedAt }), "utf8");
+    // The publisher's own caption track, if there is one. It is stored verbatim,
+    // becomes the text index.md carries, and — the part that matters most — is
+    // diffed against the recognizer. That diff is the only mechanical check in
+    // this tool that can catch a mishearing the decoder was confident about.
+    const { captions, diff: captionDiff } = await ingestCaptions({
+      captionsUrl, outDir, asrSegments: result.segments, warnings,
+    });
+
+    writeFileSync(indexPath, buildIndexMd({
+      source: sourceRef, slug, title, result, fetchedAt, captionSegments: captions,
+    }), "utf8");
 
     // The verbatim transcript is complete at this point; the descriptive extras
     // are additive, so a failure in them never costs the run its transcript.
@@ -1219,7 +1751,7 @@ async function doRun() {
       : null;
 
     writeFileSync(join(outDir, "_meta.md"),
-      buildMetaMd({ source, localPath: mediaPath, bytes, result, warnings, descriptive,
+      buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
         keptSource: !isUrl || keepSource }), "utf8");
 
     // The human-readable report is written on every run, in both depths — it is
@@ -1229,8 +1761,19 @@ async function doRun() {
     const issues = detectIssues({ ...result, title: titleFrom(slug, title), warnings });
     const reportPath = join(outDir, "transcript.txt");
     writeFileSync(reportPath, buildReportTxt({
-      source, slug, title, result, warnings, issues, fetchedAt, bytes, descriptive,
+      source: sourceRef, slug, title, result, warnings, issues, fetchedAt, bytes, descriptive,
+      captionDiff,
     }), "utf8");
+
+    // The run is not finished until the set it just claimed to write is actually
+    // on disk and self-consistent. Reporting success without checking is how a
+    // half-written directory reaches the next step looking complete.
+    const verified = verifyArtifacts(outDir);
+    if (!verified.ok) {
+      console.error("The run finished but its output does not verify:");
+      for (const problem of verified.problems) console.error(`  - ${problem}`);
+      process.exit(5);
+    }
 
     console.log(JSON.stringify({
       ok: true, slug, outDir, title: titleFrom(slug, title),
@@ -1243,6 +1786,10 @@ async function doRun() {
       issues: issues.counts,
       descriptive,
       warnings,
+      captions: captions
+        ? { file: CAPTIONS_FILE, segments: captions.length, disagreements: captionDiff.length }
+        : null,
+      verified: { ok: verified.ok, reviewed: verified.reviewed, notes: verified.notes },
       files: [indexPath, jsonPath, join(outDir, "_meta.md"), reportPath, ...(descriptive?.files || [])],
     }, null, 2));
   } finally {
@@ -1260,6 +1807,7 @@ if (invokedDirectly) {
   else if (cmd === "slice") doSlice();
   else if (cmd === "review") doReview();
   else if (cmd === "annotate") doAnnotate();
+  else if (cmd === "verify") doVerify();
   else if (cmd === "run") await doRun();
   else usage(cmd ? `Unknown command: ${cmd}` : "Missing command.");
 }

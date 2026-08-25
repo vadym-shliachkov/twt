@@ -9,6 +9,7 @@ Invoked only by transcribe-video.mjs; not a user-facing entry point.
 
 Writes a single JSON object to --out:
   {language, language_probability, duration, model, device, compute_type,
+   decode, faster_whisper,
    segments: [{start, end, text, avg_logprob, no_speech_prob,
                compression_ratio}, ...]}
 
@@ -50,13 +51,22 @@ def main():
     print(f"model ready in {time.time() - t0:.1f}s; transcribing …", file=sys.stderr)
 
     language = None if args.language in ("auto", "", None) else args.language
-    segments, info = model.transcribe(
-        args.media,
-        beam_size=args.beam_size,
-        language=language,
-        vad_filter=True,
-        vad_parameters={"min_silence_duration_ms": 500},
-    )
+    # Decoding is pinned rather than left to the defaults, so two runs of the same
+    # file are comparable. temperature=0 removes the temperature-fallback ladder,
+    # whose retries are the loudest source of run-to-run drift; turning off
+    # condition_on_previous_text stops one diverging segment from re-steering
+    # every segment after it, which is how the same recording came back as 24
+    # segments one run and 31 the next. Exact bit-for-bit reproduction is still
+    # not promised — CTranslate2's CPU kernels vary with thread count — so the
+    # settings travel with the output instead of being assumed.
+    decode = {
+        "beam_size": args.beam_size,
+        "temperature": 0.0,
+        "condition_on_previous_text": False,
+        "vad_filter": True,
+        "vad_parameters": {"min_silence_duration_ms": 500},
+    }
+    segments, info = model.transcribe(args.media, language=language, **decode)
 
     duration = float(getattr(info, "duration", 0.0) or 0.0)
     out_segments = []
@@ -88,11 +98,27 @@ def main():
         "device": args.device,
         "compute_type": args.compute_type,
         "transcribe_seconds": round(time.time() - t1, 1),
+        "decode": decode,
+        "faster_whisper": _engine_version(),
         "segments": out_segments,
     }
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False)
     print(f"done: {len(out_segments)} segments in {payload['transcribe_seconds']}s", file=sys.stderr)
+
+
+def _engine_version():
+    """The faster-whisper build that produced this file.
+
+    Recorded because the payload's shape depends on it: a build that does not
+    expose the per-segment confidence scores yields a transcript nothing can
+    check mechanically, and without the version stamped here that is invisible
+    after the fact."""
+    try:
+        import faster_whisper
+        return getattr(faster_whisper, "__version__", None)
+    except Exception:  # noqa: BLE001 — a missing version never fails a run
+        return None
 
 
 def score(seg, name):

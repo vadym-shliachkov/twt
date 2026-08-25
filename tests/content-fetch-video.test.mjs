@@ -1,9 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import {
   slugify, extFromContentType, fmtTime, paragraphize, buildIndexMd, buildMetaMd, titleFrom,
   redactUrl, sourceLabel, isGenericName, detectIssues, properPhrases, buildReportTxt,
-  spliceReview, buildReviewRequest, REPORT_WIDTH, REVIEW_HEADING,
+  spliceReview, buildReviewRequest, REPORT_WIDTH, REVIEW_HEADING, verifyArtifacts,
+  parseCaptions, captionSegments, diffTranscripts, brightcoveRef, ingestCaptions,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -579,4 +583,361 @@ test('a flagged line reaches the review with its neighbours for context', () => 
     title: 'Q3', result: { ...result, segments }, issues: detectIssues({ segments }), wordBudget: 0,
   });
   assert.match(req, /in context: Before the hard bit\. The hard bit itself\. After the hard bit\./);
+});
+
+test('a title too long to be one phrase still meets the speech at the program name', () => {
+  const issues = detectIssues({
+    title: 'About New York Life Foundation’s Grief-Sensitive Schools Initiative®',
+    segments: segs([63, 71, 'In 2018 we developed the Grief Senses Schools Initiative, a program.']),
+  });
+  const hit = issues.variants.find((g) => g.forms.some((f) => /Senses/.test(f.phrase)));
+  assert.ok(hit, 'the mangled program name must be grouped with the title spelling');
+  assert.ok(hit.forms.some((f) => /Grief-Sensitive Schools Initiative/.test(f.phrase)),
+    'and the title spelling is the one it is grouped against');
+});
+
+test('a scoreless run is flagged at the run level, not just noted inside PART 3', () => {
+  const issues = detectIssues({ segments: segs([0, 4, 'plain segment.'], [4, 8, 'another one.']) });
+  assert.equal(issues.scored, false);
+  assert.ok(issues.run.some((r) => /no per-segment confidence/i.test(r)),
+    'an unchecked transcript must not be indistinguishable from a checked, clean one');
+});
+
+test('the caller saying it already keeps detectIssues from saying it twice', () => {
+  const warnings = ['This build returned no per-segment confidence scores — nothing could be flagged mechanically.'];
+  const issues = detectIssues({ segments: segs([0, 4, 'plain segment.']), warnings });
+  const said = issues.run.filter((r) => /no per-segment confidence/i.test(r));
+  assert.equal(said.length, 1, 'one phrasing of one fact');
+});
+
+test('a scored run says nothing about missing scores', () => {
+  const issues = detectIssues({ segments: scored([[0, 4, 'clear speech here.']]) });
+  assert.equal(issues.scored, true);
+  assert.ok(!issues.run.some((r) => /no per-segment confidence/i.test(r)));
+});
+
+test('_meta.md records the decode settings, so two runs can be told apart', () => {
+  const md = buildMetaMd({
+    source: 'https://cdn.test/talk.mp4', bytes: 2048,
+    result: {
+      duration: 61, model: 'small', device: 'cpu', compute_type: 'int8',
+      language: 'en', language_probability: 1, transcribe_seconds: 9, segments: [],
+      decode: { beam_size: 5, temperature: 0, condition_on_previous_text: false },
+      faster_whisper: '1.2.1',
+    },
+    warnings: [],
+  });
+  assert.match(md, /beam_size 5/, 'the beam width belongs in the record');
+  assert.match(md, /temperature 0/, 'so does the temperature, which is what pins the decode');
+  assert.match(md, /condition_on_previous_text off/);
+  assert.match(md, /faster-whisper 1\.2\.1/, 'the build decides whether the payload carries scores at all');
+  assert.match(md, /not guaranteed to reproduce/i, 'and the honest caveat travels with them');
+});
+
+test('_meta.md stays readable when the engine did not report its settings', () => {
+  const md = buildMetaMd({
+    source: '/local/talk.mp4',
+    result: {
+      duration: 61, model: 'small', device: 'cpu', compute_type: 'int8',
+      language: 'en', language_probability: 1, transcribe_seconds: 9, segments: [],
+    },
+    warnings: [],
+  });
+  assert.ok(!/Decode:/.test(md), 'no settings, no half-empty settings line');
+});
+
+// ---- artifact verification -----------------------------------------------------
+
+const stage = (over = {}) => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-verify-'));
+  const result = {
+    duration: 30, model: 'small', device: 'cpu', compute_type: 'int8',
+    language: 'en', language_probability: 1, transcribe_seconds: 9,
+    segments: segs([0, 10, 'First thing said.'], [10, 20, 'Second thing said.']),
+  };
+  const common = { source: 'https://cdn.test/a.mp4', slug: 'a-talk', title: 'A Talk', fetchedAt: '2026-08-25' };
+  writeFileSync(join(dir, 'index.md'), buildIndexMd({ ...common, result }));
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify(result));
+  writeFileSync(join(dir, '_meta.md'), buildMetaMd({ ...common, result, warnings: [] }));
+  writeFileSync(join(dir, 'transcript.txt'), buildReportTxt({
+    ...common, result, warnings: [], issues: detectIssues({ ...result, warnings: [] }),
+  }));
+  for (const [name, body] of Object.entries(over)) {
+    if (body === null) rmSync(join(dir, name), { force: true });
+    else writeFileSync(join(dir, name), body);
+  }
+  return dir;
+};
+
+test('a complete verbatim artifact set verifies clean', () => {
+  const v = verifyArtifacts(stage());
+  assert.deepEqual(v.problems, []);
+  assert.equal(v.ok, true);
+});
+
+test('the missing report is caught — that is the whole point of verifying', () => {
+  const v = verifyArtifacts(stage({ 'transcript.txt': null }));
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /transcript\.txt/.test(p) && /missing/i.test(p)));
+});
+
+test('an empty file is as missing as an absent one', () => {
+  const v = verifyArtifacts(stage({ 'index.md': '' }));
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /index\.md/.test(p) && /empty/i.test(p)));
+});
+
+test('a hand-written report is caught by the absence of the script\'s own scaffolding', () => {
+  const v = verifyArtifacts(stage({
+    'transcript.txt': 'TRANSCRIPT\n\nPART 3 - LIKELY TRANSCRIPTION ERRORS\n\nsome prose\n\nPART 4 - KEY FACTS\n',
+  }));
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /by hand|not.*produced by the script/i.test(p)),
+    'a report the script never wrote must not pass as one it did');
+});
+
+test('a segment count that disagrees between files means a stale copy', () => {
+  const dir = stage();
+  const stale = JSON.parse(readFileSync(join(dir, 'segments.json'), 'utf8'));
+  stale.segments = stale.segments.slice(0, 1);
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify(stale));
+  const v = verifyArtifacts(dir);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /segment count/i.test(p)),
+    'copying half a run into place is exactly the failure this catches');
+});
+
+test('an unreviewed report is reported as unfinished, not as broken', () => {
+  const v = verifyArtifacts(stage());
+  assert.equal(v.ok, true, 'a pending review is not a corrupt artifact set');
+  assert.equal(v.reviewed, false);
+  assert.ok(v.notes.some((n) => /review/i.test(n)));
+});
+
+test('a descriptive set is held to the descriptive files too', () => {
+  const dir = stage({ 'transcript.md': '# A Talk\n\ndescriptive body\n' });
+  const v = verifyArtifacts(dir);
+  assert.equal(v.descriptive, true);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /outline\.json/.test(p)),
+    'a descriptive transcript with no outline behind it was assembled from something else');
+});
+
+// ---- publisher captions --------------------------------------------------------
+
+const VTT = `WEBVTT
+X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0
+
+466c7f52-5cb4-4a2c-9787-5d6fdbc17576
+00:00.000 --> 00:02.845 align:middle line:84%
+In 2008, the New
+York Life Foundation
+
+bef2d799-2391-43bb-a2c9-5a75c3084d68
+00:02.845 --> 00:06.030 align:middle line:90%
+established childhood bereavement
+as a philanthropic focus.
+
+32cd8a73-27d9-474b-991a-96f14374ab27
+00:17.450 --> 00:20.990 align:middle line:84%
+lose by death a parent or sibling.
+`;
+
+const SRT = `1
+00:00:00,000 --> 00:00:02,845
+In 2008, the New
+York Life Foundation
+
+2
+00:00:02,845 --> 00:00:06,030
+established childhood bereavement.
+`;
+
+test('WebVTT cues parse with their times, cue ids and positioning stripped', () => {
+  const { format, cues } = parseCaptions(VTT);
+  assert.equal(format, 'vtt');
+  assert.equal(cues.length, 3);
+  assert.equal(cues[0].start, 0);
+  assert.equal(cues[0].end, 2.845);
+  assert.equal(cues[0].text, 'In 2008, the New York Life Foundation',
+    'a cue wrapped across two lines is one cue, and align:/line: are not text');
+  assert.equal(cues[2].start, 17.45);
+});
+
+test('SRT parses too — a publisher hands over whichever it has', () => {
+  const { format, cues } = parseCaptions(SRT);
+  assert.equal(format, 'srt');
+  assert.equal(cues.length, 2);
+  assert.equal(cues[0].end, 2.845, 'comma decimals are still decimals');
+});
+
+test('junk is rejected rather than parsed into an empty transcript', () => {
+  assert.equal(parseCaptions('<html><body>Not found</body></html>'), null);
+  assert.equal(parseCaptions(''), null);
+});
+
+test('fragment cues are rejoined into sentences that carry the opening timestamp', () => {
+  const segments = captionSegments(parseCaptions(VTT).cues);
+  assert.equal(segments[0].text, 'In 2008, the New York Life Foundation established childhood bereavement as a philanthropic focus.');
+  assert.equal(segments[0].start, 0, 'the sentence starts when its first cue did');
+  assert.equal(segments[1].text, 'lose by death a parent or sibling.');
+  assert.equal(segments[1].start, 17.45);
+});
+
+test('the captions catch the mishearing no confidence score can', () => {
+  const asr = segs([17, 22, 'will lose, by depth, a parent or a sibling.']);
+  const cap = segs([17, 22, 'will lose by death a parent or a sibling.']);
+  const found = diffTranscripts(asr, cap);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].at, '0:17');
+  assert.match(found[0].asr, /depth/);
+  assert.match(found[0].captions, /death/);
+});
+
+test('punctuation and casing are not disagreements', () => {
+  const asr = segs([0, 5, 'When, in fact, that is a Misconception.']);
+  const cap = segs([0, 5, 'when in fact that is a misconception']);
+  assert.deepEqual(diffTranscripts(asr, cap), [],
+    'flagging these would bury the real findings');
+});
+
+test('a run of differing words is one finding, not one finding per word', () => {
+  const asr = segs([36, 44, 'they formed the Coalition to Support Grieving Students.']);
+  const cap = segs([36, 44, 'they formed the Coalition to Help Bereaved Students.']);
+  const found = diffTranscripts(asr, cap);
+  assert.equal(found.length, 1, 'adjacent differences belong in one entry');
+  assert.equal(found[0].asr, 'Support Grieving');
+  assert.equal(found[0].captions, 'Help Bereaved');
+});
+
+test('a caption line the recognizer dropped entirely is reported as missing speech', () => {
+  const asr = segs([0, 5, 'one two three.']);
+  const cap = segs([0, 5, 'one two extra words here three.']);
+  const found = diffTranscripts(asr, cap);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].asr, '');
+  assert.match(found[0].captions, /extra words here/);
+});
+
+test('index.md prefers the publisher captions and says so in its frontmatter', () => {
+  const result = {
+    duration: 30, model: 'small', language: 'en',
+    segments: segs([0, 10, 'will lose, by depth, a parent.']),
+  };
+  const md = buildIndexMd({
+    source: 'https://cdn.test/a.mp4', slug: 'a-talk', title: 'A Talk', fetchedAt: '2026-08-25',
+    result, captionSegments: segs([0, 10, 'will lose by death a parent.']),
+  });
+  assert.match(md, /text_source: publisher-captions/);
+  assert.match(md, /captions: publisher-captions\.vtt/);
+  assert.match(md, /by death/, 'the publisher wrote this one; the recognizer only guessed');
+  assert.ok(!/by depth/.test(md), 'the guess must not be what downstream reads');
+});
+
+test('index.md says plainly when it is only the recognizer talking', () => {
+  const result = { duration: 30, model: 'small', language: 'en', segments: segs([0, 10, 'a line.']) };
+  const md = buildIndexMd({ source: 'https://cdn.test/a.mp4', slug: 'a', title: 'A', fetchedAt: '2026-08-25', result });
+  assert.match(md, /text_source: speech-recognition/);
+  assert.ok(!/captions:/.test(md));
+});
+
+test('PART 3 leads with the caption disagreements — they are the checkable ones', () => {
+  const result = {
+    duration: 30, model: 'small', device: 'cpu', compute_type: 'int8', language: 'en',
+    language_probability: 1, transcribe_seconds: 4,
+    segments: segs([17, 22, 'will lose, by depth, a parent.']),
+  };
+  const txt = buildReportTxt({
+    source: 'https://cdn.test/a.mp4', slug: 'a', title: 'A', fetchedAt: '2026-08-25',
+    result, warnings: [], issues: detectIssues({ ...result, warnings: [] }),
+    captionDiff: diffTranscripts(result.segments, segs([17, 22, 'will lose by death a parent.'])),
+  });
+  assert.match(txt, /PUBLISHER'S OWN CAPTIONS/);
+  assert.match(txt, /depth/);
+  assert.match(txt, /death/);
+});
+
+test('a Brightcove player page is recognized and its ids pulled out', () => {
+  const ref = brightcoveRef('https://players.brightcove.net/75123740001/2PUrdsPSa5_default/index.html?videoId=6342533385112');
+  assert.deepEqual(ref, { account: '75123740001', player: '2PUrdsPSa5_default', videoId: '6342533385112' });
+});
+
+test('a plain media URL is not mistaken for a player page', () => {
+  assert.equal(brightcoveRef('https://cdn.example.com/media/main.mp4'), null);
+  assert.equal(brightcoveRef('/local/file.mp4'), null);
+});
+
+test('caption artifacts are verified as a set, not one at a time', () => {
+  const dir = stage();
+  writeFileSync(join(dir, 'caption-diff.json'), JSON.stringify({ differences: [] }));
+  const v = verifyArtifacts(dir);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /publisher-captions\.vtt/.test(p)),
+    'a diff with no captions behind it is half a run');
+});
+
+test('index.md claiming caption provenance must have the captions to show for it', () => {
+  const dir = stage();
+  writeFileSync(join(dir, 'publisher-captions.vtt'), 'WEBVTT\n\n00:00.000 --> 00:01.000\nhi\n');
+  writeFileSync(join(dir, 'caption-diff.json'), JSON.stringify({ differences: [] }));
+  const v = verifyArtifacts(dir);
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /text_source/.test(p)),
+    'index.md still says speech-recognition while a caption track sits beside it');
+});
+
+test('a hyphen is a typographic choice, not a disagreement about the words', () => {
+  const asr = segs([0, 5, 'it is not a one-time event for grief-sensitive schools.']);
+  const cap = segs([0, 5, 'it is not a one time event for grief sensitive schools.']);
+  assert.deepEqual(diffTranscripts(asr, cap), [],
+    'six spurious findings train a reader to skim past the real ones');
+});
+
+test('a difference inside a hyphenated word is still caught, and shown whole', () => {
+  const asr = segs([63, 71, 'we developed the Grief Senses Schools Initiative.']);
+  const cap = segs([63, 71, 'we developed the Grief-Sensitive Schools Initiative.']);
+  const found = diffTranscripts(asr, cap);
+  assert.equal(found.length, 1);
+  assert.match(found[0].captions, /Grief-Sensitive/, 'the whole word is what the reader needs to see');
+  assert.match(found[0].asr, /Senses/);
+});
+
+test('ingesting a caption file stores it verbatim and records the disagreements', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-captions-'));
+  const vttPath = join(dir, 'src.vtt');
+  writeFileSync(vttPath, `WEBVTT
+
+00:17.450 --> 00:20.990
+lose by death a parent or sibling.
+`);
+  const warnings = [];
+  const asr = segs([17, 22, 'lose by depth a parent or sibling.']);
+  const out = await ingestCaptions({ captionsUrl: vttPath, outDir: dir, asrSegments: asr, warnings });
+
+  assert.equal(out.captions.length, 1);
+  assert.equal(out.diff.length, 1);
+  assert.match(readFileSync(join(dir, 'publisher-captions.vtt'), 'utf8'), /^WEBVTT/,
+    'the track is kept exactly as the publisher wrote it');
+  const recorded = JSON.parse(readFileSync(join(dir, 'caption-diff.json'), 'utf8'));
+  assert.equal(recorded.format, 'vtt');
+  assert.equal(recorded.cues, 1);
+  assert.match(recorded.differences[0].asr, /depth/);
+  assert.ok(warnings.some((w) => /disagrees with the recognizer in 1 place/.test(w)));
+});
+
+test('an unusable caption file warns and leaves the run standing', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-captions-'));
+  writeFileSync(join(dir, 'src.vtt'), '<html>404</html>');
+  const warnings = [];
+  const out = await ingestCaptions({
+    captionsUrl: join(dir, 'src.vtt'), outDir: dir, asrSegments: segs([0, 4, 'a line.']), warnings,
+  });
+  assert.equal(out.captions, null);
+  assert.ok(warnings.some((w) => /could not be used/.test(w) && /nothing to check it against/.test(w)));
+  assert.ok(!existsSync(join(dir, 'publisher-captions.vtt')), 'nothing half-written is left behind');
+});
+
+test('no caption track is not an error, just no second opinion', async () => {
+  const out = await ingestCaptions({ captionsUrl: null, outDir: mkdtempSync(join(tmpdir(), 'twt-c-')), asrSegments: [] });
+  assert.deepEqual(out, { captions: null, diff: null });
 });
