@@ -3,8 +3,8 @@ name: twt-wiki-define
 surface: internal
 user-invocable: false
 category: wiki
-description: (v1.0.12) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
-version: 1.0.12
+description: (v1.0.13) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
+version: 1.0.13
 accepts_arguments: true
 inputs:
   - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
@@ -72,7 +72,7 @@ If `.project-wiki/AGENTS.md` does not exist, stop: the wiki has not been initial
 Read `.project-wiki/AGENTS.md`. It is the wiki's own schema and it wins over your assumptions — if it and this skill disagree, follow `AGENTS.md` and say so in your report.
 
 ## Step 2b — Apply a focus argument (if given)
-Check `$ARGUMENTS` (see `skills/twt-curation-define/SKILL.md` Step 1b for the sibling pattern this follows). If it is empty, this is a full pass — curate everything pending and skip to Step 3 unchanged.
+Check `$ARGUMENTS`. If it is empty, this is a full pass — curate everything pending and skip to Step 3 unchanged.
 
 If `$ARGUMENTS` names a focus, it narrows Steps 3–5 to that scope only:
 - **`inbox only`** — drain `inbox.md` as normal, but skip Step 4 entirely: do not synthesize any source from `sources.md` this run.

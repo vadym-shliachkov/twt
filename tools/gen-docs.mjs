@@ -292,12 +292,17 @@ for (const { path, expectedName, source, plugin, pluginRoot } of sourceFiles) {
 skills.sort((a, b) => a.name.localeCompare(b.name));
 const byName = new Map(skills.map((s) => [s.name, s]));
 
-function isInternalOrchestratedRole(s) {
-  const match = s.name.match(/^(.*)-(define|validate)$/);
-  return Boolean(match && byName.has(match[1]));
-}
-
-const publicSkills = skills.filter((s) => !isInternalOrchestratedRole(s));
+// What the user-facing docs (SKILLS.md, the README table, the doc-hub site) list.
+// This keys off `surface:` — the declared field — and nothing else.
+//
+// It used to key off name shape instead: `*-define`/`*-validate` was hidden only
+// when a bare-stem sibling existed. That made a skill's visibility depend on an
+// unrelated skill: `brand` has `/twt-brand`, so `twt-brand-define` was hidden,
+// while `ia` has no `/twt-ia`, so `twt-ia-define` was published as a runnable
+// command — and `-fetch`, one of the three internal roles, never matched at all.
+// Eighteen `surface: internal` skills were documented as commands the `/` menu
+// (correctly, from `user-invocable: false`) would not offer.
+const publicSkills = skills.filter((s) => s.surface === "command");
 
 // reverse deps
 for (const s of skills) {

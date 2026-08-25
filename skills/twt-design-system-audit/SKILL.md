@@ -2,8 +2,8 @@
 name: twt-design-system-audit
 surface: command
 category: design-system
-description: (v1.6.3) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
-version: 1.6.3
+description: (v1.6.4) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
+version: 1.6.4
 accepts_arguments: true
 inputs:
   - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -129,9 +129,10 @@ Read `discovered_total` from the JSON output. Then ask via the **AskUserQuestion
 | 1 | Fetch all (N pages) | Audit every discovered page |
 | 2 | 10 pages | Quick sample |
 | 3 | Homepage only | Single-page audit (fastest) |
-| 4 | Stop | Abort the audit |
+| 4 | You decide | I pick: fetch all when `discovered_total` ≤ 25, else a 10-page sample |
+| 5 | Stop | Abort the audit |
 
-Set `<max>` from the answer: "Fetch all" → `discovered_total` (or 1000 if the discovery hit its cap); "10 pages" → 10; "Homepage only" → 1; "Stop" → exit.
+Set `<max>` from the answer: "Fetch all" → `discovered_total` (or 1000 if the discovery hit its cap); "10 pages" → 10; "Homepage only" → 1; "You decide" → resolve it by the rule above and say which way you went; "Stop" → exit.
 
 **Step 4b-ii — Full crawl**
 Run the bundled crawler — it fetches static HTML + linked CSS, extracts the per-page block inventory, and (in Step 5) clusters and scores it. **Run it directly; do not hunt for the tool.**
@@ -339,6 +340,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>"
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/tools/ds-shots.mjs" --out "<OUT>" --html-only
 ```
+  - **You decide** — I take the HTML-preview path and keep the audit moving, rather than blocking the run on an install.
 
 The script writes `<OUT>/shots/` (PNGs when Playwright ran), `<OUT>/previews/` (HTML embeds when html-only), and `<OUT>/visuals.json`. A block with no preview renders without a thumbnail — the card is still shown. Never re-run ds-shots after Playwright has already produced screenshots; the visuals.json it writes is consumed as-is by Step 7c.
 

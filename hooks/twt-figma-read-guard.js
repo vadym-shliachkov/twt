@@ -37,7 +37,15 @@ const tool = String(data.tool_name || '');
 // (use_figma, create_new_file, ...) and the cheap lookups are none of our
 // business, and get_variable_defs is the call we are asking FOR — nagging on it
 // would be backwards.
-if (!/^mcp__plugin_figma_figma__(get_design_context|get_metadata|get_screenshot)$/.test(tool)) {
+//
+// The server segment is matched loosely, not pinned to `plugin_figma_figma`:
+// that name is what the Figma *plugin* registers, but a user who configures the
+// Figma MCP server directly gets `mcp__figma__get_design_context`, and the whole
+// point of this hook is to cover the case where nothing else matched.
+// `figma` must be a whole underscore-delimited segment of the server name, so
+// `mcp__figma__` and `mcp__plugin_figma_figma__` match while some unrelated
+// `mcp__notfigmaatall__` does not.
+if (!/^mcp__(?:[a-z0-9]+_)*figma(?:_[a-z0-9]+)*__(get_design_context|get_metadata|get_screenshot)$/.test(tool)) {
   process.exit(0);
 }
 

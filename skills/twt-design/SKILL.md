@@ -2,8 +2,8 @@
 name: twt-design
 surface: command
 category: design
-description: (v1.3.8) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
-version: 1.3.8
+description: (v1.3.9) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
+version: 1.3.9
 accepts_arguments: true
 inputs:
   - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -108,7 +108,7 @@ A real brand-brief/spec decision still wins over taste defaults — the gate is 
 Run the design-system pass inline (the standalone `/twt-design-system` wrapper remains for direct use — routing through it here would add an agent hop that only relays). Skip if excluded by flags.
 
 1. **State choice** (only when `tokens.md` already exists): interactive → ask via **AskUserQuestion** (single-select, header "State"): **Use as-is** / **Refine** (address validation findings) / **Rebuild** (start over) / **You decide**. In collect mode → pick **Refine** when the sibling `validation-report.md` flags findings, else **Use as-is**, and record it as an auto-decision. Pass the choice into the define dispatch.
-2. Dispatch `/twt-design-system-define` (Agent tool) **with `subagent-collect`** (plus the state choice and any design sources), instructing it to **fold validation in**: self-check against the `/twt-design-system-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`.
+2. Dispatch `/twt-design-system-define` (Agent tool) **with `subagent-collect` and `fold-validation`** (plus the state choice and any design sources), instructing it to **fold validation in**: self-check against the `/twt-design-system-validate` rubric (§12), write the sibling `validation-report.md` in that format, and record Band/Health + any BLOCKER/WARNING + open decisions in `decisions.md`. No separate `/twt-design-system-validate` dispatch follows — `fold-validation` is what says so, and it is the only token that authorizes a define to write a validation report.
 3. Dispatch `/twt-component-define` (Agent tool) with `subagent-collect` — **always** — so `component/components.md` + `gallery.html` are produced from the just-written tokens (it reuses the `tokens.md §3` Primitive/Component/Module names). Best-effort: if it cannot run, note it and continue.
 
 Then **surface** per the protocol below (design-system `decisions.md` first; at most one finalize re-dispatch of define, which also refreshes the folded report).

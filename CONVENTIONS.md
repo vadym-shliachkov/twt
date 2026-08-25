@@ -150,6 +150,7 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 
 - Every `*-validate` skill may write **only** its own sibling `validation-report.md` — no other side effects
 - **Fold-in exception (§9 collect mode):** when an orchestrator folds validation into `define` (orchestrated/collect runs), `define` performs the validator's §12 rubric self-check and writes that same `validation-report.md` in the validator's place — so downstream synthesis can still aggregate BLOCKERs. The standalone `*-validate` skill itself stays read-only.
+- **The fold is authorized by its own token, `fold-validation` — never by `subagent-collect`.** The two mean different things: `subagent-collect` says "you are a subagent, do not call AskUserQuestion, bubble decisions up" (§13), and every orchestrator passes it on every dispatch. `fold-validation` says "no separate `*-validate` dispatch is coming, so produce its report yourself." Conflating them is a real bug this repo shipped: the six bare orchestrators passed `subagent-collect` unconditionally *and* attached the fold instruction unconditionally, so on the standalone path `define` wrote the full rubric report and the validator immediately re-ran and overwrote it — the expensive half of the pass, paid twice, discarded once. A `*-define` writes **no** `validation-report.md` unless it is handed `fold-validation`.
 
 ## 12. Validation report format
 
@@ -227,16 +228,16 @@ Uses `## Step N — <name>` headings in execution order. First step is typically
 - **`${CLAUDE_PLUGIN_ROOT}` resolves to the OWNING plugin's root.** A split-out skill's `${CLAUDE_PLUGIN_ROOT}/tools/x.mjs` reference is unchanged by the move — but the file it names must travel with it. `gen-docs` verifies each reference against its owner's root, so a tool left behind fails the build.
 - **Cross-plugin dependencies are legal but only as `soft`.** A `soft` dep resolves at runtime or degrades gracefully, which is exactly the semantics of "the user may not have installed that plugin". A `hard` dep across a plugin boundary is an install-order bug: keep hard-dependent skills in the same plugin.
 - **Discover plugins, never glob.** Author-time tooling uses `tools/lib/plugin-roots.mjs` (`pluginRoots`, `skillFiles`, `owningPlugin`); CI enumerates via `tools/list-skill-files.mjs`. A new plugin is picked up by registering it in `marketplace.json` — no tooling or workflow edit.
-- **Decide a split with `tools/split-readiness.mjs`, never by eye.** `node tools/split-readiness.mjs --preset <name>` (or a list of skill names) reports inbound/outbound dependency edges and, critically, **contested files** — bundled files the cluster needs that non-members also need. A file can live in exactly one plugin, so a contested file blocks the split outright. The tool follows computed data paths (`join(HERE, '..', 'templates', 'themes')`), not just import statements, and compares contested paths by directory containment — both were blind spots that produced a wrong "clean" verdict during the packaging work. `tests/split-readiness.test.mjs` pins them.
-- **Measured verdicts as of the 2026-08-22 packaging pass** — re-run the tool rather than trusting this list once the graph moves:
-  | Cluster | Verdict | Blocker |
+- **Decide a split with `tools/split-readiness.mjs`, never by eye.** `node tools/split-readiness.mjs --preset <name>` (or a list of skill names) reports inbound/outbound dependency edges and, critically, **contested files** — bundled files the cluster needs that non-members also need. Since vendoring, a contested file is a cost (`VENDORABLE`), not a blocker; the one fatal verdict is a `hard` dep across the boundary. The tool follows computed data paths (`join(HERE, '..', 'templates', 'themes')`), not just import statements, and compares contested paths by directory containment — both were blind spots that produced a wrong "clean" verdict during the packaging work. `tests/split-readiness.test.mjs` pins them.
+- **Measured verdicts as of 2026-08-25** — re-run the tool rather than trusting this list once the graph moves:
+  | Cluster | Verdict | Cost |
   |---|---|---|
   | `write-as-me` | SPLITTABLE — **shipped** | one soft edge to `twt-content-fetch` |
-  | `export` | BLOCKED | `templates/themes` — `tools/theme.mjs` (export) and `tools/house-style.mjs` (four monolith report tools) both read it at runtime |
-  | `figma-dev-audit` | BLOCKED | `tools/lib/contrast.mjs`; also six commands invoke `skills/twt-figma-dev-audit/tools/figma-dev-audit.mjs` directly |
-  | `audit` | BLOCKED | 9 contested files, 10 outbound edges into the pipeline |
-  | `content` | BLOCKED | 5 contested files, 17 inbound edges from 15 skills |
-- **Unblocking a cluster means breaking a file's shared ownership first, as its own change.** Do not bundle that into a packaging commit: splitting `export` requires either duplicating `doc-hub-light`'s CSS or refactoring what the four report tools use for styling, and the second changes generated report appearance. Land that visibly, then split.
+  | `export` | SPLITTABLE — **shipped** | one soft edge to `twt-brand-define`; `templates/themes` vendored |
+  | `figma-dev-audit` | VENDORABLE | 1 contested file (`tools/lib/contrast.mjs`); 3 inbound soft edges from the orchestrators |
+  | `audit` | VENDORABLE | 10 contested files, 10 outbound edges into the pipeline |
+  | `content` | VENDORABLE | 5 contested files, 17 inbound edges from 15 skills |
+- **A `VENDORABLE` verdict is a bill, not a green light.** It says the split is *possible* once `sync-kernel` copies the contested files; it says nothing about whether the duplication is worth it. `content`'s 17 inbound edges mean nearly every pipeline skill would depend on a separately-installable plugin — the reason it stays in the monolith is the edge count, not the files.
 - **Versions are per plugin.** The bump hook advances the `plugin.json` of each plugin that owns a bumped skill, plus `marketplace.json`'s registry version. A `twt-write-as-me` fix no longer moves the pipeline's version.
 - **Hooks belong to the plugin that ships them.** `hooks/hooks.json` is the monolith's; a split-out plugin has none unless it ships its own copy — which means duplicating the hook script and double-firing when both plugins are installed. Decide this per plugin; do not copy hooks reflexively.
 

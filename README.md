@@ -49,9 +49,6 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-block-map | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | /twt-block-preview | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| /twt-brand-fetch | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
-| /twt-component-define | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
-| /twt-component-validate | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | /twt-content-approval-implement | content | Apply ready approved XLSX content into the built site or development artifacts |
 | /twt-content-fetch | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
@@ -60,14 +57,10 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-content-fetch-pdf | content | Extract a PDF's text content and save as clean Markdown |
 | /twt-content-fetch-site | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
-| /twt-content-validate | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| /twt-curation-define | curation | Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines |
-| /twt-curation-validate | curation | Critique curation against brand voice, IA, and the facts ledger; write validation-report.md |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | /twt-design-system-audit | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
 | /twt-develop | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
-| /twt-direction-define | direction | Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md |
 | /twt-elementor-block-creator | elementor | Build an Elementor widget or full-page template following project conventions |
 | /twt-elementor-theme-creator | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
 | /twt-eval-smoke | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
@@ -77,24 +70,14 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-export-presentation | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | /twt-export-template-create | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | /twt-fidelity | fidelity | Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image |
-| /twt-fidelity-fetch | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
-| /twt-fidelity-measure | fidelity | Measure a built page against the reference spec and report every delta |
 | /twt-figma-design-system | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | /twt-figma-dev-audit | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | /twt-figma-mockup | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
-| /twt-figma-read | figma | Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest |
 | /twt-html-block-creator | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
-| /twt-ia-define | ia | Build or refine sitemap.md and functional-scope.md |
-| /twt-ia-validate | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | /twt-inherit-block-creator | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
-| /twt-inherit-define | inherit | Discover an existing project's architecture and derive build conventions from it |
 | /twt-launch-audit | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
-| /twt-layout-define | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
-| /twt-layout-validate | layout | Read-only critique of per-page layout specs into validation-report.md |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| /twt-mockup-define | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger |
-| /twt-mockup-validate | mockup | Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y) |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | /twt-project-intake | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
@@ -113,7 +96,6 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-status | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | /twt-text-analysis | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 | /twt-wiki | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
-| /twt-wiki-fetch | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox |
 | /twt-wiki-query | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 | /twt-write-as-me | voice | Generate or rewrite text in the author's own voice using their writing-style profile |
 | /twt-write-as-me-analysis | voice | Extract a reproducible writing-fingerprint profile from the author's own text samples |

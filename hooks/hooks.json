@@ -20,7 +20,7 @@
         ]
       },
       {
-        "matcher": "mcp__plugin_figma_figma__(get_design_context|get_metadata|get_screenshot)",
+        "matcher": "mcp__(?:[a-z0-9]+_)*figma(?:_[a-z0-9]+)*__(get_design_context|get_metadata|get_screenshot)",
         "hooks": [
           {
             "type": "command",

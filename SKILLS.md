@@ -13,9 +13,6 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-block-map](#twt-block-map) | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
 | [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| [/twt-brand-fetch](#twt-brand-fetch) | brand | Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes |
-| [/twt-component-define](#twt-component-define) | component | Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules) |
-| [/twt-component-validate](#twt-component-validate) | component | Read-only critique of components.md and gallery.html into validation-report.md |
 | [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
 | [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
@@ -24,14 +21,10 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
-| [/twt-content-validate](#twt-content-validate) | content | Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion |
-| [/twt-curation-define](#twt-curation-define) | curation | Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines |
-| [/twt-curation-validate](#twt-curation-validate) | curation | Critique curation against brand voice, IA, and the facts ledger; write validation-report.md |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
 | [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
 | [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
-| [/twt-direction-define](#twt-direction-define) | direction | Render 2–3 competing visual-direction style tiles and lock the chosen one into design-read.md |
 | [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
 | [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
 | [/twt-eval-smoke](#twt-eval-smoke) | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
@@ -41,24 +34,14 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
 | [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
 | [/twt-fidelity](#twt-fidelity) | fidelity | Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image |
-| [/twt-fidelity-fetch](#twt-fidelity-fetch) | fidelity | Acquire a reference (Figma frame, live URL, or image) into a measured reference-spec |
-| [/twt-fidelity-measure](#twt-fidelity-measure) | fidelity | Measure a built page against the reference spec and report every delta |
 | [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
 | [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
 | [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
-| [/twt-figma-read](#twt-figma-read) | figma | Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest |
 | [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
-| [/twt-ia-define](#twt-ia-define) | ia | Build or refine sitemap.md and functional-scope.md |
-| [/twt-ia-validate](#twt-ia-validate) | ia | Critique sitemap.md + functional-scope.md against positioning and content; write report |
 | [/twt-inherit-block-creator](#twt-inherit-block-creator) | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
-| [/twt-inherit-define](#twt-inherit-define) | inherit | Discover an existing project's architecture and derive build conventions from it |
 | [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
-| [/twt-layout-define](#twt-layout-define) | layout | Define per-page layout specs (section order, component slots, content map, breakpoints) |
-| [/twt-layout-validate](#twt-layout-validate) | layout | Read-only critique of per-page layout specs into validation-report.md |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| [/twt-mockup-define](#twt-mockup-define) | mockup | Render fully-responsive plain-HTML/CSS page mockups from layouts, components, real content, and the facts ledger |
-| [/twt-mockup-validate](#twt-mockup-validate) | mockup | Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y) |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
 | [/twt-project-intake](#twt-project-intake) | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
@@ -77,7 +60,6 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
 | [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
-| [/twt-wiki-fetch](#twt-wiki-fetch) | wiki | Ingest an external source (file, URL, doc, transcript, asset) into the project wiki's raw evidence layer, or sync existing .twt-artifacts/ decisions into the inbox |
 | [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
 | [/twt-write-as-me](#twt-write-as-me) | voice | Generate or rewrite text in the author's own voice using their writing-style profile |
 | [/twt-write-as-me-analysis](#twt-write-as-me-analysis) | voice | Extract a reproducible writing-fingerprint profile from the author's own text samples |
@@ -284,128 +266,6 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 
 ---
 
-## /twt-brand-fetch
-
-**Category:** brand
-**Version:** 1.1.4
-**Accepts arguments:** yes
-
-Pull whatever brand signal exists — from a provided source (brand book PDF, Figma file, screenshots, live site) or, when no source is given, from project artifacts and any discoverable site URL — into a raw notes file (plus a coverage manifest) that `/twt-brand-define` refines into the canonical brief.
-
-**Inputs:**
-- A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-content-fetch-pdf, figma-mcp, WebFetch
-
-**Reads:**
-- <brand source>
-- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
-- references/brand-book-checklist.md
-- .twt-artifacts/pre-design/content/fetched/_manifest.md
-- .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/spec/specification.md
-
-**Writes:**
-- .twt-artifacts/pre-design/brand/_fetched-brand.md
-- .twt-artifacts/pre-design/brand/_coverage.md
-
-**Non-goals:**
-- Doesn't produce the canonical `brand-brief.md` (that's `/twt-brand-define`)
-- Doesn't invent brand attributes when the sources are silent — records gaps instead
-- Doesn't validate quality (that's `/twt-brand-validate`)
-
-**Success criteria:**
-- `_fetched-brand.md` captures every brand attribute found, tagged with where it came from
-- Missing attributes are explicitly listed as gaps
-- With no brand source, still produces `_fetched-brand.md` + `_coverage.md` from project artifacts (and the site if a URL exists), recording gaps rather than inventing values
-- `_coverage.md` has one row per `references/brand-book-checklist.md` part with a `Found/Partial/Silent/Not-extracted` status and a source tag
-- Runs without prompting when dispatched by `/twt-brand`
-
----
-
-## /twt-component-define
-
-**Category:** component
-**Version:** 1.3.14
-**Accepts arguments:** yes
-
-Document the component library the site needs — anatomy, variants, states, tokens, and responsive behavior per component, organized by **component-hierarchy level (Primitives → Components → Modules)** — and render the **exhaustive** variant/state catalog into a token-driven `gallery.html`. This is the **depth** counterpart to the design-system `preview.html` (**breadth** — every component once, organized by level); here every component appears with all its variants and states. (Levels are the atomic-design model relabelled: Atoms → Primitives, Molecules → Components, Organisms → Modules.)
-
-**Inputs:**
-- Optional: which components to (re)define; otherwise derive from IA/outlines
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/design-read.md
-- references/external-design-skills.md
-- .twt-artifacts/design/design-system/component/validation-report.md
-
-**Writes:**
-- .twt-artifacts/design/design-system/component/components.md
-- .twt-artifacts/design/design-system/component/gallery.html
-- .twt-artifacts/design/design-system/component/decisions.md
-
-**Non-goals:**
-- Doesn't invent components the IA/outlines don't need
-- Doesn't hardcode foundation values — components reference tokens from `tokens.css`
-- Doesn't re-render the breadth evolution showcase (every component once, by level) — that's the design-system `preview.html`; this is the full variant/state catalog (depth)
-- Doesn't build production code (Phase 3 owns that)
-
-**Success criteria:**
-- `components.md` documents each component with anatomy · variants · states · tokens · responsive behavior
-- `gallery.html` is scaffolded by `gen-gallery.mjs` (chrome + cell shells), links `../tokens.css`, and every `gal:fill` slot is filled with the component's variants/states (`--check` reports zero unfilled slots and zero inventory mismatches)
-- Idempotent: refines an existing `components.md` (reading `validation-report.md`) instead of overwriting (rule 10)
-
----
-
-## /twt-component-validate
-
-**Category:** component
-**Version:** 1.0.6
-**Accepts arguments:** no
-
-Read-only critique of the component library — token-only styling, reuse/composition quality, state/variant coverage, accessibility affordances, and spec clarity — written to `validation-report.md`.
-
-**Inputs:**
-- none (reads the component artifacts)
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/design-system/component/components.md
-- .twt-artifacts/design/design-system/component/gallery.html
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/design/design-system/tokens.md
-- .twt-artifacts/pre-design/ia/sitemap.md
-
-**Writes:**
-- .twt-artifacts/design/design-system/component/validation-report.md
-
-**Non-goals:**
-- Doesn't modify `components.md` or `gallery.html` (read-only; rule 11)
-- Doesn't fix findings — that's `/twt-component-define`'s job
-- Doesn't invent missing components, only flags them
-
-**Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
-- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
-- Every finding has Where / Problem / Recommendation, with Problem citing evidence
-- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
-- If `components.md` is missing, aborts pointing to `/twt-component-define`
-
----
-
 ## /twt-content-approval-checklist
 
 **Category:** content
@@ -504,7 +364,7 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.6
+**Version:** 1.1.7
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
@@ -622,8 +482,8 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 - <pdf-path>
 
 **Writes:**
-- .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
-- .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md
+- .twt-artifacts/pre-design/content/fetched/pdf/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/pdf/<filename>/_meta.md
 
 **Non-goals:**
 - Not OCR for scanned/image-only PDFs — text-layer extraction only (flag when a PDF appears image-only)
@@ -631,7 +491,7 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 - Doesn't extract embedded images as files (notes their presence only)
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content/fetched/doc/<filename>/`
+- Output appears under `.twt-artifacts/pre-design/content/fetched/pdf/<filename>/`
 - `index.md` has frontmatter (source path, title, fetched-at, page count)
 - Headings and lists are preserved where the PDF's text structure allows
 
@@ -715,131 +575,10 @@ Improve a text using the `/twt-content-validate` rubric as the rating engine —
 
 ---
 
-## /twt-content-validate
-
-**Category:** content
-**Version:** 1.1.2
-**Accepts arguments:** yes
-
-Read-only content-quality critic — score any text against an 8-criterion UX-writing rubric (Information Style / «Пиши и сокращай», NN/g, GOV.UK content design) and write a `validation-report.md` where **every score is justified by verbatim evidence and explicit reasoning**. It rates and explains; it never rewrites (that's `/twt-content-optimize`).
-
-**Inputs:**
-- Optional subject — a file path, pasted text, or nothing (then prompt for one)
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-content-fetch-site
-
-**Reads:**
-- the subject text (user-supplied file or pasted text, or a .twt-artifacts content artifact)
-- .twt-artifacts/pre-design/brand/brand-brief.md
-
-**Writes:**
-- .twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md
-
-**Non-goals:**
-- Never edits the subject text or any upstream artifact (rule 11 — writes only its own report)
-- Doesn't rewrite or suggest full replacement drafts (findings carry short suggested rewrites only)
-- Doesn't audit IA/sitemap coverage or lorem placeholders on built pages (that's `/twt-qa-content`)
-
-**Success criteria:**
-- `.twt-artifacts/content-quality/validation/<subject-slug>/validation-report.md` opens with the fixed 8-criterion weighted **Scorecard** (weights sum to 100) yielding **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50) — per-subject path, so reports for different texts never overwrite each other
-- A `## Rating reasoning` section gives, per criterion: the score rationale, ≥1 verbatim quote from the subject as evidence, and improvement opportunities — no score without a quote
-- Every criterion scoring ≤3 yields at least one Finding (Where / Problem / Recommendation / Suggested rewrite / Expected impact)
-- The report names the subject (path or "pasted text") so a future run can compare
-
----
-
-## /twt-curation-define
-
-**Category:** curation
-**Version:** 1.2.1
-**Accepts arguments:** yes
-
-Turn raw fetched content into a curated plan: a flat `inventory.md` of keep/skip/elevate decisions mapped to pages, plus one `outlines/<page-slug>.md` per page showing what content fills each section.
-
-**Inputs:**
-- Optional answers; otherwise interactive
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define
-
-**Reads:**
-- .twt-artifacts/pre-design/content/fetched/
-- .twt-artifacts/pre-design/brand/brand-brief.md
-- .twt-artifacts/pre-design/brand/_fetched-brand.md
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/audience/personas.md
-- .twt-artifacts/pre-design/curation/inventory.md
-- .twt-artifacts/pre-design/curation/facts.md
-- .twt-artifacts/pre-design/curation/validation-report.md
-
-**Writes:**
-- .twt-artifacts/pre-design/curation/inventory.md
-- .twt-artifacts/pre-design/curation/facts.md
-- .twt-artifacts/pre-design/curation/outlines/<page-slug>.md
-- .twt-artifacts/pre-design/curation/decisions.md
-
-**Non-goals:**
-- Doesn't fetch content (reads content-fetch outputs)
-- Doesn't define the sitemap (reads it from IA)
-- Doesn't critique itself; never overwrites without consent
-
-**Success criteria:**
-- `inventory.md` lists every fetched item with a KEEP/SKIP/ELEVATE decision and a target page (or none)
-- One `outlines/<page-slug>.md` exists for each page in `sitemap.md`
-- Every outline section carries drafted, on-brand transformed copy (or a `> GAP` marker) — never a raw source excerpt
-- Outlines contain final-intent **transformed copy**, not source excerpts; verbatim-mirrored copy is a curation defect (see `twt-curation-validate`'s 'Copy transformed not mirrored' criterion)
-- `facts.md` exists and reconciles every reusable fact across all sources: agreeing sources → RESOLVED, disagreeing sources → CONFLICT (canonical TBD, never a silent pick), generic-example-pinned-to-named-client → UNVERIFIED-ATTR, absent → TBD; plus a provided-assets table. Outlines never emit a reusable-fact value that contradicts `facts.md`
-- Re-run enters refinement mode
-
----
-
-## /twt-curation-validate
-
-**Category:** curation
-**Version:** 1.2.3
-**Accepts arguments:** no
-
-Act as a curation critic — read `inventory.md` and all `outlines/*.md`, score them against a weighted rubric, find coverage gaps, voice mismatches, invented content, and missing gap markers, and write a structured `validation-report.md` recommending fixes.
-
-**Inputs:**
-- (none — reads curation artifacts and upstream)
-
-**Dependencies:**
-- Hard: twt-curation-define
-- Soft: twt-content-validate
-
-**Reads:**
-- .twt-artifacts/pre-design/curation/inventory.md
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/pre-design/curation/facts.md
-- .twt-artifacts/pre-design/brand/brand-brief.md
-- .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/ia/sitemap.md
-
-**Writes:**
-- .twt-artifacts/pre-design/curation/validation-report.md
-
-**Non-goals:**
-- Writes only its own `validation-report.md` (rule 11); never edits inventory.md or any outline
-- Recommends fixes, doesn't apply them
-- Doesn't re-curate or rewrite outlines
-
-**Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
-- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
-- Every finding has Where / Problem / Recommendation, with Problem citing evidence
-- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
-- Aborts to `/twt-curation-define` if `inventory.md` is missing
-
----
-
 ## /twt-design
 
 **Category:** design
-**Version:** 1.3.8
+**Version:** 1.3.9
 **Accepts arguments:** yes
 
 Drive the whole design phase end to end — design-system → component → layout → mockup — then synthesize a single `design-brief.md` that hands off to Phase 3 (Development).
@@ -928,7 +667,7 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 ## /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.6.3
+**Version:** 1.6.4
 **Accepts arguments:** yes
 
 Audit how good a design system is **and** how consistently a real design follows it. Given a Figma file and/or a live site, score the design system on **5 separate quality scores** (when one is provided or synthesized) and extract **every block on every page**, cluster near-duplicates, and report each block that drifts — naming the **exact page + exact block + what differs + why + the fix**. When no design system is provided, **synthesize a canonical one** from the real structure first, then measure every block against it — so a weak, inconsistent design is judged against the consistent system it should have had.
@@ -1027,51 +766,6 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 - After the pilot is approved, the remaining pages are promoted as a **single parallel batch**, then their shared-file deltas are merged and de-duplicated serially — **except `inherit`**, which promotes the remaining pages **serially, one at a time** (Step 4b-inherit) instead of a parallel batch, because its consolidated-approval contract wins over the speed optimization
 - Approved workbook rows are **not** applied by this skill; after stakeholder confirmation, the user explicitly runs `/twt-content-approval-implement` to update the corresponding blocks/pages
 - Reports what was built per page and anything to follow up before Phase 4
-
----
-
-## /twt-direction-define
-
-**Category:** direction
-**Version:** 1.0.1
-**Accepts arguments:** yes
-
-Before any tokens are committed, render the brand as **2–3 genuinely distinct visual directions** — small self-contained HTML "style tiles" built from real Phase-1 copy — so the user chooses the site's aesthetic **by looking**, not by reading dial numbers. The winning direction is locked into `design-read.md`, which every design sub-area inherits. This mirrors the pilot-page gate in Development: catch a wrong direction after one cheap artifact, not after the full design-system → components → layouts → mockups chain.
-
-**Inputs:**
-- "Optional: number of directions (2 or 3, default 3); or a chosen direction slug / resolved answers (finalize mode)"
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/pre-design/brand/brand-brief.md
-- .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/spec/specification.md
-- .twt-artifacts/design/design-read.md
-- references/external-design-skills.md
-- .twt-artifacts/design/direction/directions.md
-
-**Writes:**
-- .twt-artifacts/design/direction/directions.md
-- .twt-artifacts/design/direction/tiles/
-- .twt-artifacts/design/direction/index.html
-- .twt-artifacts/design/direction/decisions.md
-- .twt-artifacts/design/design-read.md
-
-**Non-goals:**
-- Not a design system — tiles are throwaway comparison artifacts; no `tokens.css`, no `components.md` (that's `/twt-design-system-define` / `/twt-component-define`)
-- Doesn't invent copy — tiles reuse real headline/CTA/body lines from positioning/brand, and the **same content appears in every tile** so only the design varies
-- Doesn't run when a Figma/exported design drives the project — that design is authoritative; direction exploration is for the no-source (greenfield) path
-- Doesn't loop generating endless variants — one set, one pick, at most one revision pass
-
-**Success criteria:**
-- 2–3 tiles at `direction/tiles/<slug>.html`, each self-contained, each a visibly different aesthetic family, all sharing identical real content
-- `index.html` compares them side by side with a per-direction spec table
-- `directions.md` documents every candidate (family, type pairing, palette, shape/density, motion, dials) and carries a `chosen:` field
-- On finalize, `design-read.md` reflects the chosen direction with `status: confirmed` (user picked) or `model-decided` (You decide / unattended)
-- Idempotent: an existing tile set is refined or re-used, never silently re-rendered from scratch (rule 10)
 
 ---
 
@@ -1479,92 +1173,6 @@ Turn "close to the reference" into "measured against it." Acquire a reference (a
 
 ---
 
-## /twt-fidelity-fetch
-
-**Category:** fidelity
-**Version:** 1.0.2
-**Accepts arguments:** yes
-
-Turn a reference — a Figma frame, a live URL, or an image — into `reference-spec.json` (or `reference-spec-estimated.json`) plus reference PNGs, so `/twt-fidelity`'s diff loop has something concrete to measure a build against.
-
-**Inputs:**
-- A Figma URL, a site URL, or a local image path
-- --name <target-slug>, --root <selector-or-node>, --widths <csv>
-
-**Dependencies:**
-- Hard: none
-- Soft: figma-mcp
-
-**Reads:**
-- $ARGUMENTS (reference source, --name, --root, --widths)
-
-**Writes:**
-- .twt-artifacts/fidelity/<target-slug>/reference-spec.json
-- .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
-- .twt-artifacts/fidelity/<target-slug>/reference/
-- .twt-artifacts/fidelity/<target-slug>/decisions.md
-
-**Non-goals:**
-- Does not build anything — it only acquires and records a reference
-- Does not judge design quality — it captures numbers and pixels, not opinions
-- Never writes outside `.twt-artifacts/fidelity/<target-slug>/`
-
-**Success criteria:**
-- Exactly one of `reference-spec.json` / `reference-spec-estimated.json` exists for the target slug, and its name is never wrong about whether the numbers inside it were measured or guessed
-- Every captured width has a matching `reference/<width>.png` (url, figma) or `reference/<width>.<ext>` matching the source image's own extension (image adapter)
-- A Figma file with only one usable frame produces a spec that says it captured one width — never three
-- Re-run with the same `--name` overwrites cleanly, including across a different adapter — never leaves both `reference-spec.json` and `reference-spec-estimated.json` on disk for the same target slug at once (this skill has no refinement mode of its own; `/twt-fidelity` owns re-acquisition decisions)
-
----
-
-## /twt-fidelity-measure
-
-**Category:** fidelity
-**Version:** 1.0.1
-**Accepts arguments:** yes
-
-Measure an already-built page against the reference spec `/twt-fidelity-fetch` produced, diff the two, and write a deterministic, tolerance-gated report of every property that drifted — so the fix loop this skill feeds has a real measurement to stop on, never a model's opinion.
-
-**Inputs:**
-- --name <target-slug>, --built <url-or-file>, --root <selector>, --mode system|strict, --iteration <n>
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/fidelity/<target-slug>/reference-spec.json
-- .twt-artifacts/fidelity/<target-slug>/reference-spec-estimated.json
-- .twt-artifacts/fidelity/<target-slug>/reference/
-- .twt-artifacts/fidelity/<target-slug>/summary.json
-
-**Writes:**
-- .twt-artifacts/fidelity/<target-slug>/measured.json
-- .twt-artifacts/fidelity/<target-slug>/deltas.json
-- .twt-artifacts/fidelity/<target-slug>/summary.json
-- .twt-artifacts/fidelity/<target-slug>/built/
-- .twt-artifacts/fidelity/<target-slug>/diff/
-- .twt-artifacts/fidelity/<target-slug>/pixdiff.json
-- .twt-artifacts/fidelity/<target-slug>/validation-report.md
-- .twt-artifacts/fidelity/<target-slug>/validation-report-estimated.md
-- .twt-artifacts/fidelity/<target-slug>/fidelity-report.html
-- .twt-artifacts/fidelity/<target-slug>/fidelity-report-estimated.html
-
-**Non-goals:**
-- Writes nothing outside `.twt-artifacts/fidelity/<target-slug>/`.
-- Never edits the build. It only reads it.
-- Never re-runs the builder — producing or updating the build is the orchestrator's job (`/twt-fidelity`); this skill is handed a finished `--built` target and measures it as-is.
-- Never reads `deltas.json` or `measured.json` into model context. They are script-to-script artifacts — see Step 4.
-- Never renders a score for a run it could not measure (Step 2's NOT VERIFIED path).
-
-**Success criteria:**
-- Every run produces exactly one of: a full measured/estimated report pair (`validation-report(-estimated).md` + `fidelity-report(-estimated).html`), or — on the unverified path — a single `validation-report(-estimated).md`, filename chosen the same way the measured path chooses it, that says NOT VERIFIED and emits no score, and no `.html` file at all.
-- An estimated reference (`reference-spec-estimated.json`) never produces a report under the measured filenames (`validation-report.md` / `fidelity-report.html`) — that ambiguity is exactly what `spec.mjs`'s `reportBasenames()` exists to prevent, applied by the CLI itself since `spec.mjs` has no CLI of its own.
-- The model's own context never holds `deltas.json` or `measured.json` — only `summary.json` (capped, markup-free) and, when a pixel finding cannot be expressed numerically, a single heatmap screenshot.
-- A missing reference spec, a measurement failure, or a diff-CLI failure each stop the run with the tool's own stderr message reported verbatim — never a guessed explanation.
-
----
-
 ## /twt-figma-design-system
 
 **Category:** figma-export
@@ -1698,40 +1306,6 @@ Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.htm
 
 ---
 
-## /twt-figma-read
-
-**Category:** figma
-**Version:** 1.0.0
-**Accepts arguments:** yes
-
-Make one Figma read trustworthy, wherever it happens. The pipeline skills each read Figma as a step inside a larger job; this skill is the same discipline available on its own, for the far more common case — ordinary project work where someone points at a Figma frame and asks for it to be built. Without it, an ad-hoc read reaches for `get_design_context` and a screenshot, skips the file's variables entirely, and hands back hex codes and pixel numbers with no way to tell a design token from a one-off value.
-
-**Inputs:**
-- a Figma file, frame, or node URL (in $ARGUMENTS, or already in the conversation)
-
-**Dependencies:**
-- Hard: none
-- Soft: figma-mcp
-
-**Reads:**
-- (none)
-
-**Writes:**
-- (none)
-
-**Non-goals:**
-- Does not write artifacts, and does not create a `.twt-artifacts/` tree — it is a reading discipline, not a pipeline phase
-- Does not implement the design; it hands back a faithful reading for whatever build step follows
-- Does not replace `figma:figma-design-to-code` — it loads it and adds to it
-- Does not measure a built page against the design (that is `/twt-fidelity`)
-
-**Success criteria:**
-- Every value reported is traceable to a node in the tree or explicitly labelled an estimate
-- Variables are resolved to names wherever a value binds to one
-- The reply states plainly what was read and what was not (frames skipped, states not present, values guessed)
-
----
-
 ## /twt-html-block-creator
 
 **Category:** html
@@ -1822,84 +1396,6 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 
 ---
 
-## /twt-ia-define
-
-**Category:** ia
-**Version:** 1.1.1
-**Accepts arguments:** yes
-
-Produce the canonical site structure — `sitemap.md` (page hierarchy with purpose + CTA) and `functional-scope.md` (global/per-page features and integrations) — from scratch or refined.
-
-**Inputs:**
-- Optional answers; otherwise interactive
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-positioning-define, twt-audience-define, twt-content-fetch
-
-**Reads:**
-- .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/audience/personas.md
-- .twt-artifacts/pre-design/content/fetched/
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/ia/functional-scope.md
-- .twt-artifacts/pre-design/ia/validation-report.md
-
-**Writes:**
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/ia/functional-scope.md
-- .twt-artifacts/pre-design/ia/decisions.md
-
-**Non-goals:**
-- Doesn't decide per-item content keep/skip (that's `/twt-curation-define`)
-- Doesn't design pages or pick components
-- Doesn't critique itself; never overwrites without consent
-
-**Success criteria:**
-- Both `sitemap.md` and `functional-scope.md` exist with all sections populated or TBD
-- Every page has a stated purpose and primary CTA
-- Re-run enters refinement mode for both files
-
----
-
-## /twt-ia-validate
-
-**Category:** ia
-**Version:** 1.0.2
-**Accepts arguments:** no
-
-Act as an IA critic — read `sitemap.md` and `functional-scope.md`, score them against a weighted rubric, find coverage gaps, navigation problems, unclear page purposes, scope omissions, and positioning misalignment, and write a structured `validation-report.md` recommending fixes.
-
-**Inputs:**
-- (none — reads IA artifacts and upstream)
-
-**Dependencies:**
-- Hard: twt-ia-define
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/ia/functional-scope.md
-- .twt-artifacts/pre-design/positioning/positioning.md
-- .twt-artifacts/pre-design/content/fetched/
-
-**Writes:**
-- .twt-artifacts/pre-design/ia/validation-report.md
-
-**Non-goals:**
-- Writes only its own `validation-report.md` (rule 11); never edits sitemap.md or functional-scope.md
-- Recommends fixes, doesn't apply them
-- Doesn't redesign the sitemap or rewrite the functional scope
-
-**Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
-- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
-- Every finding has Where / Problem / Recommendation, with Problem citing evidence
-- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
-- If BOTH `sitemap.md` and `functional-scope.md` are missing, aborts pointing to `/twt-ia-define`
-
----
-
 ## /twt-inherit-block-creator
 
 **Category:** inherit
@@ -1939,48 +1435,6 @@ Build a page or block **into an existing project's own architecture** — the co
 - Files written match the host's idiom: exemplar directory placement, naming, import style, and co-located test/story files where the exemplars have them.
 - Styling uses the host's own system per `token-map.md` — snapped values in `host` mode, named scale extensions in `--exact` mode — never an inline arbitrary-value escape, and never an invented literal for an `unmapped` token.
 - The report lists files created, files modified (or the TODO list if modifications were declined), the reuse decision, any unmapped tokens that affected the build, and any dependency decisions.
-
----
-
-## /twt-inherit-define
-
-**Category:** inherit
-**Version:** 1.0.3
-**Accepts arguments:** yes
-
-Read an existing project's codebase — its own framework, styling system, component idiom, and file layout — and derive `.twt-artifacts/inherited/conventions.md`, the contract every later `inherit`-target step (the block creator, the target descriptor, asset sync) reads instead of assuming a twt-scaffolded layout.
-
-**Inputs:**
-- Optional project root (defaults to the working directory); optional --workspace <name>; optional --exact
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/design-system/tokens.css
-- the host project's source tree (read-only)
-
-**Writes:**
-- .twt-artifacts/inherited/detection.json
-- .twt-artifacts/inherited/conventions.md
-- .twt-artifacts/inherited/exemplars.md
-- .twt-artifacts/inherited/token-map.md
-- .twt-artifacts/inherited/host-style.json
-- .twt-artifacts/inherited/decisions.md
-- .twt-artifacts/inherited/<tailwind.config.extension.js|_tokens.scss|theme.tokens.js>
-
-**Non-goals:**
-- **Never modifies the host project.** This skill is read-only on the codebase it inspects — every file it writes lives under `.twt-artifacts/inherited/`. Only the builder (`/twt-inherit-block-creator`) ever writes into the host.
-- Does not scaffold a new project structure (there's already one — that's the point of `inherit`).
-- Does not install any dependency, config, or tool into the host.
-- Does not retrofit the host's existing components to match the design system. It documents the host's idiom as-is; making anything conform to it is later work, done with the user watching.
-
-**Success criteria:**
-- `conventions.md` opens with a `## Detected` block (stack, styling system, component idiom, routing, asset root — each with confidence and evidence) and has all seven sections (Partials, Scoping, Tokens, Responsive tiers, Content, Reuse-first, File layout) populated from real exemplar files, each citing the file it was learned from.
-- The **File layout** section names the host's actual static-asset root — a later step (asset sync) has nothing to bind to if this is vague or missing.
-- No `medium`-confidence, load-bearing signal was ever silently promoted into a written convention without the user seeing it first.
-- The user saw the Detected block, the exemplar paths, and the token-map summary and explicitly accepted them — via the Step 7 review gate in an interactive run, or via `decisions.md` in collect mode — before the run reports success.
 
 ---
 
@@ -2034,90 +1488,10 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 
 ---
 
-## /twt-layout-define
-
-**Category:** layout
-**Version:** 1.3.2
-**Accepts arguments:** yes
-
-For every page in the sitemap, define a layout spec — section order, the components each section composes, the mapping from sections to real Phase-1 outline content, and desktop/tablet/mobile behavior.
-
-**Inputs:**
-- Optional: which page(s) to (re)define; otherwise all sitemap pages
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-audience-define
-
-**Reads:**
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/audience/personas.md
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/design-system/component/components.md
-- .twt-artifacts/design/design-read.md
-- references/external-design-skills.md
-- .twt-artifacts/design/layout/validation-report.md
-
-**Writes:**
-- .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/layout/decisions.md
-- .twt-artifacts/design/assets/manifest.md
-
-**Non-goals:**
-- Doesn't render HTML (that's `/twt-mockup-define`)
-- Doesn't define components (consumes `components.md`)
-- Doesn't invent content — maps to Phase-1 outlines
-
-**Success criteria:**
-- One `layouts/<page-slug>.md` per sitemap page
-- Every section names component(s) that exist in `components.md` and maps to an outline section
-- All three breakpoints (desktop/tablet/mobile) defined per section
-- Idempotent: refines existing layout files (reading `validation-report.md`) (rule 10)
-
----
-
-## /twt-layout-validate
-
-**Category:** layout
-**Version:** 1.0.2
-**Accepts arguments:** no
-
-Read-only critique of the page layouts — section order & hierarchy, component-slot fit, content-map completeness, responsive intent, and IA consistency — written to `validation-report.md`.
-
-**Inputs:**
-- none (reads the layout artifacts)
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/pre-design/ia/sitemap.md
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/design/design-system/component/components.md
-
-**Writes:**
-- .twt-artifacts/design/layout/validation-report.md
-
-**Non-goals:**
-- Doesn't modify any layout file (read-only; rule 11)
-- Doesn't fix findings — that's `/twt-layout-define`'s job
-- Doesn't author new layouts
-
-**Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (5 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
-- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
-- Every finding has Where / Problem / Recommendation, with Problem citing evidence
-- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
-- If `layouts/` is empty, aborts pointing to `/twt-layout-define`
-
----
-
 ## /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** no
 
 Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`, and the skills table in root `README.md`) from the frontmatter and Intent blocks of every skill. Stamps `(vX.Y.Z)` into each skill's committed `description:` field from its `version:` frontmatter. Ensures docs never drift from skills.
@@ -2150,97 +1524,6 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 - Validation warnings printed for any skill missing required frontmatter fields
 - Every auto-generated file starts with the AUTO-GENERATED header
 - Root `README.md` marked block (if present) is updated
-
----
-
-## /twt-mockup-define
-
-**Category:** mockup
-**Version:** 1.3.7
-**Accepts arguments:** yes
-
-Render each page layout into a fully-responsive (desktop/tablet/mobile) plain-HTML/CSS hi-fi mockup populated with real Phase-1 content, plus a review `index.html`. Foundation values come from `tokens.css`; mockup-only layout CSS lives in `styles.css`.
-
-**Inputs:**
-- Optional: which page(s) to (re)render; otherwise all layouts
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/design-system/component/components.md
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/pre-design/spec/specification.md
-- .twt-artifacts/pre-design/curation/inventory.md
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/pre-design/curation/facts.md
-- .twt-artifacts/design/design-read.md
-- references/external-design-skills.md
-- .twt-artifacts/design/mockup/validation-report.md
-
-**Writes:**
-- .twt-artifacts/design/mockup/pages/
-- .twt-artifacts/design/mockup/index.html
-- .twt-artifacts/design/mockup/styles.css
-- .twt-artifacts/design/mockup/decisions.md
-- .twt-artifacts/design/assets/manifest.md
-
-**Non-goals:**
-- Doesn't create production WordPress/Elementor output (Phase 3)
-- Doesn't introduce new colour/type/spacing primitives — those come from `tokens.css`
-- Doesn't use lorem/placeholder where real Phase-1 content exists
-- Doesn't shell out to transform the HTML it writes — **no `perl -pe`/`sed -i` in-place edits, no `cat > x.mjs <<EOF … node x.mjs` heredoc scripts, no `cmd1 && cmd2` chains**. Edit pages with the **Edit** tool and read them with Read/Glob/Grep; those throwaway shell forms trip the obfuscation guard and prompt the user on every run, whereas the file tools are silent. (E.g. to swap an em-dash for a middot across pages, use Edit per file, not a `perl` loop.)
-
-**Success criteria:**
-- One `pages/<page-slug>.html` per layout, linking `../design-system/tokens.css` and `../styles.css` (relative to `pages/`)
-- All three breakpoints handled in CSS; real content from outlines/inventory
-- `index.html` links every page mockup
-- Idempotent: re-renders only requested pages, refines (reading `validation-report.md`) (rule 10)
-
----
-
-## /twt-mockup-validate
-
-**Category:** mockup
-**Version:** 1.2.3
-**Accepts arguments:** no
-
-Read-only critique of the page mockups — real-content usage, token/design-system fidelity, responsiveness, accessibility baseline, and visual-direction adherence — written to `validation-report.md`.
-
-**Inputs:**
-- none (reads the mockup artifacts)
-
-**Dependencies:**
-- Hard: none
-- Soft: none
-
-**Reads:**
-- .twt-artifacts/design/mockup/pages/
-- .twt-artifacts/design/mockup/index.html
-- .twt-artifacts/design/mockup/styles.css
-- .twt-artifacts/design/layout/layouts/
-- .twt-artifacts/design/design-system/tokens.css
-- .twt-artifacts/pre-design/curation/outlines/
-- .twt-artifacts/pre-design/curation/facts.md
-- .twt-artifacts/design/design-read.md
-- references/external-design-skills.md
-
-**Writes:**
-- .twt-artifacts/design/mockup/validation-report.md
-
-**Non-goals:**
-- Doesn't modify any mockup file (read-only; rule 11)
-- Doesn't fix findings — that's `/twt-mockup-define`'s job
-- Doesn't re-render pages
-
-**Success criteria:**
-- `validation-report.md` opens with a weighted **Scorecard** (7 criteria, weights summing to 100) yielding a **Health 0–100 + Band** (Pass ≥80 / Revise 50–79 / Fail <50)
-- A `## Decisions to confirm` section lists inferred rules for user approval (or states none)
-- Every finding has Where / Problem / Recommendation, with Problem citing evidence
-- Any criterion scoring ≤3 yields at least one Finding (BLOCKER if it breaks downstream)
-- If `pages/` is empty, aborts pointing to `/twt-mockup-define`
 
 ---
 
@@ -2931,50 +2214,6 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 - Requested sources are ingested and registered.
 - The inbox is drained into cited pages.
 - The user is told what needs their decision.
-
----
-
-## /twt-wiki-fetch
-
-**Category:** wiki
-**Version:** 1.0.7
-**Accepts arguments:** yes
-
-Bring an external source into the wiki's evidence layer: copy or register it under `.project-wiki/raw/`, and record it in `sources.md` so every later claim can cite it. Also covers syncing a project's existing `.twt-artifacts/` tree — pulling decision-bearing content already on disk (decisions.md items, site-log Q&A, every facts.md ledger row, validator BLOCKERs) into `inbox.md`, and registering every other artifact as a `sources.md` link.
-
-**Inputs:**
-- One or more sources — a path, a URL, a pasted note, a folder — or a request to sync/harvest existing .twt-artifacts/
-
-**Dependencies:**
-- Hard: none
-- Soft: twt-content-fetch
-
-**Reads:**
-- .project-wiki/AGENTS.md
-- .project-wiki/sources.md
-- .project-wiki/raw/assets.md
-- .twt-artifacts/
-
-**Writes:**
-- .project-wiki/raw/
-- .project-wiki/sources.md
-- .project-wiki/raw/assets.md
-- .project-wiki/log.md
-- .project-wiki/inbox.md
-- .project-wiki/.harvest-state.json
-
-**Non-goals:**
-- Does not write curated pages — no `decisions/`, `entities/`, `ideas/`, `facts.md`, `open-questions.md`, `glossary.md`, `index.md`, `overview.md`. That is the curator's job alone, run separately via `/twt-wiki` → `twt-wiki-define`.
-- Does not interpret or synthesize. It registers evidence; it does not draw conclusions from it.
-- Does not delete or edit anything already in `raw/`. Raw evidence is immutable.
-- The `.twt-artifacts/` sync path is **capture, not curation**: it appends to `inbox.md` and adds rows to `sources.md` only. It never summarizes a generated file (tokens.css, a mockup, a report) into the wiki — those get a source link, nothing more.
-
-**Success criteria:**
-- Every requested source is either copied into `raw/` or registered in `sources.md` by path/URL.
-- Every binary lands in `raw/assets/` and gets a row in `raw/assets.md`.
-- `log.md` gains one ingest (or sync) entry.
-- A `.twt-artifacts/` sync leaves `inbox.md` with new decision-bearing entries and `sources.md` with a row for everything else — and no curated page changed.
-- No curated page changed.
 
 ---
 

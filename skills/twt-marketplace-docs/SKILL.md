@@ -2,8 +2,8 @@
 name: twt-marketplace-docs
 surface: command
 category: meta
-description: (v1.0.4) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
-version: 1.0.4
+description: (v1.0.5) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
+version: 1.0.5
 model: haiku
 effort: low
 accepts_arguments: false
@@ -41,7 +41,11 @@ writes:
 
 ---
 
-## Step 0 — Run the generator script
+## Step 0 — Guard: marketplace repo only
+
+Use Glob to confirm `tools/gen-docs.mjs` and `.claude-plugin/marketplace.json` exist at the **project** root. If they do not, stop with: "This is a marketplace-dev command — run it inside the twt repo." It matters because `gen-docs.mjs` resolves its output root from the script's own location, not the working directory: run from somebody else's project it would quietly rewrite `SKILLS.md`, `architecture.md`, and `README.md` inside their installed plugin folder.
+
+## Step 0b — Run the generator script
 
 This regeneration is **deterministic**, so it is delegated to a script rather than done by hand — running it as a model wastes tokens and risks format drift. From the marketplace repo root:
 
@@ -50,9 +54,7 @@ node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs"            # regenerate all deri
 node "${CLAUDE_PLUGIN_ROOT}/tools/gen-docs.mjs" --check    # CI: exit 1 if any derived doc is stale
 ```
 
-The script (`tools/gen-docs.mjs`, zero dependencies) reads skills from two locations:
-- `commands/*.md` — orchestrators and standalone tools (39+ skills)
-- `skills/*/SKILL.md` — sub-skills (one directory per sub-skill)
+The script (`tools/gen-docs.mjs`, zero dependencies) enumerates every plugin registered in `.claude-plugin/marketplace.json` via `tools/lib/plugin-roots.mjs` and reads `skills/*/SKILL.md` under each one — a single tier, one directory per skill. (The old flat `commands/*.md` tier is retired; it is still scanned only so a leftover file raises a hard error instead of vanishing from the docs.)
 
 Category comes from the `category:` frontmatter field (not from a folder name). The script stamps `(vX.Y.Z)` into each skill's `description:` from its `version:` field, then rewrites `SKILLS.md`, `architecture.md`, and the `README.md` marked block — preserving each file's existing line endings. It prints a skills-indexed / categories / validation-warnings summary and exits 0 on success (or 1 when `--check` finds stale files).
 

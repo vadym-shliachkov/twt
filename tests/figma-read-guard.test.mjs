@@ -51,12 +51,30 @@ test('separate sessions each get the context once', () => {
   assert.notEqual(b.trim(), '');
 });
 
+// A directly-configured Figma MCP server registers `mcp__figma__*`, not the
+// plugin's `mcp__plugin_figma_figma__*`. The hook exists for exactly the case
+// where nothing else matched, so pinning it to the plugin's server name would
+// leave that case uncovered.
+for (const tool of [
+  'mcp__figma__get_design_context',
+  'mcp__figma__get_metadata',
+  'mcp__figma__get_screenshot',
+]) {
+  test(`fires for a directly-configured server: ${tool}`, () => {
+    const out = run({ session_id: sid(), tool_name: tool });
+    assert.notEqual(out.trim(), '');
+    assert.match(JSON.parse(out).hookSpecificOutput.additionalContext, /get_variable_defs/);
+  });
+}
+
 // get_variable_defs is the call the hook is asking FOR — nagging on it is backwards.
 for (const tool of [
   'mcp__plugin_figma_figma__get_variable_defs',
+  'mcp__figma__get_variable_defs',
   'mcp__plugin_figma_figma__use_figma',
   'mcp__plugin_figma_figma__create_new_file',
   'mcp__plugin_figma_figma__whoami',
+  'mcp__notfigmaatall__get_metadata',
   'Bash',
   'Read',
   '',

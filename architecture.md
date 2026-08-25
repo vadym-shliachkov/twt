@@ -659,7 +659,7 @@ flowchart TB
 ### /twt-brand-define
 
 **Category:** brand
-**Version:** 1.1.5
+**Version:** 1.1.6
 
 **Inputs:**
 - Optional starting notes or answers; otherwise interactive
@@ -676,7 +676,6 @@ flowchart TB
 - .twt-artifacts/pre-design/brand/_fetched-brand.md
 - .twt-artifacts/pre-design/brand/brand-brief.md
 - .twt-artifacts/pre-design/brand/validation-report.md
-- skills/twt-brand-validate/SKILL.md
 - references/brand-book-checklist.md
 - .twt-artifacts/pre-design/brand/_coverage.md
 
@@ -690,7 +689,7 @@ flowchart TB
 ### /twt-brand-fetch
 
 **Category:** brand
-**Version:** 1.1.4
+**Version:** 1.1.5
 
 **Inputs:**
 - A brand book (PDF), Figma URL, screenshots, or a live site URL — OR none, in which case it researches project artifacts (and the site if a URL is discoverable)
@@ -706,6 +705,7 @@ flowchart TB
 **Reads:**
 - <brand source>
 - .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md
+- .twt-artifacts/pre-design/content/fetched/pdf/<filename>/index.md
 - references/brand-book-checklist.md
 - .twt-artifacts/pre-design/content/fetched/_manifest.md
 - .twt-artifacts/pre-design/positioning/positioning.md
@@ -878,7 +878,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.6
+**Version:** 1.1.7
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
@@ -971,8 +971,8 @@ flowchart TB
 **Writes:**
 | Path | Notes |
 |------|-------|
-| .twt-artifacts/pre-design/content/fetched/doc/<filename>/index.md |  |
-| .twt-artifacts/pre-design/content/fetched/doc/<filename>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/pdf/<filename>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/pdf/<filename>/_meta.md |  |
 
 ### /twt-content-fetch-site
 
@@ -1124,7 +1124,7 @@ flowchart TB
 ### /twt-design
 
 **Category:** design
-**Version:** 1.3.8
+**Version:** 1.3.9
 
 **Inputs:**
 - Optional design sources; optional --from/--only flags (area ∈ design-system/component/layout/mockup)
@@ -1194,7 +1194,7 @@ flowchart TB
 ### /twt-design-system-audit
 
 **Category:** design-system
-**Version:** 1.6.3
+**Version:** 1.6.4
 
 **Inputs:**
 - A Figma URL and/or a site URL (the design to audit); optional brand source or brand-brief.md; optional design system (tokens.md/tokens.css path)
@@ -2125,7 +2125,7 @@ flowchart TB
 ### /twt-marketplace-docs
 
 **Category:** meta
-**Version:** 1.0.4
+**Version:** 1.0.5
 
 **Inputs:**
 - (none)
@@ -2897,7 +2897,7 @@ flowchart TB
 ### /twt-wiki-define
 
 **Category:** wiki
-**Version:** 1.0.12
+**Version:** 1.0.13
 
 **Inputs:**
 - Optional focus (a page, a topic, or "inbox only"); otherwise curates everything pending
