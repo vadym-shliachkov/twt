@@ -20,7 +20,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
-| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe a video or audio file (URL or local path) into timestamped Markdown |
+| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe a video or audio file (URL or local path) into timestamped Markdown, verbatim or as a full descriptive (accessible) transcript |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
@@ -536,10 +536,10 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
-Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
+Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Two depths: **verbatim**, a fast timestamped record of what was said, and **descriptive**, a full accessible transcript that also carries speakers, on-screen text, visible action, sounds, and structure — enough that someone who cannot watch or hear the recording gets the same information. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
 
 **Inputs:**
 - Direct URL to a video/audio file, or a path to a local media file
@@ -555,18 +555,27 @@ Turn a recording — a talk, a client walkthrough, a stakeholder interview, a sc
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/frames/
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md
 
 **Non-goals:**
 - Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page
-- Doesn't identify or label speakers (no diarization) — one continuous transcript
-- Doesn't summarize, curate, or judge the content (that's `/twt-curation-define`)
-- Doesn't describe what is on screen — audio only
+- Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
+- Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
+- Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
+- Doesn't emit SRT/VTT or burn captions into the video
 
 **Success criteria:**
 - Output appears under `.twt-artifacts/pre-design/content/fetched/video/<slug>/`
-- `index.md` has frontmatter (source, duration, language, model, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp
-- `segments.json` holds the raw per-segment machine output for citation or re-processing
-- The transcript is never read into context wholesale — the run is reported from the tool's summary
+- `index.md` has frontmatter (source, duration, language, model, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp — in **both** depths
+- In descriptive depth, `transcript.md` additionally carries every element in the coverage table below, or says plainly why an element is absent from this source
+- The verbatim transcript is never read into context wholesale — verbatim runs are reported from the tool's summary, and descriptive runs read it one window at a time through `slice`
+- Nothing in `transcript.md` is invented: every speaker name, sound, visual, link, and citation traces to the audio, a frame, the file's own caption track, or its audio-description track
 
 ---
 

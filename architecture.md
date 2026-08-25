@@ -298,7 +298,7 @@ flowchart TB
 - /twt-content-fetch-figma - Extract a Figma file's visible text content and save as clean Markdown
 - /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
 - /twt-content-fetch-site - Fetch a website's content via the bundled crawler and save as clean Markdown
-- /twt-content-fetch-video - Transcribe a video or audio file (URL or local path) into timestamped Markdown
+- /twt-content-fetch-video - Transcribe a video or audio file (URL or local path) into timestamped Markdown, verbatim or as a full descriptive (accessible) transcript
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 - /twt-text-analysis - Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
@@ -1007,7 +1007,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - Direct URL to a video/audio file, or a path to a local media file
@@ -1029,6 +1029,13 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/frames/ |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md |  |
 
 ### /twt-content-optimize
 

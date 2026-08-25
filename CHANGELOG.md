@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-25 **v1.0.128** — twt-content-fetch-video → 1.0.2
 - 2026-08-25 **v1.0.127** — twt-content-fetch → 1.1.9
 - 2026-08-25 **v1.0.126** — twt-content-fetch-video → 1.0.1, twt-content-fetch → 1.1.8
 - 2026-08-25 **v1.0.125** — twt-brand-define → 1.1.6, twt-wiki-define → 1.0.13, twt-content-fetch → 1.1.7, twt-brand-fetch → 1.1.5, twt-design-system-audit → 1.6.4, twt-design → 1.3.9, twt-marketplace-docs → 1.0.5
