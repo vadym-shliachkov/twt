@@ -882,7 +882,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.8
+**Version:** 1.1.9
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
