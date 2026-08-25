@@ -536,13 +536,14 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.3
+**Version:** 1.0.4
 **Accepts arguments:** yes
 
 Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Two depths: **verbatim**, a fast timestamped record of what was said, and **descriptive**, a full accessible transcript that also carries speakers, on-screen text, visible action, sounds, and structure — enough that someone who cannot watch or hear the recording gets the same information. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
 
 **Inputs:**
-- Direct URL to a video/audio file, or a path to a local media file
+- Direct URL to a video/audio file, a Brightcove player-page URL, or a path to a local media file
+- Optional URL or path to the publisher's caption track (WebVTT or SRT)
 
 **Dependencies:**
 - Hard: none
@@ -563,18 +564,22 @@ Turn a recording — a talk, a client walkthrough, a stakeholder interview, a sc
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/frames/
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.json
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/publisher-captions.vtt
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json
 
 **Non-goals:**
-- Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page
+- Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
 - Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
 - Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
-- Doesn't correct the transcript: the report's PART 3 says what is likely wrong and where, and the words themselves stay exactly as the recognizer produced them
+- Doesn't correct the recognizer: PART 3 says what is likely wrong and where, and PARTS 1 and 2 stay exactly as the recognizer produced them. Preferring a publisher's caption track in `index.md` is not a correction — it is choosing the account written by a person over the one guessed from audio, and `text_source:` says which one is in the file
 - Doesn't emit SRT/VTT or burn captions into the video
 
 **Success criteria:**
 - Output appears under `.twt-artifacts/pre-design/content/fetched/video/<slug>/`
-- `index.md` has frontmatter (source, duration, language, model, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp — in **both** depths
+- `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp — in **both** depths
+- `verify` passes: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
+- Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
 - `transcript.txt` exists in **both** depths, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
 - In descriptive depth, `transcript.md` additionally carries every element in the coverage table below, or says plainly why an element is absent from this source
 - The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
