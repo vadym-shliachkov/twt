@@ -32,7 +32,7 @@ writes:
 **Purpose:** Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
 
 **Non-goals:**
-- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma`)
+- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma` / `-video`)
 - Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
@@ -50,7 +50,7 @@ Everything ingested from an external source — web pages, PDFs, docs, Figma tex
 The permission rules `/twt-setup` seeds match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`); a call that doesn't match forces a manual prompt even when the binary is allowlisted. So for **every** Bash call in this run: never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
 
 ## Step 1 — Gather sources
-Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — site URLs, PDF paths, document paths/URLs, and/or Figma links (one per line):". Wait.
+Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — site URLs, PDF paths, document paths/URLs, Figma links, and/or video/audio files (one per line):". Wait.
 
 ## Step 2 — Classify each source
 - contains `figma.com` (a `/design/…` or `/file/…` URL) → **figma**

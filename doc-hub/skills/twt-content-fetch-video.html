@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content fe">
+  <title>/twt-content-fetch-video | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/pre-design.html">Pre-design</a><span>/</span><strong class="breadcrumb-command">/twt-content-fetch-video</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">Pre-design · content</p>
+          <h1>/twt-content-fetch-video</h1>
+          <p class="lede">Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and...</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--low token-usage--compact" data-token-usage="low" aria-label="Token usage: Low">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i></i><i></i><i></i></span>
+    <strong>Low</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <p>Direct URL to a video/audio file, or a path to a local media file</p>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;video-url-or-path&gt;</code><span class="file-desc">A value you provide when you run the command.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/pre-design/content/fetched/video/&lt;slug&gt;/index.md</code><span class="file-desc">The cleaned Markdown text extracted from this source.</span></li><li><code>.twt-artifacts/pre-design/content/fetched/video/&lt;slug&gt;/segments.json</code><span class="file-desc">A JSON data file.</span></li><li><code>.twt-artifacts/pre-design/content/fetched/video/&lt;slug&gt;/_meta.md</code><span class="file-desc">Notes about the fetched source — where it came from and any extraction caveats.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Not a YouTube/Vimeo/Loom downloader — this takes a <strong>direct</strong> media URL or a local file, not a watch page</li><li>Doesn't identify or label speakers (no diarization) — one continuous transcript</li><li>Doesn't summarize, curate, or judge the content (that's <code>/twt-curation-define</code>)</li><li>Doesn't describe what is on screen — audio only</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li>Output appears under <code>.twt-artifacts/pre-design/content/fetched/video/&lt;slug&gt;/</code></li><li><code>index.md</code> has frontmatter (source, duration, language, model, fetched-at) and readable paragraphs each anchored with a <code>[mm:ss]</code> timestamp</li><li><code>segments.json</code> holds the raw per-segment machine output for citation or re-processing</li><li>The transcript is never read into context wholesale — the run is reported from the tool's summary</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

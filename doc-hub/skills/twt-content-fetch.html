@@ -42,7 +42,7 @@
           <h1>/twt-content-fetch</h1>
           <p class="lede">One entry point for content ingest — detects each source you provide and routes it to the right fetcher.</p>
           <div class="fact-row">
-            <span>Version 1.1.7</span>
+            <span>Version 1.1.8</span>
             <span>Arguments: yes</span>
             <span class="token-usage token-usage--high token-usage--compact" data-token-usage="high" aria-label="Token usage: High">
     <span class="token-usage__label">Token usage</span>
@@ -64,7 +64,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Parameters it can expect</h2>
-    <p>Any mix of site URLs, PDF paths, document paths/URLs, and Figma links</p>
+    <p>Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files</p>
   </section>
         <section class="detail-panel reveal">
     <h2>What it reads</h2>
@@ -76,7 +76,7 @@
   </section>
         <section class="detail-panel reveal">
     <h2>Boundaries</h2>
-    <ul><li>Doesn't fetch anything itself — pure dispatcher (delegates to <code>-site</code> / <code>-pdf</code> / <code>-doc</code> / <code>-figma</code>)</li><li>Doesn't curate, judge, or restructure content (that's the curation step — <code>/twt-curation-define</code>)</li><li>Not a validator — there is no validate step in this sub-area</li></ul>
+    <ul><li>Doesn't fetch anything itself — pure dispatcher (delegates to <code>-site</code> / <code>-pdf</code> / <code>-doc</code> / <code>-figma</code> / <code>-video</code>)</li><li>Doesn't curate, judge, or restructure content (that's the curation step — <code>/twt-curation-define</code>)</li><li>Not a validator — there is no validate step in this sub-area</li></ul>
   </section>
         <section class="detail-panel reveal">
     <h2>Success criteria</h2>

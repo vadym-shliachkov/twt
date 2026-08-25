@@ -384,7 +384,7 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 - .twt-artifacts/pre-design/content/fetched/_manifest.md
 
 **Non-goals:**
-- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma`)
+- Doesn't fetch anything itself — pure dispatcher (delegates to `-site` / `-pdf` / `-doc` / `-figma` / `-video`)
 - Doesn't curate, judge, or restructure content (that's the curation step — `/twt-curation-define`)
 - Not a validator — there is no validate step in this sub-area
 
