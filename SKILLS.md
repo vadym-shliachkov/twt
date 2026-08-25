@@ -15,11 +15,12 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
-| [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
+| [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill |
 | [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
 | [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
+| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe a video or audio file (URL or local path) into timestamped Markdown |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
@@ -364,17 +365,17 @@ Read the content approval workbook after stakeholder confirmation and update the
 ## /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.7
+**Version:** 1.1.8
 **Accepts arguments:** yes
 
 Single entry point for content ingest. Detects what kind of sources the user provided and dispatches each to the matching source-specific fetch skill, then writes a manifest of everything ingested.
 
 **Inputs:**
-- Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
+- Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma
+- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-video
 
 **Reads:**
 - <provided sources>
@@ -529,6 +530,43 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 - Output appears under `.twt-artifacts/pre-design/content/fetched/site/<domain>/`
 - Every page has frontmatter (source URL, title, fetched-at)
 - Crawl mode produces `_sitemap.md` indexing every file written
+
+---
+
+## /twt-content-fetch-video
+
+**Category:** content
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
+
+**Inputs:**
+- Direct URL to a video/audio file, or a path to a local media file
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Reads:**
+- <video-url-or-path>
+
+**Writes:**
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
+
+**Non-goals:**
+- Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page
+- Doesn't identify or label speakers (no diarization) — one continuous transcript
+- Doesn't summarize, curate, or judge the content (that's `/twt-curation-define`)
+- Doesn't describe what is on screen — audio only
+
+**Success criteria:**
+- Output appears under `.twt-artifacts/pre-design/content/fetched/video/<slug>/`
+- `index.md` has frontmatter (source, duration, language, model, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp
+- `segments.json` holds the raw per-segment machine output for citation or re-processing
+- The transcript is never read into context wholesale — the run is reported from the tool's summary
 
 ---
 

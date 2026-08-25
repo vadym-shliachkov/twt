@@ -27,6 +27,7 @@ flowchart TB
     twt_content_fetch_figma["/twt-content-fetch-figma"]:::skill
     twt_content_fetch_pdf["/twt-content-fetch-pdf"]:::skill
     twt_content_fetch_site["/twt-content-fetch-site"]:::skill
+    twt_content_fetch_video["/twt-content-fetch-video"]:::skill
     twt_content_optimize["/twt-content-optimize"]:::skill
     twt_content_validate["/twt-content-validate"]:::skill
     twt_curation_define["/twt-curation-define"]:::skill
@@ -124,10 +125,12 @@ flowchart TB
     twt_content_fetch_pdf -.-> twt_content_fetch
     twt_content_fetch_doc -.-> twt_content_fetch
     twt_content_fetch_figma -.-> twt_content_fetch
+    twt_content_fetch_video -.-> twt_content_fetch
     twt_content_fetch -.-> twt_content_fetch_doc
     twt_content_fetch -.-> twt_content_fetch_figma
     twt_content_fetch -.-> twt_content_fetch_pdf
     twt_content_fetch -.-> twt_content_fetch_site
+    twt_content_fetch -.-> twt_content_fetch_video
     twt_content_validate --> twt_content_optimize
     twt_content_fetch_site -.-> twt_content_validate
     twt_content_fetch -.-> twt_curation_define
@@ -290,11 +293,12 @@ flowchart TB
 
 - /twt-content-approval-checklist - Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
 - /twt-content-approval-implement - Apply ready approved XLSX content into the built site or development artifacts
-- /twt-content-fetch - Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
+- /twt-content-fetch - Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
 - /twt-content-fetch-doc - Extract a Word/Google Doc's content and save as clean Markdown
 - /twt-content-fetch-figma - Extract a Figma file's visible text content and save as clean Markdown
 - /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
 - /twt-content-fetch-site - Fetch a website's content via the bundled crawler and save as clean Markdown
+- /twt-content-fetch-video - Transcribe a video or audio file (URL or local path) into timestamped Markdown
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 - /twt-text-analysis - Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
@@ -878,18 +882,18 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.7
+**Version:** 1.1.8
 
 **Inputs:**
-- Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
+- Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
 
 **Dependencies:**
 - Hard: none
-- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma
+- Soft: twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-video
 
 **Feeds into:**
 - Hard consumers: none
-- Soft consumers: twt-audience-define, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-seo-define, twt-wiki-fetch, twt-write-as-me-analysis
+- Soft consumers: twt-audience-define, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-pdf, twt-content-fetch-site, twt-content-fetch-video, twt-curation-define, twt-ia-define, twt-positioning-define, twt-pre-design, twt-seo-define, twt-wiki-fetch, twt-write-as-me-analysis
 
 **Reads:**
 - <provided sources>
@@ -999,6 +1003,32 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/site/<domain>/index.md |  |
 | .twt-artifacts/pre-design/content/fetched/site/<domain>/<path>/index.md |  |
 | .twt-artifacts/pre-design/content/fetched/site/<domain>/_sitemap.md |  |
+
+### /twt-content-fetch-video
+
+**Category:** content
+**Version:** 1.0.1
+
+**Inputs:**
+- Direct URL to a video/audio file, or a path to a local media file
+
+**Dependencies:**
+- Hard: none
+- Soft: twt-content-fetch
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: twt-content-fetch
+
+**Reads:**
+- <video-url-or-path>
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
 
 ### /twt-content-optimize
 
@@ -3106,11 +3136,12 @@ flowchart TB
 | /twt-component-validate | none | none |
 | /twt-content-approval-checklist | none | twt-text-analysis, twt-design-system-define, twt-layout-define, twt-mockup-define, twt-seo-define |
 | /twt-content-approval-implement | twt-content-approval-checklist | twt-html-block-creator, twt-elementor-block-creator, twt-inherit-block-creator |
-| /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma |
+| /twt-content-fetch | none | twt-content-fetch-site, twt-content-fetch-pdf, twt-content-fetch-doc, twt-content-fetch-figma, twt-content-fetch-video |
 | /twt-content-fetch-doc | none | twt-content-fetch |
 | /twt-content-fetch-figma | none | twt-content-fetch |
 | /twt-content-fetch-pdf | none | twt-content-fetch |
 | /twt-content-fetch-site | none | WebFetch, twt-content-fetch |
+| /twt-content-fetch-video | none | twt-content-fetch |
 | /twt-content-optimize | twt-content-validate | none |
 | /twt-content-validate | none | twt-content-fetch-site |
 | /twt-curation-define | none | twt-content-fetch, twt-brand-define, twt-ia-define, twt-audience-define |

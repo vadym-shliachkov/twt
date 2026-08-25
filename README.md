@@ -51,11 +51,12 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-brand | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
 | /twt-content-approval-checklist | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
 | /twt-content-approval-implement | content | Apply ready approved XLSX content into the built site or development artifacts |
-| /twt-content-fetch | content | Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill |
+| /twt-content-fetch | content | Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill |
 | /twt-content-fetch-doc | content | Extract a Word/Google Doc's content and save as clean Markdown |
 | /twt-content-fetch-figma | content | Extract a Figma file's visible text content and save as clean Markdown |
 | /twt-content-fetch-pdf | content | Extract a PDF's text content and save as clean Markdown |
 | /twt-content-fetch-site | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
+| /twt-content-fetch-video | content | Transcribe a video or audio file (URL or local path) into timestamped Markdown |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |

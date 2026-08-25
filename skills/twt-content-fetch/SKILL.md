@@ -2,11 +2,11 @@
 name: twt-content-fetch
 surface: command
 category: content
-description: (v1.1.7) Detect provided sources (site, PDF, doc, Figma) and dispatch to the right content-fetch sub-skill
-version: 1.1.7
+description: (v1.1.8) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
+version: 1.1.8
 accepts_arguments: true
 inputs:
-  - Any mix of site URLs, PDF paths, document paths/URLs, and Figma links
+  - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
 dependencies:
   hard: []
   soft:
@@ -14,6 +14,7 @@ dependencies:
     - twt-content-fetch-pdf
     - twt-content-fetch-doc
     - twt-content-fetch-figma
+    - twt-content-fetch-video
 reads:
   - <provided sources>
 writes:
@@ -53,13 +54,15 @@ Use `$ARGUMENTS` if provided. Otherwise ask: "List the sources to ingest — sit
 
 ## Step 2 — Classify each source
 - contains `figma.com` (a `/design/…` or `/file/…` URL) → **figma**
+- ends with a media extension (`.mp4`/`.mov`/`.mkv`/`.webm`/`.m4a`/`.mp3`/`.wav`/…), URL or local path alike → **video** (test this **before** the site rule below, so a direct `…/talk.mp4` link isn't crawled as a web page)
+- a YouTube / Vimeo / Loom watch or player page → **unrecognized** (reason: not a direct media file; ask the user to supply the downloaded file's path instead). Also test this before the site rule — crawling a watch page yields navigation chrome, not the talk.
 - starts with `http://`/`https://` and not a Google Doc or Figma URL → **site**
 - ends with `.pdf` → **pdf**
 - ends with `.docx`/`.doc`/`.md`/`.txt`, or is a Google Doc URL → **doc**
 - otherwise → **unrecognized** (collect for the report; do not dispatch)
 
 ## Step 3 — Dispatch (in parallel)
-For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, `/twt-content-fetch-doc`, or `/twt-content-fetch-figma`), passing the source as its argument — plus at most a scope hint (`homepage` / `all pages`) for sites. **Never invent CLI-style flags** (`--output`, `--sitemap`, `--preserve-copy`, …) in the dispatch prompt: the sub-skills define their own output layout, and made-up flags push executors off their bundled scripts into improvised fetching. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own output subfolder under `fetched/` — sites to `site/<domain>/`, PDFs to `pdf/<filename>/`, Word/Google docs to `doc/<filename>/`, Figma to `figma/<file-key>/` — one pool per source type and one folder per source file, so no two dispatches can target the same path. (PDFs had their own pool split out precisely because `report.pdf` and `report.docx` slugify to the same `<filename>`, and the parallel dispatch below gave them no chance to notice each other.) **Issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest. _Each fetch sub-skill declares `model: sonnet` (extraction and Markdown cleanup, no judgment) — when your Agent tool supports a `model` parameter, pass `sonnet` explicitly too, since a dispatched subagent otherwise inherits this orchestrator's model._
+For each classified source, use the Agent tool to invoke the matching sub-skill (`/twt-content-fetch-site`, `/twt-content-fetch-pdf`, `/twt-content-fetch-doc`, `/twt-content-fetch-figma`, or `/twt-content-fetch-video`), passing the source as its argument — plus at most a scope hint (`homepage` / `all pages`) for sites. **Never invent CLI-style flags** (`--output`, `--sitemap`, `--preserve-copy`, …) in the dispatch prompt: the sub-skills define their own output layout, and made-up flags push executors off their bundled scripts into improvised fetching. Per CONVENTIONS rule 5, dispatch — do not reproduce the sub-skill's logic. Each source writes to its own output subfolder under `fetched/` — sites to `site/<domain>/`, PDFs to `pdf/<filename>/`, Word/Google docs to `doc/<filename>/`, Figma to `figma/<file-key>/`, recordings to `video/<slug>/` — one pool per source type and one folder per source file, so no two dispatches can target the same path. (PDFs had their own pool split out precisely because `report.pdf` and `report.docx` slugify to the same `<filename>`, and the parallel dispatch below gave them no chance to notice each other.) **Issue all the dispatches in a single batch of parallel Agent calls** (one message, multiple Agent tool uses), not one at a time. Wait for all of them to finish before writing the manifest. _Each fetch sub-skill declares `model: sonnet` (extraction and Markdown cleanup, no judgment) — when your Agent tool supports a `model` parameter, pass `sonnet` explicitly too, since a dispatched subagent otherwise inherits this orchestrator's model._
 
 ## Step 4 — Write the manifest
 Write `.twt-artifacts/pre-design/content/fetched/_manifest.md`:
@@ -73,7 +76,7 @@ sources: <count>
 
 | Source | Type | Skill | Output |
 |--------|------|-------|--------|
-| <src> | site/pdf/doc/figma | /twt-content-fetch-<type> | <output folder> |
+| <src> | site/pdf/doc/figma/video | /twt-content-fetch-<type> | <output folder> |
 
 ## Unrecognized
 - <src> — reason
