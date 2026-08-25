@@ -1007,7 +1007,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.2
+**Version:** 1.0.3
 
 **Inputs:**
 - Direct URL to a video/audio file, or a path to a local media file
@@ -1029,6 +1029,7 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json |  |
