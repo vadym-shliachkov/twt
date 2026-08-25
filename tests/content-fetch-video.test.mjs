@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   slugify, extFromContentType, fmtTime, paragraphize, buildIndexMd, buildMetaMd, titleFrom,
+  redactUrl, sourceLabel, isGenericName, detectIssues, properPhrases, buildReportTxt,
+  spliceReview, buildReviewRequest, REPORT_WIDTH, REVIEW_HEADING,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -285,4 +287,296 @@ test('_meta.md gains a descriptive section only when the descriptive pass ran', 
   assert.match(rich, /\*\*Keyframes extracted:\*\* 12/);
   assert.match(rich, /transcribed to `audio-description\.md`/);
   assert.match(rich, /not from an audio-event classifier/);
+});
+
+// ---- URL hygiene ---------------------------------------------------------------
+// A signed CDN URL is a bearer credential. One reached a committed artifact whole,
+// twice over (the heading and the source line) — these lock that shut.
+
+test('redactUrl strips signed-token values and keeps the rest of the URL usable', () => {
+  const { url, redacted } = redactUrl(
+    'https://cdn.test/media/main.mp4?fastly_token=SECRET123&videoId=6342533385112');
+  assert.match(url, /fastly_token=REDACTED/);
+  assert.doesNotMatch(url, /SECRET123/);
+  assert.match(url, /videoId=6342533385112/, 'a non-credential param must survive');
+  assert.deepEqual(redacted, ['fastly_token']);
+});
+
+test('redactUrl covers the signature/expiry/policy family, not just "token"', () => {
+  const { url, redacted } = redactUrl(
+    'https://cdn.test/a.mp4?Signature=abc&Expires=999&Policy=ppp&plain=keep');
+  for (const secret of ['abc', '999', 'ppp']) assert.doesNotMatch(url, new RegExp(secret));
+  assert.match(url, /plain=keep/);
+  assert.deepEqual(redacted.sort(), ['Expires', 'Policy', 'Signature']);
+});
+
+test('redactUrl leaves local paths and unparseable sources alone', () => {
+  assert.equal(redactUrl('C:/media/talk.mp4').url, 'C:/media/talk.mp4');
+  assert.deepEqual(redactUrl('/tmp/a.mp4').redacted, []);
+});
+
+test('sourceLabel drops the query string — the heading is where the token leaked', () => {
+  assert.equal(sourceLabel('https://cdn.test/media/v1/main.mp4?fastly_token=SECRET123'), 'main.mp4');
+  assert.equal(sourceLabel('/tmp/dir/talk.mov'), 'talk.mov');
+});
+
+test('_meta.md never writes a signed token, in the heading or the source line', () => {
+  const source = 'https://cdn.test/media/main.mp4?fastly_token=SECRET123';
+  const md = buildMetaMd({ source, localPath: null, bytes: 0, result, warnings: [], keptSource: false });
+  assert.doesNotMatch(md, /SECRET123/);
+  assert.match(md, /^# Transcript metadata — main\.mp4$/m);
+  assert.match(md, /\*\*Signed URL:\*\*.*fastly_token/);
+});
+
+test('index.md frontmatter carries the redacted URL too', () => {
+  const md = buildIndexMd({
+    source: 'https://cdn.test/main.mp4?token=SECRET123', slug: 'talk', result, fetchedAt: '2026-08-25',
+  });
+  assert.doesNotMatch(md, /SECRET123/);
+  assert.match(md, /^source: .*token=REDACTED$/m);
+});
+
+// ---- naming --------------------------------------------------------------------
+
+test('isGenericName spots the CDN placeholder filenames that make a useless slug', () => {
+  for (const n of ['main', 'index', 'video', 'master', 'playlist', '1080', 'a1b2c3d4e5']) {
+    assert.ok(isGenericName(n), `${n} should read as generic`);
+  }
+  for (const n of ['grief-sensitive-schools-initiative', 'q3-review', 'interview-dana']) {
+    assert.ok(!isGenericName(n), `${n} should read as meaningful`);
+  }
+});
+
+test('an explicit title wins over the slug, so index.md never needs hand-editing', () => {
+  const md = buildIndexMd({
+    source: 'a.mp4', slug: 'main', title: 'About the Grief-Sensitive Schools Initiative',
+    result, fetchedAt: '2026-08-25',
+  });
+  assert.match(md, /^title: About the Grief-Sensitive Schools Initiative$/m);
+  assert.match(md, /^# About the Grief-Sensitive Schools Initiative$/m);
+  assert.equal(titleFrom('main', '  '), 'Main', 'a blank title falls back to the slug');
+});
+
+// ---- possible-issue detection --------------------------------------------------
+
+const scored = (rows) => rows.map(([start, end, text, lp, ns, cr]) => ({
+  start, end, text,
+  avg_logprob: lp ?? -0.2, no_speech_prob: ns ?? 0.05, compression_ratio: cr ?? 1.4,
+}));
+
+test('a very low confidence line is flagged high, a mildly low one medium', () => {
+  const issues = detectIssues({ segments: scored([
+    [0, 4, 'clear speech here.', -0.2],
+    [4, 8, 'mumbled words maybe.', -1.0],
+    [8, 12, 'total guesswork here.', -1.4],
+  ]) });
+  assert.equal(issues.segments.length, 2);
+  assert.equal(issues.segments[0].severity, 'medium');
+  assert.equal(issues.segments[1].severity, 'high');
+  assert.match(issues.segments[1].notes.join(' '), /very low confidence/);
+});
+
+test('a line the recognizer thinks was silence is flagged as possibly invented', () => {
+  const issues = detectIssues({ segments: scored([[0, 4, 'Thanks for watching!', -0.3, 0.92]]) });
+  assert.equal(issues.segments.length, 1);
+  assert.equal(issues.segments[0].severity, 'high');
+  assert.match(issues.segments[0].notes.join(' '), /may have been invented/);
+});
+
+test('a repetition loop is caught by compression ratio and by repeated lines alike', () => {
+  const byRatio = detectIssues({ segments: scored([[0, 4, 'la la la la la la', -0.3, 0.05, 3.1]]) });
+  assert.match(byRatio.segments[0].notes.join(' '), /repetition loop/);
+
+  const byRepeat = detectIssues({ segments: scored([
+    [0, 2, 'Subscribe to the channel.'], [2, 4, 'Subscribe to the channel.'],
+    [4, 6, 'Subscribe to the channel.'], [6, 8, 'And now the real content.'],
+  ]) });
+  assert.equal(byRepeat.segments.length, 1);
+  assert.match(byRepeat.segments[0].notes.join(' '), /repeats 3 times in a row/);
+});
+
+test('two repeats are speech; three are a loop', () => {
+  const issues = detectIssues({ segments: scored([
+    [0, 2, 'No, no.'], [2, 4, 'No, no.'], [4, 6, 'Moving on.'],
+  ]) });
+  assert.equal(issues.segments.length, 0);
+});
+
+test('a run with no confidence scores reports that rather than a clean bill of health', () => {
+  const issues = detectIssues({ segments: segs([0, 4, 'plain segment.']) });
+  assert.equal(issues.scored, false);
+  assert.equal(issues.segments.length, 0);
+});
+
+test('the run-level flags name the things that invalidate everything downstream', () => {
+  const issues = detectIssues({ segments: [], language_probability: 0.41, model: 'base',
+    warnings: ['Frame extraction failed.'] });
+  const text = issues.run.join('\n');
+  assert.match(text, /No speech was detected/);
+  assert.match(text, /Language detection was not confident/);
+  assert.match(text, /error-prone end of the range/);
+  assert.match(text, /Frame extraction failed\./);
+});
+
+test('a confident model choice raises no model flag', () => {
+  assert.ok(!detectIssues({ segments: [], model: 'medium', language_probability: 1 })
+    .run.some((r) => /error-prone/.test(r)));
+});
+
+// ---- name variants -------------------------------------------------------------
+
+test('properPhrases skips sentence openers but keeps names and acronyms', () => {
+  const found = properPhrases('The Coalition met. We asked the National Center for GSSI funding.');
+  assert.ok(found.includes('National Center'), 'a mid-sentence name run is a phrase');
+  assert.ok(found.includes('GSSI'), 'an all-caps acronym counts anywhere');
+  assert.ok(!found.includes('The'), 'a sentence opener is not a name');
+  assert.ok(!found.includes('We'), 'nor is a capitalized pronoun at position 0');
+});
+
+test('a long run also yields its individual words, which is how a title meets speech', () => {
+  const found = properPhrases('about New York Life Foundation Grief-Sensitive Schools Initiative today');
+  assert.ok(found.includes('Grief-Sensitive'), 'the individual word must be emitted');
+  assert.ok(!found.includes('New York Life Foundation Grief-Sensitive Schools Initiative'),
+    'a run past the token cap is not emitted whole — it would match nothing');
+});
+
+test('the title and the transcript disagreeing about a hyphen is reported', () => {
+  const issues = detectIssues({
+    title: 'About the Grief-Sensitive Schools Initiative',
+    segments: segs([0, 5, 'Schools can agree to become Grief Sensitive today.']),
+  });
+  assert.equal(issues.variants.length, 1);
+  const forms = issues.variants[0].forms.map((f) => f.phrase).sort();
+  assert.deepEqual(forms, ['Grief Sensitive', 'Grief-Sensitive']);
+});
+
+test('a longer name containing a shorter one is not a rival spelling', () => {
+  const issues = detectIssues({ segments: segs(
+    [0, 5, 'At New York Life we tried.'],
+    [5, 9, 'The New York Life GSSI program grew.'],
+  ) });
+  assert.equal(issues.variants.length, 0);
+});
+
+test('a plural is not a misspelling', () => {
+  const issues = detectIssues({ segments: segs(
+    [0, 5, 'the Coalition met.'], [5, 9, 'both Coalitions met.'],
+  ) });
+  assert.equal(issues.variants.length, 0);
+});
+
+test('a trademark symbol is not a rival spelling either', () => {
+  const issues = detectIssues({
+    title: 'The Grief-Sensitive Schools Initiative®',
+    segments: segs([0, 5, 'we built the Grief-Sensitive Schools Initiative.']),
+  });
+  assert.equal(issues.variants.length, 0);
+});
+
+// ---- the plain-text report -----------------------------------------------------
+
+const reportOf = (over = {}) => buildReportTxt({
+  source: 'https://cdn.test/main.mp4?fastly_token=SECRET123',
+  slug: 'q3-review', title: 'Q3 Product Review', fetchedAt: '2026-08-25', bytes: 1048576,
+  result, warnings: [], issues: detectIssues({ ...result, title: 'Q3 Product Review' }),
+  ...over,
+});
+
+test('PART 1 reads as continuous prose with no timestamps in it', () => {
+  const part1 = reportOf().split('PART 2')[0].split('PART 1')[1];
+  assert.doesNotMatch(part1, /\d+:\d\d/, 'the reading transcript carries no timings');
+  assert.match(part1, /first\./);
+  assert.match(part1, /second\./);
+});
+
+test('PART 2 keeps every timestamp — it is the half you cite from', () => {
+  const part2 = reportOf().split('PART 3')[0].split('PART 2')[1];
+  assert.match(part2, /0:00:00 - 0:00:05/);
+  assert.match(part2, /0:00:09 - 0:00:14/);
+  assert.match(part2, /all 2 items/);
+});
+
+test('the report never carries the signed token, and says the link was redacted', () => {
+  const txt = reportOf();
+  assert.doesNotMatch(txt, /SECRET123/);
+  assert.match(txt, /fastly_token=REDACTED/);
+  assert.match(txt, /time-limited credential/);
+});
+
+test('the report wraps to a readable width, URLs excepted', () => {
+  for (const line of reportOf().split('\n')) {
+    if (/https?:\/\//.test(line)) continue;
+    assert.ok(line.length <= REPORT_WIDTH, `line over ${REPORT_WIDTH} cols: ${line}`);
+  }
+});
+
+test('PART 3 ships pending until the assistant has actually reviewed it', () => {
+  const txt = reportOf();
+  assert.match(txt, new RegExp(REVIEW_HEADING));
+  assert.match(txt, /Not yet reviewed/);
+  assert.match(txt, /cannot hear the words/);
+});
+
+test('PART 3 carries the machine findings above the review seam', () => {
+  const segments = scored([[0, 5, 'we became Grief Sensitive.', -1.3]]);
+  const issues = detectIssues({
+    title: 'The Grief-Sensitive Schools Initiative', segments, model: 'base',
+  });
+  const txt = reportOf({ issues, result: { ...result, segments } });
+  assert.match(txt, /NAMES SPELLED MORE THAN ONE WAY/);
+  assert.match(txt, /ABOUT THE RUN/);
+  assert.match(txt, /LINES THE RECOGNIZER WAS UNSURE OF/);
+  assert.ok(txt.indexOf('LINES THE RECOGNIZER') < txt.indexOf(REVIEW_HEADING));
+});
+
+test('spliceReview replaces only the review section, leaving PARTS 1 and 2 untouched', () => {
+  const before = reportOf();
+  const after = spliceReview(before, '- [0:17] "by depth" is almost certainly "by death".');
+  assert.match(after, /by depth/);
+  assert.doesNotMatch(after, /Not yet reviewed/);
+  assert.equal(after.split('PART 1')[0], before.split('PART 1')[0], 'the header is unchanged');
+  assert.equal(after.split('PART 1')[1].split('PART 3')[0],
+    before.split('PART 1')[1].split('PART 3')[0], 'PARTS 1 and 2 are unchanged');
+  assert.match(after, /END OF REPORT/);
+});
+
+test('re-splicing replaces the previous review rather than stacking a second one', () => {
+  const once = spliceReview(reportOf(), 'first pass.');
+  const twice = spliceReview(once, 'second pass.');
+  assert.doesNotMatch(twice, /first pass/);
+  assert.match(twice, /second pass/);
+  assert.equal((twice.match(new RegExp(REVIEW_HEADING, 'g')) || []).length, 1);
+});
+
+test('spliceReview refuses a report whose seam was edited away', () => {
+  assert.equal(spliceReview('a hand-written file with no seam at all', 'notes'), null);
+});
+
+// ---- the review request --------------------------------------------------------
+
+test('a short transcript is handed over whole — a fluent mishearing needs reading', () => {
+  const req = buildReviewRequest({
+    title: 'Q3', result, issues: detectIssues(result), wordBudget: 4000,
+  });
+  assert.match(req, /the full transcript is below/);
+  assert.match(req, /## Full transcript/);
+});
+
+test('a transcript over the budget hands over flagged excerpts only, and says so', () => {
+  const req = buildReviewRequest({
+    title: 'Q3', result, issues: detectIssues(result), wordBudget: 10,
+  });
+  assert.match(req, /over the 10-word read budget/);
+  assert.match(req, /flagged excerpts only/);
+  assert.doesNotMatch(req, /## Full transcript/);
+});
+
+test('a flagged line reaches the review with its neighbours for context', () => {
+  const segments = scored([
+    [0, 4, 'Before the hard bit.'], [4, 8, 'The hard bit itself.', -1.3], [8, 12, 'After the hard bit.'],
+  ]);
+  const req = buildReviewRequest({
+    title: 'Q3', result: { ...result, segments }, issues: detectIssues({ segments }), wordBudget: 0,
+  });
+  assert.match(req, /in context: Before the hard bit\. The hard bit itself\. After the hard bit\./);
 });

@@ -9,7 +9,13 @@ Invoked only by transcribe-video.mjs; not a user-facing entry point.
 
 Writes a single JSON object to --out:
   {language, language_probability, duration, model, device, compute_type,
-   segments: [{start, end, text}, ...]}
+   segments: [{start, end, text, avg_logprob, no_speech_prob,
+               compression_ratio}, ...]}
+
+The three per-segment scores are the recognizer's own confidence signals and
+are what the caller's issue detector reads: avg_logprob falls when the audio
+was hard, no_speech_prob rises when there may have been nothing to transcribe,
+and compression_ratio rises when the decoder fell into a repetition loop.
 
 Progress goes to stderr so the caller can stream it. Exit 0 on success,
 3 when faster-whisper is not importable, 1 on any other failure.
@@ -63,7 +69,10 @@ def main():
             continue
         out_segments.append({"start": round(float(seg.start), 3),
                              "end": round(float(seg.end), 3),
-                             "text": text})
+                             "text": text,
+                             "avg_logprob": score(seg, "avg_logprob"),
+                             "no_speech_prob": score(seg, "no_speech_prob"),
+                             "compression_ratio": score(seg, "compression_ratio")})
         if seg.end - last_report >= 30.0:
             last_report = seg.end
             elapsed = time.time() - t1
@@ -84,6 +93,20 @@ def main():
     with open(args.out, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, ensure_ascii=False)
     print(f"done: {len(out_segments)} segments in {payload['transcribe_seconds']}s", file=sys.stderr)
+
+
+def score(seg, name):
+    """One of the recognizer's confidence scores, or None if this build omits it.
+
+    Returned as None rather than 0 on purpose: a missing score must not read as
+    a confident one downstream, and the issue detector skips None."""
+    value = getattr(seg, name, None)
+    if value is None:
+        return None
+    try:
+        return round(float(value), 4)
+    except (TypeError, ValueError):
+        return None
 
 
 def fmt(seconds):
