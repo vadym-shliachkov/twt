@@ -54,7 +54,7 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-content-fetch-figma': 'mid',
   'twt-content-fetch-pdf': 'mid',
   'twt-content-fetch-site': 'mid',
-  'twt-content-fetch-video': 'low',
+  'twt-content-fetch-video': 'mid',
   'twt-content-optimize': 'mid',
   'twt-content-validate': 'mid',
   'twt-curation-define': 'high',
