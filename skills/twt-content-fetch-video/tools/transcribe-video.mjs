@@ -276,7 +276,14 @@ function wordCount(text) { return text.split(/\s+/).filter(Boolean).length; }
 // Group ASR segments into paragraphs: break on a real pause at a sentence end,
 // or on length once a sentence ends, or unconditionally if the recognizer never
 // produced punctuation.
-export function paragraphize(segments, { turnBoundaries = [] } = {}) {
+//
+// `sentenceBreakWords` drops the pause requirement. A publisher's caption cues run
+// end-to-end by construction, and a recognizer that returns back-to-back segment
+// times offers no handovers either — so with neither signal available every break
+// rule here is blind at once and the whole recording comes out as three or four
+// 120-word lumps. Breaking on a sentence end alone is the only cut left that is
+// still a real boundary in the speech rather than an arbitrary word count.
+export function paragraphize(segments, { turnBoundaries = [], sentenceBreakWords = null } = {}) {
   const paras = [];
   const bounds = [...turnBoundaries].sort((a, b) => a - b);
   let cur = null;
@@ -290,6 +297,7 @@ export function paragraphize(segments, { turnBoundaries = [] } = {}) {
     const handover = bounds.some((b) => b > cur.start && b <= seg.start + 0.001);
     const done = handover
       || words >= HARD_WORDS
+      || (endsSentence(cur.text) && sentenceBreakWords != null && words >= sentenceBreakWords)
       || (endsSentence(cur.text) && (words >= MAX_WORDS || (gap >= GAP_SECONDS && words >= MIN_WORDS)));
     if (done) {
       paras.push(cur);
@@ -354,16 +362,24 @@ const inWindow = (t, w) => t >= w.start && t < w.end;
 
 // A bounded planning digest: one row per window, never the transcript itself.
 // A 90-minute recording outlines to ~18 rows — small enough to read whole.
-export function buildOutline({ segments, gaps = [], frames = [], captions = [],
+//
+// `textSegments` is the wording the transcript actually carries — the publisher's
+// caption track where there is one. Turn ranges still come off the recognizer's
+// segments, which are the only ones that have them, but the opens/closes quotes
+// must not be the account the run already rejected: this is the one whole-file
+// digest the descriptive pass reads, and seeding it with "no child greaves alone"
+// teaches the mishearing to the pass that is supposed to catch it.
+export function buildOutline({ segments, textSegments = null, gaps = [], frames = [], captions = [],
   duration, windowSeconds = WINDOW_SECONDS }) {
   const turned = segments[0] && "turn" in segments[0] ? segments : assignTurns(segments);
+  const quoted = textSegments && textSegments.length ? textSegments : turned;
   const span = duration || (turned.length ? turned[turned.length - 1].end : 0);
   const count = Math.max(1, Math.ceil(span / windowSeconds));
   const windows = [];
   for (let i = 0; i < count; i++) {
     const w = { start: i * windowSeconds, end: Math.min(span, (i + 1) * windowSeconds) };
     const mine = turned.filter((s) => inWindow(s.start, w));
-    const text = mine.map((s) => s.text).join(" ");
+    const text = quoted.filter((s) => inWindow(s.start, w)).map((s) => s.text).join(" ");
     windows.push({
       n: i + 1,
       start: fmtTime(w.start, span >= 3600),
@@ -373,8 +389,8 @@ export function buildOutline({ segments, gaps = [], frames = [], captions = [],
       frames: frames.filter((f) => inWindow(f.t, w)).map((f) => f.file),
       non_speech_spans: gaps.filter((g) => inWindow(g.start, w)).length,
       caption_cues: captions.filter((c) => inWindow(c.start, w)).length,
-      opens: mine.length ? words(text, 18) : "(no speech)",
-      closes: mine.length ? lastWords(text, 12) : "",
+      opens: text ? words(text, 18) : "(no speech)",
+      closes: text ? lastWords(text, 12) : "",
     });
   }
   return { duration: fmtTime(span, true), window_seconds: windowSeconds, windows };
@@ -465,7 +481,13 @@ export function buildIndexMd({ source, slug, title, result, fetchedAt, captionSe
   const turnBoundaries = turned
     .filter((seg, i) => i && seg.turn !== turned[i - 1].turn)
     .map((seg) => seg.start);
-  const paras = paragraphize(fromCaptions ? captions : result.segments, { turnBoundaries });
+  // With captions as the text source and no handover to break on, the pause rule
+  // cannot fire — caption cues abut by construction — so fall back to breaking at
+  // sentence ends. Without this an eight-speaker film comes out as four lumps.
+  const paras = paragraphize(fromCaptions ? captions : result.segments, {
+    turnBoundaries,
+    sentenceBreakWords: fromCaptions && !turnBoundaries.length ? MIN_WORDS : null,
+  });
   const name = titleFrom(slug, title);
   const body = paras.length
     ? paras.map((p) => `**[${fmtTime(p.start, forceHours)}]** ${p.text}`).join("\n\n")
@@ -491,6 +513,57 @@ export function buildIndexMd({ source, slug, title, result, fetchedAt, captionSe
       + "in `transcript.txt`._\n\n"
     : "";
   return `${fm}\n\n# ${name}\n\n${note}${body}\n`;
+}
+
+// ---- index.md, re-stamped from the descriptive pass ------------------------------
+// index.md is written before anyone has looked at the recording, so its paragraphs
+// carry timestamps and nothing else — no speakers, because at that point nothing
+// knows who is talking. It is also the file the rest of the pipeline reads: the
+// curation, positioning and IA skills enumerate `fetched/` and open the index.
+//
+// So once the descriptive pass has named the speakers, the index is rebuilt from
+// its beats. Nothing is invented here — the words, the times and the names are all
+// lifted from files the tool already wrote — but it is the difference between the
+// pipeline receiving an eight-speaker film as eight named voices and receiving it
+// as four anonymous blocks. The frontmatter is preserved key for key, because
+// `verify` and the batch index both read it.
+
+// Declared as a function, not a const: TIMELINE_FILE and WCAG_FILE are defined
+// further down the file, and a module-level const would read them in the temporal
+// dead zone and take the whole module down at load.
+const indexPointers = () => [
+  ["descriptive", "transcript.md"],
+  ["timeline", TIMELINE_FILE],
+  ["wcag", WCAG_FILE],
+];
+
+export function restampIndexMd(indexSrc, { beats, forceHours = false, note = null }) {
+  const text = String(indexSrc || "").replace(/\r\n?/g, "\n");
+  const fmMatch = text.match(/^---\n([\s\S]*?)\n---\n/);
+  if (!fmMatch) return null;
+  const keys = fmMatch[1].split("\n").filter((l) => l.trim());
+  const seen = new Set(keys.map((l) => l.split(":")[0].trim()));
+  for (const [key, file] of indexPointers()) if (!seen.has(key)) keys.push(`${key}: ${file}`);
+  const heading = (text.slice(fmMatch[0].length).match(/^#\s+.+$/m) || ["# Transcript"])[0];
+
+  // One block per speaker run: consecutive beats by the same person are rejoined,
+  // because a paragraph per sentence is a timeline, and the timeline already exists.
+  const blocks = [];
+  for (const beat of beats || []) {
+    if (beat.kind !== "speech") continue;
+    const { speech } = splitDelivery(beat.speech);
+    if (!speech) continue;
+    const last = blocks[blocks.length - 1];
+    if (last && last.speaker === beat.speaker) last.text += ` ${speech}`;
+    else blocks.push({ time: beat.time, speaker: beat.speaker, text: speech });
+  }
+  if (!blocks.length) return null;
+
+  const body = blocks
+    .map((b) => `**[${fmtTime(b.time, forceHours)}] ${b.speaker}:** ${b.text}`)
+    .join("\n\n");
+  const preamble = note ? `${note}\n\n` : "";
+  return `---\n${keys.join("\n")}\n---\n\n${heading}\n\n${preamble}${body}\n`;
 }
 
 // The settings the decode actually ran with. They are recorded rather than
@@ -521,14 +594,31 @@ function decodeLines(result) {
   return out;
 }
 
-export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive, captionSource }) {
+// "Embedded caption cues: 0" beside a 57-cue publisher track that *was* the text
+// source reads as "this recording has no captions", which is the opposite of what
+// happened. The two are different things and are now named as different things:
+// one is a stream inside the media file, the other is the track the publisher
+// shipped alongside it.
+function publisherCaptionLine(publisherCaptions) {
+  if (!publisherCaptions || !publisherCaptions.cues) {
+    return "- **Publisher caption track:** none was supplied or found — the speech below is the recognizer's alone";
+  }
+  return `- **Publisher caption track:** ${publisherCaptions.cues} cues`
+    + (publisherCaptions.used
+      ? " — used as the text source, so `index.md` carries this wording and not the recognizer's"
+      : " — supplied, but not used as the text source");
+}
+
+export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive,
+  captionSource, publisherCaptions = null }) {
   const src = redactUrl(source);
   const extras = descriptive ? [
     "",
     "## Descriptive-pass inputs",
     "",
     `- **Keyframes extracted:** ${descriptive.frames}`,
-    `- **Embedded caption cues:** ${descriptive.captions}`,
+    publisherCaptionLine(publisherCaptions),
+    `- **Caption cues inside the media file:** ${descriptive.captions} (its own subtitle stream, separate from any published track)`,
     `- **Audio-description track:** ${descriptive.audio_description ? "found and transcribed to `audio-description.md`" : "none in this file"}`,
     `- **Speaker-turn candidates:** ${descriptive.turns ?? 0} (pause-derived — boundaries are approximate and unnamed)`,
     `- **Non-speech spans:** ${descriptive.non_speech_spans ?? 0}`,
@@ -816,7 +906,7 @@ function part(n, heading) { return [RULE, `PART ${n} - ${heading}`, RULE, ""]; }
 // what about it should not be trusted. PART 1 deliberately carries no timestamps —
 // it is the version you read; PART 2 is the version you cite.
 export function buildReportTxt({ source, slug, title, result, warnings = [], issues,
-  fetchedAt, bytes, descriptive, review, captionDiff, generatedCaptions }) {
+  fetchedAt, bytes, descriptive, review, captionDiff, generatedCaptions, publisherCaptions = null }) {
   const name = titleFrom(slug, title);
   const src = redactUrl(source);
   const forceHours = (result.duration || 0) >= 3600;
@@ -833,8 +923,13 @@ export function buildReportTxt({ source, slug, title, result, warnings = [], iss
   L.push(...field("Duration", `${fmtTime(result.duration, true)} (${Math.round(result.duration || 0)} seconds)`));
   if (bytes) L.push(...field("Media size", `${(bytes / 1048576).toFixed(1)} MB`));
   if (descriptive) {
-    L.push(...field("Descriptive pass", `${descriptive.frames} keyframes, ${descriptive.captions} embedded caption cues, `
-      + `audio-description track ${descriptive.audio_description ? "found" : "absent"} — see transcript.md`));
+    L.push(...field("Descriptive pass", `${descriptive.frames} keyframes, ${descriptive.captions} caption `
+      + `cue(s) inside the media file, audio-description track `
+      + `${descriptive.audio_description ? "found" : "absent"} — see transcript.md`));
+    L.push(...field("Publisher captions", publisherCaptions?.cues
+      ? `${publisherCaptions.cues} cues`
+        + (publisherCaptions.used ? " — the text index.md carries" : " — supplied but not used as the text source")
+      : "none supplied or found"));
   }
 
   if (generatedCaptions?.file) {
@@ -1086,11 +1181,14 @@ export function captionSegments(cues) {
 // so a difference inside one is still reported as the whole word.
 function diffWords(segments) {
   const out = [];
+  let token_id = 0;
   for (const seg of segments || []) {
     for (const token of String(seg.text || "").split(/\s+/).filter(Boolean)) {
-      for (const part of token.split(/[-–—/]+/)) {
-        const norm = normWord(part);
-        if (norm) out.push({ norm, at: seg.start, src: token });
+      token_id += 1;
+      const parts = token.split(/[-–—/]+/);
+      const kept = parts.filter((p) => normWord(p));
+      for (const part of kept) {
+        out.push({ norm: normWord(part), at: seg.start, src: token, part, token_id, of: kept.length });
       }
     }
   }
@@ -1158,26 +1256,45 @@ export function diffTranscripts(asrSegments, capSegments) {
   if (!a.length || !b.length) return [];
   const ops = editScript(a.map((x) => x.norm), b.map((x) => x.norm));
 
+  // A word written "grief-sensitive" on one side and "grief sensitive" on the
+  // other splits into parts that match except for the one that differs — so the
+  // raw edit script has the difference on one side as a bare part and on the other
+  // as half of a hyphenated token. Printed as it comes out, that reads as if a word
+  // vanished: "recognizer: grease-sensitive / captions: grief".
+  //
+  // So a token with any differing part inside it is pulled into the finding whole,
+  // and the matching parts it drags along pull their counterparts in with them.
+  // Both sides are then quoted at the same granularity, which is the only way the
+  // pair reads as the same word said two ways.
+  const dirty = [new Set(), new Set()];
+  for (const op of ops) {
+    if (op.op === "-") dirty[0].add(a[op.ai]?.token_id);
+    else if (op.op === "+") dirty[1].add(b[op.bi]?.token_id);
+  }
+  const sticky = (op) => op.op === "="
+    && (dirty[0].has(a[op.ai]?.token_id) || dirty[1].has(b[op.bi]?.token_id));
+
   const findings = [];
   let block = null;
   const close = () => {
     if (!block) return;
-    if (block.asr.length || block.captions.length) {
-      findings.push({
-        at: fmtTime(block.at, false),
-        seconds: block.at,
-        asr: spanText(block.asr),
-        captions: spanText(block.captions),
-      });
+    const asr = spanText(block.asr);
+    const captions = spanText(block.captions);
+    // An absorbed run can turn out identical on both sides — a token that only
+    // ever differed in punctuation. That is not a disagreement about what was said.
+    if ((block.asr.length || block.captions.length) && asr !== captions) {
+      findings.push({ at: fmtTime(block.at, false), seconds: block.at, asr, captions });
     }
     block = null;
   };
   let lastAt = a[0].at;
   for (const op of ops) {
-    if (op.op === "=") { lastAt = a[op.ai]?.at ?? lastAt; close(); continue; }
-    if (!block) block = { at: (op.op === "-" ? a[op.ai]?.at : undefined) ?? lastAt, asr: [], captions: [] };
+    if (op.op === "=" && !sticky(op)) { lastAt = a[op.ai]?.at ?? lastAt; close(); continue; }
+    const at = (op.op === "+" ? undefined : a[op.ai]?.at) ?? lastAt;
+    if (!block) block = { at, asr: [], captions: [] };
     if (op.op === "-") block.asr.push(a[op.ai]);
-    else block.captions.push(b[op.bi]);
+    else if (op.op === "+") block.captions.push(b[op.bi]);
+    else { block.asr.push(a[op.ai]); block.captions.push(b[op.bi]); }
   }
   close();
   return findings.slice(0, MAX_CAPTION_FINDINGS);
@@ -1496,9 +1613,14 @@ export function brightcoveRef(source) {
 // two hand-written accounts of one recording drift, and the drift is invisible.
 
 export const TIMELINE_FILE = "timeline.md";
+export const WCAG_FILE = "wcag-transcription.json";
 
 const MARKER_RE = /^\[(Visual|On screen|On-screen|Sound|AD|No speech|Inaudible)\b/i;
 const SPEAKER_RE = /^\*\*([^*]{1,120}?):\*\*\s*([\s\S]*)$/;
+// A speaker label the tool has already stamped — `**[0:06] Maria Collins:**`. The
+// stamp is stripped back off when the block is re-parsed, so re-running the command
+// re-measures the line instead of stacking a second timestamp in front of the name.
+const STAMPED_SPEAKER_RE = /^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s+/;
 const CHAPTER_RE = /^###\s+\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.*)$/;
 const NOSPEECH_RE = /^\[No speech\s+(\d{1,2}:\d{2}(?::\d{2})?)/i;
 
@@ -1539,7 +1661,12 @@ export function parseTranscriptBlocks(prose) {
     if (MARKER_RE.test(flat)) { blocks.push({ kind: "marker", text: flat }); continue; }
     const speaker = flat.match(SPEAKER_RE);
     if (speaker) {
-      blocks.push({ kind: "speech", speaker: speaker[1].trim(), speech: speaker[2].trim(), text: flat });
+      blocks.push({
+        kind: "speech",
+        speaker: speaker[1].trim().replace(STAMPED_SPEAKER_RE, ""),
+        speech: speaker[2].trim(),
+        text: flat,
+      });
       continue;
     }
     // A list keeps its own line breaks — re-flowing it would destroy it.
@@ -1584,6 +1711,93 @@ export function beatsFromBlocks(blocks) {
   return { beats, chapters };
 }
 
+// ---- one beat per sentence -------------------------------------------------------
+// The descriptive pass writes a speaker's whole answer as one block, because that
+// is how it reads. The report beside it splits the same speech into one timestamped
+// row per recognizer segment. A timeline coarser than the report is the wrong way
+// round — it is the file whose entire job is saying *when* — so a block is cut at
+// its sentence ends and each sentence is timed on its own against the reference
+// stream, which the anchor already does per beat.
+//
+// Sentences, not cues: a caption cue is half a clause ("In 2008, the New" / "York
+// Life Foundation") and a beat per cue would be a subtitle file, not a transcript.
+
+// A sentence shorter than this is a fragment — "A wild misconception." — and gets
+// no beat of its own: it belongs to the sentence it completes, and a two-word row
+// in a WCAG table is noise a screen-reader user has to step through.
+export const MIN_BEAT_WORDS = 4;
+
+// Split on terminal punctuation, keeping it, and not inside an abbreviation or a
+// decimal. The lookahead requires whitespace then something that can open a
+// sentence, which is why "grades K through 12. It's not" splits and "$1,000.00"
+// does not.
+export function splitSentences(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return [];
+  const out = [];
+  const re = /([.!?…]+["')\]]?)(\s+)(?=[A-Z0-9"'(\[*‘“])/g;
+  let at = 0;
+  let m;
+  while ((m = re.exec(raw))) {
+    out.push(raw.slice(at, m.index + m[1].length).trim());
+    at = m.index + m[0].length;
+  }
+  const tail = raw.slice(at).trim();
+  if (tail) out.push(tail);
+  return out.length ? out : [raw];
+}
+
+export function splitSpeechBeats(beats, { minWords = MIN_BEAT_WORDS } = {}) {
+  const out = [];
+  for (const beat of beats || []) {
+    if (beat.kind !== "speech") { out.push(beat); continue; }
+    const parts = [];
+    for (const sentence of splitSentences(beat.speech)) {
+      const prev = parts[parts.length - 1];
+      // A fragment joins what came before it; a fragment that opens the block has
+      // nothing to join, so it waits for the next sentence to join it instead.
+      if (prev && wordCount(sentence) < minWords) parts[parts.length - 1] = `${prev} ${sentence}`;
+      else if (prev && wordCount(prev) < minWords) parts[parts.length - 1] = `${prev} ${sentence}`;
+      else parts.push(sentence);
+    }
+    if (parts.length <= 1) { out.push(beat); continue; }
+    parts.forEach((speech, i) => {
+      out.push(i === 0
+        ? { ...beat, speech }
+        // A continuation invents nothing: no markers of its own, no chapter break,
+        // and `continued` so anything rendering it knows the speaker did not change.
+        : { ...beat, speech, markers: [], after: undefined, time: undefined, continued: true });
+    });
+  }
+  return out;
+}
+
+// A marker block that lands on the same second as the beat below it is not a beat
+// — it is that beat's setup, printed one line early because the model closed a
+// chapter with it. Two `### [0:48]` headings in a row say the recording did two
+// things at one moment when it did one.
+//
+// The test is whether the two *render* the same, not whether the numbers are close:
+// the marker carries the chapter heading's stamp, rounded to the second by the
+// person who wrote it (0:48), and the line under it carries a measured caption time
+// (48.95). Those are nearly a second apart and print identically, which is the only
+// thing a reader can see.
+const sameStamp = (a, b) => Number.isFinite(a) && Number.isFinite(b)
+  && Math.floor(a) === Math.floor(b);
+
+export function foldMarkerBeats(beats) {
+  const out = [];
+  for (const beat of beats || []) {
+    const prev = out[out.length - 1];
+    if (prev && prev.kind === "markers" && !prev.after?.length && sameStamp(prev.time, beat.time)) {
+      out[out.length - 1] = { ...beat, markers: [...(prev.markers || []), ...(beat.markers || [])] };
+      continue;
+    }
+    out.push(beat);
+  }
+  return out;
+}
+
 // ---- anchoring -----------------------------------------------------------------
 // The model's speech is the publisher's or the recognizer's words, lightly tidied
 // — em-dashes added, filler dropped, an obvious mangling repaired. So a beat is
@@ -1613,6 +1827,19 @@ function matchText(speech) {
   return String(speech || "")
     .replace(/[*_]\([^)]*\)[*_]/g, " ")
     .replace(/^\s*\([^)]*\)\s*/, " ");
+}
+
+// The same stage direction, split off rather than thrown away. It is not speech —
+// putting "*(voice-over)*" inside a `caption` field makes a reviewer read words
+// nobody said, and putting it in the middle of index.md's prose reads as a stutter.
+// But it is real information about the moment, and for someone who cannot see the
+// picture "this voice is off screen" is exactly the kind of thing the descriptive
+// half of the row is for. So it moves there instead.
+export function splitDelivery(speech) {
+  const text = String(speech || "").trim();
+  const m = text.match(/^[*_]\(([^)]*)\)[*_]\s*/);
+  if (!m) return { delivery: null, speech: text };
+  return { delivery: m[1].trim() || null, speech: text.slice(m[0].length).trim() };
 }
 
 // One entry per reference word, carrying the time it is spoken at. Within a
@@ -1735,6 +1962,101 @@ export function buildTimelineMd({ beats, chapters, meta }) {
   return out.join("\n");
 }
 
+// ---- stamping transcript.md ------------------------------------------------------
+// The descriptive pass writes for a reader, so it stamps only where a chapter
+// starts — seven stamps over three minutes, while the report beside it timestamps
+// all thirty-three lines. That leaves the deliverable the coarsest account of when
+// anything happened, and a reader who wants to cite a line has to go and find it in
+// a second file.
+//
+// So the `## Transcript` section is re-emitted with the measured time on every
+// speech line. The words, the speakers, the markers and the chapter headings are
+// the model's, untouched; only the stamps are the tool's, and they are the same
+// measurement timeline.md and wcag-transcription.json are built from — which is the
+// point of stamping them here rather than asking for them a second time.
+//
+// Markers stay unstamped: a marker takes the time of the line it introduces, and
+// stamping it separately would claim a precision the frames do not have.
+export function restampTranscriptMd(prose, { beats, forceHours = false }) {
+  const text = String(prose || "").replace(/\r\n?/g, "\n");
+  // `[ \t]*` rather than `\s*`: a greedy `\s*$` swallows the blank lines under the
+  // heading, so each re-stamp would hand back a file one blank line longer than the
+  // last and the command would never be idempotent.
+  const head = text.match(/^##[ \t]+Transcript[ \t]*$/m);
+  if (!head) return null;
+  const before = text.slice(0, head.index + head[0].length);
+  const rest = text.slice(head.index + head[0].length);
+  const nextSection = rest.match(/^##\s+(?!#)/m);
+  const after = nextSection ? rest.slice(nextSection.index) : "";
+
+  const out = [];
+  let chapter = null;
+  for (const beat of beats || []) {
+    if (beat.chapter && beat.chapter !== chapter) {
+      chapter = beat.chapter;
+      const title = chapter.title ? ` ${chapter.title}` : "";
+      out.push(`### [${fmtTime(chapter.time, forceHours)}]${title}`);
+    }
+    for (const marker of beat.markers || []) out.push(marker);
+    if (beat.kind === "speech") {
+      out.push(`**[${fmtTime(beat.time, forceHours)}] ${beat.speaker}:** ${beat.speech}`);
+    } else if (beat.text) out.push(beat.text);
+    for (const extra of beat.after || []) out.push(extra);
+  }
+  if (!out.length) return null;
+  return `${before}\n\n${out.join("\n\n")}\n\n${after}`;
+}
+
+// ---- the WCAG transcription table ------------------------------------------------
+// The same beats again, as data rather than prose, in the four columns an
+// accessibility reviewer works in: when it happens, what a viewer who cannot see
+// it needs told, what was said, and who said it. `informative_caption` is the
+// descriptive half — the `[Visual: …]`, `[On screen: …]`, `[Sound: …]` and
+// `[No speech …]` markers — kept as an array so a row with three of them stays
+// three, and `caption` is the dialogue alone.
+//
+// A moment with description and no dialogue is a real row, not a gap: an empty
+// `caption` with a null `author` is how a silent end card or a wordless demo is
+// represented. Generated from the same beats as timeline.md, in the same order and
+// the same count, so the two can never disagree about what happened when.
+export function buildWcagTranscription({ beats, chapters, meta }) {
+  const forceHours = (meta.durationSeconds || 0) >= 3600;
+  const chapterAt = new Map((chapters || []).map((c) => [c.time, c.title]));
+  return {
+    source: meta.source,
+    title: meta.title,
+    duration: meta.duration,
+    language: meta.language,
+    text_source: meta.textSource,
+    kind: "wcag-transcription",
+    generated_from: "transcript.md",
+    fetched_at: meta.fetchedAt,
+    note: "Time-ordered rows for an accessibility review. `informative_caption` carries what a "
+      + "viewer who cannot see the picture needs told at that moment; `caption` is the speech "
+      + "alone; `author` is who is speaking, or null when nobody is. Generated by "
+      + "`transcribe-video.mjs timeline` from transcript.md — never edited by hand.",
+    entries: (beats || []).map((beat) => {
+      const { delivery, speech } = beat.kind === "speech"
+        ? splitDelivery(beat.speech) : { delivery: null, speech: "" };
+      return {
+        time: fmtTime(beat.time, forceHours),
+        seconds: Math.round((beat.time || 0) * 100) / 100,
+        // An inferred time is stated as inferred here too: a table read as data hides
+        // the `~` that the Markdown timeline shows.
+        time_inferred: Boolean(beat.approx),
+        chapter: chapterAt.get(beat.chapter?.time) ?? beat.chapter?.title ?? null,
+        informative_caption: [
+          ...(beat.markers || []),
+          ...(delivery ? [`[Delivery: ${delivery}]`] : []),
+          ...(beat.kind !== "speech" && beat.text ? [beat.text] : []),
+        ],
+        caption: speech,
+        author: beat.kind === "speech" ? beat.speaker : null,
+      };
+    }),
+  };
+}
+
 // Reads the directory, builds the file, returns what it did. The reference stream
 // is the publisher's caption track where there is one — its cues are two or three
 // seconds long against the recognizer's five to ten, so it locates a line several
@@ -1748,8 +2070,11 @@ export function writeTimeline(dir) {
 
   const blocks = parseTranscriptBlocks(prose);
   if (!blocks) return { ok: false, problems: ["transcript.md has no `## Transcript` section — the timeline is built from that section and it is not there."] };
-  const { beats, chapters } = beatsFromBlocks(blocks);
-  if (!beats.length) return { ok: false, problems: ["transcript.md's `## Transcript` section holds no speech or markers."] };
+  const { beats: blockBeats, chapters } = beatsFromBlocks(blocks);
+  if (!blockBeats.length) return { ok: false, problems: ["transcript.md's `## Transcript` section holds no speech or markers."] };
+  // Cut before anchoring, so every sentence is located on its own rather than
+  // inheriting the time of the paragraph it was written inside.
+  const beats = splitSpeechBeats(blockBeats);
 
   let refSegments = [];
   let textSource = "speech-recognition";
@@ -1761,6 +2086,7 @@ export function writeTimeline(dir) {
   }
 
   const { unmatched } = anchorBeats(beats, referenceWords(refSegments));
+  const timed = foldMarkerBeats(beats);
 
   const fm = (name, src) => ((src || "").match(new RegExp(`^${name}:\\s*(.+)\\s*$`, "m")) || [])[1] || null;
   const index = read("index.md") || "";
@@ -1775,14 +2101,53 @@ export function writeTimeline(dir) {
     fetchedAt: fm("fetched_at", index) || new Date().toISOString().slice(0, 10),
   };
 
+  // transcript.md is stamped first, so the two files built from it below are never
+  // a millisecond older than the prose they were derived from — which is exactly
+  // what `verify`'s staleness check exists to catch.
+  let proseRestamped = false;
+  const stampedProse = restampTranscriptMd(prose, {
+    beats: timed, forceHours: (meta.durationSeconds || 0) >= 3600,
+  });
+  if (stampedProse && stampedProse !== prose) {
+    writeFileSync(join(dir, "transcript.md"), stampedProse, "utf8");
+    proseRestamped = true;
+  }
+
   const path = join(dir, TIMELINE_FILE);
-  writeFileSync(path, buildTimelineMd({ beats, chapters, meta }), "utf8");
+  writeFileSync(path, buildTimelineMd({ beats: timed, chapters, meta }), "utf8");
+
+  const wcagPath = join(dir, WCAG_FILE);
+  writeFileSync(wcagPath,
+    `${JSON.stringify(buildWcagTranscription({ beats: timed, chapters, meta }), null, 2)}\n`, "utf8");
+
+  // index.md was written before anyone knew who was speaking. Now that the
+  // descriptive pass has said so, rebuild it with the names attached — it is the
+  // file the rest of the pipeline opens, and an anonymous one hands eight named
+  // voices downstream as four unattributed blocks.
+  let indexRestamped = false;
+  if (index) {
+    const restamped = restampIndexMd(index, {
+      beats: timed,
+      forceHours: (meta.durationSeconds || 0) >= 3600,
+      note: "_Speech below is grouped by speaker and attributed from the descriptive pass in "
+        + "`transcript.md`; `timeline.md` carries the same content with a timestamp on every beat, "
+        + "and `wcag-transcription.json` carries it as data. What is on screen is in `transcript.md`._",
+    });
+    if (restamped && restamped !== index) {
+      writeFileSync(join(dir, "index.md"), restamped, "utf8");
+      indexRestamped = true;
+    }
+  }
+
   return {
     ok: true,
     file: path,
-    beats: beats.length,
-    speech: beats.filter((b) => b.kind === "speech").length,
-    markers: beats.reduce((n, b) => n + (b.markers || []).length, 0),
+    wcag: wcagPath,
+    indexRestamped,
+    proseRestamped,
+    beats: timed.length,
+    speech: timed.filter((b) => b.kind === "speech").length,
+    markers: timed.reduce((n, b) => n + (b.markers || []).length, 0),
     chapters: chapters.length,
     reference: textSource,
     referenceSegments: refSegments.length,
@@ -1800,6 +2165,10 @@ function doTimeline() {
   if (result.unmatched.length) {
     console.error(`note: ${result.unmatched.length} line(s) could not be located in the reference `
       + "timings and carry the previous beat's time (marked ~ in the file).");
+  }
+  if (result.indexRestamped) {
+    console.error("note: index.md was rebuilt from the descriptive pass — its paragraphs now carry "
+      + "the speaker names, which is what the downstream pipeline skills read.");
   }
 }
 
@@ -1942,13 +2311,55 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
         } catch { /* a missing stat is already covered above */ }
       }
 
+      // The WCAG table is the same beats as data, written by the same command, so
+      // it goes stale in the same one direction and for the same reason — and a
+      // stale one is worse than a stale timeline, because a reviewer working from
+      // JSON has no prose around it to notice the drift in.
+      const wcagRaw = read(WCAG_FILE);
+      if (!wcagRaw) {
+        const missing = `No ${WCAG_FILE} — the accessibility transcription table has not been built.`;
+        if (expectDescriptive) {
+          problems.push(missing + ` Build it with \`timeline "<dir>"\`, which writes it beside ${TIMELINE_FILE}.`);
+        } else notes.push(missing);
+      } else {
+        let doc = null;
+        try { doc = JSON.parse(wcagRaw); } catch { doc = null; }
+        if (!doc || !Array.isArray(doc.entries) || !doc.entries.length) {
+          problems.push(`${WCAG_FILE} is not a readable transcription table (an object with a non-empty `
+            + `\`entries\` array) — re-run \`timeline "<dir>"\` rather than repairing it by hand.`);
+        } else {
+          const shaped = doc.entries.every((e) => e && typeof e.time === "string"
+            && Array.isArray(e.informative_caption) && typeof e.caption === "string"
+            && (e.author === null || typeof e.author === "string"));
+          if (!shaped) {
+            problems.push(`${WCAG_FILE} has rows missing time / informative_caption / caption / author — `
+              + "it was not produced by this script.");
+          }
+          if (timeline) {
+            const stops = (timeline.match(/^###\s+\[/gm) || []).length;
+            if (stops && stops !== doc.entries.length) {
+              problems.push(`${WCAG_FILE} holds ${doc.entries.length} rows but ${TIMELINE_FILE} has ${stops} `
+                + "beats — they are two accounts of one recording and must be the same list.");
+            }
+          }
+        }
+        try {
+          if (statSync(join(dir, "transcript.md")).mtimeMs > statSync(join(dir, WCAG_FILE)).mtimeMs + 1000) {
+            problems.push(`${WCAG_FILE} is older than transcript.md — it was built from an earlier draft. `
+              + `Re-run \`timeline "<dir>"\`.`);
+          }
+        } catch { /* a missing stat is already covered above */ }
+      }
+
       // A name read off a downscaled keyframe is evidence, not a font specimen.
       // "TerriyIn" for "Terrilyn" is the shape this takes every time: a capital I
       // where a lowercase l stood, published as fact because it came from an
       // on-screen card and cards feel authoritative. The rule is to mark it [?];
       // this is the check that notices when the rule was not followed.
       const suspect = new Set();
-      for (const m of prose.matchAll(/\*\*([A-Z][^*:]{1,60}?):\*\*/g)) {
+      // The optional `[0:06] ` is the stamp restampTranscriptMd puts in front of the
+      // name; the check is about the name, not about where it sits on the line.
+      for (const m of prose.matchAll(/\*\*(?:\[[\d:]+\]\s+)?([A-Z][^*:]{1,60}?):\*\*/g)) {
         const name = m[1].trim();
         if (/\[\?\]/.test(name)) continue;
         for (const token of name.split(/[\s'’-]+/)) {
@@ -2032,7 +2443,7 @@ function pyTranscribe(py, media, outJson) {
 // Everything a descriptive transcript needs that a machine can settle: which
 // streams exist, what the picture does, the file's own captions, and a real
 // audio-description track if the publisher shipped one.
-function enrichDescriptive({ py, mediaPath, outDir, result, warnings }) {
+function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments = null }) {
   const out = { frames: 0, captions: 0, audio_description: false, files: [] };
 
   const mediaJson = join(outDir, "media.json");
@@ -2145,7 +2556,7 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings }) {
 
   const outlinePath = join(outDir, "outline.json");
   writeFileSync(outlinePath, JSON.stringify(buildOutline({
-    segments: result.segments, gaps, frames, captions, duration: result.duration,
+    segments: result.segments, textSegments, gaps, frames, captions, duration: result.duration,
     windowSeconds: Number(flag("--window-seconds", String(WINDOW_SECONDS))) || WINDOW_SECONDS,
   }), null, 2), "utf8");
   out.files.push(outlinePath);
@@ -2589,9 +3000,12 @@ async function runOne({ source, py, outRoot }) {
     // becomes the text index.md carries, and — the part that matters most — is
     // diffed against the recognizer. That diff is the only mechanical check in
     // this tool that can catch a mishearing the decoder was confident about.
-    const { captions, diff: captionDiff } = await ingestCaptions({
+    const { captions, diff: captionDiff, cues: captionCues } = await ingestCaptions({
       captionsUrl, outDir, asrSegments: result.segments, warnings,
     });
+    // Two different things that both get called "captions": the track the publisher
+    // shipped (this) and any subtitle stream inside the media file (descriptive.captions).
+    const publisherCaptions = { cues: captionCues || 0, used: Boolean(captions && captions.length) };
 
     writeFileSync(indexPath, buildIndexMd({
       source: sourceRef, slug, title, result, fetchedAt, captionSegments: captions,
@@ -2605,7 +3019,7 @@ async function runOne({ source, py, outRoot }) {
     // is wanted (and is what collect mode passes, having no budget for the pass).
     const descriptive = has("--verbatim")
       ? null
-      : enrichDescriptive({ py, mediaPath, outDir, result, warnings });
+      : enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments: captions });
 
     // A subtitle file for the recordings that have none. Written after the
     // descriptive extraction because that is what discovers the media's own
@@ -2619,7 +3033,8 @@ async function runOne({ source, py, outRoot }) {
 
     writeFileSync(join(outDir, "_meta.md"),
       buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
-        keptSource: !isUrl || keepSource, captionSource: captionSourceLine({ captions, generatedCaptions }) }), "utf8");
+        keptSource: !isUrl || keepSource, publisherCaptions,
+        captionSource: captionSourceLine({ captions, generatedCaptions }) }), "utf8");
 
     // The human-readable report is written on every run, in both depths — it is
     // the deliverable a person actually opens, and PART 3 is the only place the
@@ -2629,7 +3044,7 @@ async function runOne({ source, py, outRoot }) {
     const reportPath = join(outDir, "transcript.txt");
     writeFileSync(reportPath, buildReportTxt({
       source: sourceRef, slug, title, result, warnings, issues, fetchedAt, bytes, descriptive,
-      captionDiff, generatedCaptions,
+      captionDiff, generatedCaptions, publisherCaptions,
     }), "utf8");
 
     // The run is not finished until the set it just claimed to write is actually

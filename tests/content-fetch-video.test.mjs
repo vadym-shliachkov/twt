@@ -9,7 +9,7 @@ import {
   spliceReview, buildReviewRequest, REPORT_WIDTH, REVIEW_HEADING, verifyArtifacts,
   parseCaptions, captionSegments, diffTranscripts, brightcoveRef, ingestCaptions,
   parseTranscriptBlocks, beatsFromBlocks, referenceWords, anchorBeats, writeTimeline,
-  TIMELINE_FILE,
+  TIMELINE_FILE, splitSpeechBeats, WCAG_FILE, splitDelivery,
   splitCueText, wrapCue, cuesFromSegments, formatVttTime, buildVtt, captionsSkipReason,
   maybeWriteGeneratedCaptions, captionSourceLine,
   GENERATED_CAPTIONS_FILE, CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
@@ -1498,4 +1498,339 @@ test('the report says which caption track was written, or why none was', () => {
     why: "the publisher's own caption track is already in the directory" } });
   assert.match(skipped.replace(/\s+/g, ' '), /no track was generated — the publisher's own caption track/);
   assert.ok(!skipped.includes('generated-captions.vtt'));
+});
+
+// ---- sentence-level beats, the WCAG table, and the re-stamped index ---------------
+
+// A speech line as the descriptive pass writes it: several sentences under one
+// speaker, with the markers that set it up. The txt report splits the same speech
+// into one timestamped row per recognizer segment, and the timeline is meant to be
+// no coarser than that.
+const GRANULAR_PROSE = [
+  '---', 'title: T', 'duration: 0:00:45', '---', '',
+  '## Transcript', '',
+  '### [0:00] Why a life insurer took this on', '',
+  '[Visual: fade up from black onto a woman against a lit blue backdrop.]', '',
+  '[On screen: name card — "Maria Collins / Vice President / New York Life Foundation".]', '',
+  '**Maria Collins:** In 2008, the New York Life Foundation established childhood bereavement'
+    + ' as a philanthropic focus. This was and is a natural extension of who we are as a life'
+    + ' insurance company. The unfortunate reality is that at least two students will lose a parent.', '',
+  // A marker that closes one chapter and sets up the next sits *before* the heading —
+  // which is what used to emit a beat of its own at the same second as the line below it.
+  '[Visual: cut to exterior footage of a school at dusk.]', '',
+  '### [0:22] Forming the coalition', '',
+  '[Visual: cut to a man in a dark suit and red tie.]', '',
+  '**David Schonfeld:** Together, our organizations formed the Coalition to Support Grieving'
+    + ' Students. An alliance dedicated to developing professional materials.', '',
+  '[No speech 0:40–0:45 — the end card holds in silence.]', '',
+].join('\n');
+
+const GRANULAR_REF = segs(
+  [0, 6, 'In 2008, the New York Life Foundation established childhood bereavement as a philanthropic focus.'],
+  [6, 11, 'This was and is a natural extension of who we are as a life insurance company.'],
+  [11, 22, 'The unfortunate reality is that at least two students will lose a parent.'],
+  [22.6, 30, 'Together, our organizations formed the Coalition to Support Grieving Students.'],
+  [30, 40, 'An alliance dedicated to developing professional materials.'],
+);
+
+function granularDir() {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-granular-'));
+  writeFileSync(join(dir, 'index.md'),
+    '---\nsource: https://example.com/v.mp4\ntype: video\ntitle: T\nduration: 0:00:45\n'
+    + 'language: en\nengine: faster-whisper\nmodel: small\ntext_source: publisher-captions\n'
+    + 'segments: 5\nfetched_at: 2026-08-26\n---\n\n# T\n\n**[0:00]** everything in one lump.\n');
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify({ segments: GRANULAR_REF }));
+  writeFileSync(join(dir, '_meta.md'), '**Segments:** 5');
+  writeFileSync(join(dir, 'transcript.txt'),
+    `PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 5 items)\nPART 3 - POSSIBLE ISSUES\n${REVIEW_HEADING}\nfound nothing\nEND OF REPORT`);
+  writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
+  writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
+  writeFileSync(join(dir, 'transcript.md'), GRANULAR_PROSE);
+  return dir;
+}
+
+test('a multi-sentence speech block becomes one beat per sentence', () => {
+  const blocks = parseTranscriptBlocks(GRANULAR_PROSE);
+  const { beats } = beatsFromBlocks(blocks);
+  const split = splitSpeechBeats(beats);
+  const speech = split.filter((b) => b.kind === 'speech');
+  assert.equal(speech.length, 5, 'three sentences from Collins and two from Schonfeld');
+  assert.match(speech[0].speech, /^In 2008,/);
+  assert.match(speech[1].speech, /^This was and is/);
+  assert.equal(speech[0].speaker, 'Maria Collins');
+  assert.equal(speech[1].speaker, 'Maria Collins');
+});
+
+test('splitting keeps the markers on the sentence they introduced', () => {
+  const { beats } = beatsFromBlocks(parseTranscriptBlocks(GRANULAR_PROSE));
+  const split = splitSpeechBeats(beats);
+  const first = split.find((b) => b.kind === 'speech');
+  assert.equal((first.markers || []).length, 2, 'the visual and the name card set up the first sentence');
+  const second = split.filter((b) => b.kind === 'speech')[1];
+  assert.deepEqual(second.markers || [], [], 'a continuation invents no markers of its own');
+  assert.equal(second.continued, true);
+});
+
+test('a fragment too short to stand alone stays with the sentence before it', () => {
+  const { beats } = beatsFromBlocks(parseTranscriptBlocks(
+    '## Transcript\n\n**Jim:** When in fact that is a misconception. A wild misconception.\n'));
+  const split = splitSpeechBeats(beats);
+  assert.equal(split.filter((b) => b.kind === 'speech').length, 1);
+  assert.match(split[0].speech, /A wild misconception\.$/);
+});
+
+test('the timeline is no coarser than the report it sits beside', () => {
+  const dir = granularDir();
+  const r = writeTimeline(dir);
+  assert.equal(r.ok, true);
+  const md = readFileSync(join(dir, TIMELINE_FILE), 'utf8');
+  const stops = (md.match(/^### \[/gm) || []).length;
+  assert.ok(stops >= 6, `expected a stop per sentence plus the silence, got ${stops}`);
+  // Each sentence carries its own measured time, not the chapter's.
+  assert.match(md, /^### \[0:06\]/m);
+  assert.match(md, /^### \[0:11\]/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a marker-only beat is folded into the beat it shares a moment with', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const md = readFileSync(join(dir, TIMELINE_FILE), 'utf8');
+  const stamps = (md.match(/^### \[[\d:]+\]/gm) || []);
+  assert.equal(new Set(stamps).size, stamps.length, `two beats share a timestamp: ${stamps.join(' ')}`);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('writeTimeline emits the WCAG transcription table', () => {
+  const dir = granularDir();
+  const r = writeTimeline(dir);
+  assert.match(r.wcag || '', /wcag-transcription\.json$/);
+  const doc = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8'));
+  assert.equal(doc.title, 'T');
+  assert.ok(Array.isArray(doc.entries));
+  const first = doc.entries[0];
+  assert.equal(first.time, '0:00');
+  assert.equal(first.author, 'Maria Collins');
+  assert.match(first.caption, /^In 2008, the New York Life Foundation/);
+  assert.deepEqual(first.informative_caption, [
+    '[Visual: fade up from black onto a woman against a lit blue backdrop.]',
+    '[On screen: name card — "Maria Collins / Vice President / New York Life Foundation".]',
+  ]);
+  // A silence is an informative caption with nobody speaking.
+  const silence = doc.entries.at(-1);
+  assert.equal(silence.author, null);
+  assert.equal(silence.caption, '');
+  assert.match(silence.informative_caption[0], /^\[No speech/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the WCAG entries and the timeline beats are the same list', () => {
+  const dir = granularDir();
+  const r = writeTimeline(dir);
+  const doc = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8'));
+  assert.equal(doc.entries.length, r.beats);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('index.md is re-stamped with the speakers the descriptive pass named', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const index = readFileSync(join(dir, 'index.md'), 'utf8');
+  assert.match(index, /\*\*\[0:00\] Maria Collins:\*\*/);
+  assert.match(index, /\*\*\[0:22\] David Schonfeld:\*\*/);
+  assert.ok(!index.includes('everything in one lump'), 'the pre-descriptive body is replaced, not appended to');
+  // Frontmatter the rest of the tool depends on survives.
+  assert.match(index, /^segments: 5$/m);
+  assert.match(index, /^text_source: publisher-captions$/m);
+  assert.match(index, /^duration: 0:00:45$/m);
+  // And it points at the files that carry the rest.
+  assert.match(index, /^descriptive: transcript\.md$/m);
+  assert.match(index, /^timeline: timeline\.md$/m);
+  assert.match(index, /^wcag: wcag-transcription\.json$/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('re-stamping index.md is idempotent', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const once = readFileSync(join(dir, 'index.md'), 'utf8');
+  writeTimeline(dir);
+  assert.equal(readFileSync(join(dir, 'index.md'), 'utf8'), once);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('verify insists on a WCAG table that is not older than the transcript', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  assert.deepEqual(verifyArtifacts(dir, { expectDescriptive: true }).problems, []);
+
+  rmSync(join(dir, WCAG_FILE));
+  const gone = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(gone.ok, false);
+  assert.ok(gone.problems.some((p) => /wcag-transcription\.json/.test(p)));
+
+  writeTimeline(dir);
+  const past = new Date(Date.now() - 60000);
+  utimesSync(join(dir, WCAG_FILE), past, past);
+  const stale = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(stale.ok, false);
+  assert.ok(stale.problems.some((p) => /older than transcript\.md/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- the fixes to what the tool already wrote -------------------------------------
+
+test('caption paragraphs break on sentence ends when no pause and no handover can be seen', () => {
+  // Publisher cues run back to back, and a recognizer with no measurable pauses
+  // offers no turn boundaries — the case that flattened an 8-speaker film into
+  // four 100-word lumps.
+  const contiguous = segs(
+    [0, 10, `${filler(45)} one.`],
+    [10, 20, `${filler(45)} two.`],
+    [20, 30, `${filler(45)} three.`],
+  );
+  assert.equal(paragraphize(contiguous).length, 1, 'the old behaviour, kept for the ASR path');
+  assert.equal(paragraphize(contiguous, { sentenceBreakWords: 40 }).length, 3);
+});
+
+test('index.md does not lump a whole caption track into one block', () => {
+  const captions = segs(
+    [0, 10, `${filler(45)} one.`],
+    [10, 20, `${filler(45)} two.`],
+    [20, 30, `${filler(45)} three.`],
+  );
+  const md = buildIndexMd({
+    source: 'https://example.com/v.mp4', slug: 'v', title: 'V', fetchedAt: '2026-08-26',
+    result: { model: 'small', language: 'en', duration: 30, segments: captions },
+    captionSegments: captions,
+  });
+  assert.ok((md.match(/^\*\*\[\d+:\d\d\]\*\*/gm) || []).length >= 3);
+});
+
+test('a hyphenated mishearing is reported part against part, not token against part', () => {
+  const asr = segs([160, 165, 'becoming a grease-sensitive school today.']);
+  const cap = segs([160, 165, 'becoming a grief sensitive school today.']);
+  const [d] = diffTranscripts(asr, cap);
+  assert.equal(d.asr, 'grease-sensitive');
+  assert.equal(d.captions, 'grief sensitive',
+    'reporting "grease-sensitive" against a bare "grief" reads as if a word vanished');
+});
+
+test('a whole differing token is still reported whole', () => {
+  const asr = segs([50, 55, 'Grief and Grievement can be lifelong.']);
+  const cap = segs([50, 55, 'Grief and bereavement can be lifelong.']);
+  const [d] = diffTranscripts(asr, cap);
+  assert.equal(d.asr, 'Grievement');
+  assert.equal(d.captions, 'bereavement');
+});
+
+test('the outline quotes the text the transcript actually carries', () => {
+  const asr = segs([0, 10, 'no child greaves alone in a grease-sensitive school.']);
+  const cap = segs([0, 10, 'no child grieves alone in a grief-sensitive school.']);
+  const o = buildOutline({ segments: asr, textSegments: cap, duration: 10 });
+  assert.match(o.windows[0].opens, /grieves alone/);
+  assert.ok(!o.windows[0].opens.includes('greaves'));
+  // Turn ranges still come from the recognizer's timings, which is all that has them.
+  assert.ok(Array.isArray(o.windows[0].turns));
+});
+
+test('_meta.md separates the publisher track from the stream inside the media file', () => {
+  const md = buildMetaMd({
+    source: 'https://example.com/v.mp4', localPath: null, bytes: 0,
+    result: { model: 'small', device: 'cpu', compute_type: 'int8', duration: 170,
+      language: 'en', language_probability: 0.999, segments: segs([0, 5, 'a']), transcribe_seconds: 33 },
+    warnings: [], keptSource: false,
+    descriptive: { frames: 35, captions: 0, audio_description: false, turns: 1, non_speech_spans: 1, windows: 1 },
+    publisherCaptions: { cues: 57, used: true },
+  });
+  assert.match(md, /Publisher caption track:\*\* 57 cues/);
+  assert.match(md, /used as the text source/);
+  // The zero that used to read as "this recording has no captions".
+  assert.match(md, /Caption cues inside the media file:\*\* 0/);
+});
+
+test('transcript.md gains a measured stamp on every speech line', () => {
+  const dir = granularDir();
+  const r = writeTimeline(dir);
+  assert.equal(r.proseRestamped, true);
+  const prose = readFileSync(join(dir, 'transcript.md'), 'utf8');
+  const stamped = prose.match(/^\*\*\[\d+:\d\d\] [^*]+:\*\*/gm) || [];
+  assert.equal(stamped.length, 5, 'one per sentence, as the report stamps one per segment');
+  assert.match(prose, /^\*\*\[0:06\] Maria Collins:\*\* This was and is/m);
+  assert.match(prose, /^\*\*\[0:22\] David Schonfeld:\*\* Together,/m);
+  // The chapter headings, markers and everything outside ## Transcript survive.
+  assert.match(prose, /^### \[0:00\] Why a life insurer took this on$/m);
+  assert.match(prose, /^\[On screen: name card — "Maria Collins/m);
+  assert.match(prose, /^\[No speech 0:40/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('stamping transcript.md is idempotent and never stacks two stamps on a name', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const once = readFileSync(join(dir, 'transcript.md'), 'utf8');
+  const second = writeTimeline(dir);
+  const twice = readFileSync(join(dir, 'transcript.md'), 'utf8');
+  assert.equal(twice, once);
+  assert.equal(second.proseRestamped, false);
+  assert.ok(!/\[\d+:\d\d\]\s+\[\d+:\d\d\]/.test(twice));
+  assert.equal(second.beats, JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8')).entries.length);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a re-stamped transcript still verifies, and its files are not stale', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  assert.deepEqual(verifyArtifacts(dir, { expectDescriptive: true }).problems, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('an already-stamped speaker line re-parses to the bare name', () => {
+  const blocks = parseTranscriptBlocks(
+    '## Transcript\n\n**[1:45] Terrilyn Rivers-Cannon [?]:** If we do not work together.\n');
+  assert.equal(blocks[0].speaker, 'Terrilyn Rivers-Cannon [?]');
+});
+
+test('a stage direction is split off the speech, not counted as speech', () => {
+  assert.deepEqual(splitDelivery('*(voice-over)* The unfortunate reality is.'),
+    { delivery: 'voice-over', speech: 'The unfortunate reality is.' });
+  assert.deepEqual(splitDelivery('*(voice-over, over the school exterior)* It is not a one time event.'),
+    { delivery: 'voice-over, over the school exterior', speech: 'It is not a one time event.' });
+  // A parenthesis inside the sentence is part of what was said.
+  assert.deepEqual(splitDelivery('We shipped it (finally) last week.'),
+    { delivery: null, speech: 'We shipped it (finally) last week.' });
+});
+
+test('the WCAG caption is the words spoken, with the delivery in the descriptive half', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-delivery-'));
+  writeFileSync(join(dir, 'index.md'), '---\ntitle: T\nduration: 0:00:20\nsegments: 2\n---\n\n# T\n\nbody\n');
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify({ segments: segs(
+    [0, 6, 'In 2008 the foundation began.'],
+    [6, 14, 'The unfortunate reality is that two students will lose a parent.'],
+  ) }));
+  writeFileSync(join(dir, 'transcript.md'), [
+    '---', 'duration: 0:00:20', '---', '', '## Transcript', '', '### [0:00] A', '',
+    '**Maria Collins:** In 2008 the foundation began.', '',
+    '[Visual: the shot dissolves to an infographic.]', '',
+    '**Maria Collins:** *(voice-over)* The unfortunate reality is that two students will lose a parent.', '',
+  ].join('\n'));
+  writeTimeline(dir);
+
+  const row = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8')).entries[1];
+  assert.equal(row.caption, 'The unfortunate reality is that two students will lose a parent.');
+  assert.ok(!row.caption.includes('voice-over'), 'a reviewer must not read words nobody said');
+  assert.deepEqual(row.informative_caption, [
+    '[Visual: the shot dissolves to an infographic.]',
+    '[Delivery: voice-over]',
+  ]);
+
+  // index.md carries the speech only — the stage direction would read as a stutter
+  // in the middle of a paragraph.
+  const index = readFileSync(join(dir, 'index.md'), 'utf8');
+  assert.match(index, /began\. The unfortunate reality/);
+  assert.ok(!index.includes('voice-over'));
+
+  // The prose keeps it exactly where the descriptive pass put it.
+  assert.match(readFileSync(join(dir, 'transcript.md'), 'utf8'), /\*\(voice-over\)\* The unfortunate/);
+  rmSync(dir, { recursive: true, force: true });
 });

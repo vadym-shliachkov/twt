@@ -2,8 +2,8 @@
 name: twt-content-fetch
 surface: command
 category: content
-description: (v1.1.9) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
-version: 1.1.9
+description: (v1.1.10) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
+version: 1.1.10
 accepts_arguments: true
 inputs:
   - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
@@ -74,13 +74,26 @@ sources: <count>
 
 # Content ingest manifest
 
-| Source | Type | Skill | Output |
-|--------|------|-------|--------|
-| <src> | site/pdf/doc/figma/video | /twt-content-fetch-<type> | <output folder> |
+| Source | Type | Skill | Output | Read this |
+|--------|------|-------|--------|-----------|
+| <src> | site/pdf/doc/figma/video | /twt-content-fetch-<type> | <output folder> | <the file inside it a reader should open> |
 
 ## Unrecognized
 - <src> — reason
 ```
 
+**The `Read this` column names one file per source, not the folder.** For a site, PDF, doc or Figma
+file that is the folder's `index.md`. For a **video** it is `<folder>/index.md` as well — the fetch
+skill rebuilds it with the speaker names once its descriptive pass has run — and the row says so:
+`index.md (speaker-attributed; transcript.md adds on-screen text and visuals)`. Without the column a
+downstream skill enumerating `fetched/` picks whatever it finds first, which for a recording means it
+can end up quoting the recognizer's raw attempt out of `transcript.txt` instead of the publisher's
+words, or reading the whole descriptive transcript when it wanted the speech.
+
 ## Step 5 — Report
 Summarize: counts per type, output folders, unrecognized sources, and that downstream define skills will read from `.twt-artifacts/pre-design/content/fetched/`.
+
+For any **video** source, add one line: whether its descriptive pass ran. A recording fetched under
+collect mode has a verbatim `index.md` with no speaker attribution and no `transcript.md` beside it —
+say so, and say that a plain `/twt-content-fetch-video` re-run with `--force` would name the speakers
+and produce the descriptive transcript, `timeline.md` and `wcag-transcription.json`.

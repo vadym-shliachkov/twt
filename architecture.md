@@ -884,7 +884,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.9
+**Version:** 1.1.10
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
@@ -1009,7 +1009,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.6
+**Version:** 1.0.7
 
 **Inputs:**
 - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
@@ -1036,6 +1036,7 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/timeline.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/wcag-transcription.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json |  |
@@ -1107,7 +1108,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.2.1
+**Version:** 1.2.2
 
 **Inputs:**
 - Optional answers; otherwise interactive
