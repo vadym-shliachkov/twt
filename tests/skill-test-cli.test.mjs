@@ -115,14 +115,15 @@ test('converged defaults to a cap of 3 when --cap is absent', () => {
 
 // Finding 8: flag() must not read a trailing flag as `undefined`, and must
 // not swallow the next flag's name as if it were this flag's value.
-test('flag() defaults a trailing flag instead of reading it as undefined', () => {
+test('flag() defaults a trailing --tree-clean to the safer false, not true', () => {
   const runDir = newDir();
   const critFile = join(newDir(), 'c.md');
   writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
-  // --tree-clean is the last token on the line — nothing follows it.
+  // --tree-clean is the last token on the line — nothing follows it. A
+  // malformed invocation must not silently flip toward "the tree was clean".
   run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--tree-clean']);
   const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
-  assert.equal(meta.startTreeClean, true);
+  assert.equal(meta.startTreeClean, false);
 });
 
 test('flag() does not swallow the next flag\'s name as its own value', () => {
@@ -160,4 +161,31 @@ test('finding --out-of-boundary true records a proposed patch', () => {
   const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
   assert.equal(meta.findings[0].outOfBoundary, true);
   assert.equal(meta.findings[0].patch, 'change x to y');
+});
+
+// Regression-of-the-fix (coordinator finding A): the Finding-8 flag() guard
+// that rejects a `--`-leading value as a flag's value also swallowed a
+// LEGITIMATE `--`-leading value — many twt skills take their own `--live`
+// style flags, and a pasted diff for --patch starts with `---`. The escape
+// hatch is `--name=value`, which must survive a value that itself starts
+// with `--` untouched.
+test('flag() --name=value lets --args carry a value starting with -- (e.g. --live)', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-skill-test', '--file', critFile, '--freeze', runDir]);
+  run(['inject', 'twt-skill-test', '--run', runDir, '--target', 'C:/tmp/skill-test-flag-test', '--iteration', '1', '--args=--live']);
+  const prompt = readFileSync(join(runDir, 'iteration-1', 'prompt.md'), 'utf8');
+  assert.match(prompt, /Arguments: --live/);
+  assert.doesNotMatch(prompt, /Arguments: \(none\)/);
+});
+
+test('flag() --name=value lets --patch carry a pasted diff starting with ---', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  run(['finding', runDir, '--tier', 'WARNING', '--title', 't', '--where', 'w', '--problem', 'p', '--recommendation', 'r', '--out-of-boundary', 'true', '--patch=--- a/file\n+++ b/file']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.equal(meta.findings[0].patch, '--- a/file\n+++ b/file');
 });

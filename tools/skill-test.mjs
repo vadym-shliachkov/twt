@@ -35,13 +35,23 @@ function usage() {
 
 const argv = process.argv.slice(2);
 const flag = (name, dflt = undefined) => {
+  // `--name=value` is the escape hatch for a value that legitimately starts
+  // with `--` (a pasted `--live` arg, a diff beginning `---`) — checked first
+  // and unconditionally, so it always wins regardless of what follows it.
+  const eqPrefix = `--${name}=`;
+  const eqArg = argv.find(a => a.startsWith(eqPrefix));
+  if (eqArg !== undefined) return eqArg.slice(eqPrefix.length);
+
   const i = argv.indexOf(`--${name}`);
   if (i === -1) return dflt;
   const v = argv[i + 1];
   // A trailing flag (nothing follows it) or a flag immediately followed by
   // another flag's name must default rather than silently reading `undefined`
   // (which stringifies to "undefined"/NaN downstream) or swallowing the next
-  // flag's name as if it were this flag's value.
+  // flag's name as if it were this flag's value. A value that legitimately
+  // starts with `--` (e.g. a skill's own `--live` flag, a diff's `---` line)
+  // must be passed via `--name=value` above, not this space-separated form —
+  // there is no way to tell the two apart from the token alone.
   return (v === undefined || v.startsWith('--')) ? dflt : v;
 };
 
@@ -68,7 +78,10 @@ try {
       initRun(freezeDir, {
         skill: arg1, criteriaHash: hash, criteriaFile: file,
         scope: (flag('scope', 'contract,dispatch,quality')).split(','),
-        target: flag('target', ''), startTreeClean: flag('tree-clean', 'true') === 'true',
+        // Default 'false', not 'true': a malformed/valueless --tree-clean
+        // must not silently flip toward "the tree was clean" when it wasn't
+        // measured — the safer default is to assume it was dirty.
+        target: flag('target', ''), startTreeClean: flag('tree-clean', 'false') === 'true',
         dispatchFidelity: 'injected', pluginCacheVersion: flag('cache-version', 'unknown'),
         substitutions: 0, selfDeclared: selfDeclaredIds(list), stopReason: null, commit: null,
         criteriaIds: list.map(c => c.id),

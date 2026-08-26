@@ -72,7 +72,13 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
      dispatched skill honours a relocated project root (confirmed empirically
      2026-08-26 against `twt-ia-define`: all declared artifacts landed under the
      relocated root and this repo's tree stayed clean).
-   - `--args "..."` — passed verbatim to the tested skill's own arguments.
+   - `--args "..."` — passed verbatim to the tested skill's own arguments. Many
+     twt skills take their own `--`-leading flags (e.g. `--live`), so this
+     value can itself start with `--`; every internal `skill-test.mjs` call
+     that carries it forward (Step 3.3) must use `--args="<value>"` (the
+     `=` form), never a space-separated `--args "<value>"` — the tool's `flag()`
+     helper cannot otherwise tell "the value happens to start with `--`" apart
+     from "the next flag's name," and defaults rather than guessing.
    - `--fix` — default OFF. Without it this is a report-only run: nothing under
      `skills/` is touched.
    - `--scope contract,dispatch,quality,robustness` — default
@@ -166,6 +172,26 @@ criteria use. `happy` (clean target, first run) is the only one required; name
 `degraded-soft-dep` (a soft dependency's artifact absent) only if `--scope`
 includes `robustness` and criteria reference them.
 
+**Every bullet in `## Fixtures` must resolve one of two ways — Step 3.2 halts
+the run on anything left ambiguous, so don't write an ambiguous one:**
+- **Seeded** — name the exact runnable command that materializes it (e.g.
+  `node tools/eval-smoke.mjs seed <target> --scope ia`). You do not also need
+  to spell out a path to check afterward: every `eval-smoke`-based seeder
+  writes a `.eval-smoke` marker into the tree it owns, and Step 3.2 checks
+  that marker automatically. A fixture seeded some other way must name at
+  least one concrete file or marker path it creates, so Step 3.2 has
+  something deterministic to check instead of inferring one from prose.
+- **`no seeding required — clean target`** — this exact phrase, for a `happy`
+  fixture that genuinely means "run against an empty target, nothing to
+  seed." This is the common case, not an exception: most of the ~90 skills
+  this harness exists to cover (this skill's own `dependencies.hard: []`
+  included) have no `eval-smoke` scope and no seed step at all, and Step 3.2
+  must be able to tell that apart from a bullet that simply forgot to name a
+  command.
+
+A bullet that does neither — no command, no explicit no-seed marker — is
+the one case Step 3.2 halts on; do not write one.
+
 Then freeze it for this run (Bash), passing every value already computed in
 Step 1 rather than letting the tool default them — a defaulted `target`,
 `cache-version`, or `tree-clean` writes a wrong fidelity header into `run.json`
@@ -218,39 +244,47 @@ says so):
    and the fixture's *name* into it — the target now has an empty
    `.twt-skill-test-owned` and nothing else a skill could read. Look up the
    active fixture (`happy`, unless a robustness fixture is active) in this
-   skill's criteria file `## Fixtures` section (read back in Step 2) and find
-   the bullet naming it — that bullet names the exact command that
-   materializes it, e.g.:
+   skill's criteria file `## Fixtures` section (read back in Step 2, which now
+   requires every bullet to resolve one of three ways below — never an
+   ambiguous fourth) and act on which one it is:
 
-   ```
-   node tools/eval-smoke.mjs seed <target> --scope ia
-   ```
+   - **Seeded** (the bullet names a runnable command, e.g.
+     `node tools/eval-smoke.mjs seed <target> --scope ia`): run **that exact
+     command** (Bash) against `<target>` now — read the bullet, don't assume
+     the form above applies to every skill. Capture its stdout: `eval-smoke`
+     seeders print a suggested dispatch line (e.g. `twt-ia-define with:
+     subagent-collect — project brief: "..."`) — keep that string; step 3
+     below uses it as this iteration's `--args` when the run's own `--args`
+     (Step 1.2) wasn't given.
 
-   Run **that exact command** (Bash) against `<target>` now — read the bullet,
-   don't assume the form above applies to every skill. Capture its stdout:
-   `eval-smoke` seeders print a suggested dispatch line (e.g. `twt-ia-define
-   with: subagent-collect — project brief: "..."`) — keep that string; step 3
-   below uses it as this iteration's `--args` when the run's own `--args`
-   (Step 1.2) wasn't given, since the rubric's fixture bullet is telling you
-   what arguments the skill needs to do anything useful against this target.
-
-   **Verify materialization before proceeding:** Glob/Read the specific paths
-   the seeder's own output or the `## Fixtures` bullet says it creates, and
-   confirm they exist under `<target>`. Do not continue past this check on
-   faith — a fixture whose files were never written makes every exclusion-list
-   criterion (e.g. "nothing outside `ia/`") pass vacuously, which is a false
-   green, not a shortcut.
-
-   **If the active fixture has no runnable command named in `## Fixtures`,
-   stop the run now** with a loud, explicit error to the user instead of
-   continuing against an unseeded target — say plainly that the rubric names a
-   fixture this harness cannot materialize, and name which one. Do not fall
-   back to running the skill against an empty target and do not invent a
-   seeding command that isn't written in the criteria file.
-3. **Inject:** `node tools/skill-test.mjs inject <skill> --run <runDir> --target <target> --iteration N [--args "..."]`.
-   `--args` is the run's own `--args` from Step 1.2 when the user gave one;
-   otherwise it is the dispatch-arguments string the fixture seeder printed in
-   step 2 above. This reads `skills/<skill>/SKILL.md` **fresh from disk this
+     **Verify materialization against a concrete path before proceeding** —
+     never on faith. For an `eval-smoke`-based command, Glob/Read for the
+     `.eval-smoke` marker it always writes into the tree it owns (e.g.
+     `.twt-artifacts/pre-design/.eval-smoke` for `--scope ia`); for any other
+     seeding command, check the specific file the `## Fixtures` bullet names.
+     A fixture whose files were never written makes every exclusion-list
+     criterion (e.g. "nothing outside `ia/`") pass vacuously, which is a false
+     green, not a shortcut.
+   - **`no seeding required — clean target`** (the bullet's literal text):
+     proceed straight to step 3 below with `<target>` exactly as `seed` left
+     it — marker only, nothing else. This is the expected, common state for a
+     leaf skill with no seed step, not a gap to fill in, and it must NOT
+     trigger the halt below.
+   - **Neither** — the bullet names no runnable command and does not carry
+     the literal no-seed marker: **stop the run now** with a loud, explicit
+     error to the user instead of continuing against an ambiguously-specified
+     target. Say plainly that the rubric's `## Fixtures` bullet for the active
+     fixture is neither a runnable seed command nor an explicit no-seed
+     marker, and name which fixture. Do not fall back to running the skill
+     against an empty target and do not invent a seeding command that isn't
+     written in the criteria file.
+3. **Inject:** `node tools/skill-test.mjs inject <skill> --run <runDir> --target <target> --iteration N [--args="..."]`.
+   **Always use the `--args="..."` form, not a space-separated `--args "..."`**
+   — the value can legitimately start with `--` (a skill's own flag), and only
+   the `=` form survives that intact. `--args` is the run's own `--args` from
+   Step 1.2 when the user gave one; otherwise it is the dispatch-arguments
+   string the fixture seeder printed in step 2 above. This reads
+   `skills/<skill>/SKILL.md` **fresh from disk this
    iteration** — the entire point of the mechanism (design spec section 2.2) —
    rewrites every `${CLAUDE_PLUGIN_ROOT}` to the repo root, and writes
    `<runDir>/iteration-N/prompt.md`. Read that file's content: it is the
@@ -347,7 +381,9 @@ Read the grader's findings (kept in context from Step 3.9), the artifacts under
 `CONVENTIONS.md`, a dependency skill, a vendored kernel copy — becomes a
 **proposed patch**, described but not applied. Record it now so it survives to
 the report even if the run stops before Step 6:
-`node tools/skill-test.mjs finding <runDir> --tier <BLOCKER|WARNING|SUGGESTION> --title "<short title>" --where "<file:line>" --problem "<the grader's evidence>" --recommendation "<what should change>" --out-of-boundary true --patch "<the specific edit you would make, described concretely>"`.
+`node tools/skill-test.mjs finding <runDir> --tier <BLOCKER|WARNING|SUGGESTION> --title "<short title>" --where "<file:line>" --problem "<the grader's evidence>" --recommendation "<what should change>" --out-of-boundary true --patch="<the specific edit you would make, described concretely>"`.
+**Use `--patch="..."`, not a space-separated `--patch "..."`** — a pasted diff
+routinely starts with `---`, and only the `=` form survives that.
 
 Two absolute prohibitions, no exceptions:
 - **Never edit the `version:` field.** The auto-bump Stop hook owns it; a manual
