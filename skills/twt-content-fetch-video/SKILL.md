@@ -2,7 +2,7 @@
 name: twt-content-fetch-video
 surface: command
 category: content
-description: (v1.0.6) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline
+description: (v1.0.6) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
 version: 1.0.6
 model: sonnet
 accepts_arguments: true
@@ -31,6 +31,7 @@ writes:
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/publisher-captions.vtt
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json
+  - .twt-artifacts/pre-design/content/fetched/video/<slug>/generated-captions.vtt
 ---
 
 # /twt-content-fetch-video
@@ -45,7 +46,7 @@ writes:
 - Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
 - Doesn't correct the recognizer: PART 3 says what is likely wrong and where, and PARTS 1 and 2 stay exactly as the recognizer produced them. Preferring a publisher's caption track in `index.md` is not a correction — it is choosing the account written by a person over the one guessed from audio, and `text_source:` says which one is in the file
-- Doesn't emit SRT/VTT or burn captions into the video
+- Doesn't burn captions into the video, doesn't emit SRT, and doesn't caption a recording that is already captioned — the one subtitle file it writes is `generated-captions.vtt`, and only for a recording that ships none of its own
 
 Every descriptive run also produces `timeline.md`, generated from `transcript.md` by the `timeline` command in Step 9b — never written by hand, and never a second place to put content that is not already in `transcript.md`.
 
@@ -60,6 +61,7 @@ Every run also produces `transcript.txt`, the human-readable report: the whole t
 - `timeline.md` exists for every recording that has a `transcript.md`, was **generated** by the `timeline` command rather than written, and is not older than the `transcript.md` it came from
 - `verify` passes for every directory: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
 - Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
+- Where **no** caption track was available, one was generated: `generated-captions.vtt` is valid WebVTT built from the recognizer's own timings, and the report, `_meta.md`, and what you tell the user all say it is unchecked machine output. A recording that already had captions — the publisher's track or the file's own subtitle stream — has no generated file beside them, and the report says why
 - `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
 - For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
 - The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
@@ -98,12 +100,14 @@ Every read of the speech goes through a command that decides how much you get:
 - **`review` (Step 5)** — the review pass. Under its word budget it prints the full text, because a fluent mishearing scores perfectly and can only be caught by reading; over the budget it prints the flagged excerpts alone and the report says the review covered only those.
 - **`slice` (Step 8)** — one 5-minute window and nothing outside it.
 
-Never open `index.md`, `segments.json`, `frames.json`, or `captions.json` directly, and never read `transcript.txt` or `timeline.md` back to check your own work — `outline.json` is the only whole-recording file you read, and it is a per-window digest, not the transcript. View only the frames the current window lists. `timeline.md` in particular is a whole second copy of the transcript: the `timeline` command's JSON summary tells you what it built, and that is what you report from.
+Never open `index.md`, `segments.json`, `frames.json`, `captions.json`, or `generated-captions.vtt` directly, and never read `transcript.txt` or `timeline.md` back to check your own work — `outline.json` is the only whole-recording file you read, and it is a per-window digest, not the transcript. View only the frames the current window lists. `timeline.md` in particular is a whole second copy of the transcript: the `timeline` command's JSON summary tells you what it built, and that is what you report from.
 
 **This multiplies by the number of sources.** Finish one recording end to end before starting the next, and carry nothing between them but the batch's settings: a second recording's speakers, chapters, and frames have nothing to do with the first's, and holding both is how a name from one transcript ends up in the other.
 
 ## Collect mode (dispatched by an orchestrator)
 If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--verbatim`** (the descriptive pass costs a vision pass per window per recording that the orchestrator did not budget for), use `--model base` with auto-detected language, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+
+`generated-captions.vtt` is still written for any recording with no publisher caption track — it costs nothing but the recognizer's own timings. A `--verbatim` run does not probe the media's subtitle streams, so it cannot tell that a file carries captions of its own; the warning says so, and you pass that on rather than presenting the track as certainly needed.
 
 Say in your return note that the transcripts are verbatim and that a plain `/twt-content-fetch-video` re-run on the same sources (with `--force`) would produce the descriptive ones. Several sources are still fine here — the batch itself costs nothing extra. There is no `timeline.md` either: it is built from `transcript.md`, so a run with no descriptive pass has nothing to build it from.
 
@@ -197,6 +201,8 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-vide
 
 Per recording the tool writes `index.md`, `segments.json`, `_meta.md`, and `transcript.txt` (the human-readable report), plus the descriptive inputs: `media.json` (stream layout), `frames/` + `frames.json` (keyframes on visual change), `captions.json` (the file's own subtitle track, if it has a text-based one), `audio-description.md` (a real description track, transcribed, if the file has one), and `outline.json` — and it adds speaker-turn candidates and non-speech spans to `segments.json`. With `--captions` (or a Brightcove page that has one) it also writes `publisher-captions.vtt` verbatim and `caption-diff.json`, makes the caption wording the text `index.md` carries, and stamps `text_source: publisher-captions` into its frontmatter — the recognizer's own attempt stays in `segments.json` and PARTS 1–2 of the report.
 
+**And where the recording has no captions of its own, it writes `generated-captions.vtt`** — a WebVTT track cut from the recognizer's own timings, split at sentence and clause ends into two-line cues. It is written automatically, for exactly the recordings that need it: a publisher track (`--captions` or Brightcove) or a text subtitle stream inside the media file (`captions.json`) suppresses it, because a human-authored track is the one to ship and two subtitle files beside one video is how the wrong one goes out. The file carries a `NOTE` header saying the words were guessed from audio — a `.vtt` in a player looks authoritative and nothing else in it would reveal that. Never write or hand-fix a caption file yourself: `captions "<dir>"` rebuilds it from `segments.json`, and `captions "<dir>" --force` is the only way one is written next to a publisher track — which the user has to ask for.
+
 For a single source it prints the usual JSON summary (slug, title, duration, language, model, segment and word counts, issue counts, warnings, file paths). For several it prints a batch summary instead: `results` holds one such object per recording, `failures` holds what went wrong and for which source, `batchIndex` names the `_batch-<date>.md` it wrote at the out-dir root, and `rebuildIndex` is the exact command Step 10 runs to refresh it. Keep that command — do not improvise your own, or you will leave two indexes behind.
 
 ## Step 4b — Verify before you build anything on it
@@ -211,6 +217,8 @@ Read the `notes` as well as the `problems`. A note is not a stop, but the speake
 `run` already does this and exits 5 if it fails, so this is the check that catches what happened *after* the run — a partial copy, a stale directory, a hand-edited report. Run it whenever you did not watch the run finish, and again at the end of each descriptive pass. Anything it lists under `problems` is a stop: the fix is to re-run the tool, never to write the missing file yourself.
 
 **One directory per recording.** In a batch, verify each one — the batch summary's `results[].outDir` lists them. A source that failed has no directory to verify; it is in `failures`.
+
+**What the subtitle files are.** `verify` fails a `generated-captions.vtt` that is not valid WebVTT (a player would silently refuse to load it while the directory looks captioned), notes a directory holding both a publisher track and a generated one, and notes a directory holding neither. A missing generated file is never a failure — a captioned recording is supposed to have none.
 
 **What the captions did.** When a caption track was used, the JSON summary's `captions` block says how many cues it had and how many places it disagrees with the recognizer. Read those out of `caption-diff.json` or PART 3 — do not re-open `index.md` to compare by hand.
 
@@ -455,6 +463,7 @@ It re-reads every directory and rewrites the index from what is on disk now. Nev
 - Duration, detected language, model used, word count
 - What PART 3 says, in a sentence or two: how many lines the recognizer itself flagged, how many names it spelled inconsistently, and the specific things your review found — a user who reads nothing else should still learn that "by depth" is probably "by death"
 - Whether the review covered the full transcript or the flagged excerpts only
+- Whether a subtitle file is in the directory and which kind: `generated-captions.vtt` when the recording shipped none — say plainly that it is unchecked machine transcription and should be read against the recording before it goes on the video — or nothing at all, with the reason the tool gave (a publisher track, the file's own subtitle stream, or no speech at all)
 - Whether a publisher caption track was used and, if so, how many places it disagreed with the recognizer and what the worst of those were — a user who reads nothing else should learn that `index.md` carries the publisher's wording, not the machine's. If there was no caption track, say that the transcript has nothing checking it but the review
 - That `verify` passed, or exactly what it flagged
 - How many keyframes were used, how many speakers you identified and on what basis, whether the file carried its own caption track or audio-description track, and how many windows you covered

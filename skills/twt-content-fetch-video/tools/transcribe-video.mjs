@@ -30,6 +30,10 @@
 //     segments.json, and outline.json. The prose transcript.md is written by the
 //     model from those, window by window. --verbatim skips that extraction for a
 //     speech-only run; --descriptive is accepted and ignored (it is the default).
+//     A recording that ships no captions of its own also gets generated-captions.vtt,
+//     built from the recognizer's timings — one WebVTT track for a video that had
+//     none. A recording that already has captions does not: the publisher's track,
+//     or the file's own subtitle stream, is the one to ship.
 //
 //     SEVERAL SOURCES. Every positional is a source: file paths, URLs, or a
 //     directory, which expands to the media files directly inside it. Each gets
@@ -54,6 +58,11 @@
 //     flags, the inconsistent name spellings, the low-confidence lines in context,
 //     and — only under the word budget — the full text. A fluent mishearing scores
 //     perfectly, so nothing mechanical can find it; this is the pass that can.
+//
+//   node transcribe-video.mjs captions <transcript-dir> [--force]
+//     (Re)build generated-captions.vtt from segments.json — for a directory
+//     transcribed before this file existed, or (with --force) for a recording
+//     whose published captions would otherwise suppress it.
 //
 //   node transcribe-video.mjs annotate <transcript-dir> --notes <file>
 //     Splice those findings into PART 3 of transcript.txt. The report stays
@@ -117,6 +126,7 @@ function usage(msg) {
   console.error("           [--frame-gap 4] [--frame-width 960]");
   console.error("           [--frame-threshold 0.06] [--frame-band-threshold 0.04] [--card-probe 1.6]");
   console.error("  timeline <dir>            build timeline.md from transcript.md");
+  console.error("  captions <dir> [--force]  (re)build generated-captions.vtt from the transcript");
   console.error("       transcribe-video.mjs verify <transcript-dir> [--expect-descriptive]");
   console.error("       transcribe-video.mjs slice <transcript-dir> [--window <n> | --from <t> --to <t>]");
   console.error("           [--window-seconds 300]");
@@ -511,7 +521,7 @@ function decodeLines(result) {
   return out;
 }
 
-export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive }) {
+export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive, captionSource }) {
   const src = redactUrl(source);
   const extras = descriptive ? [
     "",
@@ -541,6 +551,7 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
     `- **Engine:** faster-whisper (local, offline) — model \`${result.model}\`, ${result.device}/${result.compute_type}`,
     `- **Language:** ${result.language || "unknown"} (detection confidence ${result.language_probability})`,
     `- **Segments:** ${result.segments.length}`,
+    captionSource ? `- **Captions:** ${captionSource}` : null,
     `- **Transcription wall time:** ${result.transcribe_seconds}s`,
     ...decodeLines(result),
     ...extras,
@@ -805,7 +816,7 @@ function part(n, heading) { return [RULE, `PART ${n} - ${heading}`, RULE, ""]; }
 // what about it should not be trusted. PART 1 deliberately carries no timestamps —
 // it is the version you read; PART 2 is the version you cite.
 export function buildReportTxt({ source, slug, title, result, warnings = [], issues,
-  fetchedAt, bytes, descriptive, review, captionDiff }) {
+  fetchedAt, bytes, descriptive, review, captionDiff, generatedCaptions }) {
   const name = titleFrom(slug, title);
   const src = redactUrl(source);
   const forceHours = (result.duration || 0) >= 3600;
@@ -824,6 +835,14 @@ export function buildReportTxt({ source, slug, title, result, warnings = [], iss
   if (descriptive) {
     L.push(...field("Descriptive pass", `${descriptive.frames} keyframes, ${descriptive.captions} embedded caption cues, `
       + `audio-description track ${descriptive.audio_description ? "found" : "absent"} — see transcript.md`));
+  }
+
+  if (generatedCaptions?.file) {
+    L.push(...field("Captions", `none were published with this recording, so ${generatedCaptions.file} `
+      + `was generated from the transcript (${generatedCaptions.cues} cues) — unchecked machine output, `
+      + "read it against the recording before publishing it with the video"));
+  } else if (generatedCaptions?.skipped) {
+    L.push(...field("Captions", `no track was generated — ${generatedCaptions.why}`));
   }
 
   L.push("", "TRANSCRIPTION DETAILS", THIN);
@@ -1191,6 +1210,223 @@ export async function ingestCaptions({ captionsUrl, outDir, asrSegments, warning
     warnings.push(`The caption track could not be used (${err.message}) — the transcript is the recognizer's alone, with nothing to check it against.`);
     return { captions: null, diff: null };
   }
+}
+
+// ---- generated captions --------------------------------------------------------
+// A recording whose publisher never shipped a caption track is the common case,
+// and the thing people most often want out of a transcript after the transcript
+// itself is a subtitle file they can hang on the video. The recognizer has
+// already produced timed text, so this costs nothing extra to write — but it is
+// deliberately NOT written when the recording already has captions of its own.
+// Two subtitle files beside one video is how the wrong one gets shipped, and the
+// human-authored one wins every time.
+//
+// It is speech recognition, unchecked, and the file says so in a NOTE header —
+// a .vtt looks authoritative in a player, and nothing else in it would reveal
+// that the words were guessed from audio.
+
+export const GENERATED_CAPTIONS_FILE = "generated-captions.vtt";
+// A caption box is two lines of ~42 characters. Longer than that and the player
+// either clips it or covers the picture.
+export const CUE_MAX_CHARS = 84;
+export const CUE_LINE_CHARS = 42;
+// A cue flashed for under a second cannot be read; one held past seven has
+// stopped tracking the speech.
+export const CUE_MIN_SECONDS = 1.0;
+export const CUE_MAX_SECONDS = 7.0;
+
+const SENTENCE_BREAK = /[.!?…]["'’”)\]]*(\s)/g;
+const CLAUSE_BREAK = /[,;:—–](\s)/g;
+
+// Break positions inside `text` that fall in the usable window, best kind first.
+// The window's floor stops a split landing after two words and leaving a cue
+// that flashes for a third of a second.
+function breakPoints(text, max) {
+  const floor = Math.max(1, Math.floor(max * 0.4));
+  const pick = (re) => {
+    const found = [];
+    for (const m of text.matchAll(re)) {
+      const at = m.index + m[0].length;   // just past the punctuation and its space
+      if (at >= floor && at <= max) found.push(at);
+    }
+    return found;
+  };
+  return { sentence: pick(SENTENCE_BREAK), clause: pick(CLAUSE_BREAK) };
+}
+
+// Every word boundary in the same window — the last resort, for speech the
+// recognizer punctuated with nothing at all.
+function spacePoints(text, max) {
+  const floor = Math.max(1, Math.floor(max * 0.4));
+  const out = [];
+  for (let i = floor; i <= Math.min(max, text.length - 1); i++) if (text[i] === " ") out.push(i);
+  return out;
+}
+
+// One segment's text as caption-sized chunks. Sentence ends are preferred over
+// clause ends over a bare space, because a cue that breaks mid-clause reads as
+// two half-thoughts even when the timing is perfect.
+export function splitCueText(text, max = CUE_MAX_CHARS) {
+  const body = String(text || "").replace(/\s+/g, " ").trim();
+  if (!body) return [];
+  if (body.length <= max) return [body];
+  // Aim for cues of even size rather than for the cap: a 96-character line cut at
+  // 84 leaves a 12-character orphan flashing on its own, where two 48-character
+  // cues read as captions.
+  const target = Math.ceil(body.length / Math.ceil(body.length / max));
+  const closest = (list) => list.reduce(
+    (best, at) => (best === null || Math.abs(at - target) < Math.abs(best - target) ? at : best), null);
+  const { sentence, clause } = breakPoints(body, max);
+  let at = closest(sentence) ?? closest(clause) ?? closest(spacePoints(body, max))
+    ?? body.lastIndexOf(" ", max);
+  // A single unbroken token longer than a whole cue — a URL, a pasted hash.
+  // Hard-cut it rather than emit a cue that overflows the box.
+  if (at <= 0) at = max;
+  const head = body.slice(0, at).trim();
+  const tail = body.slice(at).trim();
+  if (!head) return [body];
+  return tail ? [head, ...splitCueText(tail, max)] : [head];
+}
+
+// Two lines at most, broken as evenly as the words allow — a 44-character cue
+// wrapped 42/2 looks like a mistake, wrapped 23/21 looks like a caption.
+export function wrapCue(text, width = CUE_LINE_CHARS) {
+  const body = String(text || "").replace(/\s+/g, " ").trim();
+  if (body.length <= width) return body;
+  const target = Math.ceil(body.length / 2);
+  let at = -1;
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== " ") continue;
+    if (at === -1 || Math.abs(i - target) < Math.abs(at - target)) at = i;
+  }
+  if (at === -1) return body;
+  return body.slice(0, at) + "\n" + body.slice(at + 1);
+}
+
+// Timed cues from the recognizer's segments. Whisper returns no word timings
+// here, so a split segment's time is shared out by character count — the speech
+// rate inside one segment is near enough constant for that to hold up, and the
+// thing that has to be right is where a cue *starts*.
+export function cuesFromSegments(segments, { duration = 0 } = {}) {
+  const rows = (segments || []).filter((s) => String(s.text || "").trim());
+  const cues = [];
+  for (const seg of rows) {
+    const chunks = splitCueText(seg.text);
+    if (!chunks.length) continue;
+    const start = Math.max(0, Number(seg.start) || 0);
+    const span = Math.max(0, (Number(seg.end) || 0) - start);
+    const chars = chunks.reduce((n, c) => n + c.length, 0) || 1;
+    let at = start;
+    chunks.forEach((chunk, i) => {
+      const end = i === chunks.length - 1 ? start + span : at + span * (chunk.length / chars);
+      cues.push({ start: at, end: Math.max(end, at), text: chunk });
+      at = end;
+    });
+  }
+  // Duration constraints last, so each cue can see the neighbour it must not run
+  // into: one extended to a readable minimum still has to end before the next
+  // starts, or the player shows both at once.
+  for (let i = 0; i < cues.length; i++) {
+    const next = cues[i + 1];
+    const ceiling = next ? next.start : Math.max(duration || 0, cues[i].end + CUE_MIN_SECONDS);
+    if (cues[i].end - cues[i].start > CUE_MAX_SECONDS) cues[i].end = cues[i].start + CUE_MAX_SECONDS;
+    if (cues[i].end - cues[i].start < CUE_MIN_SECONDS) {
+      cues[i].end = Math.min(Math.max(ceiling, cues[i].end), cues[i].start + CUE_MIN_SECONDS);
+    }
+    cues[i].start = round3(cues[i].start);
+    cues[i].end = round3(Math.max(cues[i].end, cues[i].start + 0.001));
+  }
+  return cues;
+}
+
+export function formatVttTime(seconds) {
+  const t = Math.max(0, Number(seconds) || 0);
+  let ms = Math.round((t - Math.floor(t)) * 1000);
+  let whole = Math.floor(t);
+  if (ms === 1000) { whole += 1; ms = 0; }
+  const pad = (n, w = 2) => String(n).padStart(w, "0");
+  return `${pad(Math.floor(whole / 3600))}:${pad(Math.floor((whole % 3600) / 60))}:${pad(whole % 60)}.${pad(ms, 3)}`;
+}
+
+// The NOTE block is the point of the header. A .vtt in a player carries the
+// authority of a track someone wrote; this one was guessed from audio, and the
+// file itself has to be where that is said — nobody reads the run's report
+// before dragging a caption file into a video editor.
+export function buildVtt(cues, { source, result = {}, fetchedAt } = {}) {
+  const note = [
+    "NOTE",
+    "Machine-generated captions from /twt-content-fetch-video.",
+    `Source: ${redactUrl(source).url}`,
+    `Engine: faster-whisper, model ${result.model || "unknown"}, language ${result.language || "unknown"}`,
+    `Generated: ${fetchedAt || new Date().toISOString().slice(0, 10)}`,
+    "This is speech recognition, not a checked caption track, and the recording shipped",
+    "no captions of its own to check it against. Names, numbers and jargon are the least",
+    "reliable parts, and speaker changes are not marked. Read it against the recording",
+    "before publishing it as the video's captions.",
+  ].join("\n");
+  const blocks = cues.map((cue, i) => [
+    String(i + 1),
+    `${formatVttTime(cue.start)} --> ${formatVttTime(cue.end)}`,
+    wrapCue(cue.text),
+  ].join("\n"));
+  return ["WEBVTT", "", note, "", ...blocks.map((b) => b + "\n")].join("\n");
+}
+
+// Why this recording gets no generated track, or null if it gets one. The reason
+// travels into the summary, `_meta.md` and the report: "there is no .vtt here"
+// must never be something the user has to work out for themselves.
+export function captionsSkipReason({ publisherCaptions, embeddedCues, segments }) {
+  if (publisherCaptions && publisherCaptions.length) return "publisher-captions";
+  if (embeddedCues) return "embedded-track";
+  if (!(segments || []).length) return "no-speech";
+  return null;
+}
+
+export const SKIP_REASON_TEXT = {
+  "publisher-captions": "the publisher's own caption track is already in the directory",
+  "embedded-track": "the media file carries its own caption stream (`captions.json`)",
+  "no-speech": "no speech was detected, so there is nothing to caption",
+};
+
+export function writeGeneratedCaptions({ outDir, source, result, fetchedAt }) {
+  const cues = cuesFromSegments(result.segments, { duration: result.duration });
+  if (!cues.length) return null;
+  const path = join(outDir, GENERATED_CAPTIONS_FILE);
+  writeFileSync(path, buildVtt(cues, { source, result, fetchedAt }), "utf8");
+  return { file: GENERATED_CAPTIONS_FILE, path, cues: cues.length };
+}
+
+// One line for `_meta.md` saying which subtitle file — if any — is in this
+// directory and where its words came from. Someone opening the folder for a
+// caption track should not have to infer the answer from the file listing.
+export function captionSourceLine({ captions, generatedCaptions }) {
+  if (captions && captions.length) {
+    return `the publisher's own track, stored verbatim as \`${CAPTIONS_FILE}\` — human-authored, and what \`index.md\` carries`;
+  }
+  if (generatedCaptions?.file) {
+    return `none published with the recording, so \`${generatedCaptions.file}\` was generated from the recognizer (${generatedCaptions.cues} cues) — unchecked machine output`;
+  }
+  return `none — ${generatedCaptions?.why || "no subtitle file was written"}`;
+}
+
+// The whole decision, in one place, so `run` and the standalone `captions`
+// command cannot drift apart on when a track is written.
+export function maybeWriteGeneratedCaptions({ outDir, source, result, fetchedAt,
+  publisherCaptions, embeddedCues, probed = true, warnings = [] }) {
+  const skipped = captionsSkipReason({ publisherCaptions, embeddedCues, segments: result.segments });
+  if (skipped) return { file: null, cues: 0, skipped, why: SKIP_REASON_TEXT[skipped] };
+  const written = writeGeneratedCaptions({ outDir, source, result, fetchedAt });
+  if (!written) return { file: null, cues: 0, skipped: "no-speech", why: SKIP_REASON_TEXT["no-speech"] };
+  // A --verbatim run never probes the media's streams, so it cannot know whether
+  // the file carries a subtitle track of its own. Generating one anyway is the
+  // right call — a caption file is the point — but the uncertainty is said out
+  // loud rather than left for someone to discover two tracks later.
+  warnings.push(`This recording had no captions of its own, so \`${GENERATED_CAPTIONS_FILE}\` was `
+    + `generated from the recognizer's own words (${written.cues} cues). It is unchecked machine `
+    + `output — read it against the recording before publishing it with the video.`
+    + (probed ? "" : " This run did not probe the media's own subtitle streams, so if the file "
+      + "carries one, this track duplicates it."));
+  return { ...written, skipped: null, probed };
 }
 
 // ---- Brightcove ----------------------------------------------------------------
@@ -1746,6 +1982,27 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
     }
   }
 
+  // The generated subtitle track. It is optional by design — a recording with
+  // captions of its own does not get one — so its absence is at most a note. What
+  // is checked is that a file claiming to be one really is: a .vtt a player
+  // silently refuses to load is worse than no .vtt, because the video looks
+  // captioned in the directory listing and is not captioned in the player.
+  const generated = read(GENERATED_CAPTIONS_FILE);
+  if (generated !== null) {
+    const parsed = parseCaptions(generated);
+    if (!/^WEBVTT/.test(generated.replace(/^﻿/, "")) || !parsed) {
+      problems.push(`${GENERATED_CAPTIONS_FILE} is not valid WebVTT — no player will load it. `
+        + `Rebuild it with \`captions "<dir>" --force\`; it is generated, not written.`);
+    }
+    if (hasVtt) {
+      notes.push(`Both ${CAPTIONS_FILE} and ${GENERATED_CAPTIONS_FILE} are here. The publisher's `
+        + "track is the one to ship — the generated one is the recognizer's guess at the same audio.");
+    }
+  } else if (!hasVtt && counts && counts["segments.json"]) {
+    notes.push(`No subtitle file in this directory: neither the publisher's ${CAPTIONS_FILE} nor a `
+      + `generated ${GENERATED_CAPTIONS_FILE}. If the recording needs captions, run \`captions "<dir>"\`.`);
+  }
+
   const reviewed = Boolean(report) && !report.includes(REVIEW_PENDING);
   if (report && !reviewed) {
     notes.push("PART 3's review half is still pending — run `review`, then `annotate`. "
@@ -2052,6 +2309,43 @@ function doVerify() {
   process.exit(v.ok ? 0 : 1);
 }
 
+// Rebuild (or force) the generated subtitle track for a directory that already
+// has a transcript. `run` writes it by itself; this exists for the run that was
+// made before the file did, and for the case where the user wants one beside a
+// publisher track anyway — which they have to ask for, because shipping the
+// recognizer's guess over a human-authored track is the mistake worth a flag.
+function doCaptions() {
+  const dir = firstPositional();
+  if (!dir) usage("Missing <transcript-dir>.");
+  if (!existsSync(dir)) { console.error(`No such directory: ${dir}`); process.exit(2); }
+  const result = readJson(join(dir, "segments.json"));
+  if (!result || !Array.isArray(result.segments)) {
+    console.error(`No readable segments.json in ${dir} — captions are built from the transcript, so there is nothing to build from.`);
+    process.exit(2);
+  }
+  const index = (() => { try { return readFileSync(join(dir, "index.md"), "utf8"); } catch { return ""; } })();
+  const source = (index.match(/^source:\s*(.+)$/m) || [])[1] || dir;
+  const publisher = existsSync(join(dir, CAPTIONS_FILE)) ? [1] : null;
+  const embedded = (readJson(join(dir, "captions.json")) || {}).cues?.length || 0;
+  const forced = has("--force");
+  const skipped = forced ? null : captionsSkipReason({ publisherCaptions: publisher, embeddedCues: embedded, segments: result.segments });
+  if (skipped) {
+    console.error(`Not writing ${GENERATED_CAPTIONS_FILE}: ${SKIP_REASON_TEXT[skipped]}.`
+      + (skipped === "no-speech" ? "" : " Pass --force to write one anyway."));
+    console.log(JSON.stringify({ file: null, cues: 0, skipped, why: SKIP_REASON_TEXT[skipped] }, null, 2));
+    process.exit(0);
+  }
+  const written = writeGeneratedCaptions({
+    outDir: dir, source, result,
+    fetchedAt: (index.match(/^fetched_at:\s*(\S+)/m) || [])[1] || undefined,
+  });
+  if (!written) {
+    console.error("No speech in this transcript — there is nothing to caption.");
+    process.exit(1);
+  }
+  console.log(JSON.stringify({ ...written, skipped: null, forced }, null, 2));
+}
+
 // ---- run -----------------------------------------------------------------------
 
 // One source failing must not take the rest of a batch down with it, so the
@@ -2313,9 +2607,19 @@ async function runOne({ source, py, outRoot }) {
       ? null
       : enrichDescriptive({ py, mediaPath, outDir, result, warnings });
 
+    // A subtitle file for the recordings that have none. Written after the
+    // descriptive extraction because that is what discovers the media's own
+    // caption stream — a recording that already carries captions must not be
+    // handed a second, worse set beside them.
+    const generatedCaptions = maybeWriteGeneratedCaptions({
+      outDir, source: sourceRef, result, fetchedAt,
+      publisherCaptions: captions, embeddedCues: descriptive?.captions ?? 0,
+      probed: Boolean(descriptive), warnings,
+    });
+
     writeFileSync(join(outDir, "_meta.md"),
       buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
-        keptSource: !isUrl || keepSource }), "utf8");
+        keptSource: !isUrl || keepSource, captionSource: captionSourceLine({ captions, generatedCaptions }) }), "utf8");
 
     // The human-readable report is written on every run, in both depths — it is
     // the deliverable a person actually opens, and PART 3 is the only place the
@@ -2325,7 +2629,7 @@ async function runOne({ source, py, outRoot }) {
     const reportPath = join(outDir, "transcript.txt");
     writeFileSync(reportPath, buildReportTxt({
       source: sourceRef, slug, title, result, warnings, issues, fetchedAt, bytes, descriptive,
-      captionDiff,
+      captionDiff, generatedCaptions,
     }), "utf8");
 
     // The run is not finished until the set it just claimed to write is actually
@@ -2351,8 +2655,10 @@ async function runOne({ source, py, outRoot }) {
       captions: captions
         ? { file: CAPTIONS_FILE, segments: captions.length, disagreements: captionDiff.length }
         : null,
+      generatedCaptions,
       verified: { ok: verified.ok, reviewed: verified.reviewed, notes: verified.notes },
-      files: [indexPath, jsonPath, join(outDir, "_meta.md"), reportPath, ...(descriptive?.files || [])],
+      files: [indexPath, jsonPath, join(outDir, "_meta.md"), reportPath, ...(descriptive?.files || []),
+        ...(generatedCaptions.file ? [join(outDir, generatedCaptions.file)] : [])],
     };
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
@@ -2503,6 +2809,7 @@ if (invokedDirectly) {
   else if (cmd === "verify") doVerify();
   else if (cmd === "batch-index") doBatchIndex();
   else if (cmd === "timeline") doTimeline();
+  else if (cmd === "captions") doCaptions();
   else if (cmd === "run") await doRun();
   else usage(cmd ? `Unknown command: ${cmd}` : "Missing command.");
 }

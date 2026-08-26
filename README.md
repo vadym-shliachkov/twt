@@ -56,7 +56,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-content-fetch-figma | content | Extract a Figma file's visible text content and save as clean Markdown |
 | /twt-content-fetch-pdf | content | Extract a PDF's text content and save as clean Markdown |
 | /twt-content-fetch-site | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
-| /twt-content-fetch-video | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline |
+| /twt-content-fetch-video | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own |
 | /twt-content-optimize | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | /twt-design | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | /twt-design-system | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |

@@ -299,7 +299,7 @@ flowchart TB
 - /twt-content-fetch-figma - Extract a Figma file's visible text content and save as clean Markdown
 - /twt-content-fetch-pdf - Extract a PDF's text content and save as clean Markdown
 - /twt-content-fetch-site - Fetch a website's content via the bundled crawler and save as clean Markdown
-- /twt-content-fetch-video - Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline
+- /twt-content-fetch-video - Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
 - /twt-content-optimize - Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 - /twt-content-validate - Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 - /twt-text-analysis - Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
@@ -1044,6 +1044,7 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/publisher-captions.vtt |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/generated-captions.vtt |  |
 
 ### /twt-content-optimize
 

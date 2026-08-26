@@ -10,6 +10,9 @@ import {
   parseCaptions, captionSegments, diffTranscripts, brightcoveRef, ingestCaptions,
   parseTranscriptBlocks, beatsFromBlocks, referenceWords, anchorBeats, writeTimeline,
   TIMELINE_FILE,
+  splitCueText, wrapCue, cuesFromSegments, formatVttTime, buildVtt, captionsSkipReason,
+  maybeWriteGeneratedCaptions, captionSourceLine,
+  GENERATED_CAPTIONS_FILE, CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -1304,4 +1307,195 @@ test('a handover ends the paragraph even when it would otherwise run on', () => 
   const split = paragraphize(segments, { turnBoundaries: [6] });
   assert.equal(split.length, 2);
   assert.equal(split[1].start, 6, 'the second paragraph is stamped at the handover, not at the window');
+});
+
+// ---- the generated caption track ---------------------------------------------------
+
+const norm = (s) => s.replace(/\s+/g, ' ').trim();
+
+test('a line that already fits a caption box is left alone', () => {
+  assert.deepEqual(splitCueText('Welcome to the quarterly product review.'),
+    ['Welcome to the quarterly product review.']);
+  assert.deepEqual(splitCueText(''), []);
+});
+
+test('a long line breaks at the last sentence end that fits, not mid-thought', () => {
+  const text = 'The payment step now comes before shipping. That cut abandonment by eleven percent across every market we measured.';
+  const chunks = splitCueText(text);
+  assert.equal(chunks[0], 'The payment step now comes before shipping.');
+  for (const c of chunks) assert.ok(c.length <= CUE_MAX_CHARS, `"${c}" is ${c.length} chars`);
+  assert.equal(norm(chunks.join(' ')), norm(text), 'no word may be lost in the split');
+});
+
+test('with no sentence end in range it falls back to a clause, then to a space', () => {
+  const clause = 'fewer form fields before the first commitment, a saved-card path that skips re-entry, and an address step that can fail';
+  assert.ok(splitCueText(clause)[0].endsWith(','), 'a clause break is preferred over a bare space');
+
+  const noPunct = filler(40);  // w0 w1 … — no punctuation anywhere
+  const chunks = splitCueText(noPunct);
+  assert.ok(chunks.length > 1);
+  for (const c of chunks) {
+    assert.ok(c.length <= CUE_MAX_CHARS);
+    assert.ok(!/^\s|\s$/.test(c), 'chunks are trimmed');
+  }
+  assert.equal(norm(chunks.join(' ')), norm(noPunct));
+});
+
+test('a single token longer than a whole cue is hard-cut rather than overflowing the box', () => {
+  const chunks = splitCueText('x'.repeat(200));
+  assert.ok(chunks.length >= 3);
+  for (const c of chunks) assert.ok(c.length <= CUE_MAX_CHARS);
+});
+
+test('a cue wraps to two balanced lines, and a short one does not wrap at all', () => {
+  assert.equal(wrapCue('short enough'), 'short enough');
+  const wrapped = wrapCue('The payment step now comes before shipping and that changed everything');
+  const lines = wrapped.split('\n');
+  assert.equal(lines.length, 2);
+  for (const l of lines) assert.ok(l.length <= CUE_LINE_CHARS + 8, `"${l}" is ${l.length} chars`);
+  assert.ok(Math.abs(lines[0].length - lines[1].length) < 12, 'the two lines are near-even');
+  assert.equal(norm(wrapped.replace('\n', ' ')),
+    'The payment step now comes before shipping and that changed everything');
+});
+
+test('a short segment becomes one cue keeping the recogniser own timings', () => {
+  const cues = cuesFromSegments(segs([3.2, 6.4, 'Welcome to the review.']), { duration: 10 });
+  assert.equal(cues.length, 1);
+  assert.equal(cues[0].start, 3.2);
+  assert.equal(cues[0].end, 6.4);
+  assert.equal(cues[0].text, 'Welcome to the review.');
+});
+
+test('a long segment is shared out across cues that stay inside it and never overlap', () => {
+  const text = 'The payment step now comes before shipping. That cut abandonment by eleven percent across every market. The saved-card path is what did most of it.';
+  const cues = cuesFromSegments(segs([10, 22, text]), { duration: 60 });
+  assert.ok(cues.length >= 2);
+  assert.equal(cues[0].start, 10);
+  assert.equal(cues[cues.length - 1].end, 22, 'the last cue ends where the segment does');
+  for (let i = 0; i < cues.length; i++) {
+    assert.ok(cues[i].end > cues[i].start, 'no zero-length cue');
+    if (i) assert.ok(cues[i].start >= cues[i - 1].end - 0.001, 'cues never overlap');
+  }
+  assert.equal(norm(cues.map((c) => c.text).join(' ')), norm(text), 'the words survive intact');
+});
+
+test('a flash-by cue is stretched to a readable minimum, but never over its neighbour', () => {
+  // Two clipped segments 0.4s apart: the first cannot be stretched a full second.
+  const cues = cuesFromSegments(segs([0, 0.3, 'Right.'], [0.4, 3.0, 'So here is the thing.']),
+    { duration: 10 });
+  assert.ok(cues[0].end <= cues[1].start + 0.001, 'the stretch stops at the next cue');
+  assert.ok(cues[0].end > cues[0].start);
+  // With room to grow it takes the full minimum.
+  const roomy = cuesFromSegments(segs([0, 0.3, 'Right.'], [8, 9, 'Later.']), { duration: 10 });
+  assert.equal(roomy[0].end - roomy[0].start, CUE_MIN_SECONDS);
+});
+
+test('a cue held past the maximum is clamped — it has stopped tracking the speech', () => {
+  const cues = cuesFromSegments(segs([0, 40, 'One short line over a very long segment.']),
+    { duration: 60 });
+  assert.equal(cues.length, 1);
+  assert.equal(cues[0].end - cues[0].start, CUE_MAX_SECONDS);
+});
+
+test('WebVTT times are zero-padded to hours and milliseconds', () => {
+  assert.equal(formatVttTime(0), '00:00:00.000');
+  assert.equal(formatVttTime(3.2), '00:00:03.200');
+  assert.equal(formatVttTime(3661.5), '01:01:01.500');
+  assert.equal(formatVttTime(9.9999), '00:00:10.000', 'rounding must not produce .1000');
+});
+
+test('the generated file parses back with this tool own caption parser', () => {
+  const result = { model: 'small', language: 'en',
+    segments: segs([0, 4, 'In 2008, the New York Life Foundation established a focus.'],
+      [5, 9, 'At least two students in an average classroom will lose a parent.']) };
+  const vtt = buildVtt(cuesFromSegments(result.segments, { duration: 12 }),
+    { source: 'https://example.com/talk.mp4', result, fetchedAt: '2026-08-26' });
+  assert.ok(vtt.startsWith('WEBVTT\n'));
+  const parsed = parseCaptions(vtt);
+  assert.equal(parsed.format, 'vtt');
+  assert.equal(parsed.cues.length, 2, 'the NOTE header is not mistaken for a cue');
+  assert.equal(parsed.cues[0].start, 0);
+  assert.equal(norm(parsed.cues[0].text), 'In 2008, the New York Life Foundation established a focus.');
+});
+
+test('the file itself says the words were guessed from audio', () => {
+  const result = { model: 'small', language: 'en', segments: segs([0, 4, 'Hello there.']) };
+  const vtt = buildVtt(cuesFromSegments(result.segments, { duration: 5 }),
+    { source: 'https://example.com/a.mp4?token=SECRET', result, fetchedAt: '2026-08-26' });
+  assert.match(vtt, /^NOTE$/m);
+  assert.match(vtt, /speech recognition, not a checked caption track/);
+  assert.match(vtt, /model small/);
+  assert.ok(!vtt.includes('SECRET'), 'a signed token must not reach the caption file either');
+});
+
+test('a recording that already has captions does not get a second, worse set', () => {
+  assert.equal(captionsSkipReason({ publisherCaptions: [{ text: 'x' }], segments: segs([0, 1, 'a']) }),
+    'publisher-captions');
+  assert.equal(captionsSkipReason({ embeddedCues: 42, segments: segs([0, 1, 'a']) }), 'embedded-track');
+  assert.equal(captionsSkipReason({ segments: [] }), 'no-speech');
+  assert.equal(captionsSkipReason({ embeddedCues: 0, segments: segs([0, 1, 'a']) }), null);
+});
+
+test('maybeWriteGeneratedCaptions writes the track and says so in the warnings', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
+  const warnings = [];
+  const result = { model: 'small', language: 'en', duration: 6,
+    segments: segs([0, 4, 'Welcome to the review.']) };
+  const out = maybeWriteGeneratedCaptions({ outDir: dir, source: 'a.mp4', result,
+    fetchedAt: '2026-08-26', embeddedCues: 0, warnings });
+  assert.equal(out.file, GENERATED_CAPTIONS_FILE);
+  assert.equal(out.cues, 1);
+  assert.ok(existsSync(join(dir, GENERATED_CAPTIONS_FILE)));
+  assert.ok(warnings.some((w) => /unchecked machine/.test(w)), 'the user must be told it is unchecked');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('it writes nothing when the publisher already shipped a track', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
+  const warnings = [];
+  const out = maybeWriteGeneratedCaptions({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Welcome.']) },
+    publisherCaptions: [{ start: 0, end: 4, text: 'Welcome.' }], warnings });
+  assert.equal(out.file, null);
+  assert.equal(out.skipped, 'publisher-captions');
+  assert.ok(!existsSync(join(dir, GENERATED_CAPTIONS_FILE)));
+  assert.deepEqual(warnings, [], 'skipping the right thing is not a warning');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('_meta.md names which caption track is in the directory, and which kind it is', () => {
+  assert.match(captionSourceLine({ captions: [{ text: 'x' }] }), /publisher's own track/);
+  assert.match(captionSourceLine({ generatedCaptions: { file: GENERATED_CAPTIONS_FILE, cues: 12 } }),
+    /generated-captions\.vtt.*12 cues.*unchecked/);
+  assert.match(captionSourceLine({ generatedCaptions: { file: null, why: 'no speech was detected, so there is nothing to caption' } }),
+    /^none — no speech/);
+});
+
+test('verify rejects a .vtt no player would load, and notes a directory with neither', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  writeFileSync(join(dir, GENERATED_CAPTIONS_FILE), 'WEBVTT\n\nthis was written by hand\n');
+  const bad = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(bad.ok, false);
+  assert.ok(bad.problems.some((p) => /not valid WebVTT/.test(p)));
+
+  const result = { model: 'small', language: 'en', duration: 6, segments: segs([0, 4, 'Welcome.']) };
+  writeFileSync(join(dir, GENERATED_CAPTIONS_FILE),
+    buildVtt(cuesFromSegments(result.segments, { duration: 6 }), { source: 'a.mp4', result }));
+  assert.deepEqual(verifyArtifacts(dir, { expectDescriptive: true }).problems, []);
+
+  rmSync(join(dir, GENERATED_CAPTIONS_FILE));
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /No subtitle file in this directory/.test(n)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the report says which caption track was written, or why none was', () => {
+  const made = reportOf({ generatedCaptions: { file: GENERATED_CAPTIONS_FILE, cues: 41, skipped: null } });
+  assert.match(made.replace(/\s+/g, ' '), /none were published with this recording/);
+  assert.match(made, /generated-captions\.vtt/);
+  assert.match(made, /unchecked machine output/);
+
+  const skipped = reportOf({ generatedCaptions: { file: null, cues: 0, skipped: 'publisher-captions',
+    why: "the publisher's own caption track is already in the directory" } });
+  assert.match(skipped.replace(/\s+/g, ' '), /no track was generated — the publisher's own caption track/);
+  assert.ok(!skipped.includes('generated-captions.vtt'));
 });

@@ -20,7 +20,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
-| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline |
+| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
@@ -569,6 +569,7 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/publisher-captions.vtt
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/generated-captions.vtt
 
 **Non-goals:**
 - Not a YouTube/Vimeo/Loom downloader — this takes **direct** media URLs, local files, or a folder of them, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
@@ -576,7 +577,7 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
 - Doesn't correct the recognizer: PART 3 says what is likely wrong and where, and PARTS 1 and 2 stay exactly as the recognizer produced them. Preferring a publisher's caption track in `index.md` is not a correction — it is choosing the account written by a person over the one guessed from audio, and `text_source:` says which one is in the file
-- Doesn't emit SRT/VTT or burn captions into the video
+- Doesn't burn captions into the video, doesn't emit SRT, and doesn't caption a recording that is already captioned — the one subtitle file it writes is `generated-captions.vtt`, and only for a recording that ships none of its own
 
 **Success criteria:**
 - **Every** source given gets its own `.twt-artifacts/pre-design/content/fetched/video/<slug>/` — one recording per directory, named from its own filename, never merged and never overwriting each other
@@ -585,6 +586,7 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - `timeline.md` exists for every recording that has a `transcript.md`, was **generated** by the `timeline` command rather than written, and is not older than the `transcript.md` it came from
 - `verify` passes for every directory: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
 - Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
+- Where **no** caption track was available, one was generated: `generated-captions.vtt` is valid WebVTT built from the recognizer's own timings, and the report, `_meta.md`, and what you tell the user all say it is unchecked machine output. A recording that already had captions — the publisher's track or the file's own subtitle stream — has no generated file beside them, and the report says why
 - `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
 - For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
 - The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
