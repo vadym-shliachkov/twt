@@ -2130,7 +2130,7 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 ## /twt-skill-test
 
 **Category:** meta
-**Version:** 1.0.2
+**Version:** 1.0.3
 **Accepts arguments:** yes
 
 The generic, agentic counterpart to `/twt-eval-smoke`. Point it at any
