@@ -64,3 +64,13 @@ test('a run with no commit says the working tree was left dirty', () => {
 test('applied fixes are listed per iteration', () => {
   assert.match(renderReport(RUN, { criteria: CRITERIA }), /skills\/twt-ia-define\/SKILL\.md/);
 });
+
+test('the invalid-dispatch-cap stop reason has a stated meaning', () => {
+  const md = renderReport({ ...RUN, stopReason: 'invalid-dispatch-cap' }, { criteria: CRITERIA });
+  assert.match(md, /\*\*Stop reason:\*\* `invalid-dispatch-cap`/);
+  assert.doesNotMatch(md, /— unknown\./);
+});
+
+test('limitations section discloses invalid-dispatch detection is best-effort', () => {
+  assert.match(renderReport(RUN, { criteria: CRITERIA }), /side-channel check/);
+});
