@@ -3,6 +3,11 @@
 // The ledger is a file rather than model memory precisely so "no-progress" is
 // computable: a loop that thrashes on the same finding for three rounds buys
 // nothing, and detecting that is what bounds the cost (spec §5.1 step 7).
+//
+// Requires meta.criteriaIds: the full, ordered list of criterion ids from the
+// frozen rubric. This is persisted by initRun() to enable converged() to detect
+// incomplete verdict maps: if the grader omits any expected criterion instead of
+// marking it UNVERIFIABLE, we fail loudly rather than certifying a false pass.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -35,15 +40,30 @@ function sameVerdicts(a, b) {
   return ka.every(k => a[k] === b[k]);
 }
 
+function bail(message) {
+  console.error(message);
+  process.exit(2);
+}
+
 export function converged(run, { cap = 3 } = {}) {
   // An iteration where the runner reached for the Skill tool graded a stale
   // cached copy; it is evidence about the runner, not about the skill.
   const valid = run.iterations.filter(i => !i.invalidDispatch);
   if (!valid.length) return 'continue';
 
+  // Must have the frozen rubric's expected criterion ids to certify completeness.
+  if (!Array.isArray(run.criteriaIds) || !run.criteriaIds.length) {
+    bail('Run ledger cannot certify a pass without its criteriaIds set');
+  }
+
   const last = valid[valid.length - 1];
   const ids = Object.keys(last.verdicts);
-  const failing = ids.filter(id => last.verdicts[id] !== 'PASS');
+  const expectedIds = new Set(run.criteriaIds);
+
+  // Check for missing criteria: any expected criterion absent from the verdict map
+  // is treated as not-passing, just like UNVERIFIABLE.
+  const missing = run.criteriaIds.filter(id => !last.verdicts.hasOwnProperty(id));
+  const failing = ids.filter(id => last.verdicts[id] !== 'PASS').concat(missing);
 
   if (ids.length && !failing.length) {
     const selfDeclared = new Set(run.selfDeclared || []);
