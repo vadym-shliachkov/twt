@@ -3,6 +3,10 @@
 Derived 2026-08-26 from frontmatter `writes:`, CONVENTIONS.md, and the skill's
 Intent block. IDs are stable and never reused.
 
+No `dispatch`-dimension criterion is included: `twt-ia-define` is a leaf
+skill with no dispatch trace source, so the dimension is derivable-but-
+unpopulated here by design (spec §12.3), not an oversight.
+
 ### C-001 · contract · sitemap-exists
 
 - **dimension:** contract
@@ -27,7 +31,7 @@ Intent block. IDs are stable and never reused.
 - **source:** CONVENTIONS.md — decisions.md format
 - **self-declared:** no
 - **fixture:** happy
-- **assert:** if `.twt-artifacts/pre-design/ia/decisions.md` exists, `node tools/check-decisions.mjs <path>` exits 0
+- **assert:** if `.twt-artifacts/pre-design/ia/decisions.md` exists, `node tools/check-decisions.mjs --file <path>` exits 0
 - **evidence:** the command and its exit status
 
 ### C-004 · contract · no-writes-outside-contract
@@ -36,7 +40,7 @@ Intent block. IDs are stable and never reused.
 - **source:** frontmatter `writes:`
 - **self-declared:** no
 - **fixture:** happy
-- **assert:** nothing was created under the target outside `.twt-artifacts/pre-design/ia/`
+- **assert:** nothing was created under the target outside `.twt-artifacts/pre-design/ia/`, other than paths the happy fixture itself pre-seeded before the skill ran: `.twt-artifacts/pre-design/positioning/`, `.twt-artifacts/pre-design/content/`, and the `.eval-smoke` marker file directly under `.twt-artifacts/pre-design/`. Anything else outside `ia/` is a violation.
 - **evidence:** a directory listing of the target
 
 ### C-005 · quality · every-page-has-a-purpose

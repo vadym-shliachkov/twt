@@ -24,7 +24,7 @@ test('a full three-iteration cycle records verdicts and stops at the cap', () =>
   run(['seed', target, '--skill', 'twt-ia-define']);
   assert.ok(existsSync(join(target, '.twt-skill-test-owned')));
 
-  run(['inject', 'twt-skill-test', '--run', runDir, '--target', target, '--iteration', '1']);
+  run(['inject', 'twt-ia-define', '--run', runDir, '--target', target, '--iteration', '1']);
   const promptPath = join(runDir, 'iteration-1', 'prompt.md');
   assert.ok(existsSync(promptPath));
 
