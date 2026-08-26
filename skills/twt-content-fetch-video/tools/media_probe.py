@@ -150,6 +150,22 @@ def diff_score(a, b):
     return float(abs(a - b).mean()) / 255.0
 
 
+# The lower third is where a name card lives, and a name card is the single most
+# valuable thing a keyframe can carry: it is the only evidence that turns "a man
+# in a navy suit" into a person with a name. It is also nearly invisible to a
+# whole-frame diff — a caption bar over a held talking-head shot changes maybe 7%
+# of the picture, which averages out to a score below any threshold worth using
+# on scene cuts. So it gets scored on its own, against its own band.
+LOWER_BAND = 0.6  # score the bottom 40% of the frame separately
+
+
+def band_score(a, b):
+    if a is None or b is None:
+        return 1.0
+    row = int(a.shape[0] * LOWER_BAND)
+    return float(abs(a[row:] - b[row:]).mean()) / 255.0
+
+
 def save_frame(av, frame, path, width):
     """JPEG via Pillow when present, else through PyAV's own mjpeg encoder."""
     w = min(width, frame.width) or frame.width
@@ -204,20 +220,62 @@ def seek_candidates(av, media, video_index, times):
     return out
 
 
-def pick_frames(candidates, duration, max_frames, min_gap, threshold):
+def pick_frames(candidates, duration, max_frames, min_gap, threshold,
+                band_threshold=None, band_gap=None, band_ratio=1.6):
     """Greedy in time order: keep a frame that is far enough from the last kept
-    one in both time and appearance. Then top up for coverage and cap by score."""
-    candidates = sorted(candidates, key=lambda c: c[0])
+    one in both time and appearance. Then top up for coverage and cap by score.
+
+    Two rules, not one. A *scene* change is a whole-frame difference and needs the
+    full gap: cuts, dissolves, a slide advancing. A *lower-third* change is a
+    caption bar arriving over an otherwise unchanged shot — small in the frame,
+    decisive for the transcript, and it follows the cut it belongs to by a second
+    or two, so it gets its own threshold and a shorter gap. Without the second
+    rule a name card is dropped for being visually boring, and the speaker it
+    names stays anonymous for the whole transcript.
+
+    What separates a title from a shrug is not how much the band changed but that
+    the band changed and the rest of the frame did not. Measured over a
+    seven-speaker film: name cards arrive at a band/scene ratio of 2.0-2.4, a
+    talking head's own shoulders and hands move at 0.4-0.8, and a hard cut moves
+    both together at ~1.0-1.5. So the ratio is the test and the absolute band
+    score is only a floor under it. The default sits at 1.6 because on that film
+    the weakest real card scored 1.80 and the strongest gesture scored 0.9 — the
+    gap is wide, but a card fading in over two seconds lands anywhere in it."""
+    if band_threshold is None:
+        band_threshold = threshold
+    if band_gap is None:
+        band_gap = max(1.0, min_gap * 0.4)
+    # seek() lands on the enclosing keyframe, so probing 4.0s, 4.5s and 5.0s of a
+    # 2-second-GOP file returns the same picture three times. Deduplicate, or the
+    # same frame is scored against itself and kept for changing by exactly zero.
+    seen, unique = set(), []
+    for ts, small in candidates:
+        key = round(ts, 3)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append((ts, small))
+    candidates = sorted(unique, key=lambda c: c[0])
     kept, last = [], None
     for ts, small in candidates:
         if not kept:
-            kept.append({"t": ts, "score": 1.0})
+            kept.append({"t": ts, "score": 1.0, "why": "open"})
             last = (ts, small)
             continue
-        score = diff_score(small, last[1])
-        if ts - last[0] < min_gap or score < threshold:
+        scene = diff_score(small, last[1])
+        band = band_score(small, last[1])
+        dt = ts - last[0]
+        if dt >= min_gap and scene >= threshold:
+            why = "scene"
+        elif (dt >= band_gap and band >= band_threshold
+              and band >= scene * band_ratio):
+            why = "lower-third"
+        else:
             continue
-        kept.append({"t": ts, "score": round(score, 4)})
+        # Ranked on the stronger of the two, so the cap below cannot decide that a
+        # name card is the least interesting frame in the recording and drop it.
+        kept.append({"t": ts, "score": round(max(scene, band), 4),
+                     "scene": round(scene, 4), "band": round(band, 4), "why": why})
         last = (ts, small)
 
     # A static talking head yields almost no scene changes; sample it anyway so
@@ -229,7 +287,7 @@ def pick_frames(candidates, duration, max_frames, min_gap, threshold):
             if len(kept) >= target:
                 break
             if all(abs(ts - t) >= min_gap * 2 for t in have):
-                kept.append({"t": ts, "score": 0.0})
+                kept.append({"t": ts, "score": 0.0, "why": "coverage"})
                 have.append(ts)
         kept.sort(key=lambda k: k["t"])
 
@@ -272,7 +330,37 @@ def cmd_frames(args):
             print("  filling %d coverage gap(s) by seeking" % len(wanted), file=sys.stderr)
             candidates += seek_candidates(av, args.media, vi, wanted[: args.max * 2])
 
-    kept = pick_frames(candidates, duration, args.max, args.min_gap, args.threshold)
+    kept = pick_frames(candidates, duration, args.max, args.min_gap, args.threshold,
+                       args.band_threshold, args.band_gap, args.band_ratio)
+
+    # Second pass, aimed at name cards. A lower third is titled in a second or two
+    # after the cut to the person it names, holds for a few seconds, and goes away
+    # — so it lives in the dead zone right after a scene change, where I-frames are
+    # scarce and the coverage grid is far too coarse to land on it. Probe just
+    # there: a handful of seeks per cut, scored against the cut itself.
+    if duration and args.card_probe > 0:
+        anchors = [k["t"] for k in kept if k.get("why") in ("scene", "open")]
+        offsets = [i * args.card_probe for i in range(1, args.card_probes + 1)]
+        wanted = []
+        for a in anchors:
+            for off in offsets:
+                t = a + off
+                if t < duration and all(abs(t - k["t"]) >= 0.8 for k in kept):
+                    wanted.append(t)
+        wanted = sorted(set(round(t, 2) for t in wanted))[: args.max * 3]
+        if wanted:
+            print("  probing %d point(s) after cuts for lower-third titles" % len(wanted),
+                  file=sys.stderr)
+            probes = seek_candidates(av, args.media, vi, wanted)
+            kept = pick_frames(candidates + probes, duration, args.max, args.min_gap,
+                               args.threshold, args.band_threshold, args.band_gap,
+                               args.band_ratio)
+
+    by_rule = {}
+    for k in kept:
+        by_rule[k.get("why", "scene")] = by_rule.get(k.get("why", "scene"), 0) + 1
+    print("  keeping %d frame(s): %s" % (len(kept),
+          ", ".join("%s %d" % (w, n) for w, n in sorted(by_rule.items()))), file=sys.stderr)
     os.makedirs(args.out_dir, exist_ok=True)
 
     written = []
@@ -289,8 +377,10 @@ def cmd_frames(args):
             except Exception as exc:  # noqa: BLE001 — one bad frame must not lose the rest
                 print("  frame at %.1fs failed: %s" % (item["t"], exc), file=sys.stderr)
                 continue
+            # `why` is the one the descriptive pass acts on: a lower-third frame is
+            # a frame to read the text off, not just another picture of the room.
             written.append({"n": n, "t": round(item["t"], 3), "file": name,
-                            "change": item["score"]})
+                            "change": item["score"], "why": item.get("why", "scene")})
     write_json(args.out, {"frames": written, "candidates": len(candidates),
                           "duration": duration, "video_index": vi})
     print("wrote %d frames to %s" % (len(written), args.out_dir), file=sys.stderr)
@@ -421,6 +511,16 @@ def main():
     p.add_argument("--min-gap", dest="min_gap", type=float, default=4.0)
     p.add_argument("--width", type=int, default=960)
     p.add_argument("--threshold", type=float, default=0.06)
+    # Scored against the bottom band alone, so it is not the same scale as
+    # --threshold: a name card clears ~0.06 here and ~0.02 whole-frame.
+    p.add_argument("--band-threshold", dest="band_threshold", type=float, default=0.015)
+    # How much more the band must move than the whole frame. Below ~1.6 a talking
+    # head's own gestures start qualifying as titles.
+    p.add_argument("--band-ratio", dest="band_ratio", type=float, default=1.6)
+    p.add_argument("--band-gap", dest="band_gap", type=float, default=None)
+    # Seconds between probes after each cut, and how many. 0 disables the pass.
+    p.add_argument("--card-probe", dest="card_probe", type=float, default=1.6)
+    p.add_argument("--card-probes", dest="card_probes", type=int, default=3)
     p.set_defaults(fn=cmd_frames)
 
     p = sub.add_parser("subs")

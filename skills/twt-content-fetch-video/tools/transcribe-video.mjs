@@ -16,7 +16,8 @@
 //   node transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]
 //        [--model base] [--language auto] [--title <name>] [--slug <slug>]
 //        [--python <exe>] [--keep-source] [--force] [--verbatim] [--max-frames 60]
-//        [--frame-gap 4] [--frame-width 960]
+//        [--frame-gap 4] [--frame-width 960] [--frame-threshold 0.06]
+//        [--frame-band-threshold 0.04] [--card-probe 1.6]
 //     Resolve the source, transcribe it locally with faster-whisper, and write
 //     index.md + segments.json + _meta.md + transcript.txt under <out-dir>/<slug>/.
 //     --title/--slug name the output: a CDN filename ("main.mp4") makes a useless
@@ -114,6 +115,8 @@ function usage(msg) {
   console.error("           [--max-frames 60] [--captions <url-or-path>]");
   console.error("       transcribe-video.mjs batch-index <out-dir> --slugs <a,b,c> [--file <name>]");
   console.error("           [--frame-gap 4] [--frame-width 960]");
+  console.error("           [--frame-threshold 0.06] [--frame-band-threshold 0.04] [--card-probe 1.6]");
+  console.error("  timeline <dir>            build timeline.md from transcript.md");
   console.error("       transcribe-video.mjs verify <transcript-dir> [--expect-descriptive]");
   console.error("       transcribe-video.mjs slice <transcript-dir> [--window <n> | --from <t> --to <t>]");
   console.error("           [--window-seconds 300]");
@@ -263,14 +266,20 @@ function wordCount(text) { return text.split(/\s+/).filter(Boolean).length; }
 // Group ASR segments into paragraphs: break on a real pause at a sentence end,
 // or on length once a sentence ends, or unconditionally if the recognizer never
 // produced punctuation.
-export function paragraphize(segments) {
+export function paragraphize(segments, { turnBoundaries = [] } = {}) {
   const paras = [];
+  const bounds = [...turnBoundaries].sort((a, b) => a - b);
   let cur = null;
   for (const seg of segments) {
     if (!cur) { cur = { start: seg.start, end: seg.end, text: seg.text }; continue; }
     const gap = seg.start - cur.end;
     const words = wordCount(cur.text);
-    const done = words >= HARD_WORDS
+    // A handover always ends the paragraph, however short that leaves it. A
+    // paragraph running across a speaker change carries one timestamp and two
+    // people, and anything quoting it attributes half of it to the wrong one.
+    const handover = bounds.some((b) => b > cur.start && b <= seg.start + 0.001);
+    const done = handover
+      || words >= HARD_WORDS
       || (endsSentence(cur.text) && (words >= MAX_WORDS || (gap >= GAP_SECONDS && words >= MIN_WORDS)));
     if (done) {
       paras.push(cur);
@@ -440,7 +449,13 @@ export function titleFrom(slug, explicit) {
 export function buildIndexMd({ source, slug, title, result, fetchedAt, captionSegments: captions }) {
   const forceHours = (result.duration || 0) >= 3600;
   const fromCaptions = Boolean(captions && captions.length);
-  const paras = paragraphize(fromCaptions ? captions : result.segments);
+  // Turn candidates come from the recognizer's timings either way — the caption
+  // track is the better *words*, but it carries no handover information at all.
+  const turned = assignTurns(result.segments);
+  const turnBoundaries = turned
+    .filter((seg, i) => i && seg.turn !== turned[i - 1].turn)
+    .map((seg) => seg.start);
+  const paras = paragraphize(fromCaptions ? captions : result.segments, { turnBoundaries });
   const name = titleFrom(slug, title);
   const body = paras.length
     ? paras.map((p) => `**[${fmtTime(p.start, forceHours)}]** ${p.text}`).join("\n\n")
@@ -1231,6 +1246,327 @@ export function brightcoveRef(source) {
   return { account: path[1], player: path[2], videoId };
 }
 
+// ---- the single-stream timeline ------------------------------------------------
+// `transcript.md` is written for a reader: chapters, an orientation header, an
+// index at the end. `timeline.md` is the same content with one thing added and one
+// thing taken away — every beat carries its own `[mm:ss]`, and nothing that is not
+// a beat is in the file. Who is speaking, what is on screen, and what is said sit
+// together under the moment they happen, from the first frame to the last, so any
+// moment can be cited without going back to the recording to find out when it was.
+//
+// It is derived, never authored: the prose is lifted verbatim out of the model's
+// `transcript.md` and the timestamps are re-measured against the recording's own
+// timings. That is the point of generating it rather than asking for it twice —
+// two hand-written accounts of one recording drift, and the drift is invisible.
+
+export const TIMELINE_FILE = "timeline.md";
+
+const MARKER_RE = /^\[(Visual|On screen|On-screen|Sound|AD|No speech|Inaudible)\b/i;
+const SPEAKER_RE = /^\*\*([^*]{1,120}?):\*\*\s*([\s\S]*)$/;
+const CHAPTER_RE = /^###\s+\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*(.*)$/;
+const NOSPEECH_RE = /^\[No speech\s+(\d{1,2}:\d{2}(?::\d{2})?)/i;
+
+export function parseStamp(text) {
+  const parts = String(text || "").split(":").map(Number);
+  if (!parts.length || parts.some((n) => !Number.isFinite(n))) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return null;
+}
+
+// Blank-line-separated blocks of the `## Transcript` section, classified. A block
+// is one marker, one speaker's line, one heading, or the odd list or framing line
+// — whatever the model wrote, kept exactly as it wrote it.
+export function parseTranscriptBlocks(prose) {
+  const text = String(prose || "").replace(/\r\n?/g, "\n");
+  const m = text.match(/^##\s+Transcript\s*$/m);
+  if (!m) return null;
+  const rest = text.slice(m.index + m[0].length);
+  const next = rest.match(/^##\s+(?!#)/m);
+  const body = next ? rest.slice(0, next.index) : rest;
+
+  const blocks = [];
+  for (const raw of body.split(/\n{2,}/)) {
+    const chunk = raw.trim();
+    if (!chunk) continue;
+    // Re-flow: the source is hard-wrapped for reading, and a wrapped marker is
+    // still one marker. The timeline puts one block on one line.
+    const flat = chunk.replace(/\s*\n\s*/g, " ").trim();
+    const chapter = flat.match(CHAPTER_RE);
+    if (chapter) {
+      blocks.push({ kind: "chapter", time: parseStamp(chapter[1]), title: chapter[2].trim(), text: flat });
+      continue;
+    }
+    if (/^#{1,6}\s/.test(flat)) { blocks.push({ kind: "heading", text: flat }); continue; }
+    const nospeech = flat.match(NOSPEECH_RE);
+    if (nospeech) { blocks.push({ kind: "nospeech", time: parseStamp(nospeech[1]), text: flat }); continue; }
+    if (MARKER_RE.test(flat)) { blocks.push({ kind: "marker", text: flat }); continue; }
+    const speaker = flat.match(SPEAKER_RE);
+    if (speaker) {
+      blocks.push({ kind: "speech", speaker: speaker[1].trim(), speech: speaker[2].trim(), text: flat });
+      continue;
+    }
+    // A list keeps its own line breaks — re-flowing it would destroy it.
+    if (/^([-*+]|\d+[.)])\s/.test(chunk)) { blocks.push({ kind: "list", text: chunk }); continue; }
+    blocks.push({ kind: "prose", text: flat });
+  }
+  return blocks;
+}
+
+// A beat is what a viewer takes in at one moment: the markers that set a line up,
+// the line itself, and anything the model hung off it. Markers attach to the
+// speech they precede, because that is the order the viewer meets them in.
+export function beatsFromBlocks(blocks) {
+  const beats = [];
+  const chapters = [];
+  let pending = [];
+  let chapter = null;
+  for (const b of blocks || []) {
+    if (b.kind === "chapter") {
+      if (pending.length) { beats.push({ kind: "markers", markers: pending, time: b.time, chapter }); pending = []; }
+      chapter = { time: b.time, title: b.title };
+      if (b.title) chapters.push(chapter);
+      continue;
+    }
+    if (b.kind === "marker") { pending.push(b.text); continue; }
+    if (b.kind === "nospeech") {
+      beats.push({ kind: "nospeech", markers: pending, time: b.time, text: b.text, chapter });
+      pending = [];
+      continue;
+    }
+    if (b.kind === "speech") {
+      beats.push({ kind: "speech", markers: pending, speaker: b.speaker, speech: b.speech, chapter });
+      pending = [];
+      continue;
+    }
+    // A list or a framing line belongs to the beat it followed, not to a new one.
+    const last = beats[beats.length - 1];
+    if (last && !pending.length) (last.after ||= []).push(b.text);
+    else pending.push(b.text);
+  }
+  if (pending.length) beats.push({ kind: "markers", markers: pending, chapter });
+  return { beats, chapters };
+}
+
+// ---- anchoring -----------------------------------------------------------------
+// The model's speech is the publisher's or the recognizer's words, lightly tidied
+// — em-dashes added, filler dropped, an obvious mangling repaired. So a beat is
+// *located* by finding where its opening words sit in the reference stream, not by
+// matching it exactly. The search only ever moves forward: a transcript runs in one
+// direction, and a backwards match is wrong however well it scores.
+
+const ANCHOR_WORDS = 10;
+const ANCHOR_MIN = 0.45;      // fraction of the opening words that must line up
+const ANCHOR_LOOKAHEAD = 600; // reference words searched forward from the cursor
+
+function normWords(text) {
+  return String(text || "")
+    .replace(/\[[^\]]*\]/g, " ")     // [inaudible], [?] and friends are not words
+    .replace(/[*_`]+/g, " ")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+// What to search the reference stream *for*. A stage direction — *(voice-over)*,
+// *(off camera)* — is the model's note about how a line is delivered, not part of
+// the line, and it is usually the first thing on it. Left in, it fills the query
+// with words nobody says and drags the beat several seconds early: it is what put
+// "It's not a one-time event" at 0:46 when the caption track says 0:48.
+function matchText(speech) {
+  return String(speech || "")
+    .replace(/[*_]\([^)]*\)[*_]/g, " ")
+    .replace(/^\s*\([^)]*\)\s*/, " ");
+}
+
+// One entry per reference word, carrying the time it is spoken at. Within a
+// segment the time is interpolated: a 10-second segment starting at 0:40 puts its
+// last word near 0:50, and rounding every word in it to 0:40 would make a beat
+// that starts mid-segment claim a timestamp ten seconds early.
+export function referenceWords(segments) {
+  const out = [];
+  for (const seg of segments || []) {
+    const ws = normWords(seg.text);
+    if (!ws.length) continue;
+    const start = Number(seg.start) || 0;
+    const span = Math.max(0, (Number(seg.end) || start) - start);
+    ws.forEach((w, i) => out.push({ w, t: start + (ws.length > 1 ? (i / ws.length) * span : 0) }));
+  }
+  return out;
+}
+
+export function anchorBeats(beats, refWords) {
+  const ref = refWords || [];
+  let cursor = 0;
+  let last = 0;
+  const unmatched = [];
+  for (const beat of beats) {
+    if (typeof beat.time === "number" && Number.isFinite(beat.time)) {
+      last = beat.time;
+      // An explicit stamp moves the cursor too, so a chapter heading stops the
+      // search drifting back into the previous chapter's words.
+      while (cursor < ref.length && ref[cursor].t < beat.time - 0.5) cursor += 1;
+      continue;
+    }
+    if (beat.kind !== "speech") { beat.time = last; beat.approx = true; continue; }
+    const query = normWords(matchText(beat.speech)).slice(0, ANCHOR_WORDS);
+    let best = { score: 0, at: -1 };
+    if (query.length) {
+      const stop = Math.min(ref.length, cursor + ANCHOR_LOOKAHEAD);
+      for (let p = cursor; p < stop; p += 1) {
+        let hits = 0;
+        for (let i = 0; i < query.length && p + i < ref.length; i += 1) {
+          if (ref[p + i].w === query[i]) hits += 1;
+        }
+        if (hits > best.score) best = { score: hits, at: p };
+        if (hits === query.length) break;
+      }
+    }
+    if (best.at >= 0 && query.length && best.score / query.length >= ANCHOR_MIN) {
+      beat.time = ref[best.at].t;
+      beat.confidence = Math.round((best.score / query.length) * 100) / 100;
+      cursor = best.at + Math.max(1, Math.floor(query.length / 2));
+      last = beat.time;
+    } else {
+      // Nothing found: keep the timeline monotonic rather than invent a time, and
+      // record which line it happened to.
+      beat.time = last;
+      beat.approx = true;
+      unmatched.push({ speaker: beat.speaker || "(unnamed)", opening: (beat.speech || "").slice(0, 60) });
+    }
+  }
+  // Monotonic by construction, but a bad match can still land a beat before the
+  // one above it. Clamp, rather than emit a timeline that runs backwards.
+  //
+  // The tolerance matters: a chapter heading's stamp is the model's, rounded to
+  // the second, so a line the caption track puts at 1:24.99 sits a hundredth of a
+  // second "before" a heading written as [1:25]. Clamping that is right; flagging
+  // it as an unlocated line is not, and a `~` that means nothing teaches the
+  // reader to ignore the ones that mean something.
+  const CLAMP_TOLERANCE = 1.0;
+  let floor = 0;
+  for (const beat of beats) {
+    if (!(beat.time >= floor)) {
+      if (floor - beat.time > CLAMP_TOLERANCE) beat.approx = true;
+      beat.time = floor;
+    }
+    floor = beat.time;
+  }
+  return { beats, unmatched };
+}
+
+export function buildTimelineMd({ beats, chapters, meta }) {
+  const forceHours = (meta.durationSeconds || 0) >= 3600;
+  const fm = [
+    "---",
+    `source: ${meta.source}`,
+    "type: video",
+    "kind: timeline",
+    `title: ${meta.title}`,
+    `duration: ${meta.duration}`,
+    `language: ${meta.language}`,
+    `text_source: ${meta.textSource}`,
+    `beats: ${beats.length}`,
+    "generated_from: transcript.md",
+    `fetched_at: ${meta.fetchedAt}`,
+    "---",
+  ].join("\n");
+
+  const out = [fm, "", `# ${meta.title} — timeline`, "",
+    "_One stream, in time order: what is on screen, who starts speaking, and what they say, each"
+    + " under the moment it happens. Generated from `transcript.md` and the recording's own"
+    + " timings — regenerate it with `transcribe-video.mjs timeline`, never edit it by hand._", ""];
+
+  if (chapters.length) {
+    out.push("## Chapters", "");
+    for (const c of chapters) out.push(`- **[${fmtTime(c.time, forceHours)}]** ${c.title}`);
+    out.push("");
+  }
+
+  out.push("## Timeline", "");
+  for (const beat of beats) {
+    out.push(`### [${fmtTime(beat.time, forceHours)}]${beat.approx ? " ~" : ""}`);
+    for (const marker of beat.markers || []) out.push(marker);
+    if (beat.kind === "speech") out.push(`**${beat.speaker}:** ${beat.speech}`);
+    else if (beat.text) out.push(beat.text);
+    for (const extra of beat.after || []) out.push("", extra);
+    out.push("");
+  }
+  out.push("---", "",
+    "_A `~` on a timestamp means that line could not be located in the recording's own timings and"
+    + " carries the previous beat's time instead. A marker takes the time of the line it introduces._",
+    "");
+  return out.join("\n");
+}
+
+// Reads the directory, builds the file, returns what it did. The reference stream
+// is the publisher's caption track where there is one — its cues are two or three
+// seconds long against the recognizer's five to ten, so it locates a line several
+// times more precisely — and the recognizer's segments otherwise.
+export function writeTimeline(dir) {
+  const read = (name) => {
+    try { return readFileSync(join(dir, name), "utf8"); } catch { return null; }
+  };
+  const prose = read("transcript.md");
+  if (!prose) return { ok: false, problems: ["No transcript.md — there is nothing to build a timeline from. Assemble the descriptive pass first."] };
+
+  const blocks = parseTranscriptBlocks(prose);
+  if (!blocks) return { ok: false, problems: ["transcript.md has no `## Transcript` section — the timeline is built from that section and it is not there."] };
+  const { beats, chapters } = beatsFromBlocks(blocks);
+  if (!beats.length) return { ok: false, problems: ["transcript.md's `## Transcript` section holds no speech or markers."] };
+
+  let refSegments = [];
+  let textSource = "speech-recognition";
+  const vtt = read(CAPTIONS_FILE);
+  const parsed = vtt ? parseCaptions(vtt) : null;
+  if (parsed) { refSegments = captionSegments(parsed.cues); textSource = "publisher-captions"; }
+  if (!refSegments.length) {
+    try { refSegments = JSON.parse(read("segments.json") || "{}").segments || []; } catch { refSegments = []; }
+  }
+
+  const { unmatched } = anchorBeats(beats, referenceWords(refSegments));
+
+  const fm = (name, src) => ((src || "").match(new RegExp(`^${name}:\\s*(.+)\\s*$`, "m")) || [])[1] || null;
+  const index = read("index.md") || "";
+  const durationText = fm("duration", prose) || fm("duration", index) || "0:00:00";
+  const meta = {
+    source: fm("source", index) || fm("source", prose) || "(unknown)",
+    title: (prose.match(/^#\s+(.+)$/m) || [])[1] || fm("title", index) || "Transcript",
+    duration: durationText,
+    durationSeconds: parseStamp(durationText) || 0,
+    language: fm("language", index) || fm("language", prose) || "unknown",
+    textSource,
+    fetchedAt: fm("fetched_at", index) || new Date().toISOString().slice(0, 10),
+  };
+
+  const path = join(dir, TIMELINE_FILE);
+  writeFileSync(path, buildTimelineMd({ beats, chapters, meta }), "utf8");
+  return {
+    ok: true,
+    file: path,
+    beats: beats.length,
+    speech: beats.filter((b) => b.kind === "speech").length,
+    markers: beats.reduce((n, b) => n + (b.markers || []).length, 0),
+    chapters: chapters.length,
+    reference: textSource,
+    referenceSegments: refSegments.length,
+    unmatched,
+    problems: [],
+  };
+}
+
+function doTimeline() {
+  const dir = firstPositional();
+  if (!dir) usage("timeline needs the transcript directory.");
+  const result = writeTimeline(dir);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) process.exit(1);
+  if (result.unmatched.length) {
+    console.error(`note: ${result.unmatched.length} line(s) could not be located in the reference `
+      + "timings and carry the previous beat's time (marked ~ in the file).");
+  }
+}
+
 // ---- artifact verification -----------------------------------------------------
 // A run is only finished when the whole declared set is on disk and the files
 // agree with each other. This exists because they can come apart: output written
@@ -1346,6 +1682,50 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
         problems.push(`transcript.md says the recording runs ${proseDur} but index.md says ${indexDur} — `
           + "these two files describe different recordings.");
       }
+
+      // timeline.md is derived from transcript.md, so the two come apart in one
+      // direction only: the prose is edited and the timeline is not rebuilt. Then
+      // the file that looks the most citable — every line stamped with a time —
+      // is quietly the stale one, which is worse than not having it.
+      const timeline = read(TIMELINE_FILE);
+      if (!timeline) {
+        const missing = `No ${TIMELINE_FILE} — the single-stream timeline has not been built.`;
+        if (expectDescriptive) {
+          problems.push(missing + ` Build it with \`timeline "<dir>"\`; it is generated, not written.`);
+        } else notes.push(missing);
+      } else {
+        if (!/^##\s+Timeline\s*$/m.test(timeline) || !/^###\s+\[\d/m.test(timeline)) {
+          problems.push(`${TIMELINE_FILE} carries no \`## Timeline\` section with \`### [mm:ss]\` beats — `
+            + "it was not produced by this script.");
+        }
+        try {
+          if (statSync(join(dir, "transcript.md")).mtimeMs > statSync(join(dir, TIMELINE_FILE)).mtimeMs + 1000) {
+            problems.push(`${TIMELINE_FILE} is older than transcript.md — it was built from an earlier `
+              + `draft. Re-run \`timeline "<dir>"\`.`);
+          }
+        } catch { /* a missing stat is already covered above */ }
+      }
+
+      // A name read off a downscaled keyframe is evidence, not a font specimen.
+      // "TerriyIn" for "Terrilyn" is the shape this takes every time: a capital I
+      // where a lowercase l stood, published as fact because it came from an
+      // on-screen card and cards feel authoritative. The rule is to mark it [?];
+      // this is the check that notices when the rule was not followed.
+      const suspect = new Set();
+      for (const m of prose.matchAll(/\*\*([A-Z][^*:]{1,60}?):\*\*/g)) {
+        const name = m[1].trim();
+        if (/\[\?\]/.test(name)) continue;
+        for (const token of name.split(/[\s'’-]+/)) {
+          const bare = token.replace(/^(Mc|Mac|De|Di|Du|La|Le|Van|Von|O)(?=[A-Z])/, "");
+          if (/[a-z][A-Z]/.test(bare)) suspect.add(name);
+        }
+      }
+      if (suspect.size) {
+        notes.push(`Speaker name(s) with a capital letter inside a word and no \`[?]\`: `
+          + `${[...suspect].map((n) => `"${n}"`).join(", ")}. That is what a lowercase l misread off a `
+          + "name card looks like. Check the frame, or mark the name uncertain — an almost-right "
+          + "spelling of a real person's name is worse than admitting the glyphs were unreadable.");
+      }
     }
   }
 
@@ -1412,7 +1792,10 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings }) {
     const framesJson = join(outDir, "frames.json");
     const r = pyProbe(py, ["frames", "--media", mediaPath, "--out-dir", join(outDir, "frames"),
       "--out", framesJson, "--max", flag("--max-frames", "60"),
-      "--min-gap", flag("--frame-gap", "4"), "--width", flag("--frame-width", "960")]);
+      "--min-gap", flag("--frame-gap", "4"), "--width", flag("--frame-width", "960"),
+      "--threshold", flag("--frame-threshold", "0.06"),
+      "--band-threshold", flag("--frame-band-threshold", "0.04"),
+      "--card-probe", flag("--card-probe", "1.6")]);
     if (r.status === 0) {
       frames = (readJson(framesJson) || {}).frames || [];
       out.files.push(framesJson);
@@ -1478,7 +1861,30 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings }) {
     ...result, segments: assignTurns(result.segments), non_speech: gaps,
   }), "utf8");
   out.non_speech_spans = gaps.length;
-  out.turns = new Set(assignTurns(result.segments).map((s) => s.turn)).size;
+  const turned = assignTurns(result.segments);
+  out.turns = new Set(turned.map((s) => s.turn)).size;
+
+  // Turn detection is pause detection, and some faster-whisper builds return
+  // segments whose start is exactly the previous segment's end. Then there are no
+  // pauses to find, the recording collapses to one or two turns, and the count
+  // reads as "one speaker" when it means "this file cannot tell you". Say so,
+  // rather than let a seven-speaker film go out reporting two turn candidates
+  // under "Warnings: None".
+  if (result.segments.length > 4) {
+    const butts = result.segments.filter(
+      (seg, i) => i && Math.abs(seg.start - result.segments[i - 1].end) < 0.005).length;
+    out.contiguous_segments = butts;
+    if (butts / (result.segments.length - 1) >= 0.8) {
+      warnings.push("The recognizer returned back-to-back segment times (no measurable pauses), so "
+        + "pause-based turn detection is blind on this file — the " + out.turns + " turn candidate(s) "
+        + "in segments.json are an artefact of that, not a speaker count. Take speakers from the "
+        + "frames and the content, and do not trust the turn numbers to mark handovers.");
+    } else if (info.has_video && out.turns <= 2 && (result.duration || 0) >= 90) {
+      warnings.push("Only " + out.turns + " speaker-turn candidate(s) across "
+        + fmtTime(result.duration) + " of video — if more than one person speaks, the handovers "
+        + "have no pause the detector can see. Take speakers from the frames, not the turn numbers.");
+    }
+  }
 
   const outlinePath = join(outDir, "outline.json");
   writeFileSync(outlinePath, JSON.stringify(buildOutline({
@@ -2096,6 +2502,7 @@ if (invokedDirectly) {
   else if (cmd === "annotate") doAnnotate();
   else if (cmd === "verify") doVerify();
   else if (cmd === "batch-index") doBatchIndex();
+  else if (cmd === "timeline") doTimeline();
   else if (cmd === "run") await doRun();
   else usage(cmd ? `Unknown command: ${cmd}` : "Missing command.");
 }

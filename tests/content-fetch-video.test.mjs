@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync, utimesSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -8,6 +8,8 @@ import {
   redactUrl, sourceLabel, isGenericName, detectIssues, properPhrases, buildReportTxt,
   spliceReview, buildReviewRequest, REPORT_WIDTH, REVIEW_HEADING, verifyArtifacts,
   parseCaptions, captionSegments, diffTranscripts, brightcoveRef, ingestCaptions,
+  parseTranscriptBlocks, beatsFromBlocks, referenceWords, anchorBeats, writeTimeline,
+  TIMELINE_FILE,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -1077,7 +1079,11 @@ function descriptiveDir(prose) {
     `PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 1 items)\nPART 3 - POSSIBLE ISSUES\n${REVIEW_HEADING}\nfound nothing\nEND OF REPORT`);
   writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
   writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
-  if (prose !== null) writeFileSync(join(dir, 'transcript.md'), prose);
+  if (prose !== null) {
+    writeFileSync(join(dir, 'transcript.md'), prose);
+    // Built after the prose, as a real run does — the staleness check compares mtimes.
+    writeTimeline(dir);
+  }
   return dir;
 }
 
@@ -1120,4 +1126,182 @@ test('a transcript.md describing a different recording is caught', () => {
   const v = verifyArtifacts(dir, { expectDescriptive: true });
   assert.ok(v.problems.some((p) => /describe different recordings/.test(p)));
   rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- the single-stream timeline ---------------------------------------------------
+
+const TL_PROSE = [
+  '---', 'title: T', 'duration: 0:02:50', '---', '',
+  '# T', '',
+  '## Summary', '', 'Not part of the timeline.', '',
+  '## Transcript', '',
+  '### [0:00] Opening', '',
+  '[Visual: fade up from black onto a woman against a lit blue',
+  'studio backdrop.]', '',
+  '[On screen: name card — "Maria Collins / Vice President".]', '',
+  '**Maria Collins:** In 2008, the New York Life Foundation established',
+  'childhood bereavement as a philanthropic focus.', '',
+  '### [0:29] The Coalition', '',
+  '**David Schonfeld:** *(voice-over, then on camera)* Together, our organizations formed the Coalition.', '',
+  '[No speech 2:44–2:50 — the end card holds in silence.]', '',
+  '## References', '', '- Something cited.', '',
+].join('\n');
+
+// Times chosen so a naive "first segment" match and a correct one differ.
+const TL_SEGMENTS = [
+  { start: 0.0, end: 11.0, text: 'In 2008, the New York Life Foundation established childhood bereavement as a philanthropic focus.' },
+  { start: 29.15, end: 38.1, text: 'Together, our organizations formed the Coalition.' },
+];
+
+function timelineDir(prose = TL_PROSE, segments = TL_SEGMENTS) {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-timeline-'));
+  writeFileSync(join(dir, 'index.md'),
+    '---\nsource: https://example.com/v.mp4\ntitle: T\nduration: 0:02:50\nlanguage: en\nfetched_at: 2026-08-26\n---\n');
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify({ segments }));
+  writeFileSync(join(dir, 'transcript.md'), prose);
+  return dir;
+}
+
+test('the transcript section is split into markers, speech and chapters — and nothing outside it is', () => {
+  const blocks = parseTranscriptBlocks(TL_PROSE);
+  const kinds = blocks.map((b) => b.kind);
+  assert.deepEqual(kinds, ['chapter', 'marker', 'marker', 'speech', 'chapter', 'speech', 'nospeech']);
+  // The Summary above and the References below must not leak into the timeline.
+  assert.ok(!blocks.some((b) => /Not part of the timeline|Something cited/.test(b.text || b.speech || '')));
+  // A marker hard-wrapped over two source lines is one marker, on one line.
+  assert.equal(blocks[1].text, '[Visual: fade up from black onto a woman against a lit blue studio backdrop.]');
+});
+
+test('markers attach to the speech line they introduce', () => {
+  const { beats, chapters } = beatsFromBlocks(parseTranscriptBlocks(TL_PROSE));
+  assert.equal(chapters.length, 2);
+  assert.equal(beats[0].kind, 'speech');
+  assert.equal(beats[0].speaker, 'Maria Collins');
+  assert.equal(beats[0].markers.length, 2, 'both markers belong to the line they precede');
+  assert.equal(beats[1].markers.length, 0);
+});
+
+test('a beat is timed from the recording, not from the chapter heading above it', () => {
+  const dir = timelineDir();
+  const out = writeTimeline(dir);
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.unmatched, []);
+  const md = readFileSync(join(dir, TIMELINE_FILE), 'utf8');
+  // Schonfeld's line sits under a [0:29] chapter and starts at 29.15 — both
+  // round to 0:29, so this asserts the *shape*: every beat carries its own stamp.
+  assert.match(md, /^### \[0:00\]$/m);
+  assert.match(md, /^### \[0:29\]$/m);
+  assert.match(md, /^\*\*Maria Collins:\*\* In 2008/m);
+  assert.match(md, /^## Timeline$/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a stage direction does not drag the beat earlier than the line it decorates', () => {
+  // "*(voice-over, then on camera)*" is nine words nobody says. Left in the match
+  // query it pulls the anchor back into the previous speaker's segment.
+  const ref = referenceWords(TL_SEGMENTS);
+  const beats = [{ kind: 'speech', speaker: 'David Schonfeld', markers: [], speech: '*(voice-over, then on camera)* Together, our organizations formed the Coalition.' }];
+  const { beats: out } = anchorBeats(beats, ref);
+  assert.equal(Math.round(out[0].time), 29, 'must land on the line, not on the words about the line');
+  assert.ok(!out[0].approx);
+});
+
+test('a line that is nowhere in the recording keeps the previous time and says so', () => {
+  const dir = timelineDir(TL_PROSE.replace(
+    '**David Schonfeld:** *(voice-over, then on camera)* Together, our organizations formed the Coalition.',
+    '**David Schonfeld:** Nothing here corresponds to any audio whatsoever, none of it.'));
+  const out = writeTimeline(dir);
+  assert.equal(out.unmatched.length, 1);
+  assert.equal(out.unmatched[0].speaker, 'David Schonfeld');
+  assert.match(readFileSync(join(dir, TIMELINE_FILE), 'utf8'), /^### \[\d+:\d\d\] ~$/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the timeline never runs backwards', () => {
+  const dir = timelineDir(TL_PROSE, [
+    { start: 40, end: 50, text: 'In 2008, the New York Life Foundation established childhood bereavement as a philanthropic focus.' },
+    { start: 5, end: 10, text: 'Together, our organizations formed the Coalition.' },
+  ]);
+  writeTimeline(dir);
+  const stamps = [...readFileSync(join(dir, TIMELINE_FILE), 'utf8').matchAll(/^### \[(\d+):(\d\d)\]/gm)]
+    .map((m) => Number(m[1]) * 60 + Number(m[2]));
+  assert.deepEqual(stamps, [...stamps].sort((a, b) => a - b));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the publisher caption track is preferred as the timing reference', () => {
+  const dir = timelineDir();
+  writeFileSync(join(dir, 'publisher-captions.vtt'),
+    'WEBVTT\n\n00:00.000 --> 00:11.000\nIn 2008, the New York Life Foundation established childhood bereavement as a philanthropic focus.\n\n'
+    + '00:31.500 --> 00:38.000\nTogether, our organizations formed the Coalition.\n');
+  const out = writeTimeline(dir);
+  assert.equal(out.reference, 'publisher-captions');
+  // 31.5 is the caption's time; segments.json says 29.15. The caption wins.
+  assert.match(readFileSync(join(dir, TIMELINE_FILE), 'utf8'), /^### \[0:31\]$/m);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a transcript with no ## Transcript section cannot produce a timeline', () => {
+  const dir = timelineDir('---\ntitle: T\n---\n\n## Summary\n\nNo timeline here.\n');
+  const out = writeTimeline(dir);
+  assert.equal(out.ok, false);
+  assert.match(out.problems[0], /no `## Transcript` section/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a missing timeline.md is a note during the run and a problem once the pass is claimed done', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  rmSync(join(dir, TIMELINE_FILE));
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /has not been built/.test(n)));
+  const strict = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(strict.ok, false);
+  assert.ok(strict.problems.some((p) => /it is generated, not written/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a timeline older than the transcript it came from is caught', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  // The prose is edited and the timeline is not rebuilt — the only way these two
+  // come apart, and the one that leaves the most citable file in the directory stale.
+  const future = new Date(Date.now() + 60000);
+  utimesSync(join(dir, 'transcript.md'), future, future);
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(v.ok, false);
+  assert.ok(v.problems.some((p) => /older than transcript\.md/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- a name misread off a keyframe -------------------------------------------------
+
+test('a speaker name with a capital inside a word and no [?] is flagged', () => {
+  const dir = descriptiveDir(GOOD_PROSE.replace('**Maria:**', '**TerriyIn Rivers-Cannon:**'));
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.ok(v.notes.some((n) => /TerriyIn Rivers-Cannon/.test(n)), 'the misread must be named');
+  assert.deepEqual(v.problems, [], 'it is a note, not a stop — real names can look like this');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the same name marked [?] is not flagged, and ordinary names never are', () => {
+  for (const name of ['TerriyIn Rivers-Cannon [?]', 'Maria Collins', 'David Schonfeld',
+    'Jim Arey', 'Eric Rossen', 'Boardroom interviewee A [?]', 'Ronan McDonald', 'Ana DeLuca']) {
+    const dir = descriptiveDir(GOOD_PROSE.replace('**Maria:**', `**${name}:**`));
+    const v = verifyArtifacts(dir, { expectDescriptive: true });
+    assert.ok(!v.notes.some((n) => /capital letter inside a word/.test(n)), `${name} must not be flagged`);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ---- paragraphs do not run across a speaker change ---------------------------------
+
+test('a handover ends the paragraph even when it would otherwise run on', () => {
+  const segments = [
+    { start: 0, end: 4, text: 'First speaker says something short.' },
+    { start: 6, end: 10, text: 'Second speaker answers.' },
+  ];
+  const fused = paragraphize(segments);
+  assert.equal(fused.length, 1, 'without turn boundaries these fuse — the behaviour being fixed');
+
+  const split = paragraphize(segments, { turnBoundaries: [6] });
+  assert.equal(split.length, 2);
+  assert.equal(split[1].start, 6, 'the second paragraph is stamped at the handover, not at the window');
 });
