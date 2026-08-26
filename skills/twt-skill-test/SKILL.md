@@ -103,7 +103,10 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
 
 ## Step 2 — Criteria
 
-Resolve the criteria file at `tests/skill-criteria/<skill>.md` (Read/Glob).
+Resolve the criteria file at `tests/skill-criteria/<skill>.md` (Read/Glob). Keep
+its `## Fixtures` section in context for the rest of the run — Step 3.2 reads it
+every iteration to find the command that actually materializes the active
+fixture.
 
 **If it exists:** use it as-is. Never edit it in this step or any later step —
 extending the rubric is a separate, deliberate action outside this command; if
@@ -193,17 +196,54 @@ loop is the only place that bound is enforced, so enforce it exactly as written.
 For iteration `N` = 1, 2, 3 (stop looping as soon as any step below says so):
 
 1. **Drift check** (N ≥ 2 only): `node tools/skill-test.mjs criteria <skill> --check <runDir>`.
-   A non-zero exit means the rubric changed mid-run — stop immediately, report
-   `stopReason: criteria-drift`, and do not seed another iteration.
+   A non-zero exit means the rubric changed mid-run — stop immediately: Edit
+   `<runDir>/run.json` (Edit tool) to set `"stopReason": "criteria-drift"`, do
+   not seed another iteration, and go straight to Step 6 to report it.
 2. **Seed:** `node tools/skill-test.mjs seed <target> --skill <skill> --fixture happy`
    (or the active robustness fixture). Deletes iteration N−1's tree under the
    ownership marker and starts clean — iteration N never inherits N−1's mess.
+
+   **The marker is not the fixture.** `seed` writes only the ownership marker
+   and the fixture's *name* into it — the target now has an empty
+   `.twt-skill-test-owned` and nothing else a skill could read. Look up the
+   active fixture (`happy`, unless a robustness fixture is active) in this
+   skill's criteria file `## Fixtures` section (read back in Step 2) and find
+   the bullet naming it — that bullet names the exact command that
+   materializes it, e.g.:
+
+   ```
+   node tools/eval-smoke.mjs seed <target> --scope ia
+   ```
+
+   Run **that exact command** (Bash) against `<target>` now — read the bullet,
+   don't assume the form above applies to every skill. Capture its stdout:
+   `eval-smoke` seeders print a suggested dispatch line (e.g. `twt-ia-define
+   with: subagent-collect — project brief: "..."`) — keep that string; step 3
+   below uses it as this iteration's `--args` when the run's own `--args`
+   (Step 1.2) wasn't given, since the rubric's fixture bullet is telling you
+   what arguments the skill needs to do anything useful against this target.
+
+   **Verify materialization before proceeding:** Glob/Read the specific paths
+   the seeder's own output or the `## Fixtures` bullet says it creates, and
+   confirm they exist under `<target>`. Do not continue past this check on
+   faith — a fixture whose files were never written makes every exclusion-list
+   criterion (e.g. "nothing outside `ia/`") pass vacuously, which is a false
+   green, not a shortcut.
+
+   **If the active fixture has no runnable command named in `## Fixtures`,
+   stop the run now** with a loud, explicit error to the user instead of
+   continuing against an unseeded target — say plainly that the rubric names a
+   fixture this harness cannot materialize, and name which one. Do not fall
+   back to running the skill against an empty target and do not invent a
+   seeding command that isn't written in the criteria file.
 3. **Inject:** `node tools/skill-test.mjs inject <skill> --run <runDir> --target <target> --iteration N [--args "..."]`.
-   This reads `skills/<skill>/SKILL.md` **fresh from disk this iteration** — the
-   entire point of the mechanism (design spec section 2.2) — rewrites every
-   `${CLAUDE_PLUGIN_ROOT}` to the repo root, and writes `<runDir>/iteration-N/prompt.md`.
-   Read that file's content: it is the runner's prompt, verbatim, with no
-   additions or edits.
+   `--args` is the run's own `--args` from Step 1.2 when the user gave one;
+   otherwise it is the dispatch-arguments string the fixture seeder printed in
+   step 2 above. This reads `skills/<skill>/SKILL.md` **fresh from disk this
+   iteration** — the entire point of the mechanism (design spec section 2.2) —
+   rewrites every `${CLAUDE_PLUGIN_ROOT}` to the repo root, and writes
+   `<runDir>/iteration-N/prompt.md`. Read that file's content: it is the
+   runner's prompt, verbatim, with no additions or edits.
 4. **Dispatch the runner.** Agent tool, `subagent_type: general-purpose`, the
    prompt from step 3 verbatim and nothing else appended. This is close to what
    the Skill tool does anyway (it inlines a SKILL.md into context) and was
