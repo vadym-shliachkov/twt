@@ -24,12 +24,23 @@ function write(runDir, run) {
 }
 
 export function initRun(runDir, meta) {
-  return write(runDir, { ...meta, startedAt: new Date().toISOString(), iterations: [] });
+  return write(runDir, { ...meta, startedAt: new Date().toISOString(), iterations: [], findings: [] });
 }
 
 export function appendIteration(runDir, { n, verdicts, fixes = [], invalidDispatch = false }) {
   const run = readRun(runDir);
   run.iterations.push({ n, verdicts, fixes, invalidDispatch, at: new Date().toISOString() });
+  return write(runDir, run);
+}
+
+// A finding survives independently of the verdict ledger: a contract BLOCKER
+// (root-honouring violation) or an out-of-boundary proposed patch (spec §5.1
+// step 8 / Step 4) both need a place to land that isn't the pass/fail map, so
+// renderReport can render them even on a run that never reaches converged-pass.
+export function appendFinding(runDir, finding) {
+  const run = readRun(runDir);
+  run.findings = run.findings || [];
+  run.findings.push({ ...finding, at: new Date().toISOString() });
   return write(runDir, run);
 }
 
@@ -58,16 +69,19 @@ export function converged(run, { cap = 3 } = {}) {
   }
 
   const last = valid[valid.length - 1];
-  const ids = Object.keys(last.verdicts);
 
-  // Check for missing criteria: any expected criterion absent from the verdict map
-  // is treated as not-passing, just like UNVERIFIABLE.
-  const missing = run.criteriaIds.filter(id => !Object.prototype.hasOwnProperty.call(last.verdicts, id));
-  const failing = ids.filter(id => last.verdicts[id] !== 'PASS').concat(missing);
+  // Derive failing (and, below, the self-declared test) from the FROZEN
+  // rubric's own id list — never from Object.keys(last.verdicts). The grader
+  // is a fresh subagent and can hallucinate an id that was never in the
+  // rubric; iterating its keys would let a phantom non-self-declared PASS
+  // silently upgrade an all-self-declared result from converged-pass-weak to
+  // converged-pass. A criterion absent from the verdict map is not-passing,
+  // same as UNVERIFIABLE.
+  const failing = run.criteriaIds.filter(id => last.verdicts[id] !== 'PASS');
 
-  if (ids.length && !failing.length) {
+  if (!failing.length) {
     const selfDeclared = new Set(run.selfDeclared || []);
-    return ids.some(id => !selfDeclared.has(id)) ? 'converged-pass' : 'converged-pass-weak';
+    return run.criteriaIds.some(id => !selfDeclared.has(id)) ? 'converged-pass' : 'converged-pass-weak';
   }
 
   // Checked before the cap: three rounds of the same verdict map is the cheaper

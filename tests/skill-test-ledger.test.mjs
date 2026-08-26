@@ -4,7 +4,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const { initRun, appendIteration, readRun, converged } =
+const { initRun, appendIteration, appendFinding, readRun, converged } =
   await import(new URL('../tools/lib/skill-test/ledger.mjs', import.meta.url).href);
 
 const newRun = () => {
@@ -96,4 +96,39 @@ test('converged: a run with missing criteriaIds throws with exit code 2', () => 
   });
   assert.equal(err.exitCode, 2);
   assert.match(err.message, /criteriaIds/);
+});
+
+// Finding 3: the grader is a fresh subagent and can hallucinate a criterion
+// id that was never in the frozen rubric. converged() must derive `failing`
+// (and the self-declared test) from run.criteriaIds — never from
+// Object.keys(last.verdicts) — or a phantom non-self-declared PASS silently
+// upgrades an all-self-declared weak pass to a full pass.
+test('converged: a hallucinated extra verdict id does not upgrade a weak pass to a full pass', () => {
+  const run = {
+    selfDeclared: ['C-001'],
+    criteriaIds: ['C-001'],
+    iterations: [{ n: 1, verdicts: { 'C-001': 'PASS', 'C-006': 'PASS' } }],
+  };
+  assert.equal(converged(run), 'converged-pass-weak');
+});
+
+test('converged: --cap threads through to the CLI-facing option, overriding the default of 3', () => {
+  const run = { selfDeclared: [], criteriaIds: ['C-001'], iterations: [
+    { n: 1, verdicts: { 'C-001': 'FAIL' } },
+  ] };
+  assert.equal(converged(run, { cap: 1 }), 'iteration-cap');
+  assert.equal(converged(run, { cap: 3 }), 'continue');
+});
+
+test('appendFinding accumulates findings on the run', () => {
+  const dir = newRun();
+  appendFinding(dir, { tier: 'BLOCKER', title: 'x', where: 'y', problem: 'z', recommendation: 'w' });
+  const run = readRun(dir);
+  assert.equal(run.findings.length, 1);
+  assert.equal(run.findings[0].tier, 'BLOCKER');
+});
+
+test('initRun starts findings as an empty array', () => {
+  const run = readRun(newRun());
+  assert.deepEqual(run.findings, []);
 });

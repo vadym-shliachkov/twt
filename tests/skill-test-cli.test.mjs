@@ -88,3 +88,76 @@ test('guard reports a clean tree as commit-allowed', () => {
   assert.equal(out.clean, true);
   assert.equal(out.mayCommit, true);
 });
+
+// Finding 7: --iterations is documented but was never threaded to converged()'s
+// cap. --cap on the converged verb is what makes that wiring possible.
+test('converged --cap overrides the default 3-iteration cap', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  const v = join(newDir(), 'v.json');
+  writeFileSync(v, JSON.stringify({ 'C-001': 'FAIL' }));
+  run(['ledger', runDir, '--iteration', '1', '--verdicts', v]);
+  assert.match(run(['converged', runDir, '--cap', '1']), /iteration-cap/);
+});
+
+test('converged defaults to a cap of 3 when --cap is absent', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  const v = join(newDir(), 'v.json');
+  writeFileSync(v, JSON.stringify({ 'C-001': 'FAIL' }));
+  run(['ledger', runDir, '--iteration', '1', '--verdicts', v]);
+  assert.match(run(['converged', runDir]), /continue/);
+});
+
+// Finding 8: flag() must not read a trailing flag as `undefined`, and must
+// not swallow the next flag's name as if it were this flag's value.
+test('flag() defaults a trailing flag instead of reading it as undefined', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  // --tree-clean is the last token on the line — nothing follows it.
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--tree-clean']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.equal(meta.startTreeClean, true);
+});
+
+test('flag() does not swallow the next flag\'s name as its own value', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  // --target is immediately followed by another flag, not a value.
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--target', '--tree-clean', 'true']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.equal(meta.target, '');
+  assert.equal(meta.startTreeClean, true);
+});
+
+// Finding 5(c): the `finding` verb is how the skill records a contract
+// BLOCKER (root-honouring) or an out-of-boundary proposed patch so it
+// survives to run.json and renders in the report.
+test('finding appends a BLOCKER to run.json', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  run(['finding', runDir, '--tier', 'BLOCKER', '--title', 'root-honouring violation', '--where', 'target', '--problem', 'wrote to repo root', '--recommendation', 'fix root resolution']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.equal(meta.findings.length, 1);
+  assert.equal(meta.findings[0].tier, 'BLOCKER');
+  assert.equal(meta.findings[0].outOfBoundary, false);
+});
+
+test('finding --out-of-boundary true records a proposed patch', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, '### C-001 · contract · a\n\n- **self-declared:** no\n');
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  run(['finding', runDir, '--tier', 'WARNING', '--title', 'shared bug', '--where', 'tools/x.mjs:1', '--problem', 'p', '--recommendation', 'r', '--out-of-boundary', 'true', '--patch', 'change x to y']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.equal(meta.findings[0].outOfBoundary, true);
+  assert.equal(meta.findings[0].patch, 'change x to y');
+});

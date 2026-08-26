@@ -9,7 +9,8 @@
 //   node tools/skill-test.mjs inject    <skill> --run <runDir> --target <dir> [--args "..."]
 //   node tools/skill-test.mjs criteria  <skill> --file <path> [--freeze <runDir>] [--check <runDir>]
 //   node tools/skill-test.mjs ledger    <runDir> --iteration N --verdicts <file> [--fixes a,b]
-//   node tools/skill-test.mjs converged <runDir>
+//   node tools/skill-test.mjs converged <runDir> [--cap N]
+//   node tools/skill-test.mjs finding   <runDir> --tier BLOCKER|WARNING|SUGGESTION --title <t> --where <w> --problem <p> --recommendation <r> [--out-of-boundary true] [--patch <text>]
 //   node tools/skill-test.mjs report    <runDir>
 //   node tools/skill-test.mjs guard     <repoRoot>
 //   node tools/skill-test.mjs clean     <target>
@@ -21,21 +22,27 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { seedTarget, cleanTarget } from './lib/skill-test/marker.mjs';
 import { parseCriteria, criteriaHash, selfDeclaredIds } from './lib/skill-test/criteria.mjs';
 import { prepareInjection } from './lib/skill-test/inject.mjs';
-import { initRun, appendIteration, readRun, converged } from './lib/skill-test/ledger.mjs';
+import { initRun, appendIteration, appendFinding, readRun, converged } from './lib/skill-test/ledger.mjs';
 import { renderReport } from './lib/skill-test/report.mjs';
 import { gitGuard } from './lib/skill-test/guard.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 function usage() {
-  console.error('usage: node tools/skill-test.mjs seed|inject|criteria|ledger|converged|report|guard|clean <arg> [options]');
+  console.error('usage: node tools/skill-test.mjs seed|inject|criteria|ledger|converged|finding|report|guard|clean <arg> [options]');
   process.exit(1);
 }
 
 const argv = process.argv.slice(2);
 const flag = (name, dflt = undefined) => {
   const i = argv.indexOf(`--${name}`);
-  return i === -1 ? dflt : argv[i + 1];
+  if (i === -1) return dflt;
+  const v = argv[i + 1];
+  // A trailing flag (nothing follows it) or a flag immediately followed by
+  // another flag's name must default rather than silently reading `undefined`
+  // (which stringifies to "undefined"/NaN downstream) or swallowing the next
+  // flag's name as if it were this flag's value.
+  return (v === undefined || v.startsWith('--')) ? dflt : v;
 };
 
 const [cmd, arg1] = argv;
@@ -90,6 +97,14 @@ try {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(join(outDir, 'prompt.md'), prompt, 'utf8');
     const run = readRun(runDir);
+    // Recorded PER ITERATION, not just as one overwritten scalar: a body whose
+    // ${CLAUDE_PLUGIN_ROOT} count changes between iterations (e.g. a fix adds
+    // or removes a reference) is worth noticing, and iteration 3 overwriting
+    // iteration 1's count would make that invisible (spec §5.1 step 2).
+    run.substitutionsByIteration = run.substitutionsByIteration || {};
+    run.substitutionsByIteration[iter] = substitutions;
+    // Kept for the fidelity header, which reports "this run" at a glance —
+    // the per-iteration map above is the record that actually matters.
     run.substitutions = substitutions;
     writeFileSync(join(runDir, 'run.json'), JSON.stringify(run, null, 2) + '\n', 'utf8');
     console.log(join(outDir, 'prompt.md'));
@@ -106,10 +121,22 @@ try {
 
   } else if (cmd === 'converged') {
     const run = readRun(arg1);
-    const reason = converged(run);
+    const reason = converged(run, { cap: Number(flag('cap', '3')) });
     run.stopReason = reason;
     writeFileSync(join(arg1, 'run.json'), JSON.stringify(run, null, 2) + '\n', 'utf8');
     console.log(reason);
+
+  } else if (cmd === 'finding') {
+    appendFinding(arg1, {
+      tier: flag('tier', 'WARNING'),
+      title: flag('title', ''),
+      where: flag('where', ''),
+      problem: flag('problem', ''),
+      recommendation: flag('recommendation', ''),
+      outOfBoundary: flag('out-of-boundary', 'false') === 'true',
+      patch: flag('patch', null),
+    });
+    console.log('finding: recorded');
 
   } else if (cmd === 'report') {
     const run = readRun(arg1);

@@ -41,6 +41,9 @@ test('a full three-iteration cycle records verdicts and stops at the cap', () =>
   const runAfterInject = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
   assert.equal(typeof runAfterInject.substitutions, 'number');
   assert.ok(runAfterInject.substitutions > 0);
+  // Finding 6: recorded per iteration, not just the overwritten top-level
+  // scalar, so a later iteration's count doesn't erase this one's.
+  assert.equal(runAfterInject.substitutionsByIteration['1'], runAfterInject.substitutions);
 
   for (const n of [1, 2, 3]) {
     const v = join(newDir(), `v${n}.json`);

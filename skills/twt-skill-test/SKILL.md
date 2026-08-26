@@ -79,7 +79,12 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
      `contract,dispatch,quality`. `robustness` is opt-in because each extra
      fixture is a full additional run per iteration.
    - `--iterations N` — default 3. **Hard-capped at 3 regardless of what is
-     passed** — this harness never runs a fourth iteration, full stop.
+     passed** — this harness never runs a fourth iteration, full stop. Compute
+     `effectiveCap = min(N, 3)` now (an omitted `--iterations` means `N = 3`,
+     so `effectiveCap = 3`). Carry `effectiveCap` forward: it is Step 3's own
+     loop bound (not the literal number 3) and the `--cap` value passed to
+     every `converged` call in this run — `--iterations 1` must actually run
+     one iteration, not three.
    - `--fixture <name>` — repeatable; `robustness` scope only.
 3. Confirm `skills/<skill>/SKILL.md` exists (Glob). If not, stop and name the
    closest match found under `skills/`.
@@ -99,7 +104,10 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
    (three iterations of a full pipeline, and any sub-skill it dispatches is
    mixed-version under injection) / "Reduce to 1 iteration" / "Cancel" / **You
    decide** (default Proceed — resolves only this question). Apply the answer
-   before Step 2.
+   before Step 2 — "Reduce to 1 iteration" sets `effectiveCap = 1` regardless
+   of whatever `--iterations` value (or default) Step 1.2 computed; this is
+   the cost control that only works if `effectiveCap` actually gates Step 3's
+   loop and its `converged --cap` calls, not just the number 3 in prose.
 
 ## Step 2 — Criteria
 
@@ -184,16 +192,19 @@ This writes the criteria file's SHA-256 and its ordered criterion-id list, plus
 these four values, into `<runDir>/run.json`; iterations 2 and 3 re-verify the
 hash and the run aborts (exit 4) on drift — the rubric cannot shift mid-run.
 
-## Step 3 — Iterate (bounded at 3 iterations, and at 3 consecutive invalid dispatches)
+## Step 3 — Iterate (bounded at `effectiveCap` iterations from Step 1.2 — 3 unless
+`--iterations` or the Step 1.6 cost-control answer lowered it — and at 3
+consecutive invalid dispatches)
 
 Track one counter across the whole run: `consecutiveInvalid`, starting at 0. This
 exists because `converged()` deliberately excludes `invalidDispatch` iterations
-from its 3-iteration cap — a runner that keeps reaching for the Skill tool despite
+from its cap — a runner that keeps reaching for the Skill tool despite
 the explicit prohibition would otherwise loop forever, since nothing in the
 deterministic tooling counts total dispatch *attempts*, only valid ones. **This
 loop is the only place that bound is enforced, so enforce it exactly as written.**
 
-For iteration `N` = 1, 2, 3 (stop looping as soon as any step below says so):
+For iteration `N` = 1 .. `effectiveCap` (stop looping as soon as any step below
+says so):
 
 1. **Drift check** (N ≥ 2 only): `node tools/skill-test.mjs criteria <skill> --check <runDir>`.
    A non-zero exit means the rubric changed mid-run — stop immediately: Edit
@@ -257,8 +268,10 @@ For iteration `N` = 1, 2, 3 (stop looping as soon as any step below says so):
    gained anything matching the skill's declared `writes:` (a real Skill-tool
    call would run against this repo as its project root, not `<target>`). If
    either signals a violation:
-   - Increment `consecutiveInvalid`. Write `<runDir>/iteration-N/verdicts.json`
-     as `{}` and record it: `node tools/skill-test.mjs ledger <runDir> --iteration N --verdicts <emptyfile> --invalid-dispatch true`.
+   - Increment `consecutiveInvalid`. Write both `<runDir>/iteration-N/verdicts.json`
+     (raw grader output — none ran, so `{}`) and `<runDir>/iteration-N/verdict-map.json`
+     (the reduced map `ledger` reads — also `{}`) and record it:
+     `node tools/skill-test.mjs ledger <runDir> --iteration N --verdicts <path-to-verdict-map.json> --invalid-dispatch true`.
      Do not dispatch the grader and do not attempt a fix for this iteration —
      the artifacts, if any, came from the stale cached copy and say nothing
      about the working-tree edit.
@@ -271,9 +284,10 @@ For iteration `N` = 1, 2, 3 (stop looping as soon as any step below says so):
 7. **Root-honouring check.** Glob `<target>` for the artifacts the skill's
    `writes:` declares. If they are missing there but present under this repo's
    own `.twt-artifacts/` instead, the skill ignored the project-root override —
-   record it as its own contract `BLOCKER` in this iteration's findings, and for
-   any remaining iteration fall back to seeding `<target>` at this repo's root
-   with a clearly stated warning in the report.
+   record it as its own contract `BLOCKER` now:
+   `node tools/skill-test.mjs finding <runDir> --tier BLOCKER --title "root-honouring violation" --where "<skill>, target <target>" --problem "artifacts landed under this repo's .twt-artifacts/ instead of the relocated <target>" --recommendation "resolve the project root from the injected preamble instead of assuming the repo root"`,
+   and for any remaining iteration fall back to seeding `<target>` at this
+   repo's root with a clearly stated warning in the report.
 8. **Blind grader.** Agent tool, `subagent_type: general-purpose`, fresh context.
    The prompt must contain the following **verbatim**, since prompt-blinding is
    the only blinding this design has (the grader is not sandboxed and could read
@@ -294,21 +308,33 @@ For iteration `N` = 1, 2, 3 (stop looping as soon as any step below says so):
    else: the criteria file's absolute path and the target directory's absolute
    path. Do **not** give it the tested `SKILL.md`, the injected prompt, any prior
    iteration's report, or the runner's reasoning.
-9. From the grader's response, build the flat verdict map
-   `{ "C-001": "PASS", "C-002": "FAIL", ... }` — one entry per criterion id in the
-   frozen rubric, defaulting to `UNVERIFIABLE` for any criterion the grader did
-   not address — and write it to `<runDir>/iteration-N/verdicts.json` (Write
-   tool). Keep the grader's cited evidence in context; it feeds Step 6's findings
-   and, if `--fix` is set, Step 4.
+9. Write the grader's **raw response** verbatim to `<runDir>/iteration-N/verdicts.json`
+   (Write tool). Spec §6 defines this file as raw grader output — evidence and
+   all — and it is the only place that evidence survives to disk; do not
+   reduce it before writing it here. Then, from that same response, build the
+   flat verdict map `{ "C-001": "PASS", "C-002": "FAIL", ... }` — one entry
+   per criterion id in the frozen rubric, defaulting to `UNVERIFIABLE` for any
+   criterion the grader did not address — and write *that* reduced map
+   separately to `<runDir>/iteration-N/verdict-map.json` (Write tool); Step 11's
+   `ledger` call reads this second file, never `verdicts.json`. Keep the
+   grader's cited evidence in context; it feeds this iteration's fix (Step 4,
+   below) and the final report.
 10. **Fix, only if `--fix` and this iteration's verdict map has any non-`PASS`
     entry.** Go to Step 4 now, before the ledger call, so the fix this round
     produced is recorded against this same iteration.
-11. **Ledger:** `node tools/skill-test.mjs ledger <runDir> --iteration N --verdicts <file> [--fixes <comma-list from Step 4>]`.
-12. **Stop check:** `node tools/skill-test.mjs converged <runDir>`. This also
-    writes `stopReason` into `run.json`. Act on the result:
-    - `continue` — loop to iteration N+1 (skipped if N was already 3; the cap is
-      enforced by the tool itself in that case, returning `iteration-cap`
-      instead).
+11. **Ledger:** `node tools/skill-test.mjs ledger <runDir> --iteration N --verdicts <runDir>/iteration-N/verdict-map.json [--fixes <comma-list from Step 4>]`.
+12. **Stop check:** `node tools/skill-test.mjs converged <runDir> --cap <effectiveCap>`.
+    This also writes `stopReason` into `run.json`. Act on the result:
+    - `continue` — loop to iteration N+1 (skipped if N was already `effectiveCap`:
+      this loop's own bound on `N`, not the tool, is what stops the run there.
+      `converged()` counts only **valid** iterations toward `--cap`, so an
+      invalid-dispatch iteration can leave the valid count under the cap even
+      at the last attempted `N` — in that case `converged()` legitimately
+      still returns `continue`, and `stopReason: continue` is what lands in
+      the report, not `iteration-cap`. (An earlier version of this doc claimed
+      the tool itself enforces the cap and always returns `iteration-cap`
+      here — that is false; this loop's own `N` bound is the only thing that
+      stops the run when invalid dispatches are in the mix.)
     - anything else (`converged-pass`, `converged-pass-weak`, `no-progress`,
       `iteration-cap`) — stop looping now, regardless of iterations remaining,
       and go to Step 5.
@@ -319,7 +345,9 @@ Read the grader's findings (kept in context from Step 3.9), the artifacts under
 `<target>`, and `skills/<skill>/SKILL.md`. Edit **only** files under
 `skills/<skill>/`. A finding that points anywhere else — shared `tools/`,
 `CONVENTIONS.md`, a dependency skill, a vendored kernel copy — becomes a
-**proposed patch** in the final report's prose, described but not applied.
+**proposed patch**, described but not applied. Record it now so it survives to
+the report even if the run stops before Step 6:
+`node tools/skill-test.mjs finding <runDir> --tier <BLOCKER|WARNING|SUGGESTION> --title "<short title>" --where "<file:line>" --problem "<the grader's evidence>" --recommendation "<what should change>" --out-of-boundary true --patch "<the specific edit you would make, described concretely>"`.
 
 Two absolute prohibitions, no exceptions:
 - **Never edit the `version:` field.** The auto-bump Stop hook owns it; a manual

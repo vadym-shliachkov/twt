@@ -10,6 +10,8 @@ const STOP_MEANING = {
   'no-progress': 'the verdict map was identical two iterations running; the loop was thrashing and stopped early.',
   'iteration-cap': 'cap reached with failures outstanding.',
   'invalid-dispatch-cap': 'the runner called the Skill tool for the tested skill (or another twt: skill) 3 times running, despite the injected prompt explicitly forbidding it. The run was aborted rather than looping indefinitely — this is a finding about the runner, not about the skill under test.',
+  'continue': 'the run ended before reaching a final verdict — either it is still in progress, or this loop\'s own iteration bound (not `converged()`\'s cap) is what stopped it: an invalid-dispatch iteration can leave the VALID iteration count under the cap even at the last attempted iteration, so `converged()` legitimately reports `continue` with no iterations left to spend.',
+  'criteria-drift': 'the criteria file changed after being frozen for this run (spec §4.3) — the run was aborted rather than grading against a rubric that moved mid-loop. Re-run after deciding, separately and deliberately, whether the rubric change was intended.',
 };
 
 export function renderReport(run, { criteria }) {
@@ -21,21 +23,77 @@ export function renderReport(run, { criteria }) {
   L.push(`dispatch-fidelity: ${run.dispatchFidelity} (working tree)`);
   L.push(`sub-skills resolved from: cache/twt-marketplace/twt/${run.pluginCacheVersion}`);
   L.push(`\${CLAUDE_PLUGIN_ROOT} substitutions: ${run.substitutions}`);
+  // Per-iteration, not just the latest overwritten scalar above — a body
+  // whose substitution count changes between iterations (e.g. a fix adds or
+  // removes a reference) is worth noticing, and the scalar alone erases it
+  // (spec §5.1 step 2).
+  const subsByIter = run.substitutionsByIteration || {};
+  const subKeys = Object.keys(subsByIter);
+  L.push(`\${CLAUDE_PLUGIN_ROOT} substitutions per iteration: ${
+    subKeys.length ? subKeys.map(n => `it.${n}=${subsByIter[n]}`).join(', ') : '(not recorded)'
+  }`);
   L.push(`criteria: ${run.criteriaHash}`);
   L.push(`target: ${run.target}`);
   L.push('```', '');
 
-  L.push(`**Stop reason:** \`${run.stopReason}\` — ${STOP_MEANING[run.stopReason] || 'unknown.'}`, '');
+  // A run inspected before its first `ledger` call (or one that died before
+  // one) has stopReason === null from initRun — that is a real, explainable
+  // state, not an "unknown" stop reason someone forgot to document.
+  const stopReason = run.stopReason;
+  const stopMeaning = stopReason == null
+    ? 'no iteration has completed yet — this run stopped (or is being inspected) before its first `ledger` call.'
+    : (STOP_MEANING[stopReason] || 'unknown.');
+  L.push(`**Stop reason:** \`${stopReason}\` — ${stopMeaning}`, '');
 
   L.push('## Verdicts', '');
-  L.push(`| Criterion | Dimension | ${iters.map(i => `it.${i.n}`).join(' | ')} |`);
-  L.push(`|---|---|${iters.map(() => '---').join('|')}|`);
+  // Header/separator/row cells are built as one array per row so a zero-
+  // iteration run (columns = just Criterion/Dimension) never emits a
+  // trailing empty delimiter cell (`|---|---||`), which is invalid GFM.
+  const iterCols = iters.map(i => `it.${i.n}`);
+  const headerCols = ['Criterion', 'Dimension', ...iterCols];
+  L.push(`| ${headerCols.join(' | ')} |`);
+  L.push(`|${headerCols.map(() => '---').join('|')}|`);
   for (const c of criteria) {
     const label = c.selfDeclared ? `${c.id} (self-declared)` : c.id;
-    const cells = iters.map(i => i.verdicts[c.id] ?? '—');
-    L.push(`| ${label} | ${c.dimension} | ${cells.join(' | ')} |`);
+    const cells = [label, c.dimension, ...iters.map(i => i.verdicts[c.id] ?? '—')];
+    L.push(`| ${cells.join(' | ')} |`);
   }
   L.push('');
+
+  // Findings — spec §6's tier format (BLOCKER/WARNING/SUGGESTION with
+  // Where/Problem/Recommendation), matching templates/validation-report.md.
+  // Out-of-boundary findings (a fix that would touch something other than
+  // skills/<skill>/) are proposed patches, not findings, and get their own
+  // section below — Step 4 never applies them.
+  const findings = run.findings || [];
+  const inBoundary = findings.filter(f => !f.outOfBoundary);
+  const outOfBoundary = findings.filter(f => f.outOfBoundary);
+
+  L.push('## Findings', '');
+  if (!inBoundary.length) {
+    L.push('None recorded.', '');
+  } else {
+    inBoundary.forEach((f, i) => {
+      L.push(`### ${i + 1}. [${f.tier}] ${f.title}`);
+      L.push(`- **Where:** ${f.where}`);
+      L.push(`- **Problem:** ${f.problem}`);
+      L.push(`- **Recommendation:** ${f.recommendation}`);
+      L.push('');
+    });
+  }
+
+  L.push('## Proposed patches', '');
+  if (!outOfBoundary.length) {
+    L.push('None — no finding this run pointed outside `skills/<skill>/`.', '');
+  } else {
+    outOfBoundary.forEach((f, i) => {
+      L.push(`### ${i + 1}. ${f.title}`);
+      L.push(`- **Where:** ${f.where}`);
+      L.push(`- **Problem:** ${f.problem}`);
+      L.push(`- **Proposed patch (not applied):** ${f.patch || f.recommendation}`);
+      L.push('');
+    });
+  }
 
   const withFixes = iters.filter(i => i.fixes.length);
   L.push('## Fixes applied', '');
