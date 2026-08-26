@@ -41,8 +41,9 @@ function sameVerdicts(a, b) {
 }
 
 function bail(message) {
-  console.error(message);
-  process.exit(2);
+  const e = new Error(`skill-test: ${message}`);
+  e.exitCode = 2;
+  throw e;
 }
 
 export function converged(run, { cap = 3 } = {}) {
@@ -58,11 +59,10 @@ export function converged(run, { cap = 3 } = {}) {
 
   const last = valid[valid.length - 1];
   const ids = Object.keys(last.verdicts);
-  const expectedIds = new Set(run.criteriaIds);
 
   // Check for missing criteria: any expected criterion absent from the verdict map
   // is treated as not-passing, just like UNVERIFIABLE.
-  const missing = run.criteriaIds.filter(id => !last.verdicts.hasOwnProperty(id));
+  const missing = run.criteriaIds.filter(id => !Object.prototype.hasOwnProperty.call(last.verdicts, id));
   const failing = ids.filter(id => last.verdicts[id] !== 'PASS').concat(missing);
 
   if (ids.length && !failing.length) {

@@ -90,14 +90,10 @@ test('converged: a complete all-PASS map with a non-self-declared id is still co
 
 test('converged: a run with missing criteriaIds throws with exit code 2', () => {
   const run = { selfDeclared: [], iterations: [{ n: 1, verdicts: { 'C-001': 'PASS' } }] };
-  let exitCode = null;
-  const originalExit = process.exit;
-  process.exit = (code) => { exitCode = code; throw new Error('exit'); };
-  try {
-    converged(run);
-    assert.fail('Should have thrown');
-  } catch (err) {
-    assert.equal(exitCode, 2, 'Should exit with code 2');
-  }
-  process.exit = originalExit;
+  let err;
+  assert.throws(() => {
+    try { converged(run); } catch (e) { err = e; throw e; }
+  });
+  assert.equal(err.exitCode, 2);
+  assert.match(err.message, /criteriaIds/);
 });
