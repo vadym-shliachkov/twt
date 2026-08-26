@@ -28,6 +28,10 @@ export function parseCriteria(md) {
       out.push(cur);
       continue;
     }
+    // Detect malformed headings: lines attempting to be criterion headings but not matching HEADING
+    if (line.match(/^###\s+C-/)) {
+      bail(`malformed criterion heading: ${line}`);
+    }
     if (!cur) continue;
     const sd = line.match(SELF_DECLARED);
     if (sd) { cur.selfDeclared = sd[1] === 'yes'; continue; }

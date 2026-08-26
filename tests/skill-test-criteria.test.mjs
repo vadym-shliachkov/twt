@@ -69,3 +69,18 @@ test('criteriaHash is stable across CRLF and LF line endings', () => {
 test('criteriaHash changes when a criterion changes', () => {
   assert.notEqual(criteriaHash(SAMPLE), criteriaHash(SAMPLE.replace('non-empty', 'empty')));
 });
+
+test('parseCriteria defaults self-declared to false when the line is absent', () => {
+  const list = parseCriteria('### C-007 · contract · x\n\n- **dimension:** contract\n');
+  assert.equal(list[0].selfDeclared, false);
+});
+
+test('parseCriteria rejects malformed criterion headings with exit code 2', () => {
+  const malformed = '### C-001 - contract - uses hyphens not middle dots\n';
+  let err;
+  assert.throws(() => {
+    try { parseCriteria(malformed); } catch (e) { err = e; throw e; }
+  });
+  assert.equal(err.exitCode, 2);
+  assert.match(err.message, /malformed criterion heading/);
+});
