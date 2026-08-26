@@ -153,7 +153,7 @@ if ($surface -notin @('command','internal')) {
 }
 $isCommand = $surface -eq 'command'
 $gateRequired = @('twt-site','twt-site-dev','twt-pre-design','twt-design','twt-develop','twt-qa')
-$blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke')
+$blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke','twt-skill-test')
 $blockExemptPrefix = @('twt-content-fetch-','twt-export-')
 if ($isCommand) {
     $hasGate = $text -match '(?im)^## Step 0.*permission allowlist'

@@ -105,6 +105,9 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-setup': 'low',
   'twt-site': 'very-high',
   'twt-site-dev': 'very-high',
+  // Three iterations, each dispatching two subagents (runner + blind grader),
+  // plus an optional fix pass — the most expensive command in the marketplace.
+  'twt-skill-test': 'high',
   'twt-spec': 'high',
   'twt-status': 'low',
   'twt-text-analysis': 'mid',

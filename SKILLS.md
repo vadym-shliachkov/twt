@@ -57,6 +57,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
 | [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
 | [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
+| [/twt-skill-test](#twt-skill-test) | meta | Agentic skill harness — derive frozen criteria, run a skill from the working tree, grade blind, optionally fix, re-run bounded (marketplace-dev only) |
 | [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
 | [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
 | [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
@@ -2123,6 +2124,38 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 - The target's scaffold is ensured (created if its `conventions.md` is missing — theme-creator before block-creator for Elementor)
 - The matching builder is dispatched to start page/block development
 - Approved workbook rows are not applied automatically; after stakeholder confirmation, the user runs `/twt-content-approval-implement` to update corresponding blocks/pages
+
+---
+
+## /twt-skill-test
+
+**Category:** meta
+**Version:** 1.0.0
+**Accepts arguments:** yes
+
+The generic, agentic counterpart to `/twt-eval-smoke`. Point it at any
+
+**Inputs:**
+- Skill name (required), plus optional --target, --args, --fix, --scope, --iterations, --fixture
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- skills/twt-<name>/SKILL.md
+- tests/skill-criteria/twt-<name>.md
+- CONVENTIONS.md
+
+**Writes:**
+- tests/skill-criteria/twt-<name>.md
+- tests/skill-test-runs/<skill>-<stamp>/report.md
+
+**Non-goals:**
+- **Never pushes, and no flag could make it push.** A `--fix` run ends in one local
+
+**Success criteria:**
+- Every run ends with `tests/skill-test-runs/<skill>-<stamp>/report.md` stating a
 
 ---
 

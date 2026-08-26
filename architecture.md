@@ -84,6 +84,7 @@ flowchart TB
     twt_setup["/twt-setup"]:::skill
     twt_site["/twt-site"]:::skill
     twt_site_dev["/twt-site-dev"]:::skill
+    twt_skill_test["/twt-skill-test"]:::skill
     twt_spec["/twt-spec"]:::skill
     twt_spec_define["/twt-spec-define"]:::skill
     twt_spec_validate["/twt-spec-validate"]:::skill
@@ -386,6 +387,7 @@ flowchart TB
 - /twt-eval-smoke - Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
 - /twt-marketplace-docs - Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
 - /twt-setup - One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs
+- /twt-skill-test - Agentic skill harness — derive frozen criteria, run a skill from the working tree, grade blind, optionally fix, re-run bounded (marketplace-dev only)
 
 ### mockup
 
@@ -2780,6 +2782,33 @@ flowchart TB
 | .twt-artifacts/design/design-system/component/gallery.html |  |
 | .twt-artifacts/content-approval/content-approval-checklist.xlsx |  |
 
+### /twt-skill-test
+
+**Category:** meta
+**Version:** 1.0.0
+
+**Inputs:**
+- Skill name (required), plus optional --target, --args, --fix, --scope, --iterations, --fixture
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- skills/twt-<name>/SKILL.md
+- tests/skill-criteria/twt-<name>.md
+- CONVENTIONS.md
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| tests/skill-criteria/twt-<name>.md |  |
+| tests/skill-test-runs/<skill>-<stamp>/report.md |  |
+
 ### /twt-spec
 
 **Category:** spec
@@ -3209,6 +3238,7 @@ flowchart TB
 | /twt-setup | none | none |
 | /twt-site | none | twt-pre-design, twt-design, twt-text-analysis, twt-develop, twt-site-dev, twt-content-approval-checklist, twt-figma-dev-audit, twt-qa |
 | /twt-site-dev | none | twt-design-system-define, twt-component-define, twt-elementor-theme-creator, twt-elementor-block-creator, twt-html-site-creator, twt-html-block-creator, twt-inherit-define, twt-inherit-block-creator, twt-content-approval-checklist, twt-figma-dev-audit, twt-fidelity, figma-mcp |
+| /twt-skill-test | none | none |
 | /twt-spec | none | twt-spec-define, twt-spec-validate |
 | /twt-spec-define | none | figma-mcp |
 | /twt-spec-validate | twt-spec-define | none |
