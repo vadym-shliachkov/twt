@@ -941,3 +941,183 @@ test('no caption track is not an error, just no second opinion', async () => {
   const out = await ingestCaptions({ captionsUrl: null, outDir: mkdtempSync(join(tmpdir(), 'twt-c-')), asrSegments: [] });
   assert.deepEqual(out, { captions: null, diff: null });
 });
+
+// ---- several sources at once ---------------------------------------------------
+
+import { expandSources, collectBatchEntries, buildBatchIndexMd } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
+import { mkdirSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
+
+// A fake filesystem, so source expansion is tested without laying down media.
+// Keys are absolute paths in the platform's own shape — expandSources resolves
+// every path it touches, so anything else would miss on Windows.
+const P = (...parts) => resolve(join(tmpdir(), ...parts));
+const fakeFs = (tree) => ({
+  statSync(p) {
+    if (!(p in tree)) throw new Error('ENOENT');
+    return { isDirectory: () => Array.isArray(tree[p]), isFile: () => !Array.isArray(tree[p]) };
+  },
+  readdirSync(p) { return tree[p]; },
+});
+
+test('a URL passes through untouched — it is never probed on disk', () => {
+  const out = expandSources(['https://cdn.example.com/talk.mp4'], fakeFs({}));
+  assert.deepEqual(out, ['https://cdn.example.com/talk.mp4']);
+});
+
+test('a directory expands to the media directly inside it, in a stable order', () => {
+  const tree = {
+    [P('vids')]: ['zeta.mp4', 'alpha.mov', 'notes.txt', 'nested'],
+    [P('vids', 'zeta.mp4')]: 1, [P('vids', 'alpha.mov')]: 1,
+    [P('vids', 'notes.txt')]: 1, [P('vids', 'nested')]: [],
+  };
+  const out = expandSources([P('vids')], fakeFs(tree));
+  assert.equal(out.length, 2, 'notes.txt is not media and nested/ is not descended into');
+  assert.equal(basename(out[0]), 'alpha.mov', 'sorted, so a re-run transcribes in the same order');
+  assert.equal(basename(out[1]), 'zeta.mp4');
+});
+
+test('a directory holding no media is a stop, not a silent empty batch', () => {
+  const tree = { [P('empty')]: ['readme.md'], [P('empty', 'readme.md')]: 1 };
+  assert.throws(() => expandSources([P('empty')], fakeFs(tree)), (err) => {
+    assert.equal(err.code, 2);
+    assert.match(err.lines.join(' '), /No media files directly inside/);
+    assert.match(err.lines.join(' '), /subdirectories are not searched/);
+    return true;
+  });
+});
+
+test('a missing path stops before anything is transcribed', () => {
+  assert.throws(() => expandSources([P('nope.mp4')], fakeFs({})), (err) => {
+    assert.equal(err.code, 2);
+    assert.match(err.message, /No such file or directory/);
+    return true;
+  });
+});
+
+test('a file named both directly and through its folder is transcribed once', () => {
+  const tree = { [P('vids')]: ['a.mp4'], [P('vids', 'a.mp4')]: 1 };
+  const out = expandSources([P('vids'), P('vids', 'a.mp4')], fakeFs(tree));
+  assert.equal(out.length, 1, 'the same media must not land in the same slug twice');
+});
+
+// ---- the batch index -----------------------------------------------------------
+
+// Two recordings on disk: one with its descriptive transcript assembled, one without.
+function batchRoot() {
+  const root = mkdtempSync(join(tmpdir(), 'twt-batch-'));
+  mkdirSync(join(root, 'kickoff'));
+  writeFileSync(join(root, 'kickoff', 'index.md'),
+    '---\nsource: https://x/kickoff.mp4\ntitle: Kickoff call\nduration: 0:42:10\n'
+    + 'language: en\nmodel: small\nsegments: 412\ntext_source: publisher-captions\n---\n# Kickoff call\n');
+  writeFileSync(join(root, 'kickoff', 'transcript.md'),
+    '---\ntitle: Kickoff call\nspeakers_named: 3\nspeakers_unnamed: 1\n---\n# Kickoff call\n');
+  mkdirSync(join(root, 'interview'));
+  writeFileSync(join(root, 'interview', 'index.md'),
+    '---\nsource: /media/interview.mov\ntitle: Interview\nduration: 0:12:00\n'
+    + 'language: uk\nmodel: base\nsegments: 90\ntext_source: speech-recognition\n---\n# Interview\n');
+  return root;
+}
+
+test('the batch index reads what is on disk now, not what the run reported', () => {
+  const root = batchRoot();
+  const entries = collectBatchEntries(root, ['kickoff', 'interview']);
+  assert.equal(entries[0].descriptive.speakers_named, '3');
+  assert.equal(entries[1].descriptive, null, 'interview has no transcript.md yet');
+  const md = buildBatchIndexMd({ entries, fetchedAt: '2026-08-26' });
+
+  assert.match(md, /2 recordings, 1 of them with a descriptive transcript assembled/);
+  assert.match(md, /\[transcript\.md\]\(kickoff\/transcript\.md\) — 3 named, 1 identified by role only/);
+  assert.match(md, /interview[\s\S]*not assembled yet/,
+    'a missing descriptive transcript is stated, never quietly omitted');
+  assert.match(md, /publisher's own caption track/);
+  assert.match(md, /no caption track to check it against/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test('a slug whose directory went missing is named, not skipped', () => {
+  const root = batchRoot();
+  const md = buildBatchIndexMd({
+    entries: collectBatchEntries(root, ['kickoff', 'deleted-one']), fetchedAt: '2026-08-26',
+  });
+  assert.match(md, /Directories this index expected but did not find/);
+  assert.match(md, /`deleted-one\/` — no `index\.md`/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test('a source that failed is carried into the index rather than vanishing', () => {
+  const root = batchRoot();
+  const md = buildBatchIndexMd({
+    entries: collectBatchEntries(root, ['kickoff']), fetchedAt: '2026-08-26',
+    failed: [{ source: 'https://x/gone.mp4', error: 'Could not download the source: 404' }],
+  });
+  assert.match(md, /1 source failed/);
+  assert.match(md, /Sources that failed[\s\S]*gone\.mp4 — Could not download/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test('the index falls back to a speaker total when the transcript counts only that', () => {
+  const root = batchRoot();
+  writeFileSync(join(root, 'interview', 'transcript.md'), '---\ntitle: Interview\nspeakers: 7\n---\n');
+  const md = buildBatchIndexMd({ entries: collectBatchEntries(root, ['interview']), fetchedAt: '2026-08-26' });
+  assert.match(md, /transcript\.md\) — 7 speakers/);
+  rmSync(root, { recursive: true, force: true });
+});
+
+// ---- verify insists on the descriptive transcript --------------------------------
+
+// A directory that passes every pre-existing check, so each assertion below is
+// isolated to the transcript.md rule it is testing.
+function descriptiveDir(prose) {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-verify-desc-'));
+  writeFileSync(join(dir, 'index.md'), '---\ntitle: T\nduration: 0:02:50\nsegments: 1\n---\n');
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify({ segments: [{ start: 0, end: 1, text: 'a' }] }));
+  writeFileSync(join(dir, '_meta.md'), '**Segments:** 1');
+  writeFileSync(join(dir, 'transcript.txt'),
+    `PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 1 items)\nPART 3 - POSSIBLE ISSUES\n${REVIEW_HEADING}\nfound nothing\nEND OF REPORT`);
+  writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
+  writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
+  if (prose !== null) writeFileSync(join(dir, 'transcript.md'), prose);
+  return dir;
+}
+
+const GOOD_PROSE = '---\ntitle: T\nduration: 0:02:50\n---\n\n## Transcript\n\n### [0:00] Opening\n\n**Maria:** hello.\n';
+
+test('a finished descriptive pass verifies clean', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.deepEqual(v.problems, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a missing transcript.md is a note during the run and a problem once the pass is claimed done', () => {
+  const dir = descriptiveDir(null);
+  assert.ok(verifyArtifacts(dir).ok, 'run-time verify must not fail before the model has written it');
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /has not been assembled/.test(n)));
+
+  const strict = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.equal(strict.ok, false);
+  assert.ok(strict.problems.some((p) => /the deliverable, not an optional extra/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('descriptive detail lifted out of the timeline is caught', () => {
+  const dir = descriptiveDir('---\nduration: 0:02:50\n---\n\n## Summary\n\nA video.\n\n## Visual descriptions\n\n- fade up\n');
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.ok(v.problems.some((p) => /no `## Transcript` section/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a timeline with no timestamps is caught', () => {
+  const dir = descriptiveDir('---\nduration: 0:02:50\n---\n\n## Transcript\n\n### Opening\n\n**Maria:** hello.\n');
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.ok(v.problems.some((p) => /no `### \[mm:ss\]` heading/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a transcript.md describing a different recording is caught', () => {
+  const dir = descriptiveDir(GOOD_PROSE.replace('0:02:50', '1:14:02'));
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.ok(v.problems.some((p) => /describe different recordings/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});

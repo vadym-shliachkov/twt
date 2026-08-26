@@ -13,22 +13,34 @@
 //     Report the media's stream layout — video, every audio track (flagging a
 //     real audio-description track), and text vs bitmap subtitle streams.
 //
-//   node transcribe-video.mjs run <url-or-path> [--out-dir <dir>] [--model base]
-//        [--language auto] [--title <name>] [--slug <slug>] [--python <exe>]
-//        [--keep-source] [--force] [--descriptive] [--max-frames 60]
+//   node transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]
+//        [--model base] [--language auto] [--title <name>] [--slug <slug>]
+//        [--python <exe>] [--keep-source] [--force] [--verbatim] [--max-frames 60]
 //        [--frame-gap 4] [--frame-width 960]
 //     Resolve the source, transcribe it locally with faster-whisper, and write
 //     index.md + segments.json + _meta.md + transcript.txt under <out-dir>/<slug>/.
 //     --title/--slug name the output: a CDN filename ("main.mp4") makes a useless
 //     slug, and correcting it afterwards by hand breaks the exists-check that
 //     stops a re-run from duplicating itself. Signed-URL tokens are redacted out
-//     of every file written. With
-//     --descriptive, also extract the deterministic half of a WCAG-style
-//     descriptive transcript: media.json, keyframes + frames.json, captions.json
-//     from an embedded subtitle track, audio-description.md from a real
-//     description track, speaker-turn candidates and non-speech spans in
+//     of every file written. By default it also extracts the deterministic half
+//     of a WCAG-style descriptive transcript: media.json, keyframes + frames.json,
+//     captions.json from an embedded subtitle track, audio-description.md from a
+//     real description track, speaker-turn candidates and non-speech spans in
 //     segments.json, and outline.json. The prose transcript.md is written by the
-//     model from those, window by window.
+//     model from those, window by window. --verbatim skips that extraction for a
+//     speech-only run; --descriptive is accepted and ignored (it is the default).
+//
+//     SEVERAL SOURCES. Every positional is a source: file paths, URLs, or a
+//     directory, which expands to the media files directly inside it. Each gets
+//     its own <out-dir>/<slug>/ directory, named from its own filename, and one
+//     failure never stops the others. The batch writes _batch-<date>.md at the
+//     out-dir root and prints one JSON summary covering every source.
+//     --title/--slug/--captions name a single recording, so they are refused
+//     when more than one source is given.
+//
+//   node transcribe-video.mjs batch-index <out-dir> --slugs <a,b,c> [--file <name>]
+//     Rewrite a batch index over those slugs. Run it again after the descriptive
+//     passes are assembled so the index counts the speakers they actually found.
 //
 //   node transcribe-video.mjs slice <transcript-dir> [--window <n>]
 //        [--from <t>] [--to <t>] [--window-seconds 300]
@@ -76,30 +88,33 @@ const HARD_WORDS = 200;
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
-const BOOLEAN_FLAGS = new Set(["--keep-source", "--force", "--descriptive"]);
+const BOOLEAN_FLAGS = new Set(["--keep-source", "--force", "--descriptive", "--verbatim", "--expect-descriptive"]);
 
 function flag(name, dflt) {
   const i = argv.indexOf(name);
   return i !== -1 && argv[i + 1] !== undefined ? argv[i + 1] : dflt;
 }
 function has(name) { return argv.includes(name); }
-function firstPositional() {
+function allPositionals() {
+  const out = [];
   for (let i = 1; i < argv.length; i++) {
     if (argv[i].startsWith("--")) { if (!BOOLEAN_FLAGS.has(argv[i])) i++; continue; }
-    return argv[i];
+    out.push(argv[i]);
   }
-  return null;
+  return out;
 }
+function firstPositional() { return allPositionals()[0] ?? null; }
 function usage(msg) {
   console.error(msg);
   console.error("Usage: transcribe-video.mjs check [--python <exe>]");
   console.error("       transcribe-video.mjs probe <path> [--python <exe>]");
-  console.error("       transcribe-video.mjs run <url-or-path> [--out-dir <dir>] [--model base]");
-  console.error("           [--language auto] [--title <name>] [--slug <slug>] [--python <exe>]");
-  console.error("           [--keep-source] [--force] [--descriptive] [--max-frames 60]");
-  console.error("           [--captions <url-or-path>]");
-  console.error("       transcribe-video.mjs verify <transcript-dir>");
+  console.error("       transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]");
+  console.error("           [--model base] [--language auto] [--title <name>] [--slug <slug>]");
+  console.error("           [--python <exe>] [--keep-source] [--force] [--verbatim]");
+  console.error("           [--max-frames 60] [--captions <url-or-path>]");
+  console.error("       transcribe-video.mjs batch-index <out-dir> --slugs <a,b,c> [--file <name>]");
   console.error("           [--frame-gap 4] [--frame-width 960]");
+  console.error("       transcribe-video.mjs verify <transcript-dir> [--expect-descriptive]");
   console.error("       transcribe-video.mjs slice <transcript-dir> [--window <n> | --from <t> --to <t>]");
   console.error("           [--window-seconds 300]");
   console.error("       transcribe-video.mjs review <transcript-dir> [--word-budget 4000]");
@@ -1234,7 +1249,7 @@ function countIn(text, re) {
   return m ? Number(m[1]) : null;
 }
 
-export function verifyArtifacts(dir) {
+export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   const problems = [];
   const notes = [];
   const read = (name) => {
@@ -1304,8 +1319,33 @@ export function verifyArtifacts(dir) {
         }
       }
     }
-    if (!present("transcript.md")) {
-      notes.push("No transcript.md yet — the descriptive pass has not been assembled.");
+    // transcript.md is the deliverable, but it does not exist yet when `run`
+    // verifies its own output — the model writes it afterwards, window by window.
+    // So its absence is only a note here, and a problem when the caller says the
+    // pass is supposed to be finished.
+    const prose = read("transcript.md");
+    if (!prose) {
+      const missing = "No transcript.md — the descriptive pass has not been assembled.";
+      if (expectDescriptive) problems.push(missing + " It is the deliverable, not an optional extra.");
+      else notes.push(missing);
+    } else {
+      // A summary with no timeline under it is the failure mode worth catching:
+      // it reads as a finished document while carrying none of the *when*.
+      if (!/^##\s+Transcript\s*$/m.test(prose)) {
+        problems.push("transcript.md has no `## Transcript` section — the descriptive detail was "
+          + "written somewhere other than the timeline, which is what made it equivalent to watching.");
+      } else if (!/^###\s+\[\d/m.test(prose)) {
+        problems.push("transcript.md's timeline carries no `### [mm:ss]` heading — nothing in it says "
+          + "when anything happens.");
+      }
+      // Catches the transcript.md of a *different* recording sitting in this
+      // directory — a copy gone wrong, or a window pass that lost its place.
+      const proseDur = (prose.match(/^duration:\s*(\S+)\s*$/m) || [])[1];
+      const indexDur = ((read("index.md") || "").match(/^duration:\s*(\S+)\s*$/m) || [])[1];
+      if (proseDur && indexDur && proseDur !== indexDur) {
+        problems.push(`transcript.md says the recording runs ${proseDur} but index.md says ${indexDur} — `
+          + "these two files describe different recordings.");
+      }
     }
   }
 
@@ -1601,16 +1641,51 @@ function doVerify() {
   const dir = firstPositional();
   if (!dir) usage("Missing <transcript-dir>.");
   if (!existsSync(dir)) { console.error(`No such directory: ${dir}`); process.exit(2); }
-  const v = verifyArtifacts(dir);
+  const v = verifyArtifacts(dir, { expectDescriptive: has("--expect-descriptive") });
   console.log(JSON.stringify(v, null, 2));
   process.exit(v.ok ? 0 : 1);
 }
 
 // ---- run -----------------------------------------------------------------------
 
+// One source failing must not take the rest of a batch down with it, so the
+// per-source path reports failure by throwing this instead of exiting. A single
+// source still exits with the same code it always did — the caller decides.
+class RunFailure extends Error {
+  constructor(code, lines) { super(lines[0]); this.code = code; this.lines = lines; }
+}
+
+// Every positional is a source: a URL, a media file, or a directory, which
+// expands to the media sitting *directly* inside it. Deliberately not recursive —
+// a nested tree is somebody's archive, and transcribing all of it is never what
+// was meant by pointing at the folder.
+export function expandSources(positionals, fs = { statSync, readdirSync }) {
+  const sources = [];
+  for (const p of positionals) {
+    if (/^https?:\/\//i.test(p)) { sources.push(p); continue; }
+    let st = null;
+    try { st = fs.statSync(p); } catch { /* reported next */ }
+    if (!st) throw new RunFailure(2, [`No such file or directory: ${p}`]);
+    if (!st.isDirectory()) { sources.push(resolve(p)); continue; }
+    const found = fs.readdirSync(p)
+      .filter((n) => MEDIA_EXT.test(n)).sort()
+      .map((n) => resolve(join(p, n)))
+      .filter((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } });
+    if (!found.length) {
+      throw new RunFailure(2, [
+        `No media files directly inside ${p}.`,
+        "Point at the files themselves, or at the directory that holds them — subdirectories are not searched.",
+      ]);
+    }
+    sources.push(...found);
+  }
+  // A file named both directly and via its directory must not be transcribed twice.
+  return [...new Set(sources)];
+}
+
 async function doRun() {
-  const source = firstPositional();
-  if (!source) usage("Missing <url-or-path>.");
+  const positionals = allPositionals();
+  if (!positionals.length) usage("Missing <url-or-path>.");
 
   const py = findPython(flag("--python", null));
   if (!py) {
@@ -1623,6 +1698,87 @@ async function doRun() {
     process.exit(3);
   }
 
+  let sources;
+  try {
+    sources = expandSources(positionals);
+  } catch (err) {
+    if (!(err instanceof RunFailure)) throw err;
+    for (const line of err.lines) console.error(line);
+    process.exit(err.code);
+  }
+
+  const single = sources.length === 1;
+  // These three name one recording. Silently applying a title to five files would
+  // land four of them in directories named after the fifth — or, worse, on top of
+  // each other, since the slug is what the exists-check keys on.
+  if (!single) {
+    for (const name of ["--title", "--slug", "--captions"]) {
+      if (flag(name, null) !== null) {
+        usage(`${name} names one recording, but ${sources.length} sources were given. `
+          + `Run that one on its own, or drop ${name} — in a batch each output is named from its own filename.`);
+      }
+    }
+  }
+
+  const outRoot = resolve(flag("--out-dir", DEFAULT_OUT));
+  const results = [];
+  for (const [i, source] of sources.entries()) {
+    if (!single) {
+      console.error(`\n=== [${i + 1}/${sources.length}] ${redactUrl(source).url} ===`);
+    }
+    try {
+      results.push({ ok: true, summary: await runOne({ source, py, outRoot }) });
+    } catch (err) {
+      if (!(err instanceof RunFailure)) throw err;
+      if (single) {
+        for (const line of err.lines) console.error(line);
+        process.exit(err.code);
+      }
+      for (const line of err.lines) console.error(`  ${line}`);
+      console.error("  — skipped; the rest of the batch continues.");
+      results.push({ ok: false, exit: err.code, source: redactUrl(source).url, error: err.lines.join(" ") });
+    }
+  }
+
+  if (single) {
+    console.log(JSON.stringify(results[0].summary, null, 2));
+    return;
+  }
+
+  const done = results.filter((r) => r.ok).map((r) => r.summary);
+  const failed = results.filter((r) => !r.ok);
+  const fetchedAt = new Date().toISOString().slice(0, 10);
+  // A batch where nothing was transcribed has no set to index. Writing the file
+  // anyway leaves a `_batch-…-2.md` listing only failures beside a directory of
+  // real transcripts — an index that describes none of them.
+  const indexFile = done.length
+    ? writeBatchIndex({
+      outRoot, slugs: done.map((s) => s.slug), fetchedAt, failed,
+      file: pickBatchFile(outRoot, fetchedAt),
+    })
+    : null;
+
+  console.log(JSON.stringify({
+    ok: failed.length === 0,
+    batch: true,
+    sources: sources.length,
+    transcribed: done.length,
+    failed: failed.length,
+    outDir: outRoot,
+    batchIndex: indexFile,
+    // The descriptive passes rewrite the speaker counts, so the index is not final
+    // until they are done. Hand the caller the exact command rather than let it
+    // improvise one with a different --file and leave two indexes behind.
+    rebuildIndex: indexFile
+      ? `transcribe-video.mjs batch-index "${outRoot}" --slugs "${done.map((s) => s.slug).join(",")}" --file "${basename(indexFile)}"`
+      : null,
+    results: done,
+    failures: failed,
+  }, null, 2));
+  if (failed.length) process.exit(1);
+}
+
+async function runOne({ source, py, outRoot }) {
   // A Brightcove player page is the one watch page resolved in-tool: it is what a
   // client hands over, the media behind it is a plain MP4, and the account
   // usually carries the publisher's caption track right next to it. Resolving it
@@ -1643,17 +1799,15 @@ async function doRun() {
         console.error(`found the publisher's ${bc.captionsLang || "default"} caption track`);
       }
     } catch (err) {
-      console.error(`Could not resolve the Brightcove player page: ${err.message}`);
-      console.error("Supply the direct MP4 URL or a downloaded file instead.");
-      process.exit(1);
+      throw new RunFailure(1, [
+        `Could not resolve the Brightcove player page: ${err.message}`,
+        "Supply the direct MP4 URL or a downloaded file instead.",
+      ]);
     }
   }
 
   const isUrl = /^https?:\/\//i.test(mediaUrl);
-  if (!isUrl && !existsSync(mediaUrl)) {
-    console.error(`No such file: ${mediaUrl}`);
-    process.exit(2);
-  }
+  if (!isUrl && !existsSync(mediaUrl)) throw new RunFailure(2, [`No such file: ${mediaUrl}`]);
 
   const rawName = (isUrl ? nameFromUrl(mediaUrl) : basename(mediaUrl)).replace(MEDIA_EXT, "");
   // The page URL is the durable reference; the signed CDN link behind it expires.
@@ -1663,11 +1817,10 @@ async function doRun() {
   // re-run lands on the same directory: a slug corrected by hand afterwards makes
   // the exists-check below look in the wrong place and silently duplicate the run.
   const slug = slugify(flag("--slug", null) || title || rawName);
-  const outDir = resolve(flag("--out-dir", DEFAULT_OUT), slug);
+  const outDir = join(outRoot, slug);
   const indexPath = join(outDir, "index.md");
   if (existsSync(indexPath) && !has("--force")) {
-    console.error(`A transcript already exists at ${indexPath}. Re-run with --force to replace it.`);
-    process.exit(4);
+    throw new RunFailure(4, [`A transcript already exists at ${indexPath}. Re-run with --force to replace it.`]);
   }
   mkdirSync(outDir, { recursive: true });
 
@@ -1690,11 +1843,12 @@ async function doRun() {
       } catch (err) {
         // A dead host, a redirect to a login page, or a watch page instead of a
         // file — all user-fixable. Report the cause, not a Node stack trace.
-        console.error(`Could not download the source: ${err.cause?.message || err.message}`);
-        console.error("Check the URL points directly at a media file and is reachable from this machine.");
         // Don't leave the empty slug directory behind for a source we never got.
         try { if (!readdirSync(outDir).length) rmSync(outDir, { recursive: true }); } catch { /* leave it */ }
-        process.exit(1);
+        throw new RunFailure(1, [
+          `Could not download the source: ${err.cause?.message || err.message}`,
+          "Check the URL points directly at a media file and is reachable from this machine.",
+        ]);
       }
       mediaPath = dl.path;
       bytes = dl.bytes;
@@ -1708,11 +1862,10 @@ async function doRun() {
     const args = [...py.args, WORKER, "--media", mediaPath, "--out", jsonPath,
       "--model", flag("--model", "base"), "--language", flag("--language", "auto")];
     const run = spawnSync(py.exe, args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+    // Exit 3 is the engine going missing mid-run — that is not this file's
+    // problem, it is every remaining file's problem too, so it stops everything.
     if (run.status === 3) process.exit(3);
-    if (run.status !== 0) {
-      console.error(`Transcription failed (exit ${run.status}).`);
-      process.exit(1);
-    }
+    if (run.status !== 0) throw new RunFailure(1, [`Transcription failed (exit ${run.status}).`]);
 
     const result = JSON.parse(readFileSync(jsonPath, "utf8"));
     if (!result.segments.length) warnings.push("No speech was detected — the transcript is empty.");
@@ -1746,9 +1899,13 @@ async function doRun() {
 
     // The verbatim transcript is complete at this point; the descriptive extras
     // are additive, so a failure in them never costs the run its transcript.
-    const descriptive = has("--descriptive")
-      ? enrichDescriptive({ py, mediaPath, outDir, result, warnings })
-      : null;
+    // Extracted by default: the descriptive transcript is the deliverable people
+    // actually read, and a run that skipped the frames cannot be upgraded into one
+    // without re-decoding the media. --verbatim opts out where speech is all that
+    // is wanted (and is what collect mode passes, having no budget for the pass).
+    const descriptive = has("--verbatim")
+      ? null
+      : enrichDescriptive({ py, mediaPath, outDir, result, warnings });
 
     writeFileSync(join(outDir, "_meta.md"),
       buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
@@ -1770,12 +1927,11 @@ async function doRun() {
     // half-written directory reaches the next step looking complete.
     const verified = verifyArtifacts(outDir);
     if (!verified.ok) {
-      console.error("The run finished but its output does not verify:");
-      for (const problem of verified.problems) console.error(`  - ${problem}`);
-      process.exit(5);
+      throw new RunFailure(5, ["The run finished but its output does not verify:",
+        ...verified.problems.map((p) => `  - ${p}`)]);
     }
 
-    console.log(JSON.stringify({
+    return {
       ok: true, slug, outDir, title: titleFrom(slug, title),
       duration: fmtTime(result.duration, true),
       language: result.language, model: result.model,
@@ -1791,10 +1947,141 @@ async function doRun() {
         : null,
       verified: { ok: verified.ok, reviewed: verified.reviewed, notes: verified.notes },
       files: [indexPath, jsonPath, join(outDir, "_meta.md"), reportPath, ...(descriptive?.files || [])],
-    }, null, 2));
+    };
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
   }
+}
+
+// ---- batch index ---------------------------------------------------------------
+
+// A drop of ten recordings is ten sibling directories with nothing tying them
+// together. This is the one file that says what the set is — and, like every
+// other file here, it is written by the script: hand-maintaining a list of
+// directories is exactly the thing that goes stale the first time one is re-run.
+
+function readFrontmatter(path) {
+  let text;
+  try { text = readFileSync(path, "utf8"); } catch { return null; }
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) return {};
+  const out = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = line.match(/^([a-z_]+):\s*(.*)$/i);
+    if (kv) out[kv[1]] = kv[2].trim();
+  }
+  return out;
+}
+
+// Every fact here is read back off disk rather than carried over from the run,
+// so a regenerated index describes what the directories actually hold now —
+// including the descriptive transcripts that did not exist when the batch ended.
+export function collectBatchEntries(outRoot, slugs, fs = { existsSync, readFrontmatter, readFileSync }) {
+  return slugs.map((slug) => {
+    const dir = join(outRoot, slug);
+    const index = fs.readFrontmatter(join(dir, "index.md"));
+    const descriptive = fs.existsSync(join(dir, "transcript.md"))
+      ? fs.readFrontmatter(join(dir, "transcript.md"))
+      : null;
+    return { slug, dir, present: Boolean(index), index: index || {}, descriptive };
+  });
+}
+
+export function buildBatchIndexMd({ entries, fetchedAt, failed = [] }) {
+  const L = [`# Video transcripts — batch of ${fetchedAt}`, ""];
+  const ok = entries.filter((e) => e.present);
+  const withDescriptive = ok.filter((e) => e.descriptive).length;
+
+  L.push(`${ok.length} recording${ok.length === 1 ? "" : "s"}, `
+    + `${withDescriptive} of them with a descriptive transcript assembled.`
+    + (failed.length ? ` ${failed.length} source${failed.length === 1 ? "" : "s"} failed — listed at the end.` : ""), "");
+  L.push("In each directory: `transcript.md` is the descriptive transcript (speakers, on-screen",
+    "text, and visible action woven into the timeline), `index.md` the machine-readable verbatim",
+    "record, and `transcript.txt` the report — the same speech again with a list of what in it is",
+    "most likely wrong.", "");
+
+  for (const e of ok) {
+    const fm = e.index;
+    L.push(`## ${fm.title || titleFrom(e.slug)}`, "");
+    L.push(`- **Directory:** [\`${e.slug}/\`](${e.slug}/)`);
+    const runs = [fm.duration, fm.language, fm.model && `model \`${fm.model}\``,
+      fm.segments && `${fm.segments} segments`].filter(Boolean);
+    if (runs.length) L.push(`- **Runs:** ${runs.join(" · ")}`);
+    if (e.descriptive) {
+      const named = Number(e.descriptive.speakers_named ?? NaN);
+      const unnamed = Number(e.descriptive.speakers_unnamed ?? NaN);
+      const total = Number(e.descriptive.speakers ?? NaN);
+      const who = Number.isFinite(named) || Number.isFinite(unnamed)
+        ? `${Number.isFinite(named) ? named : 0} named`
+          + (Number.isFinite(unnamed) && unnamed ? `, ${unnamed} identified by role only` : "")
+        : Number.isFinite(total) ? `${total} speakers` : "speakers listed in the file";
+      L.push(`- **Descriptive transcript:** [transcript.md](${e.slug}/transcript.md) — ${who}`);
+    } else {
+      L.push(`- **Descriptive transcript:** not assembled yet — the deterministic inputs `
+        + `(frames, outline, captions) are in \`${e.slug}/\`, so it can be written without re-transcribing.`);
+    }
+    L.push(`- **Verbatim record:** [index.md](${e.slug}/index.md) · **Report:** [transcript.txt](${e.slug}/transcript.txt)`);
+    if (fm.text_source) {
+      L.push(`- **Speech comes from:** ${fm.text_source === "publisher-captions"
+        ? "the publisher's own caption track (a person's wording, not the recognizer's guess)"
+        : "speech recognition, with no caption track to check it against"}`);
+    }
+    if (fm.source) L.push(`- **Source:** ${fm.source}`);
+    L.push("");
+  }
+
+  const missing = entries.filter((e) => !e.present);
+  if (missing.length) {
+    L.push("## Directories this index expected but did not find", "");
+    for (const e of missing) L.push(`- \`${e.slug}/\` — no \`index.md\`; the run was removed or never finished.`);
+    L.push("");
+  }
+  if (failed.length) {
+    L.push("## Sources that failed", "");
+    for (const f of failed) L.push(`- ${f.source} — ${f.error}`);
+    L.push("");
+  }
+  L.push("---", "", "Machine transcription. Names, jargon, and numbers are its least reliable parts —",
+    "check anything you plan to quote or treat as fact against the recording itself.", "");
+  return L.join("\n");
+}
+
+// Never clobber an earlier batch that happens to share today's date: two drops in
+// one afternoon are two different sets, and merging them silently loses one.
+function pickBatchFile(outRoot, fetchedAt) {
+  const base = `_batch-${fetchedAt}`;
+  let name = `${base}.md`;
+  for (let n = 2; existsSync(join(outRoot, name)) && !has("--force"); n++) name = `${base}-${n}.md`;
+  return join(outRoot, name);
+}
+
+function writeBatchIndex({ outRoot, slugs, fetchedAt, failed = [], file }) {
+  mkdirSync(outRoot, { recursive: true });
+  writeFileSync(file, buildBatchIndexMd({
+    entries: collectBatchEntries(outRoot, slugs, { existsSync, readFrontmatter, readFileSync }),
+    fetchedAt, failed,
+  }), "utf8");
+  return file;
+}
+
+function doBatchIndex() {
+  const outRoot = firstPositional();
+  if (!outRoot) usage("Missing <out-dir>.");
+  if (!existsSync(outRoot)) { console.error(`No such directory: ${outRoot}`); process.exit(2); }
+  const slugs = String(flag("--slugs", "")).split(",").map((s) => s.trim()).filter(Boolean);
+  if (!slugs.length) usage("Missing --slugs <a,b,c> — the recordings this index covers.");
+  const fetchedAt = flag("--date", new Date().toISOString().slice(0, 10));
+  const file = flag("--file", null)
+    ? join(resolve(outRoot), flag("--file", null))
+    : join(resolve(outRoot), `_batch-${fetchedAt}.md`);
+  writeBatchIndex({ outRoot: resolve(outRoot), slugs, fetchedAt, file });
+  const entries = collectBatchEntries(resolve(outRoot), slugs, { existsSync, readFrontmatter, readFileSync });
+  console.log(JSON.stringify({
+    ok: entries.every((e) => e.present), batchIndex: file,
+    recordings: entries.length,
+    descriptive: entries.filter((e) => e.descriptive).length,
+    missing: entries.filter((e) => !e.present).map((e) => e.slug),
+  }, null, 2));
 }
 
 // ---- dispatch ------------------------------------------------------------------
@@ -1808,6 +2095,7 @@ if (invokedDirectly) {
   else if (cmd === "review") doReview();
   else if (cmd === "annotate") doAnnotate();
   else if (cmd === "verify") doVerify();
+  else if (cmd === "batch-index") doBatchIndex();
   else if (cmd === "run") await doRun();
   else usage(cmd ? `Unknown command: ${cmd}` : "Missing command.");
 }
