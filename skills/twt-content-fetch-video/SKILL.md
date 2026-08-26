@@ -2,20 +2,21 @@
 name: twt-content-fetch-video
 surface: command
 category: content
-description: (v1.0.4) Transcribe a video or audio file (URL or local path) into timestamped Markdown, verbatim or as a full descriptive (accessible) transcript
-version: 1.0.4
+description: (v1.0.5) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline
+version: 1.0.5
 model: sonnet
 accepts_arguments: true
 inputs:
-  - Direct URL to a video/audio file, a Brightcove player-page URL, or a path to a local media file
-  - Optional URL or path to the publisher's caption track (WebVTT or SRT)
+  - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
+  - Optional URL or path to the publisher's caption track (WebVTT or SRT) — single recording only
 dependencies:
   hard: []
   soft:
     - twt-content-fetch
 reads:
-  - <video-url-or-path>
+  - <video-url-or-path> (one or many)
 writes:
+  - .twt-artifacts/pre-design/content/fetched/video/_batch-<date>.md
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
@@ -35,10 +36,10 @@ writes:
 
 ## Intent
 
-**Purpose:** Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Two depths: **verbatim**, a fast timestamped record of what was said, and **descriptive**, a full accessible transcript that also carries speakers, on-screen text, visible action, sounds, and structure — enough that someone who cannot watch or hear the recording gets the same information. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
+**Purpose:** Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets two files worth reading: `index.md`, the verbatim machine record of what was said, and `transcript.md`, the **descriptive transcript** — the same timeline with each speaker named where they start speaking, and on-screen text, visible action, and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
 
 **Non-goals:**
-- Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
+- Not a YouTube/Vimeo/Loom downloader — this takes **direct** media URLs, local files, or a folder of them, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
 - Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
 - Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
@@ -47,13 +48,16 @@ writes:
 
 Every run also produces `transcript.txt`, the human-readable report: the whole transcript as continuous prose, the same transcript again as timestamped segments, and a PART 3 listing what in it is most likely wrong. It is written by the script, never by hand.
 
+**The descriptive transcript is not an option to be offered — it is the deliverable.** The only thing that turns it off is `--verbatim`, and the only caller that passes it is collect mode, which has no budget for the pass. A run that skipped the frame extraction cannot be upgraded into a descriptive one without decoding the media again, which is why the extraction happens by default even when the prose pass is deferred.
+
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content/fetched/video/<slug>/`
-- `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp — in **both** depths
-- `verify` passes: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
+- **Every** source given gets its own `.twt-artifacts/pre-design/content/fetched/video/<slug>/` — one recording per directory, named from its own filename, never merged and never overwriting each other
+- `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp
+- `transcript.md` exists for **every** recording, carrying every element in the coverage table below or saying plainly why an element is absent from this source, with each speaker named at the point they start speaking and the visual/on-screen/sound markers interleaved in timeline order — not collected into a separate section at the end
+- `verify` passes for every directory: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
 - Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
-- `transcript.txt` exists in **both** depths, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
-- In descriptive depth, `transcript.md` additionally carries every element in the coverage table below, or says plainly why an element is absent from this source
+- `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
+- For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
 - The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
 - No signed-URL token reaches any file — the tool redacts them, and nothing you write puts one back
 - Nothing in `transcript.md` is invented: every speaker name, sound, visual, link, and citation traces to the audio, a frame, the file's own caption track, or its audio-description track
@@ -62,7 +66,7 @@ Every run also produces `transcript.txt`, the human-readable report: the whole t
 
 ## What a descriptive transcript must contain
 
-The checklist for descriptive depth, and where each element comes from. An element that
+The checklist every `transcript.md` is held to, and where each element comes from. An element that
 this source genuinely does not have is stated as absent — it is never filled in by guesswork.
 
 | Element | Where it comes from | If the source lacks it |
@@ -87,28 +91,42 @@ An hour of speech is ~10,000 words. `index.md`, `segments.json`, and `transcript
 
 Every read of the speech goes through a command that decides how much you get:
 
-- **`review` (Step 5, both depths)** — the review pass. Under its word budget it prints the full text, because a fluent mishearing scores perfectly and can only be caught by reading; over the budget it prints the flagged excerpts alone and the report says the review covered only those.
-- **`slice` (Step 8, descriptive only)** — one 5-minute window and nothing outside it.
+- **`review` (Step 5)** — the review pass. Under its word budget it prints the full text, because a fluent mishearing scores perfectly and can only be caught by reading; over the budget it prints the flagged excerpts alone and the report says the review covered only those.
+- **`slice` (Step 8)** — one 5-minute window and nothing outside it.
 
 Never open `index.md`, `segments.json`, `frames.json`, or `captions.json` directly, and never read `transcript.txt` back to check your own work — `outline.json` is the only whole-recording file you read, and it is a per-window digest, not the transcript. View only the frames the current window lists.
 
+**This multiplies by the number of sources.** Finish one recording end to end before starting the next, and carry nothing between them but the batch's settings: a second recording's speakers, chapters, and frames have nothing to do with the first's, and holding both is how a name from one transcript ends up in the other.
+
 ## Collect mode (dispatched by an orchestrator)
-If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, run **verbatim depth only** (never `--descriptive` — it costs a vision pass the orchestrator did not budget for), use `--model base` with auto-detected language, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--verbatim`** (the descriptive pass costs a vision pass per window per recording that the orchestrator did not budget for), use `--model base` with auto-detected language, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+
+Say in your return note that the transcripts are verbatim and that a plain `/twt-content-fetch-video` re-run on the same sources (with `--force`) would produce the descriptive ones. Several sources are still fine here — the batch itself costs nothing extra.
 
 Skip Step 5's review as well: it costs a read the orchestrator did not budget for. `transcript.txt` is still written, with its machine-detected findings and PART 3's review half left pending — say so in your return note so the user knows a `/twt-content-fetch-video` re-run would complete it.
 
-## Step 1 — Get the source
-Use `$ARGUMENTS` if it looks like a URL or a media path. Otherwise ask: "Paste the direct URL to the video/audio file, or the path to a local media file:". Wait for the answer.
+## Step 1 — Get the sources
+Use `$ARGUMENTS` if it looks like a URL or a media path — **there may be more than one**. Otherwise ask: "Paste the URL(s) or path(s) to the video/audio file(s) — one per line, or the path to a folder of them:". Wait for the answer.
 
-Accepted: `http(s)://…/file.mp4` (also `.mov`, `.mkv`, `.webm`, `.m4a`, `.mp3`, `.wav`, and friends), any local path to such a file, or a **Brightcove player page** (`https://players.brightcove.net/<account>/<player>/index.html?videoId=<id>`) — the tool resolves that one itself and picks up the publisher's caption track and the video's real title on the way. If the user gives a YouTube, Vimeo, Loom, or other player/watch page, STOP and say so plainly: this skill needs a direct file link, so they should supply the downloaded file's path instead.
+Accepted, in any mix and any number:
+- `http(s)://…/file.mp4` (also `.mov`, `.mkv`, `.webm`, `.m4a`, `.mp3`, `.wav`, and friends)
+- any local path to such a file
+- **a folder** — it expands to the media files sitting directly inside it. Not recursive: subfolders are somebody's archive, and transcribing all of it is never what pointing at the folder meant. If the user wants a subfolder too, pass it as its own source
+- a **Brightcove player page** (`https://players.brightcove.net/<account>/<player>/index.html?videoId=<id>`) — the tool resolves that one itself and picks up the publisher's caption track and the video's real title on the way
+
+If the user gives a YouTube, Vimeo, Loom, or other player/watch page, STOP and say so plainly: this skill needs a direct file link, so they should supply the downloaded file's path instead. Where only *some* of the sources are watch pages, name exactly which ones and offer to proceed with the rest.
 
 Never resolve a player page by hand — no reading policy keys out of a bundle, no calling a playback API yourself, no fetching a caption file with a separate command. A run assembled that way cannot be repeated by anyone, including you: it leaves artifacts nothing declared and steps nothing recorded. If a platform is not supported, say so and ask for the file.
 
-**Ask about captions.** If the source is not a Brightcove page, ask once: "Does this recording have a caption or subtitle file (`.vtt` / `.srt`)? Paste a URL or path, or say no." A publisher's captions are written by a person, and passing them to `--captions` is the single biggest accuracy win this skill has — it is the only mechanical check that catches a confident mishearing like "by depth" for "by death".
+**Confirm the list before transcribing.** When a folder expanded, or when more than two sources were given, list what you are about to transcribe — one line each — and say how many there are. A folder holding a stray screen-recording nobody wanted is cheap to catch here and expensive to catch after an hour of decoding.
 
-If they mention the recording has captions or a described-audio version, ask them to supply the file that **contains** those tracks (a `.mkv` or `.mp4` with the extra streams) rather than a stripped export — Step 4 extracts them, and they beat anything inferred from the picture.
+**Ask about captions — single recording only.** If there is exactly one source and it is not a Brightcove page, ask once: "Does this recording have a caption or subtitle file (`.vtt` / `.srt`)? Paste a URL or path, or say no." A publisher's captions are written by a person, and passing them to `--captions` is the single biggest accuracy win this skill has — it is the only mechanical check that catches a confident mishearing like "by depth" for "by death". For a batch, do not ask: `--captions` names one track and the tool refuses it alongside several sources. If the user has caption files for several recordings, transcribe those one at a time.
 
-**Then name it.** The output directory and the transcript's title come from the source's filename, which on a CDN is routinely a placeholder — `main.mp4`, `index.mp4`, a bare hash. Look at the filename you were given: if it says nothing about the recording, ask "What is this recording? A few words — they name the output folder and the transcript's title:" and pass the answer to Step 4 as `--title`. If the user gave you a player page, a document, or a sentence describing the video alongside the file, take the title from there instead of asking.
+If they mention a recording has captions or a described-audio version, ask them to supply the file that **contains** those tracks (a `.mkv` or `.mp4` with the extra streams) rather than a stripped export — Step 4 extracts them, and they beat anything inferred from the picture.
+
+**Then name it — single recording only.** The output directory and the transcript's title come from the source's filename, which on a CDN is routinely a placeholder — `main.mp4`, `index.mp4`, a bare hash. Look at the filename you were given: if it says nothing about the recording, ask "What is this recording? A few words — they name the output folder and the transcript's title:" and pass the answer to Step 4 as `--title`. If the user gave you a player page, a document, or a sentence describing the video alongside the file, take the title from there instead of asking.
+
+In a batch each output is named from its own filename, and `--title`/`--slug` are refused — one title cannot name five recordings, and silently applying it would land four of them on top of the fifth. If the batch's filenames are placeholders, the tool warns per file; say so in the report and offer to re-run the affected ones singly with a real `--title`.
 
 Do this **before** the run, never after. Renaming the directory or editing the title into `index.md` afterwards leaves `_meta.md` pointing at the old name and, worse, makes the next run's exists-check look in a directory that no longer matches — so instead of refusing to overwrite, it silently writes a second transcript of the same recording.
 
@@ -127,55 +145,70 @@ Read the `STATUS:` line:
 
 The descriptive pass needs nothing further: it decodes frames, captions, and extra audio tracks with PyAV, which faster-whisper already pulls in.
 
-## Step 3 — Choose depth, model, and language
-Ask all three with a single AskUserQuestion call (they are independent fixed-option choices), each offering **You decide** (CONVENTIONS §4) — selecting it resolves only that question:
-
-**Depth**
-- `Verbatim` (default) — what was said, timestamped. Fast: one transcription pass, no reading on your side.
-- `Descriptive` — the accessible transcript: summary, speakers, on-screen text, visible action, sounds, headings, lists, links, citations. Costs the same transcription plus a pass in which you read each 5-minute window and look at its frames. Budget roughly one window's work per 5 minutes of recording, and expect real token use.
+## Step 3 — Choose model and language
+Ask both with a single AskUserQuestion call (they are independent fixed-option choices), each offering **You decide** (CONVENTIONS §4) — selecting it resolves only that question. One answer covers the whole batch. **Do not ask about depth**: every run produces the descriptive transcript.
 
 **Model** — accuracy against time. Transcription runs on CPU at roughly 0.5–2× real time depending on size:
 - `tiny` (~75MB) — fastest, noticeably error-prone; rough notes only
-- `base` (~145MB) — the default; fine for clear single-speaker audio
-- `small` (~484MB) — markedly better on accents, jargon, and crosstalk
-- `medium` (~1.5GB) — best quality here; slow, and worth it for anything you will quote
+- `base` (~145MB) — fine for clear single-speaker audio
+- `small` (~484MB) — the default here: markedly better on accents, jargon, and crosstalk
+- `medium` (~1.5GB) — best quality; slow, and worth it for anything you will quote
 
-For descriptive depth prefer `small` or better: a descriptive transcript is a deliverable someone will rely on, and speaker attribution degrades fast on a sloppy verbatim base.
+`small` is the floor worth recommending. The descriptive transcript is a deliverable someone will rely on, and speaker attribution degrades fast on a sloppy verbatim base — a mangled name is a name you then cannot match to an on-screen card.
 
-**Language** — *Auto-detect* (default) or a specific language. Forcing the language with a code (`en`, `uk`, `de`, …) is more reliable for short clips, accented speech, or any recording that mixes languages.
+**Language** — *Auto-detect* (default) or a specific language. Forcing the language with a code (`en`, `uk`, `de`, …) is more reliable for short clips, accented speech, or any recording that mixes languages. In a batch of mixed-language recordings, leave it on auto-detect: one forced code would mistranscribe every recording that is not in it.
 
-Before running, tell the user the expected wall time: roughly the media's duration for `base`, more for larger models, plus a one-time model download on first use. If they chose descriptive depth on a recording longer than ~45 minutes, say what that means in windows (duration ÷ 5) and confirm before starting.
+**Then say what it will cost, and get a yes.** Add up the media durations and tell the user, before starting:
+- **Wall time** — roughly the total duration for `base`, more for larger models, plus a one-time model download on first use
+- **Your own pass** — total duration ÷ 5, rounded up, is the number of windows you will read and describe across all recordings. Say that number. Past ~10 windows it is real token spend, and past ~30 it is worth splitting the batch across runs
+
+If the total comes to more than ~10 windows, confirm before starting, and offer the alternative plainly: transcribe everything now and assemble the descriptive transcripts for a named subset, leaving the rest's inputs on disk for a later run (they need no re-transcription).
 
 ## Step 4 — Transcribe
-Run (substituting the chosen values; drop `--language` for auto-detect, drop `--title` only when the source filename already names the recording, and add `--descriptive` only for descriptive depth):
+**One command for the whole batch** — every source is a positional, and the tool loops. Substitute the chosen values; drop `--language` for auto-detect, and drop `--title`/`--captions` unless there is exactly one source:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model base --language en --title "<what it is>" --captions "<vtt-url-or-path>"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<source>" "<source>" "<folder>" --model small --language en
 ```
 
-- **Anything longer than ~5 minutes of media: launch this with `run_in_background: true`** and check back — a foreground Bash call is capped at 10 minutes and will be killed mid-transcription. `--descriptive` roughly doubles the tool's own time when the file carries a description track, since that track is transcribed too.
+Single recording, with the extras it alone can take:
+
+```
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model small --language en --title "<what it is>" --captions "<vtt-url-or-path>"
+```
+
+- **Anything longer than ~5 minutes of media in total: launch this with `run_in_background: true`** and check back — a foreground Bash call is capped at 10 minutes and will be killed mid-transcription. A batch is one background job, not one per file; do not fan out into several.
+- Sources are transcribed **sequentially**, and one failure never stops the rest — a dead URL, an existing transcript, an unreadable file is reported for that source and the batch continues. The batch's own exit code is 1 if any source failed, so read the JSON, not the exit code, to learn what landed.
+- Each source gets `<out-dir>/<slug>/`, its slug taken from its own filename. A folder positional expands to the media directly inside it.
 - A URL is streamed to a temp file and deleted after transcription. Pass `--keep-source` to keep the downloaded media alongside the transcript instead.
-- `--title` sets both the output directory's slug and the transcript's title; `--slug` overrides just the directory when the title makes an awkward folder name. Pass them here, not afterwards — the tool's own output is never hand-edited.
-- Exit 4 means a transcript for that slug already exists. Do not silently replace it: ask the user, and only then re-run with `--force`.
-- Exit 3 means the engine went missing between Step 2 and now — go back to Step 2.
-- Add `--out-dir <dir>` only if the user wants the transcript somewhere other than the standard content-fetch location.
-- Frame extraction defaults suit most recordings; `--max-frames`, `--frame-gap`, and `--frame-width` are there for a slide deck that changes every few seconds or a long static talking head.
-- `--captions <url-or-path>` takes the publisher's WebVTT or SRT. Drop it only when there is none — on a Brightcove page it is found automatically, so pass it only to override what was found. Exit 5 means the run finished but its output did not verify; the reasons are printed and none of them are fixable by editing a file.
+- `--title` sets both the output directory's slug and the transcript's title; `--slug` overrides just the directory when the title makes an awkward folder name. Pass them here, not afterwards — the tool's own output is never hand-edited. Both are **refused when there is more than one source**, as is `--captions`.
+- Exit 4 means a transcript for that slug already exists. Do not silently replace it: ask the user, and only then re-run with `--force`. In a batch this is per-source — the others still run.
+- Exit 3 means the engine went missing between Step 2 and now — go back to Step 2. It stops the whole batch, since it would fail every remaining source too.
+- Add `--out-dir <dir>` only if the user wants the transcripts somewhere other than the standard content-fetch location.
+- Frame extraction defaults suit most recordings; `--max-frames`, `--frame-gap`, and `--frame-width` are there for a slide deck that changes every few seconds or a long static talking head. They apply to every source in the batch.
+- `--captions <url-or-path>` takes the publisher's WebVTT or SRT. Drop it only when there is none — on a Brightcove page it is found automatically, so pass it only to override what was found. Exit 5 means a run finished but its output did not verify; the reasons are printed and none of them are fixable by editing a file.
+- `--verbatim` skips the descriptive extraction entirely. Only collect mode passes it — never offer it as a choice.
 - **Never pass `--out-dir` to a scratch location and copy the results into place afterwards.** Copying delivers the files one at a time and drops whatever the copy forgot — that is exactly how a directory ends up holding a transcript with no report beside it, looking finished. Pass the final destination the first time.
 
-The tool writes `index.md`, `segments.json`, `_meta.md`, and `transcript.txt` — the human-readable report. With `--captions` (or a Brightcove page that has one) it also writes `publisher-captions.vtt` verbatim and `caption-diff.json`, makes the caption wording the text `index.md` carries, and stamps `text_source: publisher-captions` into its frontmatter — the recognizer's own attempt stays in `segments.json` and PARTS 1–2 of the report. It prints a JSON summary (slug, title, duration, language, model, segment and word counts, issue counts, warnings, file paths). With `--descriptive` it also writes `media.json` (stream layout), `frames/` + `frames.json` (keyframes on visual change), `captions.json` (the file's own subtitle track, if it has a text-based one), `audio-description.md` (a real description track, transcribed, if the file has one), and `outline.json` — and adds speaker-turn candidates and non-speech spans to `segments.json`.
+Per recording the tool writes `index.md`, `segments.json`, `_meta.md`, and `transcript.txt` (the human-readable report), plus the descriptive inputs: `media.json` (stream layout), `frames/` + `frames.json` (keyframes on visual change), `captions.json` (the file's own subtitle track, if it has a text-based one), `audio-description.md` (a real description track, transcribed, if the file has one), and `outline.json` — and it adds speaker-turn candidates and non-speech spans to `segments.json`. With `--captions` (or a Brightcove page that has one) it also writes `publisher-captions.vtt` verbatim and `caption-diff.json`, makes the caption wording the text `index.md` carries, and stamps `text_source: publisher-captions` into its frontmatter — the recognizer's own attempt stays in `segments.json` and PARTS 1–2 of the report.
+
+For a single source it prints the usual JSON summary (slug, title, duration, language, model, segment and word counts, issue counts, warnings, file paths). For several it prints a batch summary instead: `results` holds one such object per recording, `failures` holds what went wrong and for which source, `batchIndex` names the `_batch-<date>.md` it wrote at the out-dir root, and `rebuildIndex` is the exact command Step 10 runs to refresh it. Keep that command — do not improvise your own, or you will leave two indexes behind.
 
 ## Step 4b — Verify before you build anything on it
 ```
 node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" verify "<out-dir>/<slug>"
 ```
 
-`run` already does this and exits 5 if it fails, so this is the check that catches what happened *after* the run — a partial copy, a stale directory, a hand-edited report. Run it whenever you did not watch the run finish, and again at the end of a descriptive pass. Anything it lists under `problems` is a stop: the fix is to re-run the tool, never to write the missing file yourself.
+Add `--expect-descriptive` **only** once you have written that recording's `transcript.md` (end of Step 9). Without the flag a missing `transcript.md` is a note, because the tool's own verify runs before you have written one; with it, a missing or malformed one is a failure. It also checks the shape: a `## Transcript` section, at least one `### [mm:ss]` heading in it, and a duration matching `index.md` — the three ways a descriptive transcript can look finished while carrying no timeline.
+
+`run` already does this and exits 5 if it fails, so this is the check that catches what happened *after* the run — a partial copy, a stale directory, a hand-edited report. Run it whenever you did not watch the run finish, and again at the end of each descriptive pass. Anything it lists under `problems` is a stop: the fix is to re-run the tool, never to write the missing file yourself.
+
+**One directory per recording.** In a batch, verify each one — the batch summary's `results[].outDir` lists them. A source that failed has no directory to verify; it is in `failures`.
 
 **What the captions did.** When a caption track was used, the JSON summary's `captions` block says how many cues it had and how many places it disagrees with the recognizer. Read those out of `caption-diff.json` or PART 3 — do not re-open `index.md` to compare by hand.
 
 ## Step 5 — Review the transcript and finish the report
-**Both depths. Not optional** (the one exception is `subagent-collect`, above). The tool has already filled PART 3 with what a machine can settle — low-confidence lines, repetition loops, lines that may be invented over silence, names spelled more than one way, the run-level flags, and, where a caption track was supplied, every place the publisher's own words differ from the recognizer's. Only that last one can catch a fluent mishearing, and only when a caption track exists. Without one, nothing mechanical can hear the words: "lose, by depth, a parent" scores perfectly and reads as ordinary text. This step is what stands in its place.
+**Not optional** (the one exception is `subagent-collect`, above), and done **per recording**. The tool has already filled PART 3 with what a machine can settle — low-confidence lines, repetition loops, lines that may be invented over silence, names spelled more than one way, the run-level flags, and, where a caption track was supplied, every place the publisher's own words differ from the recognizer's. Only that last one can catch a fluent mishearing, and only when a caption track exists. Without one, nothing mechanical can hear the words: "lose, by depth, a parent" scores perfectly and reads as ordinary text. This step is what stands in its place.
 
 If PART 3 already lists caption disagreements, do not repeat them in your review — they are settled. Spend the pass on what a second transcript cannot settle: figures, whether two speakers were separated correctly, and anything that reads fluently but cannot be true.
 
@@ -201,11 +234,15 @@ What the notes must be:
 
 Never edit `transcript.txt` yourself — `annotate` is the only way prose gets into it, which is what keeps PARTS 1 and 2 identical to `segments.json`.
 
-## Step 6 — Verbatim runs stop here
-Run `verify` one last time (Step 4b), report as in Step 10, and finish. Everything below is the descriptive pass.
+## Step 6 — The descriptive pass, one recording at a time
+A `--verbatim` run (collect mode only) stops here: run `verify` one last time (Step 4b), report as in Step 10, and finish. Every other run continues.
+
+Steps 7–9 produce **one** recording's `transcript.md`. Repeat them for each directory the run produced, in the order the batch summary lists them, and **finish each recording completely — Step 7, Step 8, Step 9, `verify` — before opening the next one's outline.** Do not interleave: two recordings' windows in play at once is how a speaker from one lands in the other's transcript, and a batch interrupted mid-way should leave finished transcripts behind, not several half-written ones.
+
+Before starting each, say which recording you are on and how many remain.
 
 ## Step 7 — Read the plan, not the transcript
-Read `outline.json`. It is one row per 5-minute window: word count, turn-candidate range, frame filenames, how many non-speech spans and caption cues fall in it, and ~18 opening / ~12 closing words for orientation. This is the only file you read whole.
+Read this recording's `outline.json`. It is one row per 5-minute window: word count, turn-candidate range, frame filenames, how many non-speech spans and caption cues fall in it, and ~18 opening / ~12 closing words for orientation. This is the only file you read whole.
 
 Also read `_meta.md`'s "Descriptive-pass inputs" section and the run's warnings, and note before you start:
 - **No video stream** — this is an audio-only source. On-screen text, actions, and visual description are genuinely absent; say so in the transcript rather than inventing them.
@@ -225,7 +262,7 @@ That prints, for that window only: its frames with timestamps, its speech in tur
 
 1. **View that window's frames** with the Read tool — only the files the slice listed. Frames are chosen on visual change, so each one is a moment where the picture became different.
 2. **Write the window's section** into `transcript.md` (format in Step 9), appending it immediately rather than holding every window in your head. If a run is interrupted, the finished windows are already on disk and you resume from the next one.
-3. Do **not** re-open earlier windows. Carry forward only what you need: the speaker roster, the running chapter, and any thread left open.
+3. Do **not** re-open earlier windows. Carry forward only what you need: the speaker roster, the running chapter, and any thread left open — and carry **nothing** from a previous recording, whose speakers and chapters are not this one's.
 
 Rules that keep the result trustworthy:
 
@@ -239,7 +276,11 @@ Rules that keep the result trustworthy:
 
 ## Step 9 — Assemble `transcript.md`
 
-Write it to `<out-dir>/<slug>/transcript.md`, alongside (never replacing) `index.md`. Exact shape:
+Write it to `<out-dir>/<slug>/transcript.md`, alongside (never replacing) `index.md`.
+
+**Everything descriptive belongs *in* the timeline.** The `## Transcript` section runs from `[0:00]` to the end in time order, and each speaker's name stands at the head of the line where they start speaking. A `[Visual: …]`, `[On screen: …]`, or `[Sound: …]` marker sits at the moment it happens — immediately before the line it sets up, or between two lines — so a reader going top to bottom learns who is talking and what is being shown at the same point the viewer would. Never collect the visuals into a separate section, an appendix, or a parallel column: a description that has been lifted out of the timeline no longer says *when*, which is the only thing that made it equivalent to watching. The sections around it — Summary, At a glance, Speakers, References, Links — are orientation and index; the timeline is the transcript.
+
+Exact shape:
 
 ```markdown
 ---
@@ -342,23 +383,36 @@ Marker conventions, used consistently:
 | `[inaudible]` / `[?]` | unrecoverable speech / uncertain name | your own honesty |
 
 Structure rules:
-- **Headings** break the transcript at real topic shifts, each stamped with the timestamp it starts at. A 3-minute clip may need none; an hour-long talk needs one every few minutes. Name the topic — "Why the pilot stalled", not "Section 3".
+- **Headings** break the transcript at real topic shifts, each stamped with the timestamp it starts at — `### [14:22] Why the pilot stalled`. The timestamp is not optional even where the topic name is obvious, and a short clip that needs no topic breaks still opens with `### [0:00]`. Name the topic — "Why the pilot stalled", not "Section 3".
 - **Lists** are for content the speaker actually enumerates (steps, options, criteria). Introduce them with the speaker's own framing line so the dialogue still reads as dialogue.
 - **Links** carry descriptive text naming the destination — never "click here", never a bare URL as the link text. Only link a URL that is visibly on screen, spoken aloud, or supplied by the user; never reconstruct one you did not see, and never guess a domain from a brand name.
 - **References** record what the recording cites — a study, a book, a product, a person's work — as it was said, with the timestamp. If you could not catch it cleanly, say so rather than completing it from memory.
 - Omit any section that has nothing in it, except where its absence is information: an audio-only source keeps a one-line "Visual content: none — audio only" in **At a glance**, and a source whose sound never mattered simply carries no `[Sound: …]` markers.
 
-## Step 10 — Report
-From the tool's JSON summary and your own Step 5 findings — not from re-reading the transcript — tell the user:
-- The files written, with paths, and what each is for: `transcript.txt` is the report to read, `index.md` the machine-readable verbatim record, and for descriptive runs `transcript.md` the accessible one
+When the file is written, run `verify --expect-descriptive` on that directory (Step 4b) before moving to the next recording. Then go back to Step 7 for it, or on to Step 10 if this was the last.
+
+## Step 10 — Refresh the batch index, then report
+
+**If there was more than one source**, the `_batch-<date>.md` written at the end of Step 4 was written before any `transcript.md` existed, so it still says every descriptive transcript is unassembled. Run the `rebuildIndex` command the batch summary printed, verbatim:
+
+```
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" batch-index "<out-dir>" --slugs "<slug,slug,…>" --file "_batch-<date>.md"
+```
+
+It re-reads every directory and rewrites the index from what is on disk now. Never hand-edit the index instead — it is script-owned like every other file here, and its `missing` list is what tells you a directory you expected is gone. If that list is non-empty, say so rather than quietly shortening the report.
+
+**Then report.** From the tool's JSON summary and your own Step 5 findings — not from re-reading the transcripts — tell the user:
+- For a batch: how many recordings were transcribed, how many failed and why, and the path to `_batch-<date>.md` as the place to start. Then the per-recording facts below, kept brief — one short block each, not a full report per file
+- The files written, with paths, and what each is for: `transcript.md` is the descriptive transcript to read, `transcript.txt` the report on what may be wrong in it, and `index.md` the machine-readable verbatim record
 - Duration, detected language, model used, word count
 - What PART 3 says, in a sentence or two: how many lines the recognizer itself flagged, how many names it spelled inconsistently, and the specific things your review found — a user who reads nothing else should still learn that "by depth" is probably "by death"
 - Whether the review covered the full transcript or the flagged excerpts only
 - Whether a publisher caption track was used and, if so, how many places it disagreed with the recognizer and what the worst of those were — a user who reads nothing else should learn that `index.md` carries the publisher's wording, not the machine's. If there was no caption track, say that the transcript has nothing checking it but the review
 - That `verify` passed, or exactly what it flagged
-- For descriptive runs: how many keyframes were used, how many speakers you identified and on what basis, whether the file carried its own caption track or audio-description track, and how many windows you covered
+- How many keyframes were used, how many speakers you identified and on what basis, whether the file carried its own caption track or audio-description track, and how many windows you covered
 - Every warning the tool reported (empty transcript, low language confidence, a long recording run through a small model, a placeholder filename, no video stream, bitmap subtitles, a failed extraction), and what to do about each
 - If the source URL was signed, that its token was redacted out of the artifacts and the stored link will not re-fetch as written. For a Brightcove page, that the durable player-page URL is what was stored, not the expiring CDN link the media came from
 - What this method cannot see, in one line: sounds with no visible source and no mention, visual detail falling between two keyframes, and speaker changes with no pause between them
 - That this is machine transcription: names, jargon, and numbers are the least reliable parts, so anything destined for `facts.md` or published copy should be checked against the recording
-- That the transcript now feeds `/twt-content-fetch` and the downstream define skills, and can be ingested into the project wiki with `/twt-wiki-fetch`
+- Any recording whose descriptive transcript you did **not** assemble (a batch split for budget, an interrupted run): name it, and say its inputs are already on disk so a re-run needs no re-transcription
+- That the transcripts now feed `/twt-content-fetch` and the downstream define skills, and can be ingested into the project wiki with `/twt-wiki-fetch`

@@ -20,7 +20,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
 | [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
 | [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
-| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe a video or audio file (URL or local path) into timestamped Markdown, verbatim or as a full descriptive (accessible) transcript |
+| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline |
 | [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
 | [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
 | [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
@@ -537,23 +537,24 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.4
+**Version:** 1.0.5
 **Accepts arguments:** yes
 
-Turn a recording — a talk, a client walkthrough, a stakeholder interview, a screen capture — into clean, frontmatter-tagged Markdown so its content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Two depths: **verbatim**, a fast timestamped record of what was said, and **descriptive**, a full accessible transcript that also carries speakers, on-screen text, visible action, sounds, and structure — enough that someone who cannot watch or hear the recording gets the same information. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
+Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets two files worth reading: `index.md`, the verbatim machine record of what was said, and `transcript.md`, the **descriptive transcript** — the same timeline with each speaker named where they start speaking, and on-screen text, visible action, and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
 
 **Inputs:**
-- Direct URL to a video/audio file, a Brightcove player-page URL, or a path to a local media file
-- Optional URL or path to the publisher's caption track (WebVTT or SRT)
+- One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
+- Optional URL or path to the publisher's caption track (WebVTT or SRT) — single recording only
 
 **Dependencies:**
 - Hard: none
 - Soft: twt-content-fetch
 
 **Reads:**
-- <video-url-or-path>
+- <video-url-or-path> (one or many)
 
 **Writes:**
+- .twt-artifacts/pre-design/content/fetched/video/_batch-<date>.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
@@ -569,7 +570,7 @@ Turn a recording — a talk, a client walkthrough, a stakeholder interview, a sc
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json
 
 **Non-goals:**
-- Not a YouTube/Vimeo/Loom downloader — this takes a **direct** media URL or a local file, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
+- Not a YouTube/Vimeo/Loom downloader — this takes **direct** media URLs, local files, or a folder of them, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
 - Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
 - Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
@@ -577,12 +578,13 @@ Turn a recording — a talk, a client walkthrough, a stakeholder interview, a sc
 - Doesn't emit SRT/VTT or burn captions into the video
 
 **Success criteria:**
-- Output appears under `.twt-artifacts/pre-design/content/fetched/video/<slug>/`
-- `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp — in **both** depths
-- `verify` passes: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
+- **Every** source given gets its own `.twt-artifacts/pre-design/content/fetched/video/<slug>/` — one recording per directory, named from its own filename, never merged and never overwriting each other
+- `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp
+- `transcript.md` exists for **every** recording, carrying every element in the coverage table below or saying plainly why an element is absent from this source, with each speaker named at the point they start speaking and the visual/on-screen/sound markers interleaved in timeline order — not collected into a separate section at the end
+- `verify` passes for every directory: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
 - Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
-- `transcript.txt` exists in **both** depths, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
-- In descriptive depth, `transcript.md` additionally carries every element in the coverage table below, or says plainly why an element is absent from this source
+- `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
+- For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
 - The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
 - No signed-URL token reaches any file — the tool redacts them, and nothing you write puts one back
 - Nothing in `transcript.md` is invented: every speaker name, sound, visual, link, and citation traces to the audio, a frame, the file's own caption track, or its audio-description track
