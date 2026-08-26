@@ -2785,7 +2785,7 @@ flowchart TB
 ### /twt-skill-test
 
 **Category:** meta
-**Version:** 1.0.3
+**Version:** 1.0.4
 
 **Inputs:**
 - Skill name (required), plus optional --target, --args, --fix, --scope, --iterations, --fixture
