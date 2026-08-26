@@ -155,12 +155,31 @@ criteria use. `happy` (clean target, first run) is the only one required; name
 `degraded-soft-dep` (a soft dependency's artifact absent) only if `--scope`
 includes `robustness` and criteria reference them.
 
-Then freeze it for this run (Bash):
-`node "${CLAUDE_PROJECT_DIR}/tools/skill-test.mjs" criteria <skill> --freeze <runDir>`
-— `<runDir>` is `tests/skill-test-runs/<skill>-<YYYY-MM-DD-HHMM>/`, computed once
-now and reused for the whole run. This writes the criteria file's SHA-256 and its
-ordered criterion-id list into `<runDir>/run.json`; iterations 2 and 3 re-verify
-the hash and the run aborts (exit 4) on drift — the rubric cannot shift mid-run.
+Then freeze it for this run (Bash), passing every value already computed in
+Step 1 rather than letting the tool default them — a defaulted `target`,
+`cache-version`, or `tree-clean` writes a wrong fidelity header into `run.json`
+for the life of the run, silently, since nothing re-checks it later:
+
+```
+node "${CLAUDE_PROJECT_DIR}/tools/skill-test.mjs" criteria <skill> --freeze <runDir> \
+  --target <target-from-1.2> --tree-clean <clean-from-1.4-guard> \
+  --cache-version <pluginCacheVersion-from-1.5> --scope <scope-from-1.2>
+```
+
+`<runDir>` is `tests/skill-test-runs/<skill>-<YYYY-MM-DD-HHMM>/`, computed once
+now and reused for the whole run. `--tree-clean` takes the literal string
+`true` or `false` from Step 1.4's `guard` output — this is the field
+`report.mjs` reads to say "the working tree was already dirty when the run
+started" versus "no fixes were applied," and defaulting it to `true` would
+render a fix-blocked-by-dirty-tree run as if no fix had even been attempted.
+`--cache-version` takes Step 1.5's resolved directory name (or `unknown` if the
+cache path did not exist — pass that literal string, don't leave the flag off).
+`--target` takes the resolved `<target>` from Step 1.2, `--scope` the resolved
+scope list from Step 1.2 (comma-joined, e.g. `contract,dispatch,quality`).
+
+This writes the criteria file's SHA-256 and its ordered criterion-id list, plus
+these four values, into `<runDir>/run.json`; iterations 2 and 3 re-verify the
+hash and the run aborts (exit 4) on drift — the rubric cannot shift mid-run.
 
 ## Step 3 — Iterate (bounded at 3 iterations, and at 3 consecutive invalid dispatches)
 

@@ -9,6 +9,7 @@ const STOP_MEANING = {
   'converged-pass-weak': 'every criterion passed, but ALL of them were self-declared by the skill itself — this is a weak result (spec §9.3).',
   'no-progress': 'the verdict map was identical two iterations running; the loop was thrashing and stopped early.',
   'iteration-cap': 'cap reached with failures outstanding.',
+  'invalid-dispatch-cap': 'the runner called the Skill tool for the tested skill (or another twt: skill) 3 times running, despite the injected prompt explicitly forbidding it. The run was aborted rather than looping indefinitely — this is a finding about the runner, not about the skill under test.',
 };
 
 export function renderReport(run, { criteria }) {
@@ -58,6 +59,7 @@ export function renderReport(run, { criteria }) {
   L.push('## Known limitations of this verdict', '');
   L.push('- The blind grader is prompt-blinded, not sandboxed (spec §9.1).');
   L.push('- Sub-skills resolved to the cached plugin copy, not the working tree (spec §9.6).');
+  L.push('- Invalid-dispatch detection relies on the runner\'s own self-report plus a side-channel check of this repo\'s own artifact tree — it can miss a runner that consulted the cached plugin copy while still completing the injected instructions.');
   L.push('');
 
   return L.join('\n');
