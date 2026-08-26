@@ -73,7 +73,7 @@
 // 4 output exists (pass --force); 1 anything else.
 'use strict';
 import { spawnSync } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { Readable } from "node:stream";
@@ -93,6 +93,73 @@ const GAP_SECONDS = 1.5;
 const MIN_WORDS = 40;
 const MAX_WORDS = 120;
 const HARD_WORDS = 200;
+
+
+// ---- where each file lives -------------------------------------------------------
+// A recording's directory holds two kinds of file: the ones a person opens and the
+// ones the tool computed to build them with. Mixed together, sixteen files in one
+// listing, the second kind buries the first — and the question "which of these do I
+// read?" is the one this command gets asked most. So the machine files go into
+// `data/`, and the directory itself shows only what is worth opening.
+//
+// Reads fall back to the flat layout, because `timeline`, `verify`, `slice`,
+// `review` and `captions` all run against directories that already exist and were
+// written before this split. Writes only ever go to `data/`.
+
+export const DATA_DIR = "data";
+
+export function dataPath(dir, name) { return join(dir, DATA_DIR, name); }
+
+export function artifactPath(dir, name) {
+  const nested = join(dir, DATA_DIR, name);
+  if (existsSync(nested)) return nested;
+  const flat = join(dir, name);
+  return existsSync(flat) ? flat : nested;
+}
+
+export function readArtifact(dir, name) {
+  try { return readFileSync(artifactPath(dir, name), "utf8"); } catch { return null; }
+}
+
+function ensureData(dir) {
+  mkdirSync(join(dir, DATA_DIR), { recursive: true });
+  return join(dir, DATA_DIR);
+}
+
+export function writeData(dir, name, body) {
+  ensureData(dir);
+  const path = dataPath(dir, name);
+  writeFileSync(path, body, "utf8");
+  return path;
+}
+
+// Everything that belongs under data/. Named rather than inferred, because the rule
+// is not "JSON goes in data/" — it is "this specific list is machinery", and a file
+// this tool has never heard of is somebody else's and gets left alone.
+export const DATA_FILES = ["segments.json", "outline.json", "media.json", "frames.json",
+  "captions.json", "caption-diff.json", "publisher-captions.vtt", "publisher-captions.srt",
+  "audio-description.json", "frames"];
+
+// A directory from before the split has these files at its top level. Re-running the
+// tool over it would write the new copies into data/ and leave the old ones sitting
+// beside them — two segments.json in one directory, one of them a run behind, and
+// nothing saying which is which. So they move, and where data/ already holds the file
+// the stale one is deleted rather than kept as a second opinion nobody asked for.
+export function migrateFlatArtifacts(dir) {
+  const moved = [];
+  for (const name of DATA_FILES) {
+    const flat = join(dir, name);
+    if (!existsSync(flat)) continue;
+    ensureData(dir);
+    const target = dataPath(dir, name);
+    try {
+      if (existsSync(target)) rmSync(flat, { recursive: true, force: true });
+      else renameSync(flat, target);
+      moved.push(name);
+    } catch { /* a file held open elsewhere stays where it is; verify will say so */ }
+  }
+  return moved;
+}
 
 // ---- CLI ----------------------------------------------------------------------
 
@@ -502,7 +569,7 @@ export function buildIndexMd({ source, slug, title, result, fetchedAt, captionSe
     "engine: faster-whisper",
     `model: ${result.model}`,
     `text_source: ${fromCaptions ? "publisher-captions" : "speech-recognition"}`,
-    fromCaptions ? `captions: ${CAPTIONS_FILE}` : null,
+    result.segments.length ? `captions: ${SUBTITLE_FILE}` : null,
     `segments: ${result.segments.length}`,
     `fetched_at: ${fetchedAt}`,
     "---",
@@ -609,6 +676,38 @@ function publisherCaptionLine(publisherCaptions) {
       : " — supplied, but not used as the text source");
 }
 
+// A recording's directory holds a dozen files and only one of them is the one this
+// particular reader came for. Guessing from the names goes wrong the same way every
+// time — `transcript.txt` sounds like the transcript and is the report *on* it — so
+// the directory says which is which, in the file that exists to explain itself.
+export function fileMapLines(descriptive) {
+  const rows = [
+    [true, "`index.md`", "the speech, attributed per speaker — the file the rest of the pipeline reads"],
+    [false, "`transcript.md`", "the descriptive transcript: speech with what is on screen woven in"],
+    [false, `\`${TIMELINE_FILE}\``, "the same content as one stream, a timestamp on every beat"],
+    [false, `\`${SPEECH_MD_FILE}\``, "the speech alone, a timestamp on every line and no visuals"],
+    [false, `\`${SPEECH_TXT_FILE}\``, "the speech alone as continuous text — no times, no names, no markers"],
+    [false, `\`${SPEAKERS_FILE}\``, "who speaks, their on-screen title, and how much of the recording is theirs"],
+    [false, `\`${WCAG_FILE}\` / \`${WCAG_TEXT_FILE}\``,
+      "one row per moment for an accessibility review — as data, and as text"],
+    [true, "`transcript.txt`", "the report: the transcript twice over, plus what in it is most likely wrong"],
+    [true, `\`${SUBTITLE_FILE}\` / \`${SRT_FILE}\``, "the caption track to hang on the video"],
+    [false, `\`${DESCRIPTIONS_FILE}\``,
+      "the audio-description track — what is on screen, for a viewer who cannot see it"],
+    [false, `\`${CHAPTERS_FILE}\``, "chapter markers for the player's scrubber"],
+    [true, "`_meta.md`", "this file"],
+    [true, `\`${DATA_DIR}/\``, "what the tool computed to build the rest: segments, keyframes, stream "
+      + "layout, the caption diff, and the publisher's own track as they published it. "
+      + "Nothing in here is content"],
+  ];
+  return ["", "## What is in this directory", "", "| File | What it is |", "|---|---|",
+    ...rows.filter(([always]) => always || descriptive).map(([, name, what]) => `| ${name} | ${what} |`),
+    ...(descriptive ? [] : ["",
+      "> This was a verbatim run, so there is no descriptive transcript and none of the files "
+      + "built from one. A `/twt-content-fetch-video` re-run with `--force` produces them."]),
+  ];
+}
+
 export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive,
   captionSource, publisherCaptions = null }) {
   const src = redactUrl(source);
@@ -645,6 +744,7 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
     `- **Transcription wall time:** ${result.transcribe_seconds}s`,
     ...decodeLines(result),
     ...extras,
+    ...fileMapLines(Boolean(descriptive)),
     "",
     "## Warnings",
     "",
@@ -906,7 +1006,7 @@ function part(n, heading) { return [RULE, `PART ${n} - ${heading}`, RULE, ""]; }
 // what about it should not be trusted. PART 1 deliberately carries no timestamps —
 // it is the version you read; PART 2 is the version you cite.
 export function buildReportTxt({ source, slug, title, result, warnings = [], issues,
-  fetchedAt, bytes, descriptive, review, captionDiff, generatedCaptions, publisherCaptions = null }) {
+  fetchedAt, bytes, descriptive, review, captionDiff, subtitles, publisherCaptions = null }) {
   const name = titleFrom(slug, title);
   const src = redactUrl(source);
   const forceHours = (result.duration || 0) >= 3600;
@@ -932,12 +1032,13 @@ export function buildReportTxt({ source, slug, title, result, warnings = [], iss
       : "none supplied or found"));
   }
 
-  if (generatedCaptions?.file) {
-    L.push(...field("Captions", `none were published with this recording, so ${generatedCaptions.file} `
-      + `was generated from the transcript (${generatedCaptions.cues} cues) — unchecked machine output, `
-      + "read it against the recording before publishing it with the video"));
-  } else if (generatedCaptions?.skipped) {
-    L.push(...field("Captions", `no track was generated — ${generatedCaptions.why}`));
+  if (subtitles?.file) {
+    L.push(...field("Captions", `${subtitles.file} + ${subtitles.srt} (${subtitles.cues} cues) — `
+      + subtitles.why
+      + (subtitles.origin === "generated"
+        ? ". Read it against the recording before publishing it with the video" : "")));
+  } else if (subtitles) {
+    L.push(...field("Captions", `no track was written — ${subtitles.why}`));
   }
 
   L.push("", "TRANSCRIPTION DETAILS", THIN);
@@ -1313,36 +1414,37 @@ export async function ingestCaptions({ captionsUrl, outDir, asrSegments, warning
       : readFileSync(resolve(captionsUrl), "utf8");
     const parsed = parseCaptions(raw);
     if (!parsed) throw new Error("the file is neither WebVTT nor SRT");
-    writeFileSync(join(outDir, CAPTIONS_FILE), raw, "utf8");
+    // The publisher's file is archived under its true extension and never touched
+    // again; the `captions.vtt` beside it is what ships. Keeping the original is what
+    // makes "the words are theirs" checkable rather than asserted.
+    const archived = publisherTrackFile(parsed.format);
+    writeData(outDir, archived, raw);
     const captions = captionSegments(parsed.cues);
     const diff = diffTranscripts(asrSegments, captions);
-    writeFileSync(join(outDir, "caption-diff.json"), JSON.stringify({
-      captions: CAPTIONS_FILE, format: parsed.format, cues: parsed.cues.length, differences: diff,
-    }, null, 2), "utf8");
+    writeData(outDir, "caption-diff.json", JSON.stringify({
+      captions: archived, format: parsed.format, cues: parsed.cues.length, differences: diff,
+    }, null, 2));
     if (diff.length) {
       warnings.push(`The publisher's caption track disagrees with the recognizer in ${diff.length} place(s) — each one is listed in PART 3, and \`index.md\` carries the caption wording rather than the recognizer's.`);
     }
-    return { captions, diff, cues: parsed.cues.length, format: parsed.format };
+    return { captions, diff, cues: parsed.cues.length, format: parsed.format,
+      track: { raw, format: parsed.format, cues: parsed.cues, file: archived } };
   } catch (err) {
     warnings.push(`The caption track could not be used (${err.message}) — the transcript is the recognizer's alone, with nothing to check it against.`);
     return { captions: null, diff: null };
   }
 }
 
-// ---- generated captions --------------------------------------------------------
-// A recording whose publisher never shipped a caption track is the common case,
-// and the thing people most often want out of a transcript after the transcript
-// itself is a subtitle file they can hang on the video. The recognizer has
-// already produced timed text, so this costs nothing extra to write — but it is
-// deliberately NOT written when the recording already has captions of its own.
-// Two subtitle files beside one video is how the wrong one gets shipped, and the
-// human-authored one wins every time.
-//
-// It is speech recognition, unchecked, and the file says so in a NOTE header —
-// a .vtt looks authoritative in a player, and nothing else in it would reveal
-// that the words were guessed from audio.
+// ---- cutting cues out of timed text ----------------------------------------------
+// A recording whose publisher never shipped a caption track is the common case, and
+// the thing people most often want out of a transcript after the transcript itself is
+// a subtitle file to hang on the video. The recognizer has already produced timed
+// text, so the cues cost nothing but the splitting: a caption box is two lines and a
+// recognizer segment is a paragraph.
 
-export const GENERATED_CAPTIONS_FILE = "generated-captions.vtt";
+// Written by versions of this tool from before `captions.vtt` became the single name.
+// Only `verify` mentions it now, to say a directory holding one is from an older run.
+export const LEGACY_GENERATED_CAPTIONS_FILE = "generated-captions.vtt";
 // A caption box is two lines of ~42 characters. Longer than that and the player
 // either clips it or covers the picture.
 export const CUE_MAX_CHARS = 84;
@@ -1486,65 +1588,123 @@ export function buildVtt(cues, { source, result = {}, fetchedAt } = {}) {
     `${formatVttTime(cue.start)} --> ${formatVttTime(cue.end)}`,
     wrapCue(cue.text),
   ].join("\n"));
-  return ["WEBVTT", "", note, "", ...blocks.map((b) => b + "\n")].join("\n");
+  return vttFrom(cues, note.split("\n").slice(1));
 }
 
-// Why this recording gets no generated track, or null if it gets one. The reason
-// travels into the summary, `_meta.md` and the report: "there is no .vtt here"
-// must never be something the user has to work out for themselves.
-export function captionsSkipReason({ publisherCaptions, embeddedCues, segments }) {
-  if (publisherCaptions && publisherCaptions.length) return "publisher-captions";
-  if (embeddedCues) return "embedded-track";
-  if (!(segments || []).length) return "no-speech";
+// Cues plus a NOTE block, as WebVTT. Every track this tool writes goes through here,
+// so a player that will load one will load all of them.
+export function vttFrom(cues, noteLines) {
+  const blocks = (cues || []).map((cue, i) => [
+    String(i + 1),
+    `${formatVttTime(cue.start)} --> ${formatVttTime(cue.end)}`,
+    wrapCue(cue.text),
+  ].join("\n"));
+  return ["WEBVTT", "", ["NOTE", ...noteLines].join("\n"), "",
+    ...blocks.map((b) => b + "\n")].join("\n");
+}
+
+// ---- the one caption track -------------------------------------------------------
+// Exactly one subtitle file sits in a recording's directory, always, and it is always
+// called `captions.vtt`. Where the publisher shipped a track, it holds their words
+// verbatim; where the media file carries its own subtitle stream, that stream; and
+// where there was neither, the recognizer's timed text with a NOTE saying the words
+// were guessed. A caller wanting the captions should never have to work out which of
+// two filenames this particular recording happened to get — that guess is what left
+// `generated-captions.vtt` unopened on the recordings that had one and sent people
+// looking for a `publisher-captions.vtt` that was never going to exist.
+//
+// Nothing about provenance is lost by the shared name. `_meta.md` and `index.md`'s
+// `captions_source:` say where the words came from, the publisher's original stays
+// byte-for-byte in `data/`, and a generated track still carries its NOTE header, which
+// is the only place a person dragging a .vtt into an editor would ever read it.
+
+export const SUBTITLE_FILE = "captions.vtt";
+
+// Where this recording's captions come from, in precedence order: a human wrote it >
+// the file already carries one > the recognizer guessed it. Null only when there is
+// no speech at all, which is the one case with nothing to caption.
+export function captionOrigin({ publisherCaptions, embeddedCues, segments }) {
+  if (publisherCaptions && publisherCaptions.length) return "publisher";
+  if (embeddedCues) return "embedded";
+  if ((segments || []).length) return "generated";
   return null;
 }
 
-export const SKIP_REASON_TEXT = {
-  "publisher-captions": "the publisher's own caption track is already in the directory",
-  "embedded-track": "the media file carries its own caption stream (`captions.json`)",
-  "no-speech": "no speech was detected, so there is nothing to caption",
+export const ORIGIN_TEXT = {
+  publisher: "the publisher's own track, copied verbatim — human-authored, and the wording `index.md` carries",
+  embedded: "the media file's own subtitle stream, extracted verbatim",
+  generated: "generated from the recognizer's own timed text — unchecked machine output",
+  null: "no speech was detected, so there was nothing to caption",
 };
 
-export function writeGeneratedCaptions({ outDir, source, result, fetchedAt }) {
-  const cues = cuesFromSegments(result.segments, { duration: result.duration });
-  if (!cues.length) return null;
-  const path = join(outDir, GENERATED_CAPTIONS_FILE);
-  writeFileSync(path, buildVtt(cues, { source, result, fetchedAt }), "utf8");
-  return { file: GENERATED_CAPTIONS_FILE, path, cues: cues.length };
+// The publisher's track reaches the directory in whatever format they published, and
+// half of them publish SRT. The archived original keeps its true extension; the
+// shipping file is always WebVTT, converted cue for cue with the words untouched.
+export function publisherTrackFile(format) {
+  return format === "srt" ? "publisher-captions.srt" : CAPTIONS_FILE;
 }
 
-// One line for `_meta.md` saying which subtitle file — if any — is in this
-// directory and where its words came from. Someone opening the folder for a
-// caption track should not have to infer the answer from the file listing.
-export function captionSourceLine({ captions, generatedCaptions }) {
-  if (captions && captions.length) {
-    return `the publisher's own track, stored verbatim as \`${CAPTIONS_FILE}\` — human-authored, and what \`index.md\` carries`;
+export function writeSubtitles({ outDir, source, result = {}, fetchedAt,
+  publisherTrack = null, embeddedCues = null }) {
+  const origin = captionOrigin({
+    publisherCaptions: publisherTrack?.cues,
+    embeddedCues: embeddedCues?.length,
+    segments: result.segments,
+  });
+  if (!origin) return { file: null, srt: null, cues: 0, origin: null, why: ORIGIN_TEXT.null };
+
+  let body = null;
+  let cues = [];
+  if (origin === "publisher") {
+    cues = publisherTrack.cues;
+    // A published .vtt ships byte for byte: a track someone wrote, re-emitted by a
+    // formatter, is no longer the thing they published, and cue identifiers, styling
+    // and positioning are exactly what a re-emit would drop.
+    body = publisherTrack.format === "vtt" ? publisherTrack.raw : vttFrom(cues, [
+      `Converted from the publisher's SRT track (${publisherTrackFile("srt")} in data/) by`,
+      "/twt-content-fetch-video. The words and the timings are theirs, unchanged; only the",
+      "container is different, because a .srt is not what a browser <track> will load.",
+    ]);
+  } else if (origin === "embedded") {
+    cues = embeddedCues.map((c) => ({ start: c.start, end: c.end, text: String(c.text || "").trim() }));
+    body = vttFrom(cues, [
+      "Extracted from the media file's own subtitle stream by /twt-content-fetch-video.",
+      `Source: ${redactUrl(source).url}`,
+      "The words and timings are the file's own, unchanged — this is not speech recognition.",
+    ]);
+  } else {
+    cues = cuesFromSegments(result.segments, { duration: result.duration });
+    if (!cues.length) return { file: null, srt: null, cues: 0, origin: null, why: ORIGIN_TEXT.null };
+    body = buildVtt(cues, { source, result, fetchedAt });
   }
-  if (generatedCaptions?.file) {
-    return `none published with the recording, so \`${generatedCaptions.file}\` was generated from the recognizer (${generatedCaptions.cues} cues) — unchecked machine output`;
-  }
-  return `none — ${generatedCaptions?.why || "no subtitle file was written"}`;
+
+  writeFileSync(join(outDir, SUBTITLE_FILE), body, "utf8");
+  writeFileSync(join(outDir, SRT_FILE), buildSrt(cues), "utf8");
+  return { file: SUBTITLE_FILE, srt: SRT_FILE, cues: cues.length, origin, why: ORIGIN_TEXT[origin] };
 }
 
-// The whole decision, in one place, so `run` and the standalone `captions`
-// command cannot drift apart on when a track is written.
-export function maybeWriteGeneratedCaptions({ outDir, source, result, fetchedAt,
-  publisherCaptions, embeddedCues, probed = true, warnings = [] }) {
-  const skipped = captionsSkipReason({ publisherCaptions, embeddedCues, segments: result.segments });
-  if (skipped) return { file: null, cues: 0, skipped, why: SKIP_REASON_TEXT[skipped] };
-  const written = writeGeneratedCaptions({ outDir, source, result, fetchedAt });
-  if (!written) return { file: null, cues: 0, skipped: "no-speech", why: SKIP_REASON_TEXT["no-speech"] };
-  // A --verbatim run never probes the media's streams, so it cannot know whether
-  // the file carries a subtitle track of its own. Generating one anyway is the
-  // right call — a caption file is the point — but the uncertainty is said out
-  // loud rather than left for someone to discover two tracks later.
-  warnings.push(`This recording had no captions of its own, so \`${GENERATED_CAPTIONS_FILE}\` was `
-    + `generated from the recognizer's own words (${written.cues} cues). It is unchecked machine `
-    + `output — read it against the recording before publishing it with the video.`
+// One line for `_meta.md` and the report saying where this directory's caption track
+// came from. The file is always there now, so the question is never "is there one" —
+// it is "who wrote the words in it", and that is what this answers.
+export function captionSourceLine(subtitles) {
+  if (!subtitles?.file) return `none — ${subtitles?.why || "no subtitle file was written"}`;
+  return `\`${subtitles.file}\` (${subtitles.cues} cues) and \`${subtitles.srt}\` — ${subtitles.why}`;
+}
+
+// A --verbatim run never probes the media's streams, so it cannot know the file
+// carries a subtitle track of its own. Captioning it anyway is right — a caption file
+// is the point — but the uncertainty is said out loud rather than left to be
+// discovered as two tracks later.
+export function subtitleWarnings({ subtitles, probed = true }) {
+  if (subtitles?.origin !== "generated") return [];
+  return [`This recording shipped no captions, so \`${SUBTITLE_FILE}\` was generated from the `
+    + `recognizer's own words (${subtitles.cues} cues), with \`${SRT_FILE}\` beside it. It is `
+    + "unchecked machine output — read it against the recording before publishing it with the "
+    + "video."
     + (probed ? "" : " This run did not probe the media's own subtitle streams, so if the file "
-      + "carries one, this track duplicates it."));
-  return { ...written, skipped: null, probed };
+      + "carries one, this track duplicates it.")];
 }
+
 
 // ---- Brightcove ----------------------------------------------------------------
 // The one player page worth resolving in-tool. It is what a client hands over
@@ -2057,6 +2217,312 @@ export function buildWcagTranscription({ beats, chapters, meta }) {
   };
 }
 
+
+// ---- the speech-only files -------------------------------------------------------
+// `timeline.md` and `transcript.md` interleave the picture with the speech, which is
+// the point of a descriptive transcript and exactly wrong when what you want is the
+// words. Two more files carry the speech alone: `speech.md` with a measured stamp on
+// every beat — the same granularity the report's PART 2 uses, so a line can be cited
+// — and `speech.txt` with no stamps, no names and no markers at all, for pasting into
+// a document, counting, or searching. Both are generated from the same beats as
+// everything else, so no file here is a second opinion about what was said.
+
+export const SPEECH_MD_FILE = "speech.md";
+export const SPEECH_TXT_FILE = "speech.txt";
+
+// Consecutive beats by one speaker are one paragraph. The sentence-level split that
+// makes the timeline citable makes continuous prose unreadable, so it is undone here
+// rather than never made.
+export function speechParagraphs(beats) {
+  const out = [];
+  for (const beat of beats || []) {
+    if (beat.kind !== "speech") continue;
+    const { speech } = splitDelivery(beat.speech);
+    if (!speech) continue;
+    const last = out[out.length - 1];
+    if (last && last.speaker === beat.speaker) { last.text += ` ${speech}`; continue; }
+    out.push({ time: beat.time, speaker: beat.speaker, text: speech });
+  }
+  return out;
+}
+
+export function buildSpeechMd({ beats, chapters, meta }) {
+  const forceHours = (meta.durationSeconds || 0) >= 3600;
+  const spoken = (beats || []).filter((b) => b.kind === "speech" && splitDelivery(b.speech).speech);
+  const out = [
+    "---",
+    `source: ${meta.source}`,
+    "type: video",
+    "kind: speech",
+    `title: ${meta.title}`,
+    `duration: ${meta.duration}`,
+    `language: ${meta.language}`,
+    `text_source: ${meta.textSource}`,
+    `lines: ${spoken.length}`,
+    "generated_from: transcript.md",
+    `fetched_at: ${meta.fetchedAt}`,
+    "---",
+    "",
+    `# ${meta.title} — speech`,
+    "",
+    "_What was said and when, and nothing else — no visuals, no on-screen text, no sounds."
+    + " Those are in `transcript.md` and `timeline.md`. Generated by `transcribe-video.mjs"
+    + " timeline`; never edit it by hand._",
+    "",
+  ];
+  let chapter = null;
+  for (const beat of spoken) {
+    if (beat.chapter && beat.chapter !== chapter) {
+      chapter = beat.chapter;
+      out.push(`## [${fmtTime(chapter.time, forceHours)}] ${chapter.title || ""}`.trimEnd(), "");
+    }
+    const { speech } = splitDelivery(beat.speech);
+    out.push(`**[${fmtTime(beat.time, forceHours)}]${beat.approx ? "~" : ""} ${beat.speaker}:** ${speech}`, "");
+  }
+  return out.join("\n");
+}
+
+// No frontmatter, no header, no names, no stamps: the file is the words. Anything
+// else in it is something a person pasting this into a document has to delete first,
+// and everything else about the recording is in the eleven files beside it.
+export function buildSpeechTxt({ beats }) {
+  const paras = speechParagraphs(beats).map((p) => p.text.trim()).filter(Boolean);
+  return paras.length ? `${paras.join("\n\n")}\n` : "";
+}
+
+// ---- the WCAG table as text ------------------------------------------------------
+// The same rows as `wcag-transcription.json`, in the shape a reviewer reads rather
+// than parses: one stanza per moment, each field on its own labelled line. Built from
+// the JSON document itself, not from the beats again, so the two cannot drift.
+
+export const WCAG_TEXT_FILE = "wcag-transcription.txt";
+
+export function buildWcagText(doc) {
+  const out = [
+    `${doc.title} — WCAG transcription`,
+    `Source: ${doc.source}`,
+    `Duration: ${doc.duration}   Language: ${doc.language}   Rows: ${(doc.entries || []).length}`,
+    `Text source: ${doc.text_source}   Generated from: ${doc.generated_from} on ${doc.fetched_at}`,
+    "",
+    "Each stanza is one moment: what a viewer who cannot see the picture needs told,",
+    "what was said, and who said it. Generated by `transcribe-video.mjs timeline` —",
+    "never edited by hand, and the same rows as wcag-transcription.json.",
+    "",
+    "=".repeat(REPORT_WIDTH),
+    "",
+  ];
+  for (const e of doc.entries || []) {
+    out.push(`time: ${e.time}${e.time_inferred ? "  (inferred — this line could not be located in the recording's timings)" : ""}`, "");
+    out.push("informative caption:");
+    out.push(...(e.informative_caption?.length ? e.informative_caption : ["(nothing on screen changed here)"]));
+    out.push("");
+    out.push("caption:");
+    out.push(e.caption || "(no speech)");
+    out.push("");
+    out.push("author:");
+    out.push(e.author || "(nobody speaking)");
+    out.push("", "-".repeat(REPORT_WIDTH), "");
+  }
+  return out.join("\n");
+}
+
+// ---- who is in it ----------------------------------------------------------------
+// Every speaker's name, their title and organization as they were shown on screen,
+// where they first appear and how much of the recording is theirs. All of it already
+// exists inside `transcript.md`, spread across a name card here and a line there —
+// which is no use at all when the question is "who said the thing about grants, and
+// what is her title", the question anyone quoting a recording actually has.
+
+export const SPEAKERS_FILE = "speakers.md";
+
+const CARD_MARKER = /name card|lower third|lower-third|title card|caption bar/i;
+const CARD_QUOTE = /["“”]([^"“”]{2,240})["“”]/g;
+
+function normName(s) { return String(s || "").toLowerCase().replace(/\[\?\]/g, "").replace(/[^a-z]+/g, ""); }
+
+// Pull `"Maria Collins / Vice President / New York Life Foundation"` out of the
+// `[On screen: name card — …]` markers, split off the name, and keep the rest as the
+// role. A card with no separator is a title, not a person, and is ignored.
+export function speakerCards(beats) {
+  const cards = new Map();
+  for (const beat of beats || []) {
+    for (const marker of beat.markers || []) {
+      if (!CARD_MARKER.test(marker)) continue;
+      for (const m of marker.matchAll(CARD_QUOTE)) {
+        const parts = m[1].trim().split(/\s*[/|·—–]\s*/).map((p) => p.trim()).filter(Boolean);
+        if (parts.length < 2) continue;
+        const key = normName(parts[0]);
+        if (key.length < 3 || cards.has(key)) continue;
+        cards.set(key, { name: parts[0], role: parts.slice(1).join(" · ") });
+      }
+    }
+  }
+  return cards;
+}
+
+export function speakerRoster(beats, { durationSeconds = 0 } = {}) {
+  const cards = speakerCards(beats);
+  const all = beats || [];
+  const by = new Map();
+  for (let i = 0; i < all.length; i++) {
+    const beat = all[i];
+    if (beat.kind !== "speech") continue;
+    const { speech } = splitDelivery(beat.speech);
+    const name = beat.speaker;
+    if (!by.has(name)) by.set(name, { name, first: beat.time, lines: 0, words: 0, seconds: 0 });
+    const row = by.get(name);
+    row.lines += 1;
+    row.words += (speech.match(/\S+/g) || []).length;
+    // A beat runs until the next one starts; the last runs to the end of the
+    // recording. Approximate on purpose — nothing here measures voice activity —
+    // which is why the file prints it with a ≈.
+    const next = all.slice(i + 1).find((b) => Number.isFinite(b.time) && b.time > beat.time);
+    const end = next ? next.time : durationSeconds;
+    if (Number.isFinite(beat.time) && end > beat.time) row.seconds += end - beat.time;
+  }
+  const rows = [...by.values()];
+  const totalWords = rows.reduce((n, r) => n + r.words, 0) || 1;
+  for (const row of rows) {
+    const card = cards.get(normName(row.name))
+      || [...cards.values()].find((c) => {
+        const a = normName(c.name); const b = normName(row.name);
+        return a && b && (a.includes(b) || b.includes(a));
+      });
+    row.role = card ? card.role : null;
+    row.share = Math.round((row.words / totalWords) * 100);
+    row.uncertain = /\[\?\]/.test(row.name);
+  }
+  return rows.sort((a, b) => b.words - a.words || a.first - b.first);
+}
+
+export function buildSpeakersMd({ beats, meta }) {
+  const forceHours = (meta.durationSeconds || 0) >= 3600;
+  const rows = speakerRoster(beats, { durationSeconds: meta.durationSeconds });
+  const out = [
+    "---",
+    `source: ${meta.source}`,
+    "type: video",
+    "kind: speakers",
+    `title: ${meta.title}`,
+    `duration: ${meta.duration}`,
+    `speakers: ${rows.length}`,
+    "generated_from: transcript.md",
+    `fetched_at: ${meta.fetchedAt}`,
+    "---",
+    "",
+    `# ${meta.title} — speakers`,
+    "",
+  ];
+  if (!rows.length) {
+    out.push("_Nobody speaks in this recording, or the descriptive pass named nobody._", "");
+    return out.join("\n");
+  }
+  out.push("_Read off the recording's own name cards and the descriptive pass. A name marked"
+    + " `[?]` was read off a keyframe and the glyphs were not certain — check the frame before"
+    + " printing it. Speaking time is approximate: it is the span between beats, not voice"
+    + " activity._", "",
+    "| Speaker | On-screen card | First | Lines | Words | Share | ≈ Time |",
+    "|---|---|---|---|---|---|---|");
+  for (const r of rows) {
+    out.push(`| ${r.name} | ${r.role || "—"} | ${fmtTime(r.first, forceHours)} | ${r.lines} `
+      + `| ${r.words} | ${r.share}% | ${fmtTime(r.seconds, forceHours)} |`);
+  }
+  out.push("");
+  const unnamed = rows.filter((r) => r.uncertain);
+  if (unnamed.length) {
+    out.push(`_${unnamed.length} name(s) above are marked uncertain: `
+      + `${unnamed.map((r) => `**${r.name}**`).join(", ")}._`, "");
+  }
+  return out.join("\n");
+}
+
+// ---- the two derived subtitle tracks ---------------------------------------------
+// `descriptions.vtt` is the audio-description companion to `captions.vtt`: the same
+// timeline, carrying what is on screen instead of what is said. Hung on a video as
+// `<track kind="descriptions">` it is what a screen reader announces; read on its
+// own it is the picture, in order. It exists because the WCAG rows already carry
+// exactly this content and nothing was doing anything with it.
+
+export const DESCRIPTIONS_FILE = "descriptions.vtt";
+export const CHAPTERS_FILE = "chapters.vtt";
+
+// A description runs until the next beat, so it is on screen for as long as the
+// moment it describes lasts.
+export function cuesFromBeats(beats, { durationSeconds = 0 } = {}) {
+  const all = beats || [];
+  const cues = [];
+  for (let i = 0; i < all.length; i++) {
+    const beat = all[i];
+    const lines = [...(beat.markers || []), ...(beat.kind !== "speech" && beat.text ? [beat.text] : [])];
+    if (!lines.length || !Number.isFinite(beat.time)) continue;
+    const next = all.slice(i + 1).find((b) => Number.isFinite(b.time) && b.time > beat.time);
+    const end = next ? next.time : Math.max(durationSeconds, beat.time + CUE_MIN_SECONDS);
+    cues.push({
+      start: round3(beat.time),
+      end: round3(Math.max(end, beat.time + CUE_MIN_SECONDS)),
+      text: lines.join("\n"),
+    });
+  }
+  return cues;
+}
+
+export function buildDescriptionsVtt(cues, { source, meta }) {
+  const note = [
+    "NOTE",
+    "Audio-description track from /twt-content-fetch-video.",
+    `Source: ${redactUrl(source).url}`,
+    `Generated: ${meta.fetchedAt} from transcript.md`,
+    "What is on screen at each moment, for a viewer who cannot see it. Hang it on the",
+    "video as <track kind=\"descriptions\">, not as captions — the speech is in",
+    "captions.vtt. Written from keyframes by a model, so it describes what the picture",
+    "showed, not what a described-video producer would have chosen to say.",
+  ].join("\n");
+  const blocks = cues.map((cue, i) => [
+    String(i + 1),
+    `${formatVttTime(cue.start)} --> ${formatVttTime(cue.end)}`,
+    cue.text,
+  ].join("\n"));
+  return ["WEBVTT", "", note, "", ...blocks.map((b) => b + "\n")].join("\n");
+}
+
+// Chapters as the player's own scrubber markers. The same seven lines the timeline
+// prints as a list at the top, in the one format a video player will act on.
+export function buildChaptersVtt(chapters, { durationSeconds = 0, meta = {} } = {}) {
+  const rows = (chapters || []).filter((c) => c.title && Number.isFinite(c.time));
+  if (!rows.length) return null;
+  const note = ["NOTE", `Chapters for ${meta.title || "this recording"}, from transcript.md.`,
+    "Hang it on the video as <track kind=\"chapters\">."].join("\n");
+  const blocks = rows.map((c, i) => {
+    const end = rows[i + 1] ? rows[i + 1].time : Math.max(durationSeconds, c.time + CUE_MIN_SECONDS);
+    return [`Chapter ${i + 1}`,
+      `${formatVttTime(c.time)} --> ${formatVttTime(Math.max(end, c.time + CUE_MIN_SECONDS))}`,
+      c.title].join("\n");
+  });
+  return ["WEBVTT", "", note, "", ...blocks.map((b) => b + "\n")].join("\n");
+}
+
+// ---- SRT ---------------------------------------------------------------------------
+// The same cues, in the format the rest of the world takes. Premiere, Resolve, and
+// most upload forms want SRT and quietly refuse a .vtt; emitting both from one cue
+// list costs a formatter and removes the step where somebody converts it by hand and
+// the two drift. SRT has no NOTE block, so the provenance goes in the first cue's
+// place: it does not, and the file is machine output, which `_meta.md` says instead.
+
+export const SRT_FILE = "captions.srt";
+
+export function formatSrtTime(seconds) {
+  return formatVttTime(seconds).replace(".", ",");
+}
+
+export function buildSrt(cues) {
+  return (cues || []).map((cue, i) => [
+    String(i + 1),
+    `${formatSrtTime(cue.start)} --> ${formatSrtTime(cue.end)}`,
+    wrapCue(cue.text),
+    "",
+  ].join("\n")).join("\n");
+}
+
 // Reads the directory, builds the file, returns what it did. The reference stream
 // is the publisher's caption track where there is one — its cues are two or three
 // seconds long against the recognizer's five to ten, so it locates a line several
@@ -2076,13 +2542,19 @@ export function writeTimeline(dir) {
   // inheriting the time of the paragraph it was written inside.
   const beats = splitSpeechBeats(blockBeats);
 
+  // The reference stream is the publisher's own cues where they exist — two or three
+  // seconds each against the recognizer's five to ten, so they place a line several
+  // times more precisely. `captions.vtt` is not it: when the recording had no track of
+  // its own that file *is* the recognizer, and anchoring the recognizer against itself
+  // would look like a second opinion while being none.
   let refSegments = [];
   let textSource = "speech-recognition";
-  const vtt = read(CAPTIONS_FILE);
-  const parsed = vtt ? parseCaptions(vtt) : null;
-  if (parsed) { refSegments = captionSegments(parsed.cues); textSource = "publisher-captions"; }
+  for (const name of [CAPTIONS_FILE, publisherTrackFile("srt")]) {
+    const parsed = parseCaptions(readArtifact(dir, name) || "");
+    if (parsed) { refSegments = captionSegments(parsed.cues); textSource = "publisher-captions"; break; }
+  }
   if (!refSegments.length) {
-    try { refSegments = JSON.parse(read("segments.json") || "{}").segments || []; } catch { refSegments = []; }
+    try { refSegments = JSON.parse(readArtifact(dir, "segments.json") || "{}").segments || []; } catch { refSegments = []; }
   }
 
   const { unmatched } = anchorBeats(beats, referenceWords(refSegments));
@@ -2116,9 +2588,31 @@ export function writeTimeline(dir) {
   const path = join(dir, TIMELINE_FILE);
   writeFileSync(path, buildTimelineMd({ beats: timed, chapters, meta }), "utf8");
 
+  // Everything below is the same beats in a different shape, written in one place so
+  // that no two of them can ever be a different account of the recording. Each exists
+  // because a real reader wants one shape and is badly served by the others: the
+  // timeline interleaves the picture with the speech, which is exactly wrong when what
+  // you want is the words, and the JSON table is exactly wrong when what you want is
+  // to read.
+  const wcag = buildWcagTranscription({ beats: timed, chapters, meta });
   const wcagPath = join(dir, WCAG_FILE);
-  writeFileSync(wcagPath,
-    `${JSON.stringify(buildWcagTranscription({ beats: timed, chapters, meta }), null, 2)}\n`, "utf8");
+  writeFileSync(wcagPath, `${JSON.stringify(wcag, null, 2)}\n`, "utf8");
+  writeFileSync(join(dir, WCAG_TEXT_FILE), buildWcagText(wcag), "utf8");
+  writeFileSync(join(dir, SPEECH_MD_FILE), buildSpeechMd({ beats: timed, chapters, meta }), "utf8");
+  writeFileSync(join(dir, SPEECH_TXT_FILE), buildSpeechTxt({ beats: timed }), "utf8");
+  writeFileSync(join(dir, SPEAKERS_FILE), buildSpeakersMd({ beats: timed, meta }), "utf8");
+
+  // The audio-description track and the chapter markers: the two files that turn this
+  // directory's contents into something a video player can act on rather than
+  // something a person has to read and re-key.
+  const describedCues = cuesFromBeats(timed, { durationSeconds: meta.durationSeconds });
+  const descriptions = describedCues.length ? join(dir, DESCRIPTIONS_FILE) : null;
+  if (descriptions) {
+    writeFileSync(descriptions,
+      buildDescriptionsVtt(describedCues, { source: meta.source, meta }), "utf8");
+  }
+  const chaptersVtt = buildChaptersVtt(chapters, { durationSeconds: meta.durationSeconds, meta });
+  if (chaptersVtt) writeFileSync(join(dir, CHAPTERS_FILE), chaptersVtt, "utf8");
 
   // index.md was written before anyone knew who was speaking. Now that the
   // descriptive pass has said so, rebuild it with the names attached — it is the
@@ -2130,8 +2624,9 @@ export function writeTimeline(dir) {
       beats: timed,
       forceHours: (meta.durationSeconds || 0) >= 3600,
       note: "_Speech below is grouped by speaker and attributed from the descriptive pass in "
-        + "`transcript.md`; `timeline.md` carries the same content with a timestamp on every beat, "
-        + "and `wcag-transcription.json` carries it as data. What is on screen is in `transcript.md`._",
+        + "`transcript.md`; `speech.md` carries the same words with a timestamp on every line, "
+        + "`speech.txt` with none at all, and `wcag-transcription.json` / `.txt` carry them as an "
+        + "accessibility table. What is on screen is in `transcript.md` and `timeline.md`._",
     });
     if (restamped && restamped !== index) {
       writeFileSync(join(dir, "index.md"), restamped, "utf8");
@@ -2143,11 +2638,19 @@ export function writeTimeline(dir) {
     ok: true,
     file: path,
     wcag: wcagPath,
+    wcagText: join(dir, WCAG_TEXT_FILE),
+    speech: join(dir, SPEECH_MD_FILE),
+    speechText: join(dir, SPEECH_TXT_FILE),
+    speakers: join(dir, SPEAKERS_FILE),
+    descriptions,
+    chaptersFile: chaptersVtt ? join(dir, CHAPTERS_FILE) : null,
     indexRestamped,
     proseRestamped,
     beats: timed.length,
-    speech: timed.filter((b) => b.kind === "speech").length,
+    speechBeats: timed.filter((b) => b.kind === "speech").length,
     markers: timed.reduce((n, b) => n + (b.markers || []).length, 0),
+    describedCues: describedCues.length,
+    voices: speakerRoster(timed, { durationSeconds: meta.durationSeconds }).length,
     chapters: chapters.length,
     reference: textSource,
     referenceSegments: refSegments.length,
@@ -2159,6 +2662,7 @@ export function writeTimeline(dir) {
 function doTimeline() {
   const dir = firstPositional();
   if (!dir) usage("timeline needs the transcript directory.");
+  migrateFlatArtifacts(dir);
   const result = writeTimeline(dir);
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exit(1);
@@ -2181,6 +2685,11 @@ function doTimeline() {
 // the recognizer's own doubts. Each of those looks like success from the outside.
 
 export const REQUIRED_FILES = ["index.md", "segments.json", "_meta.md", "transcript.txt"];
+// Everything the `timeline` command builds out of transcript.md. They go stale in one
+// direction only — the prose is edited and the command is not re-run — and then the
+// files that look the most citable are quietly the ones describing an older draft.
+export const DERIVED_FILES = [TIMELINE_FILE, WCAG_FILE, WCAG_TEXT_FILE, SPEECH_MD_FILE,
+  SPEECH_TXT_FILE, SPEAKERS_FILE, DESCRIPTIONS_FILE, CHAPTERS_FILE];
 // The scaffolding buildReportTxt always emits. A report missing any of it was not
 // produced by this script, whatever it says at the top.
 const REPORT_MARKERS = ["PART 1 - ", "PART 2 - ", "PART 3 - POSSIBLE ISSUES", REVIEW_HEADING, "END OF REPORT"];
@@ -2193,10 +2702,10 @@ function countIn(text, re) {
 export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   const problems = [];
   const notes = [];
-  const read = (name) => {
-    try { return readFileSync(join(dir, name), "utf8"); } catch { return null; }
-  };
-  const present = (name) => existsSync(join(dir, name));
+  // Through artifactPath, so a directory written before the `data/` split verifies on
+  // its old flat layout rather than reporting every machine file as missing.
+  const read = (name) => readArtifact(dir, name);
+  const present = (name) => existsSync(artifactPath(dir, name));
 
   const descriptive = ["transcript.md", "media.json", "frames.json", "outline.json"].some(present);
   const required = [...REQUIRED_FILES, ...(descriptive ? ["media.json", "outline.json"] : [])];
@@ -2204,7 +2713,7 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   for (const name of required) {
     if (!present(name)) { problems.push(`${name} is missing — the run did not finish, or only part of it was copied into place.`); continue; }
     let size = 0;
-    try { size = statSync(join(dir, name)).size; } catch { /* treated as empty below */ }
+    try { size = statSync(artifactPath(dir, name)).size; } catch { /* treated as empty below */ }
     if (!size) problems.push(`${name} is empty.`);
   }
 
@@ -2254,7 +2763,7 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
       } else {
         const listed = (() => { try { return (JSON.parse(read("frames.json")).frames || []).length; } catch { return null; } })();
         let onDisk = null;
-        try { onDisk = readdirSync(join(dir, "frames")).length; } catch { onDisk = 0; }
+        try { onDisk = readdirSync(artifactPath(dir, "frames")).length; } catch { onDisk = 0; }
         if (listed !== null && listed !== onDisk) {
           problems.push(`frames.json lists ${listed} keyframes but frames/ holds ${onDisk} — the descriptive pass cited frames that are not there.`);
         }
@@ -2303,12 +2812,25 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
           problems.push(`${TIMELINE_FILE} carries no \`## Timeline\` section with \`### [mm:ss]\` beats — `
             + "it was not produced by this script.");
         }
-        try {
-          if (statSync(join(dir, "transcript.md")).mtimeMs > statSync(join(dir, TIMELINE_FILE)).mtimeMs + 1000) {
-            problems.push(`${TIMELINE_FILE} is older than transcript.md — it was built from an earlier `
-              + `draft. Re-run \`timeline "<dir>"\`.`);
-          }
-        } catch { /* a missing stat is already covered above */ }
+        for (const derived of DERIVED_FILES) {
+          if (!present(derived)) continue;
+          try {
+            if (statSync(join(dir, "transcript.md")).mtimeMs > statSync(join(dir, derived)).mtimeMs + 1000) {
+              problems.push(`${derived} is older than transcript.md — it was built from an earlier `
+                + `draft. Re-run \`timeline "<dir>"\`.`);
+            }
+          } catch { /* a missing stat is already covered above */ }
+        }
+        // The four files that carry the speech in another shape. Each is generated by
+        // the same command from the same beats, so one missing means the command was
+        // not re-run — and a directory that is missing `speech.txt` while holding a
+        // fresh timeline is the shape a partial copy takes.
+        for (const derived of [WCAG_TEXT_FILE, SPEECH_MD_FILE, SPEECH_TXT_FILE, SPEAKERS_FILE]) {
+          if (present(derived)) continue;
+          const missing = `No ${derived} — \`timeline "<dir>"\` writes it beside ${TIMELINE_FILE}.`;
+          if (expectDescriptive) problems.push(missing);
+          else notes.push(missing);
+        }
       }
 
       // The WCAG table is the same beats as data, written by the same command, so
@@ -2343,12 +2865,6 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
             }
           }
         }
-        try {
-          if (statSync(join(dir, "transcript.md")).mtimeMs > statSync(join(dir, WCAG_FILE)).mtimeMs + 1000) {
-            problems.push(`${WCAG_FILE} is older than transcript.md — it was built from an earlier draft. `
-              + `Re-run \`timeline "<dir>"\`.`);
-          }
-        } catch { /* a missing stat is already covered above */ }
       }
 
       // A name read off a downscaled keyframe is evidence, not a font specimen.
@@ -2380,9 +2896,9 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   // match what is actually on disk: a directory holding a diff but no captions,
   // or captions that index.md does not claim, is a partly-copied run.
   const hasDiff = present("caption-diff.json");
-  const hasVtt = present(CAPTIONS_FILE);
+  const hasVtt = present(CAPTIONS_FILE) || present(publisherTrackFile("srt"));
   if (hasDiff && !hasVtt) {
-    problems.push(`caption-diff.json is here but ${CAPTIONS_FILE} is missing — the transcript cites a caption track that is not in the directory.`);
+    problems.push(`caption-diff.json is here but the publisher's ${CAPTIONS_FILE} is missing — the transcript cites a caption track that is not in the directory.`);
   }
   if (hasVtt || hasDiff) {
     const index = read("index.md") || "";
@@ -2393,25 +2909,40 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
     }
   }
 
-  // The generated subtitle track. It is optional by design — a recording with
-  // captions of its own does not get one — so its absence is at most a note. What
-  // is checked is that a file claiming to be one really is: a .vtt a player
-  // silently refuses to load is worse than no .vtt, because the video looks
-  // captioned in the directory listing and is not captioned in the player.
-  const generated = read(GENERATED_CAPTIONS_FILE);
-  if (generated !== null) {
-    const parsed = parseCaptions(generated);
-    if (!/^WEBVTT/.test(generated.replace(/^﻿/, "")) || !parsed) {
-      problems.push(`${GENERATED_CAPTIONS_FILE} is not valid WebVTT — no player will load it. `
-        + `Rebuild it with \`captions "<dir>" --force\`; it is generated, not written.`);
+  // Every recording with speech carries a `captions.vtt`, whoever wrote the words, so
+  // its absence is now a real gap rather than a design choice. What is checked hardest
+  // is that a file claiming to be a caption track really is one: a .vtt a player
+  // silently refuses to load is worse than no .vtt at all, because the directory
+  // listing says the video is captioned and the player says it is not.
+  for (const name of [SUBTITLE_FILE, DESCRIPTIONS_FILE, CHAPTERS_FILE]) {
+    const track = existsSync(join(dir, name)) ? readFileSync(join(dir, name), "utf8") : null;
+    if (track === null) continue;
+    if (!/^WEBVTT/.test(track.replace(/^﻿/, "")) || !parseCaptions(track)) {
+      problems.push(`${name} is not valid WebVTT — no player will load it. `
+        + `Rebuild it (\`captions "<dir>"\` for ${SUBTITLE_FILE}, \`timeline "<dir>"\` for the `
+        + "others); these files are generated, not written.");
     }
-    if (hasVtt) {
-      notes.push(`Both ${CAPTIONS_FILE} and ${GENERATED_CAPTIONS_FILE} are here. The publisher's `
-        + "track is the one to ship — the generated one is the recognizer's guess at the same audio.");
-    }
-  } else if (!hasVtt && counts && counts["segments.json"]) {
-    notes.push(`No subtitle file in this directory: neither the publisher's ${CAPTIONS_FILE} nor a `
-      + `generated ${GENERATED_CAPTIONS_FILE}. If the recording needs captions, run \`captions "<dir>"\`.`);
+  }
+  if (!existsSync(join(dir, SUBTITLE_FILE)) && counts && counts["segments.json"]) {
+    const missing = `No ${SUBTITLE_FILE} — every recording with speech gets one, from the `
+      + `publisher's track, the media file's own stream, or the recognizer. Run \`captions "<dir>"\`.`;
+    if (expectDescriptive) problems.push(missing);
+    else notes.push(missing);
+  }
+  if (existsSync(join(dir, SUBTITLE_FILE)) && !existsSync(join(dir, SRT_FILE))) {
+    notes.push(`${SUBTITLE_FILE} is here but ${SRT_FILE} is not — they are written together, so this `
+      + `directory is from an older run or a partial copy. Run \`captions "<dir>"\`.`);
+  }
+  const stranded = DATA_FILES.filter((name) =>
+    existsSync(join(dir, name)) && existsSync(join(dir, DATA_DIR, name)));
+  if (stranded.length) {
+    notes.push(`${stranded.join(", ")} exist(s) both here and in ${DATA_DIR}/ — the copy at the top `
+      + "level is from an older run and is the one a person will open first. Re-run `timeline "
+      + '"<dir>"` and it will be cleared away.');
+  }
+  if (existsSync(join(dir, LEGACY_GENERATED_CAPTIONS_FILE))) {
+    notes.push(`${LEGACY_GENERATED_CAPTIONS_FILE} is left over from an older run — the caption track `
+      + `is ${SUBTITLE_FILE} now, whoever wrote the words. Delete it before anyone ships the wrong one.`);
   }
 
   const reviewed = Boolean(report) && !report.includes(REVIEW_PENDING);
@@ -2445,8 +2976,9 @@ function pyTranscribe(py, media, outJson) {
 // audio-description track if the publisher shipped one.
 function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments = null }) {
   const out = { frames: 0, captions: 0, audio_description: false, files: [] };
+  mkdirSync(join(outDir, DATA_DIR), { recursive: true });
 
-  const mediaJson = join(outDir, "media.json");
+  const mediaJson = dataPath(outDir, "media.json");
   if (pyProbe(py, ["probe", "--media", mediaPath, "--out", mediaJson]).status !== 0) {
     warnings.push("Stream probe failed — the descriptive extras (frames, captions, description track) were skipped.");
     return null;
@@ -2457,8 +2989,8 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
 
   let frames = [];
   if (info.has_video) {
-    const framesJson = join(outDir, "frames.json");
-    const r = pyProbe(py, ["frames", "--media", mediaPath, "--out-dir", join(outDir, "frames"),
+    const framesJson = dataPath(outDir, "frames.json");
+    const r = pyProbe(py, ["frames", "--media", mediaPath, "--out-dir", dataPath(outDir, "frames"),
       "--out", framesJson, "--max", flag("--max-frames", "60"),
       "--min-gap", flag("--frame-gap", "4"), "--width", flag("--frame-width", "960"),
       "--threshold", flag("--frame-threshold", "0.06"),
@@ -2477,10 +3009,14 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
 
   let captions = [];
   if (info.subtitle_index !== null && info.subtitle_index !== undefined) {
-    const capJson = join(outDir, "captions.json");
+    const capJson = dataPath(outDir, "captions.json");
     if (pyProbe(py, ["subs", "--media", mediaPath, "--out", capJson]).status === 0) {
       captions = (readJson(capJson) || {}).cues || [];
       out.files.push(capJson);
+      // Kept whole, not just counted: where the media carries its own subtitles they
+      // are the caption track to ship, and re-reading the file to get them back is a
+      // second place for the two to disagree.
+      out.captionCues = captions;
     }
   } else if ((info.bitmap_subtitles || []).length) {
     warnings.push(`Subtitle stream(s) ${info.bitmap_subtitles.join(", ")} are bitmap subtitles — their text is only in the picture, so read it off the frames.`);
@@ -2497,13 +3033,13 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
         "--stream", String(info.audio_description_index), "--out", wav]);
       if (ex.status === 0) {
         console.error(`transcribing the audio-description track (stream ${info.audio_description_index}) …`);
-        const adJson = join(outDir, "audio-description.json");
+        const adJson = dataPath(outDir, "audio-description.json");
         if (pyTranscribe(py, wav, adJson).status === 0) {
           const ad = readJson(adJson);
           const forceHours = (result.duration || 0) >= 3600;
           const body = paragraphize(ad.segments || []).map(
             (p) => `**[${fmtTime(p.start, forceHours)}]** ${p.text}`).join("\n\n");
-          const adMd = join(outDir, "audio-description.md");
+          const adMd = dataPath(outDir, "audio-description.md");
           writeFileSync(adMd,
             `# Audio description track\n\n_Transcribed from audio stream ${info.audio_description_index} `
             + `of the source — the publisher's own description of the visuals. Prefer it over anything `
@@ -2524,7 +3060,7 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
   // Turn candidates and silences go back into segments.json; the outline is the
   // only whole-recording view the model is meant to read.
   const gaps = nonSpeechGaps(result.segments, result.duration);
-  const segmentsPath = join(outDir, "segments.json");
+  const segmentsPath = dataPath(outDir, "segments.json");
   writeFileSync(segmentsPath, JSON.stringify({
     ...result, segments: assignTurns(result.segments), non_speech: gaps,
   }), "utf8");
@@ -2554,7 +3090,7 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
     }
   }
 
-  const outlinePath = join(outDir, "outline.json");
+  const outlinePath = dataPath(outDir, "outline.json");
   writeFileSync(outlinePath, JSON.stringify(buildOutline({
     segments: result.segments, textSegments, gaps, frames, captions, duration: result.duration,
     windowSeconds: Number(flag("--window-seconds", String(WINDOW_SECONDS))) || WINDOW_SECONDS,
@@ -2593,7 +3129,7 @@ function doProbe() {
 function doSlice() {
   const dir = firstPositional();
   if (!dir) usage("Missing <transcript-dir>.");
-  const segs = readJson(join(dir, "segments.json"));
+  const segs = readJson(artifactPath(dir, "segments.json"));
   if (!segs) { console.error(`No segments.json under ${dir}. Run \`run --descriptive\` first.`); process.exit(2); }
 
   const windowSeconds = Number(flag("--window-seconds", String(WINDOW_SECONDS))) || WINDOW_SECONDS;
@@ -2607,8 +3143,11 @@ function doSlice() {
   process.stdout.write(buildSlice({
     from, to, duration: segs.duration, segments: segs.segments,
     gaps: segs.non_speech || nonSpeechGaps(segs.segments, segs.duration),
-    frames: (readJson(join(dir, "frames.json")) || {}).frames || [],
-    captions: (readJson(join(dir, "captions.json")) || {}).cues || [],
+    frames: (readJson(artifactPath(dir, "frames.json")) || {}).frames || [],
+    captions: (readJson(artifactPath(dir, "captions.json")) || {}).cues || [],
+    // Named, not assumed: the slice is the only thing that tells the model where to
+    // look, and a bare filename against the wrong folder is a frame silently unread.
+    framesDir: existsSync(join(dir, DATA_DIR, "frames")) ? `${DATA_DIR}/frames` : "frames",
   }));
 }
 
@@ -2677,7 +3216,7 @@ export function buildReviewRequest({ title, result, issues, wordBudget = REVIEW_
 function doReview() {
   const dir = firstPositional();
   if (!dir) usage("Missing <transcript-dir>.");
-  const result = readJson(join(dir, "segments.json"));
+  const result = readJson(artifactPath(dir, "segments.json"));
   if (!result) { console.error(`No segments.json under ${dir}. Run \`run\` first.`); process.exit(2); }
   const title = titleFromIndex(dir, slugify(basename(resolve(dir))));
   const issues = detectIssues({ ...result, title });
@@ -2720,41 +3259,43 @@ function doVerify() {
   process.exit(v.ok ? 0 : 1);
 }
 
-// Rebuild (or force) the generated subtitle track for a directory that already
-// has a transcript. `run` writes it by itself; this exists for the run that was
-// made before the file did, and for the case where the user wants one beside a
-// publisher track anyway — which they have to ask for, because shipping the
-// recognizer's guess over a human-authored track is the mistake worth a flag.
+// Rebuild a directory's `captions.vtt` and `captions.srt`. `run` writes them by
+// itself; this exists for directories written before they did, and for re-cutting the
+// cues after `segments.json` changed. The precedence is the same one `run` applies —
+// the publisher's track, then the media file's own, then the recognizer — and
+// `--force` is the override that ignores the first two and captions from the
+// recognizer anyway, which is a thing to ask for and never a default.
 function doCaptions() {
   const dir = firstPositional();
   if (!dir) usage("Missing <transcript-dir>.");
   if (!existsSync(dir)) { console.error(`No such directory: ${dir}`); process.exit(2); }
-  const result = readJson(join(dir, "segments.json"));
+  migrateFlatArtifacts(dir);
+  const result = readJson(artifactPath(dir, "segments.json"));
   if (!result || !Array.isArray(result.segments)) {
     console.error(`No readable segments.json in ${dir} — captions are built from the transcript, so there is nothing to build from.`);
     process.exit(2);
   }
   const index = (() => { try { return readFileSync(join(dir, "index.md"), "utf8"); } catch { return ""; } })();
   const source = (index.match(/^source:\s*(.+)$/m) || [])[1] || dir;
-  const publisher = existsSync(join(dir, CAPTIONS_FILE)) ? [1] : null;
-  const embedded = (readJson(join(dir, "captions.json")) || {}).cues?.length || 0;
   const forced = has("--force");
-  const skipped = forced ? null : captionsSkipReason({ publisherCaptions: publisher, embeddedCues: embedded, segments: result.segments });
-  if (skipped) {
-    console.error(`Not writing ${GENERATED_CAPTIONS_FILE}: ${SKIP_REASON_TEXT[skipped]}.`
-      + (skipped === "no-speech" ? "" : " Pass --force to write one anyway."));
-    console.log(JSON.stringify({ file: null, cues: 0, skipped, why: SKIP_REASON_TEXT[skipped] }, null, 2));
-    process.exit(0);
+  let publisherTrack = null;
+  if (!forced) {
+    for (const name of [CAPTIONS_FILE, publisherTrackFile("srt")]) {
+      const raw = readArtifact(dir, name);
+      const parsed = raw ? parseCaptions(raw) : null;
+      if (parsed) { publisherTrack = { raw, format: parsed.format, cues: parsed.cues, file: name }; break; }
+    }
   }
-  const written = writeGeneratedCaptions({
-    outDir: dir, source, result,
+  const embedded = forced ? null : (readJson(artifactPath(dir, "captions.json")) || {}).cues || null;
+  const written = writeSubtitles({
+    outDir: dir, source, result, publisherTrack, embeddedCues: embedded,
     fetchedAt: (index.match(/^fetched_at:\s*(\S+)/m) || [])[1] || undefined,
   });
-  if (!written) {
-    console.error("No speech in this transcript — there is nothing to caption.");
+  if (!written.file) {
+    console.error(`Nothing to caption: ${written.why}`);
     process.exit(1);
   }
-  console.log(JSON.stringify({ ...written, skipped: null, forced }, null, 2));
+  console.log(JSON.stringify({ ...written, forced }, null, 2));
 }
 
 // ---- run -----------------------------------------------------------------------
@@ -2933,7 +3474,8 @@ async function runOne({ source, py, outRoot }) {
   if (existsSync(indexPath) && !has("--force")) {
     throw new RunFailure(4, [`A transcript already exists at ${indexPath}. Re-run with --force to replace it.`]);
   }
-  mkdirSync(outDir, { recursive: true });
+  mkdirSync(join(outDir, DATA_DIR), { recursive: true });
+  migrateFlatArtifacts(outDir);
 
   const warnings = [];
   if (!flag("--slug", null) && !title && isGenericName(rawName)) {
@@ -2969,7 +3511,7 @@ async function runOne({ source, py, outRoot }) {
       warnings.push(`Unrecognized media extension on \`${basename(mediaPath)}\` — decoding was attempted anyway.`);
     }
 
-    const jsonPath = join(outDir, "segments.json");
+    const jsonPath = dataPath(outDir, "segments.json");
     const args = [...py.args, WORKER, "--media", mediaPath, "--out", jsonPath,
       "--model", flag("--model", "base"), "--language", flag("--language", "auto")];
     const run = spawnSync(py.exe, args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
@@ -3000,9 +3542,8 @@ async function runOne({ source, py, outRoot }) {
     // becomes the text index.md carries, and — the part that matters most — is
     // diffed against the recognizer. That diff is the only mechanical check in
     // this tool that can catch a mishearing the decoder was confident about.
-    const { captions, diff: captionDiff, cues: captionCues } = await ingestCaptions({
-      captionsUrl, outDir, asrSegments: result.segments, warnings,
-    });
+    const { captions, diff: captionDiff, cues: captionCues, track: captionTrack } =
+      await ingestCaptions({ captionsUrl, outDir, asrSegments: result.segments, warnings });
     // Two different things that both get called "captions": the track the publisher
     // shipped (this) and any subtitle stream inside the media file (descriptive.captions).
     const publisherCaptions = { cues: captionCues || 0, used: Boolean(captions && captions.length) };
@@ -3021,20 +3562,21 @@ async function runOne({ source, py, outRoot }) {
       ? null
       : enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments: captions });
 
-    // A subtitle file for the recordings that have none. Written after the
-    // descriptive extraction because that is what discovers the media's own
-    // caption stream — a recording that already carries captions must not be
-    // handed a second, worse set beside them.
-    const generatedCaptions = maybeWriteGeneratedCaptions({
+    // The recording's one caption track. Written after the descriptive extraction
+    // because that is what discovers the media's own subtitle stream, and an
+    // extracted track beats a guessed one — the precedence is the publisher's
+    // words, then the file's own, then the recognizer's.
+    const embedded = descriptive?.captionCues || null;
+    const subtitles = writeSubtitles({
       outDir, source: sourceRef, result, fetchedAt,
-      publisherCaptions: captions, embeddedCues: descriptive?.captions ?? 0,
-      probed: Boolean(descriptive), warnings,
+      publisherTrack: captionTrack, embeddedCues: embedded,
     });
+    warnings.push(...subtitleWarnings({ subtitles, probed: Boolean(descriptive) }));
 
     writeFileSync(join(outDir, "_meta.md"),
       buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
         keptSource: !isUrl || keepSource, publisherCaptions,
-        captionSource: captionSourceLine({ captions, generatedCaptions }) }), "utf8");
+        captionSource: captionSourceLine(subtitles) }), "utf8");
 
     // The human-readable report is written on every run, in both depths — it is
     // the deliverable a person actually opens, and PART 3 is the only place the
@@ -3044,7 +3586,7 @@ async function runOne({ source, py, outRoot }) {
     const reportPath = join(outDir, "transcript.txt");
     writeFileSync(reportPath, buildReportTxt({
       source: sourceRef, slug, title, result, warnings, issues, fetchedAt, bytes, descriptive,
-      captionDiff, generatedCaptions, publisherCaptions,
+      captionDiff, subtitles, publisherCaptions,
     }), "utf8");
 
     // The run is not finished until the set it just claimed to write is actually
@@ -3068,12 +3610,13 @@ async function runOne({ source, py, outRoot }) {
       descriptive,
       warnings,
       captions: captions
-        ? { file: CAPTIONS_FILE, segments: captions.length, disagreements: captionDiff.length }
+        ? { file: captionTrack?.file || CAPTIONS_FILE, segments: captions.length,
+          disagreements: captionDiff.length }
         : null,
-      generatedCaptions,
+      subtitles,
       verified: { ok: verified.ok, reviewed: verified.reviewed, notes: verified.notes },
       files: [indexPath, jsonPath, join(outDir, "_meta.md"), reportPath, ...(descriptive?.files || []),
-        ...(generatedCaptions.file ? [join(outDir, generatedCaptions.file)] : [])],
+        ...(subtitles.file ? [join(outDir, subtitles.file), join(outDir, subtitles.srt)] : [])],
     };
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });

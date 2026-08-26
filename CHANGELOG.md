@@ -2,6 +2,7 @@
 
 Auto-maintained: one line per plugin version bump (newest first); `git log` carries the full story.
 
+- 2026-08-26 **v1.0.138** — twt-content-fetch-video → 1.0.8, twt-content-fetch → 1.1.11, twt-curation-define → 1.2.3
 - 2026-08-26 **v1.0.137** — twt-content-fetch-video → 1.0.7, twt-content-fetch → 1.1.10, twt-curation-define → 1.2.2
 - 2026-08-26 **v1.0.136** — twt-content-fetch-video → 1.0.6
 - 2026-08-26 **v1.0.135** — twt-content-fetch-video → 1.0.5

@@ -2,8 +2,8 @@
 name: twt-content-fetch
 surface: command
 category: content
-description: (v1.1.10) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
-version: 1.1.10
+description: (v1.1.11) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
+version: 1.1.11
 accepts_arguments: true
 inputs:
   - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
@@ -96,4 +96,5 @@ Summarize: counts per type, output folders, unrecognized sources, and that downs
 For any **video** source, add one line: whether its descriptive pass ran. A recording fetched under
 collect mode has a verbatim `index.md` with no speaker attribution and no `transcript.md` beside it —
 say so, and say that a plain `/twt-content-fetch-video` re-run with `--force` would name the speakers
-and produce the descriptive transcript, `timeline.md` and `wcag-transcription.json`.
+and produce the descriptive transcript and the files built from it — `timeline.md`, `speech.md`,
+`speech.txt`, `speakers.md`, `wcag-transcription.json` / `.txt`, `descriptions.vtt`, `chapters.vtt`.

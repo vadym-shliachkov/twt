@@ -3,8 +3,8 @@ name: twt-curation-define
 surface: internal
 user-invocable: false
 category: curation
-description: (v1.2.2) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
-version: 1.2.2
+description: (v1.2.3) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
+version: 1.2.3
 accepts_arguments: true
 inputs:
   - Optional answers; otherwise interactive
@@ -69,9 +69,11 @@ Read content-fetch outputs (the items to curate), `sitemap.md` (the target pages
 ## Step 3 — Build the inventory
 **(Skipped in collect mode — see Step 1b.)** Enumerate every fetched content item. For each, decide KEEP / SKIP / ELEVATE with the user and assign a target page slug from the sitemap (or none). Write `inventory.md` as the flat decision table with rationale.
 
-**Which file to open per item.** Every `fetched/<type>/<name>/` directory holds several files and only one of them is the content: open its **`index.md`**. Never quote from a directory's other files — `transcript.txt` under `fetched/video/` in particular is the *recognizer's* raw attempt, deliberately left uncorrected, and where a publisher's caption track existed `index.md` carries different and better words. If `/twt-content-fetch` wrote a manifest, its `Read this` column names the file for each source.
+**Which file to open per item.** Every `fetched/<type>/<name>/` directory holds several files and only one of them is the content: open its **`index.md`**. Never quote from a directory's other files — `transcript.txt` under `fetched/video/` in particular is the *recognizer's* raw attempt, deliberately left uncorrected, and where a publisher's caption track existed `index.md` carries different and better words. A video directory's `data/` folder is machinery — segments, keyframes, stream layout — and nothing in it is ever content. If `/twt-content-fetch` wrote a manifest, its `Read this` column names the file for each source.
 
 **Recordings carry more than speech.** A video directory with a `transcript.md` beside its `index.md` has had a descriptive pass: `index.md` is the speech, attributed per speaker, and `transcript.md` adds on-screen text, name cards, visible action and the links that only ever appeared on screen. Where a recording is a real content source rather than a passing reference, read `transcript.md` too — an end card's URL, a statistic that was shown and never said, and a speaker's name and organization exist nowhere else. A video directory with **no** `transcript.md` was fetched verbatim under collect mode: its speech has no speaker attribution at all, so treat quotes from it as unattributed and say so in the inventory row.
+
+**Who said it, without reading the transcript for it.** A recording's `speakers.md` is one small table of every voice in it with the title and organization from their on-screen name card — the attribution a quote needs, at a fraction of the tokens it costs to find the same thing by reading `transcript.md`. Open it when you are attributing a quote; a name there marked `[?]` was read off a keyframe and is not safe to print.
 
 ## Step 3.5 — Reconcile reusable facts (facts.md — the source of truth)
 Build the reconciled ledger at **`.twt-artifacts/pre-design/curation/facts.md`** — it always lives here in the artifacts, and it is the ledger every downstream skill binds to. **The pipeline never writes to `.project-wiki/`**, so this skill does not touch the wiki's own `facts.md`. If a project wiki exists and the user wants these facts kept as durable memory, `/twt-wiki` harvests this ledger's rows into the wiki on demand — never automatically. This runs after the inventory and **before** the outlines, so the outline agents can cite it. It runs in every mode (collect and interactive).

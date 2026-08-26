@@ -884,7 +884,7 @@ flowchart TB
 ### /twt-content-fetch
 
 **Category:** content
-**Version:** 1.1.10
+**Version:** 1.1.11
 
 **Inputs:**
 - Any mix of site URLs, PDF paths, document paths/URLs, Figma links, and media files
@@ -1009,7 +1009,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.7
+**Version:** 1.0.8
 
 **Inputs:**
 - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
@@ -1031,21 +1031,20 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/pre-design/content/fetched/video/_batch-<date>.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/index.md |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/segments.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/timeline.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/speech.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/speech.txt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/speakers.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/wcag-transcription.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/frames/ |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/audio-description.md |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/publisher-captions.vtt |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/caption-diff.json |  |
-| .twt-artifacts/pre-design/content/fetched/video/<slug>/generated-captions.vtt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/wcag-transcription.txt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.vtt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/captions.srt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/descriptions.vtt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/chapters.vtt |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/data/ (segments.json, outline.json, media.json, frames.json, frames/, captions.json, caption-diff.json, publisher-captions.vtt, audio-description.md) |  |
 
 ### /twt-content-optimize
 
@@ -1108,7 +1107,7 @@ flowchart TB
 ### /twt-curation-define
 
 **Category:** curation
-**Version:** 1.2.2
+**Version:** 1.2.3
 
 **Inputs:**
 - Optional answers; otherwise interactive

@@ -298,7 +298,7 @@
         <span class="alt-skill-head">
           <a href="skills/twt-content-fetch.html"><code>/twt-content-fetch</code></a>
           <span class="alt-skill-name">Content Fetch</span>
-          <span class="alt-skill-version">v1.1.10</span>
+          <span class="alt-skill-version">v1.1.11</span>
         </span>
         <p class="alt-skill-desc">One easy front door for pulling in content you already have. Give it any mix of websites, PDFs, documents, or Figma files and it works out what each one is, sends it to the right reader, and hands you clean, consistent Markdown.</p>
         <span class="token-usage token-usage--high" data-token-usage="high" aria-label="Token usage: High">
@@ -394,9 +394,9 @@
         <span class="alt-skill-head">
           <a href="skills/twt-content-fetch-video.html"><code>/twt-content-fetch-video</code></a>
           <span class="alt-skill-name">Content Fetch Video</span>
-          <span class="alt-skill-version">v1.0.7</span>
+          <span class="alt-skill-version">v1.0.8</span>
         </span>
-        <p class="alt-skill-desc">Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets three files worth reading: <code>index.md</code>, the verbatim machine record of what was said; <code>transcript.md</code>, the <strong>descriptive transcript</strong> — the same timeline with each speaker named where they start speaking, and on-screen text, visible action, and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information; and <code>timeline.md</code>, that same content as <strong>one stream with a timestamp on every beat</strong>, for citing a moment rather than reading a document. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.</p>
+        <p class="alt-skill-desc">Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets the same content in the shapes different readers need it in. <code>transcript.md</code> is the <strong>descriptive transcript</strong> — each speaker named where they start speaking, with on-screen text, visible action and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. <code>timeline.md</code> is that content as <strong>one stream with a timestamp on every beat</strong>, for citing a moment. <code>speech.md</code> and <code>speech.txt</code> are the words alone, timed and untimed. <code>speakers.md</code> is who is in it. <code>wcag-transcription.json</code> / <code>.txt</code> are the accessibility rows. <code>captions.vtt</code> / <code>.srt</code>, <code>descriptions.vtt</code> and <code>chapters.vtt</code> are what you hang on the video. <code>index.md</code> is the speech, attributed, and the file the rest of the pipeline reads. The machinery that built them — segments, keyframes, stream layout, the caption diff — sits in <code>data/</code>, so the directory listing shows only what is worth opening. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.</p>
         <span class="token-usage token-usage--mid" data-token-usage="mid" aria-label="Token usage: Mid">
     <span class="token-usage__label">Token usage</span>
     <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i class="is-filled"></i><i></i><i></i></span>

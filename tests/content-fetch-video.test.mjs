@@ -10,9 +10,14 @@ import {
   parseCaptions, captionSegments, diffTranscripts, brightcoveRef, ingestCaptions,
   parseTranscriptBlocks, beatsFromBlocks, referenceWords, anchorBeats, writeTimeline,
   TIMELINE_FILE, splitSpeechBeats, WCAG_FILE, splitDelivery,
-  splitCueText, wrapCue, cuesFromSegments, formatVttTime, buildVtt, captionsSkipReason,
-  maybeWriteGeneratedCaptions, captionSourceLine,
-  GENERATED_CAPTIONS_FILE, CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
+  splitCueText, wrapCue, cuesFromSegments, formatVttTime, buildVtt, captionOrigin,
+  writeSubtitles, subtitleWarnings, captionSourceLine, ORIGIN_TEXT, SUBTITLE_FILE, SRT_FILE,
+  buildSrt, formatSrtTime, buildSpeechMd, buildSpeechTxt, speechParagraphs, buildWcagText,
+  speakerCards, speakerRoster, buildSpeakersMd, cuesFromBeats, buildChaptersVtt, fileMapLines,
+  SPEECH_MD_FILE, SPEECH_TXT_FILE, SPEAKERS_FILE, WCAG_TEXT_FILE, DESCRIPTIONS_FILE,
+  CHAPTERS_FILE, DATA_DIR, dataPath, artifactPath, readArtifact, writeData, migrateFlatArtifacts,
+  buildWcagTranscription,
+  CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -834,7 +839,7 @@ test('index.md prefers the publisher captions and says so in its frontmatter', (
     result, captionSegments: segs([0, 10, 'will lose by death a parent.']),
   });
   assert.match(md, /text_source: publisher-captions/);
-  assert.match(md, /captions: publisher-captions\.vtt/);
+  assert.match(md, /captions: captions\.vtt/);
   assert.match(md, /by death/, 'the publisher wrote this one; the recognizer only guessed');
   assert.ok(!/by depth/.test(md), 'the guess must not be what downstream reads');
 });
@@ -843,7 +848,10 @@ test('index.md says plainly when it is only the recognizer talking', () => {
   const result = { duration: 30, model: 'small', language: 'en', segments: segs([0, 10, 'a line.']) };
   const md = buildIndexMd({ source: 'https://cdn.test/a.mp4', slug: 'a', title: 'A', fetchedAt: '2026-08-25', result });
   assert.match(md, /text_source: speech-recognition/);
-  assert.ok(!/captions:/.test(md));
+  // The caption file still exists — the recognizer wrote it. What changes is the
+  // claim: text_source says whose words these are, and _meta.md says who cut the cues.
+  assert.match(md, /captions: captions\.vtt/);
+  assert.ok(!/publisher/.test(md));
 });
 
 test('PART 3 leads with the caption disagreements — they are the checkable ones', () => {
@@ -921,9 +929,12 @@ lose by death a parent or sibling.
 
   assert.equal(out.captions.length, 1);
   assert.equal(out.diff.length, 1);
-  assert.match(readFileSync(join(dir, 'publisher-captions.vtt'), 'utf8'), /^WEBVTT/,
+  assert.match(readFileSync(dataPath(dir, 'publisher-captions.vtt'), 'utf8'), /^WEBVTT/,
     'the track is kept exactly as the publisher wrote it');
-  const recorded = JSON.parse(readFileSync(join(dir, 'caption-diff.json'), 'utf8'));
+  assert.equal(out.track.format, 'vtt');
+  assert.ok(!existsSync(join(dir, 'publisher-captions.vtt')),
+    'the machine files live under data/ so the directory listing shows only what is read');
+  const recorded = JSON.parse(readFileSync(dataPath(dir, 'caption-diff.json'), 'utf8'));
   assert.equal(recorded.format, 'vtt');
   assert.equal(recorded.cues, 1);
   assert.match(recorded.differences[0].asr, /depth/);
@@ -1082,6 +1093,8 @@ function descriptiveDir(prose) {
     `PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 1 items)\nPART 3 - POSSIBLE ISSUES\n${REVIEW_HEADING}\nfound nothing\nEND OF REPORT`);
   writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
   writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
+  writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 170, segments: [{ start: 0, end: 1, text: 'a' }] } });
   if (prose !== null) {
     writeFileSync(join(dir, 'transcript.md'), prose);
     // Built after the prose, as a real run does — the staleness check compares mtimes.
@@ -1428,76 +1441,138 @@ test('the file itself says the words were guessed from audio', () => {
   assert.ok(!vtt.includes('SECRET'), 'a signed token must not reach the caption file either');
 });
 
-test('a recording that already has captions does not get a second, worse set', () => {
-  assert.equal(captionsSkipReason({ publisherCaptions: [{ text: 'x' }], segments: segs([0, 1, 'a']) }),
-    'publisher-captions');
-  assert.equal(captionsSkipReason({ embeddedCues: 42, segments: segs([0, 1, 'a']) }), 'embedded-track');
-  assert.equal(captionsSkipReason({ segments: [] }), 'no-speech');
-  assert.equal(captionsSkipReason({ embeddedCues: 0, segments: segs([0, 1, 'a']) }), null);
+test('captions come from the publisher, then the media file, then the recognizer', () => {
+  assert.equal(captionOrigin({ publisherCaptions: [{ text: 'x' }], embeddedCues: 9, segments: segs([0, 1, 'a']) }),
+    'publisher', 'a person wrote it — nothing else outranks that');
+  assert.equal(captionOrigin({ embeddedCues: 42, segments: segs([0, 1, 'a']) }), 'embedded');
+  assert.equal(captionOrigin({ embeddedCues: 0, segments: segs([0, 1, 'a']) }), 'generated');
+  assert.equal(captionOrigin({ segments: [] }), null, 'nothing said, nothing to caption');
 });
 
-test('maybeWriteGeneratedCaptions writes the track and says so in the warnings', () => {
+test('every recording gets captions.vtt and captions.srt, whoever wrote the words', () => {
   const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
-  const warnings = [];
   const result = { model: 'small', language: 'en', duration: 6,
     segments: segs([0, 4, 'Welcome to the review.']) };
-  const out = maybeWriteGeneratedCaptions({ outDir: dir, source: 'a.mp4', result,
-    fetchedAt: '2026-08-26', embeddedCues: 0, warnings });
-  assert.equal(out.file, GENERATED_CAPTIONS_FILE);
-  assert.equal(out.cues, 1);
-  assert.ok(existsSync(join(dir, GENERATED_CAPTIONS_FILE)));
-  assert.ok(warnings.some((w) => /unchecked machine/.test(w)), 'the user must be told it is unchecked');
+  const out = writeSubtitles({ outDir: dir, source: 'a.mp4', result, fetchedAt: '2026-08-26' });
+  assert.equal(out.file, SUBTITLE_FILE);
+  assert.equal(out.srt, SRT_FILE);
+  assert.equal(out.origin, 'generated');
+  assert.ok(existsSync(join(dir, SUBTITLE_FILE)));
+  assert.ok(existsSync(join(dir, SRT_FILE)));
+  assert.match(readFileSync(join(dir, SUBTITLE_FILE), 'utf8'), /speech recognition, not a checked caption track/);
+  const warned = subtitleWarnings({ subtitles: out });
+  assert.ok(warned.some((w) => /unchecked machine/.test(w)), 'the user must be told it is unchecked');
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('it writes nothing when the publisher already shipped a track', () => {
+test("a publisher's WebVTT ships byte for byte under the same name", () => {
   const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
-  const warnings = [];
-  const out = maybeWriteGeneratedCaptions({ outDir: dir, source: 'a.mp4',
-    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Welcome.']) },
-    publisherCaptions: [{ start: 0, end: 4, text: 'Welcome.' }], warnings });
-  assert.equal(out.file, null);
-  assert.equal(out.skipped, 'publisher-captions');
-  assert.ok(!existsSync(join(dir, GENERATED_CAPTIONS_FILE)));
-  assert.deepEqual(warnings, [], 'skipping the right thing is not a warning');
+  const raw = 'WEBVTT\n\nintro\n00:00:00.000 --> 00:00:04.000 line:90%\nWelcome.\n';
+  const parsed = parseCaptions(raw);
+  const out = writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Wellcome.']) },
+    publisherTrack: { raw, format: 'vtt', cues: parsed.cues, file: 'publisher-captions.vtt' } });
+  assert.equal(out.origin, 'publisher');
+  assert.equal(readFileSync(join(dir, SUBTITLE_FILE), 'utf8'), raw,
+    'a track someone wrote, re-emitted by a formatter, is no longer the track they published');
+  assert.match(readFileSync(join(dir, SRT_FILE), 'utf8'), /00:00:00,000 --> 00:00:04,000/);
+  assert.ok(!readFileSync(join(dir, SUBTITLE_FILE), 'utf8').includes('Wellcome'),
+    "the recognizer's guess must not reach the file the video ships");
+  assert.deepEqual(subtitleWarnings({ subtitles: out }), [], 'nothing to warn about a human-authored track');
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('_meta.md names which caption track is in the directory, and which kind it is', () => {
-  assert.match(captionSourceLine({ captions: [{ text: 'x' }] }), /publisher's own track/);
-  assert.match(captionSourceLine({ generatedCaptions: { file: GENERATED_CAPTIONS_FILE, cues: 12 } }),
-    /generated-captions\.vtt.*12 cues.*unchecked/);
-  assert.match(captionSourceLine({ generatedCaptions: { file: null, why: 'no speech was detected, so there is nothing to caption' } }),
-    /^none — no speech/);
+test("a publisher's SRT is converted rather than shipped with a .vtt name on it", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
+  const raw = '1\n00:00:00,000 --> 00:00:04,000\nWelcome.\n';
+  const parsed = parseCaptions(raw);
+  assert.equal(parsed.format, 'srt');
+  const out = writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Welcome.']) },
+    publisherTrack: { raw, format: 'srt', cues: parsed.cues, file: 'publisher-captions.srt' } });
+  assert.equal(out.origin, 'publisher');
+  const vtt = readFileSync(join(dir, SUBTITLE_FILE), 'utf8');
+  assert.match(vtt, /^WEBVTT/, 'a browser <track> will not load a .srt whatever it is called');
+  assert.match(vtt, /Converted from the publisher's SRT/);
+  assert.match(vtt, /00:00:00\.000 --> 00:00:04\.000/);
+  assert.match(vtt, /Welcome\./);
+  rmSync(dir, { recursive: true, force: true });
 });
 
-test('verify rejects a .vtt no player would load, and notes a directory with neither', () => {
+test("the media file's own subtitle stream is extracted, not re-guessed", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-vtt-'));
+  const out = writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Wellcome.']) },
+    embeddedCues: [{ start: 0, end: 4, text: 'Welcome.' }] });
+  assert.equal(out.origin, 'embedded');
+  const vtt = readFileSync(join(dir, SUBTITLE_FILE), 'utf8');
+  assert.match(vtt, /Extracted from the media file's own subtitle stream/);
+  assert.match(vtt, /Welcome\./);
+  assert.ok(!vtt.includes('Wellcome'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('_meta.md names the caption file and says who wrote the words in it', () => {
+  assert.match(captionSourceLine({ file: 'captions.vtt', srt: 'captions.srt', cues: 57, origin: 'publisher',
+    why: ORIGIN_TEXT.publisher }), /captions\.vtt.*57 cues.*publisher's own track/);
+  assert.match(captionSourceLine({ file: 'captions.vtt', srt: 'captions.srt', cues: 12, origin: 'generated',
+    why: ORIGIN_TEXT.generated }), /unchecked machine output/);
+  assert.match(captionSourceLine({ file: null, why: ORIGIN_TEXT.null }), /^none — no speech/);
+});
+
+test('verify rejects a .vtt no player would load, and misses one that is absent', () => {
   const dir = descriptiveDir(GOOD_PROSE);
-  writeFileSync(join(dir, GENERATED_CAPTIONS_FILE), 'WEBVTT\n\nthis was written by hand\n');
+  writeFileSync(join(dir, SUBTITLE_FILE), 'WEBVTT\n\nthis was written by hand\n');
   const bad = verifyArtifacts(dir, { expectDescriptive: true });
   assert.equal(bad.ok, false);
-  assert.ok(bad.problems.some((p) => /not valid WebVTT/.test(p)));
+  assert.ok(bad.problems.some((p) => /captions\.vtt is not valid WebVTT/.test(p)));
 
   const result = { model: 'small', language: 'en', duration: 6, segments: segs([0, 4, 'Welcome.']) };
-  writeFileSync(join(dir, GENERATED_CAPTIONS_FILE),
-    buildVtt(cuesFromSegments(result.segments, { duration: 6 }), { source: 'a.mp4', result }));
-  assert.deepEqual(verifyArtifacts(dir, { expectDescriptive: true }).problems, []);
+  writeSubtitles({ outDir: dir, source: 'a.mp4', result });
+  assert.ok(!verifyArtifacts(dir, { expectDescriptive: true }).problems
+    .some((p) => /captions/.test(p)));
 
-  rmSync(join(dir, GENERATED_CAPTIONS_FILE));
-  assert.ok(verifyArtifacts(dir).notes.some((n) => /No subtitle file in this directory/.test(n)));
+  rmSync(join(dir, SUBTITLE_FILE));
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /No captions\.vtt/.test(n)),
+    'a recording with speech and no caption track is worth saying out loud');
+  assert.ok(verifyArtifacts(dir, { expectDescriptive: true }).problems
+    .some((p) => /No captions\.vtt/.test(p)));
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('the report says which caption track was written, or why none was', () => {
-  const made = reportOf({ generatedCaptions: { file: GENERATED_CAPTIONS_FILE, cues: 41, skipped: null } });
-  assert.match(made.replace(/\s+/g, ' '), /none were published with this recording/);
-  assert.match(made, /generated-captions\.vtt/);
-  assert.match(made, /unchecked machine output/);
+test('verify calls out a leftover generated-captions.vtt from an older run', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 6, segments: segs([0, 4, 'Welcome.']) } });
+  writeFileSync(join(dir, 'generated-captions.vtt'), 'WEBVTT\n\n1\n00:00:00.000 --> 00:00:04.000\nWelcome.\n');
+  const v = verifyArtifacts(dir);
+  assert.ok(v.notes.some((n) => /generated-captions\.vtt is left over/.test(n)),
+    'two caption files beside one video is how the wrong one ships');
+  rmSync(dir, { recursive: true, force: true });
+});
 
-  const skipped = reportOf({ generatedCaptions: { file: null, cues: 0, skipped: 'publisher-captions',
-    why: "the publisher's own caption track is already in the directory" } });
-  assert.match(skipped.replace(/\s+/g, ' '), /no track was generated — the publisher's own caption track/);
-  assert.ok(!skipped.includes('generated-captions.vtt'));
+test('the report says which caption file was written and where its words came from', () => {
+  const made = reportOf({ subtitles: { file: 'captions.vtt', srt: 'captions.srt', cues: 41,
+    origin: 'generated', why: ORIGIN_TEXT.generated } });
+  assert.match(made, /captions\.vtt \+ captions\.srt \(41 cues\)/);
+  assert.match(made.replace(/\s+/g, ' '), /unchecked machine output/);
+  assert.match(made.replace(/\s+/g, ' '), /Read it against the recording/);
+
+  const published = reportOf({ subtitles: { file: 'captions.vtt', srt: 'captions.srt', cues: 57,
+    origin: 'publisher', why: ORIGIN_TEXT.publisher } });
+  assert.match(published.replace(/\s+/g, ' '), /the publisher's own track, copied verbatim/);
+  assert.ok(!published.includes('Read it against the recording'),
+    'a human-authored track needs no health warning');
+});
+
+test('SRT is the same cues with a comma and no NOTE block', () => {
+  const cues = cuesFromSegments(segs([0, 4, 'Welcome to the review.'], [4, 9, 'Here is what changed.']),
+    { duration: 9 });
+  const srt = buildSrt(cues);
+  assert.match(srt, /^1\n00:00:00,000 --> /);
+  assert.match(srt, /\n2\n00:00:04,000 --> /);
+  assert.ok(!srt.includes('NOTE'), 'SRT has no comment syntax — a NOTE line would render as a caption');
+  assert.equal(formatSrtTime(3661.5), '01:01:01,500');
 });
 
 // ---- sentence-level beats, the WCAG table, and the re-stamped index ---------------
@@ -1545,6 +1620,8 @@ function granularDir() {
     `PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 5 items)\nPART 3 - POSSIBLE ISSUES\n${REVIEW_HEADING}\nfound nothing\nEND OF REPORT`);
   writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
   writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
+  writeSubtitles({ outDir: dir, source: 'a.mp4',
+    result: { model: 'small', duration: 45, segments: GRANULAR_REF } });
   writeFileSync(join(dir, 'transcript.md'), GRANULAR_PROSE);
   return dir;
 }
@@ -1833,4 +1910,262 @@ test('the WCAG caption is the words spoken, with the delivery in the descriptive
   // The prose keeps it exactly where the descriptive pass put it.
   assert.match(readFileSync(join(dir, 'transcript.md'), 'utf8'), /\*\(voice-over\)\* The unfortunate/);
   rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- the speech-only files, the roster, and the two extra tracks -----------------
+
+test('speech.md stamps every line and carries none of the picture', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const md = readFileSync(join(dir, SPEECH_MD_FILE), 'utf8');
+  assert.match(md, /^kind: speech$/m);
+  assert.match(md, /^lines: 5$/m);
+  const stamped = md.match(/^\*\*\[\d+:\d\d\][^*]*\*\*/gm) || [];
+  assert.equal(stamped.length, 5, 'one per sentence, the granularity the report uses');
+  assert.match(md, /^\*\*\[0:06\] Maria Collins:\*\* This was and is/m);
+  assert.ok(!md.includes('[Visual:'), 'the visuals are what this file exists to leave out');
+  assert.ok(!md.includes('[On screen:'));
+  assert.ok(!md.includes('[No speech'));
+  assert.match(md, /^## \[0:00\] Why a life insurer took this on$/m, 'chapters still orient the reader');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('speech.txt is the words and nothing else — no frontmatter, no times, no names', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const txt = readFileSync(join(dir, SPEECH_TXT_FILE), 'utf8');
+  assert.ok(!txt.startsWith('---'), 'a file for pasting into a document starts with the words');
+  assert.ok(!/\[\d+:\d\d\]/.test(txt), 'no timings');
+  assert.ok(!/Maria Collins/.test(txt), 'no speaker names');
+  assert.ok(!/\[Visual:|\[On screen:|\[No speech/.test(txt), 'no markers');
+  assert.match(txt, /^In 2008, the New York Life Foundation/);
+  // Consecutive sentences by one speaker rejoin into a paragraph; a new speaker
+  // starts a new one. Five beats from two speakers is two paragraphs.
+  assert.equal(txt.trim().split(/\n\n+/).length, 2);
+  assert.match(txt, /philanthropic focus\. This was and is/, 'the sentence split is undone for prose');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a voice-over marker never becomes words in the speech files', () => {
+  const beats = [
+    { kind: 'speech', time: 0, speaker: 'Jim', speech: 'We opened the school.' },
+    { kind: 'speech', time: 6, speaker: 'Jim', speech: '*(voice-over)* Then it changed.' },
+  ];
+  assert.equal(buildSpeechTxt({ beats }), 'We opened the school. Then it changed.\n');
+  const md = buildSpeechMd({ beats, chapters: [], meta: { source: 's', title: 'T', duration: '0:00:10',
+    durationSeconds: 10, language: 'en', textSource: 'x', fetchedAt: '2026-08-26' } });
+  assert.ok(!md.includes('voice-over'), 'a stage direction is not something anybody said');
+});
+
+test('speechParagraphs groups by speaker, not by sentence', () => {
+  const paras = speechParagraphs([
+    { kind: 'speech', time: 0, speaker: 'A', speech: 'One.' },
+    { kind: 'markers', time: 3, markers: ['[Visual: a cut.]'] },
+    { kind: 'speech', time: 4, speaker: 'A', speech: 'Two.' },
+    { kind: 'speech', time: 8, speaker: 'B', speech: 'Three.' },
+  ]);
+  assert.equal(paras.length, 2);
+  assert.equal(paras[0].text, 'One. Two.', 'a marker between two of a speaker\'s sentences is not a handover');
+  assert.equal(paras[1].speaker, 'B');
+});
+
+test('wcag-transcription.txt is the JSON rows in the shape a reviewer reads', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const txt = readFileSync(join(dir, WCAG_TEXT_FILE), 'utf8');
+  const doc = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8'));
+  assert.equal((txt.match(/^time: /gm) || []).length, doc.entries.length,
+    'the two files are one list — a row in one and not the other is a drift nobody would see');
+  assert.equal((txt.match(/^caption:$/gm) || []).length, doc.entries.length);
+  assert.equal((txt.match(/^author:$/gm) || []).length, doc.entries.length);
+  assert.match(txt, /time: 0:00\n\ninformative caption:\n\[Visual: fade up from black/);
+  assert.match(txt, /caption:\nIn 2008, the New York Life Foundation/);
+  assert.match(txt, /author:\nMaria Collins/);
+  // A row with description and no speech is a real row, and says so rather than
+  // leaving a reviewer to wonder whether a field went missing.
+  assert.match(txt, /caption:\n\(no speech\)/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('speakers.md reads the title off the name card and totals each voice', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const md = readFileSync(join(dir, SPEAKERS_FILE), 'utf8');
+  assert.match(md, /^speakers: 2$/m);
+  assert.match(md, /\| Maria Collins \| Vice President · New York Life Foundation \| 0:00 \| 3 \|/);
+  assert.match(md, /\| David Schonfeld \|/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a name card is only read as one when it has a name and a role in it', () => {
+  const cards = speakerCards([
+    { markers: ['[On screen: name card — "Maria Collins / Vice President / New York Life Foundation".]'] },
+    { markers: ['[On screen: title card — "A film about grief".]'] },
+    { markers: ['[Visual: a wide shot of "the building".]'] },
+  ]);
+  assert.equal(cards.size, 1, 'a title with no separator is a caption, not a person');
+  assert.deepEqual(cards.get('mariacollins'),
+    { name: 'Maria Collins', role: 'Vice President · New York Life Foundation' });
+});
+
+test('an uncertain name keeps its [?] and is called out under the table', () => {
+  const beats = [{ kind: 'speech', time: 0, speaker: 'Terrilyn Rivers-Cannon [?]', speech: 'We work together.' }];
+  const md = buildSpeakersMd({ beats, meta: { source: 's', title: 'T', duration: '0:00:10',
+    durationSeconds: 10, fetchedAt: '2026-08-26' } });
+  assert.match(md, /\| Terrilyn Rivers-Cannon \[\?\] \| — \|/, 'no card was shown, so no title is invented');
+  assert.match(md, /1 name\(s\) above are marked uncertain/);
+});
+
+test('the roster shares by words and reports a speaking span for each voice', () => {
+  const rows = speakerRoster([
+    { kind: 'speech', time: 0, speaker: 'A', speech: 'one two three' },
+    { kind: 'speech', time: 10, speaker: 'B', speech: 'four' },
+  ], { durationSeconds: 20 });
+  assert.equal(rows[0].name, 'A');
+  assert.equal(rows[0].words, 3);
+  assert.equal(rows[0].share, 75);
+  assert.equal(rows[0].seconds, 10);
+  assert.equal(rows[1].seconds, 10, 'the last voice runs to the end of the recording');
+});
+
+test('descriptions.vtt carries the picture and never the speech', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const vtt = readFileSync(join(dir, DESCRIPTIONS_FILE), 'utf8');
+  assert.match(vtt, /^WEBVTT/);
+  assert.ok(parseCaptions(vtt), 'a player has to be able to load it');
+  assert.match(vtt, /kind="descriptions"/, 'the file says which track it is meant to be hung on');
+  assert.match(vtt, /\[Visual: fade up from black/);
+  assert.ok(!vtt.includes('In 2008, the New York Life Foundation'),
+    'the speech is in captions.vtt — a viewer hearing both would hear the film twice');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a description cue runs until the moment it describes is over', () => {
+  const cues = cuesFromBeats([
+    { kind: 'markers', time: 0, markers: ['[Visual: a cut.]'] },
+    { kind: 'speech', time: 6, speaker: 'A', speech: 'hello' },
+    { kind: 'markers', time: 12, markers: ['[Visual: an end card.]'] },
+  ], { durationSeconds: 20 });
+  assert.equal(cues.length, 2, 'a beat with nothing to describe gets no cue');
+  assert.deepEqual([cues[0].start, cues[0].end], [0, 6]);
+  assert.deepEqual([cues[1].start, cues[1].end], [12, 20], 'the last one runs to the end');
+});
+
+test('chapters.vtt is the chapter list a player can act on, or nothing at all', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  const vtt = readFileSync(join(dir, CHAPTERS_FILE), 'utf8');
+  assert.match(vtt, /^Chapter 1\n00:00:00\.000 --> 00:00:22\.000\nWhy a life insurer took this on$/m);
+  assert.ok(parseCaptions(vtt));
+  assert.equal(buildChaptersVtt([], { durationSeconds: 20 }), null,
+    'an empty chapters track would look like a broken one');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- data/ ------------------------------------------------------------------------
+
+test('the machine files go under data/ and reads still find an old flat directory', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-data-'));
+  writeData(dir, 'segments.json', '{"segments":[]}');
+  assert.ok(existsSync(join(dir, DATA_DIR, 'segments.json')));
+  assert.equal(artifactPath(dir, 'segments.json'), dataPath(dir, 'segments.json'));
+  assert.equal(readArtifact(dir, 'segments.json'), '{"segments":[]}');
+
+  const flat = mkdtempSync(join(tmpdir(), 'twt-flat-'));
+  writeFileSync(join(flat, 'segments.json'), '{"segments":[1]}');
+  assert.equal(artifactPath(flat, 'segments.json'), join(flat, 'segments.json'),
+    'a directory written before the split still verifies and still re-runs');
+  assert.equal(readArtifact(flat, 'nothing.json'), null);
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(flat, { recursive: true, force: true });
+});
+
+test('_meta.md says which file to open, and what data/ is not', () => {
+  const map = fileMapLines(true).join('\n');
+  assert.match(map, /\| `index\.md` \| the speech, attributed per speaker/);
+  assert.match(map, /`transcript\.txt`.*the report/);
+  assert.match(map, /`data\/`.*Nothing in here is content/);
+  assert.match(map, /`speech\.txt`/);
+  assert.match(map, /`captions\.vtt` \/ `captions\.srt`/);
+
+  const verbatim = fileMapLines(false).join('\n');
+  assert.ok(!verbatim.includes('transcript.md'), 'a verbatim run has no descriptive transcript to list');
+  assert.ok(!verbatim.includes('speech.txt'));
+  assert.match(verbatim, /`index\.md`/);
+  assert.match(verbatim, /re-run with `--force` produces them/);
+});
+
+test('the derived files are rebuilt together and verify catches a stale one', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  assert.deepEqual(verifyArtifacts(dir, { expectDescriptive: true }).problems, []);
+
+  // The prose is edited and the command is not re-run: every file built from it is
+  // now describing a draft that no longer exists.
+  const later = Date.now() / 1000 + 60;
+  utimesSync(join(dir, 'transcript.md'), later, later);
+  const stale = verifyArtifacts(dir, { expectDescriptive: true }).problems;
+  for (const name of [TIMELINE_FILE, WCAG_FILE, WCAG_TEXT_FILE, SPEECH_MD_FILE, SPEECH_TXT_FILE,
+    SPEAKERS_FILE, DESCRIPTIONS_FILE, CHAPTERS_FILE]) {
+    assert.ok(stale.some((p) => p.startsWith(`${name} is older than transcript.md`)),
+      `${name} went stale without anyone being told`);
+  }
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a missing speech file is a note mid-run and a problem once the pass is claimed done', () => {
+  const dir = granularDir();
+  writeTimeline(dir);
+  rmSync(join(dir, SPEECH_TXT_FILE));
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /No speech\.txt/.test(n)));
+  assert.ok(verifyArtifacts(dir, { expectDescriptive: true }).problems
+    .some((p) => /No speech\.txt/.test(p)));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('an old flat directory is tidied into data/ rather than doubled', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-migrate-'));
+  writeFileSync(join(dir, 'segments.json'), '{"segments":[1]}');
+  writeFileSync(join(dir, 'outline.json'), '{"windows":[]}');
+  writeFileSync(join(dir, 'index.md'), '---\ntitle: T\n---\n');
+  const moved = migrateFlatArtifacts(dir);
+  assert.deepEqual(moved.sort(), ['outline.json', 'segments.json']);
+  assert.equal(readFileSync(dataPath(dir, 'segments.json'), 'utf8'), '{"segments":[1]}');
+  assert.ok(!existsSync(join(dir, 'segments.json')));
+  assert.ok(existsSync(join(dir, 'index.md')), 'the files a person reads stay where they are');
+
+  // A stale flat copy beside a current one in data/ is deleted, not promoted.
+  writeFileSync(join(dir, 'segments.json'), '{"segments":[9,9,9]}');
+  migrateFlatArtifacts(dir);
+  assert.ok(!existsSync(join(dir, 'segments.json')));
+  assert.equal(readFileSync(dataPath(dir, 'segments.json'), 'utf8'), '{"segments":[1]}');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('verify notices a machine file sitting in both places', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  migrateFlatArtifacts(dir);
+  writeFileSync(join(dir, 'segments.json'), '{"segments":[]}');
+  assert.ok(verifyArtifacts(dir).notes.some((n) => /segments\.json exist\(s\) both here and in data\//.test(n)),
+    'the copy at the top level is the one a person opens first');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a directory in the data/ layout verifies clean, not as one full of empty files', () => {
+  const dir = descriptiveDir(GOOD_PROSE);
+  migrateFlatArtifacts(dir);
+  const v = verifyArtifacts(dir, { expectDescriptive: true });
+  assert.deepEqual(v.problems, [], 'a size check that only looks at the top level calls every machine file empty');
+  assert.equal(v.counts['segments.json'], 1);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the slice names the frame folder that actually holds the frames', () => {
+  const one = buildSlice({ from: 0, to: 300, duration: 300, segments: segs([0, 5, 'hello']),
+    frames: [{ t: 4, file: '001-00m04s.jpg' }], framesDir: 'data/frames' });
+  assert.match(one, /- 0:04 — data\/frames\/001-00m04s\.jpg/);
+  const legacy = buildSlice({ from: 0, to: 300, duration: 300, segments: segs([0, 5, 'hello']),
+    frames: [{ t: 4, file: '001-00m04s.jpg' }] });
+  assert.match(legacy, /- 0:04 — frames\/001-00m04s\.jpg/, 'an older directory still resolves');
 });
