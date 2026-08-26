@@ -1009,7 +1009,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.5
+**Version:** 1.0.6
 
 **Inputs:**
 - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
@@ -1035,6 +1035,7 @@ flowchart TB
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md |  |
+| .twt-artifacts/pre-design/content/fetched/video/<slug>/timeline.md |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json |  |
 | .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json |  |

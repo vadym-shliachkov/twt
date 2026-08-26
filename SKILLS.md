@@ -537,10 +537,10 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.5
+**Version:** 1.0.6
 **Accepts arguments:** yes
 
-Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets two files worth reading: `index.md`, the verbatim machine record of what was said, and `transcript.md`, the **descriptive transcript** — the same timeline with each speaker named where they start speaking, and on-screen text, visible action, and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
+Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets three files worth reading: `index.md`, the verbatim machine record of what was said; `transcript.md`, the **descriptive transcript** — the same timeline with each speaker named where they start speaking, and on-screen text, visible action, and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information; and `timeline.md`, that same content as **one stream with a timestamp on every beat**, for citing a moment rather than reading a document. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
 
 **Inputs:**
 - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files
@@ -560,6 +560,7 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.txt
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/transcript.md
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/timeline.md
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/outline.json
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/media.json
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/frames.json
@@ -581,6 +582,7 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - **Every** source given gets its own `.twt-artifacts/pre-design/content/fetched/video/<slug>/` — one recording per directory, named from its own filename, never merged and never overwriting each other
 - `index.md` has frontmatter (source, duration, language, model, `text_source`, fetched-at) and readable paragraphs each anchored with a `[mm:ss]` timestamp
 - `transcript.md` exists for **every** recording, carrying every element in the coverage table below or saying plainly why an element is absent from this source, with each speaker named at the point they start speaking and the visual/on-screen/sound markers interleaved in timeline order — not collected into a separate section at the end
+- `timeline.md` exists for every recording that has a `transcript.md`, was **generated** by the `timeline` command rather than written, and is not older than the `transcript.md` it came from
 - `verify` passes for every directory: the whole declared file set is on disk, the segment count agrees across `index.md`, `segments.json`, `_meta.md` and the report, and the report carries the script's own scaffolding rather than prose written by hand
 - Where a caption track was available it was used: `publisher-captions.vtt` and `caption-diff.json` exist, `index.md` says `text_source: publisher-captions`, and every disagreement is in PART 3
 - `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
