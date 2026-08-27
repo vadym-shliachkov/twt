@@ -14,7 +14,7 @@
 //     real audio-description track), and text vs bitmap subtitle streams.
 //
 //   node transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]
-//        [--model base] [--language auto] [--title <name>] [--slug <slug>]
+//        [--model medium] [--language auto] [--title <name>] [--slug <slug>]
 //        [--python <exe>] [--keep-source] [--force] [--verbatim] [--max-frames 60]
 //        [--frame-gap 4] [--frame-width 960] [--frame-threshold 0.06]
 //        [--frame-band-threshold 0.04] [--card-probe 1.6]
@@ -85,6 +85,64 @@ const WORKER = join(HERE, "whisper_transcribe.py");
 const PROBE = join(HERE, "media_probe.py");
 const DEFAULT_OUT = ".twt-artifacts/pre-design/content/fetched/video";
 const MEDIA_EXT = /\.(mp4|m4v|mov|mkv|webm|avi|wmv|flv|mpe?g|m4a|mp3|wav|aac|ogg|opus|flac)$/i;
+
+// The default is the accurate model, not the fast one, and the fast ones are the
+// opt-in. Measured on a 2:50 recording whose publisher shipped human-written
+// captions, so "disagreements with the captions" is a score rather than an opinion:
+// `base` disagreed in 15 places, `small` in 11, `medium` in 9. The counts hide the
+// finding. `small`'s misses were the words the film was *about* — "bereavement" as
+// "grievement", "grief" as "grease" and "greaves", "grief-sensitive" as
+// "grease-sensitive" — five times over. `medium` got every one of them right, and
+// what it had left was articles, plus one place where it transcribed "gonna" and the
+// human captioner had tidied it to "going to", which is the recognizer being the more
+// faithful of the two.
+//
+// Transcription is unattended, and a transcript nobody re-reads is exactly the one
+// that must not be guessing at the vocabulary. On the machine this was measured on,
+// `medium` ran at 3.3x real time — an hour of audio in eighteen minutes.
+export const DEFAULT_MODEL = "medium";
+// Below the default. `tiny` and `base` are the error-prone end and are called that;
+// `small` is a deliberate trade and gets a milder note.
+export const ROUGH_MODELS = ["tiny", "base"];
+export const BELOW_DEFAULT = ["tiny", "base", "small"];
+
+// What each size costs on disk, and where its weights come from. The first run of a
+// size downloads them; every run after is free. `check` reports which are already
+// here, because "1.5 GB" and "1.5 GB you already have" are different answers to
+// "should I use the accurate one", and the user is the one who gets to decide.
+//
+// relTime is measured wall time relative to `medium` on one machine — a ratio rather
+// than seconds, because the seconds are that machine's and the ratio travels.
+export const MODELS = [
+  { name: "tiny", repo: "Systran/faster-whisper-tiny", disk: "75 MB", relTime: null },
+  { name: "base", repo: "Systran/faster-whisper-base", disk: "142 MB", relTime: 0.12 },
+  { name: "small", repo: "Systran/faster-whisper-small", disk: "464 MB", relTime: 0.35 },
+  { name: "medium", repo: "Systran/faster-whisper-medium", disk: "1.5 GB", relTime: 1 },
+  { name: "large-v3", repo: "Systran/faster-whisper-large-v3", disk: "3.1 GB", relTime: null },
+  { name: "large-v3-turbo", repo: "mobiuslabsgmbh/faster-whisper-large-v3-turbo", disk: "1.6 GB", relTime: null },
+];
+
+function hubDir() {
+  const home = process.env.HF_HOME
+    ? join(process.env.HF_HOME, "hub")
+    : join(process.env.USERPROFILE || process.env.HOME || ".", ".cache", "huggingface", "hub");
+  return process.env.HUGGINGFACE_HUB_CACHE || home;
+}
+
+// The weights, specifically. An interrupted download leaves the small files behind —
+// config.json, the tokenizer, the vocabulary — with the 1.5 GB `model.bin` still a
+// `.incomplete` blob, so "the directory exists" and even "it has real files in it"
+// both report a model as ready that will make the user wait for the rest of it.
+export function modelIsCached(repo, dir = hubDir()) {
+  const path = join(dir, `models--${repo.replace(/\//g, "--")}`, "snapshots");
+  try {
+    return readdirSync(path).some((snap) => existsSync(join(path, snap, "model.bin")));
+  } catch { return false; }
+}
+
+export function modelReport(dir = hubDir()) {
+  return MODELS.map((m) => ({ ...m, cached: modelIsCached(m.repo, dir), isDefault: m.name === DEFAULT_MODEL }));
+}
 const UA = "Mozilla/5.0 (compatible; twt-content-fetch-video/1.0; +https://github.com/vadym-shliachkov/twt)";
 
 // Paragraphing thresholds — tuned so a paragraph is a readable unit of speech,
@@ -186,7 +244,7 @@ function usage(msg) {
   console.error("Usage: transcribe-video.mjs check [--python <exe>]");
   console.error("       transcribe-video.mjs probe <path> [--python <exe>]");
   console.error("       transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]");
-  console.error("           [--model base] [--language auto] [--title <name>] [--slug <slug>]");
+  console.error("           [--model medium] [--language auto] [--title <name>] [--slug <slug>]");
   console.error("           [--python <exe>] [--keep-source] [--force] [--verbatim]");
   console.error("           [--max-frames 60] [--captions <url-or-path>]");
   console.error("       transcribe-video.mjs batch-index <out-dir> --slugs <a,b,c> [--file <name>]");
@@ -251,6 +309,11 @@ function doCheck() {
     return;
   }
   console.log(`faster-whisper: ${fw}`);
+  console.log(`default model: ${DEFAULT_MODEL} (accuracy over speed; override with --model <name>)`);
+  for (const m of modelReport()) {
+    console.log(`  ${m.name.padEnd(15)} ${m.disk.padStart(7)}  `
+      + `${m.cached ? "downloaded" : "not downloaded"}${m.isDefault ? "  <- default" : ""}`);
+  }
   console.log("STATUS: ok");
 }
 
@@ -952,8 +1015,14 @@ export function detectIssues({ segments = [], duration = 0, language_probability
   if (typeof langProb === "number" && langProb < 0.75) {
     run.push(`Language detection was not confident (${langProb}) — if the language is wrong, everything downstream of it is too. Re-run with --language <code>.`);
   }
-  if (["tiny", "base"].includes(model)) {
-    run.push(`Transcribed with the \`${model}\` model, which is the error-prone end of the range. Re-run with --model small (or medium) before quoting any of this.`);
+  if (ROUGH_MODELS.includes(model)) {
+    run.push(`Transcribed with the \`${model}\` model, which is the error-prone end of the range. `
+      + `Re-run with --model ${DEFAULT_MODEL} before quoting any of this.`);
+  } else if (BELOW_DEFAULT.includes(model)) {
+    run.push(`Transcribed with \`${model}\` rather than the default \`${DEFAULT_MODEL}\`. Where it `
+      + "goes wrong is on the words a recording is about — domain vocabulary, product names and "
+      + `proper nouns — which is what you are most likely to quote. Re-run with --model ${DEFAULT_MODEL} `
+      + "before treating any of this as the wording.");
   }
   for (const w of warnings) run.push(w);
 
@@ -2967,7 +3036,7 @@ function pyProbe(py, args) {
 
 function pyTranscribe(py, media, outJson) {
   return spawnSync(py.exe, [...py.args, WORKER, "--media", media, "--out", outJson,
-    "--model", flag("--model", "base"), "--language", flag("--language", "auto")],
+    "--model", flag("--model", DEFAULT_MODEL), "--language", flag("--language", "auto")],
   { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
 }
 
@@ -3513,7 +3582,7 @@ async function runOne({ source, py, outRoot }) {
 
     const jsonPath = dataPath(outDir, "segments.json");
     const args = [...py.args, WORKER, "--media", mediaPath, "--out", jsonPath,
-      "--model", flag("--model", "base"), "--language", flag("--language", "auto")];
+      "--model", flag("--model", DEFAULT_MODEL), "--language", flag("--language", "auto")];
     const run = spawnSync(py.exe, args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
     // Exit 3 is the engine going missing mid-run — that is not this file's
     // problem, it is every remaining file's problem too, so it stops everything.
@@ -3525,8 +3594,9 @@ async function runOne({ source, py, outRoot }) {
     if (result.language_probability && result.language_probability < 0.6) {
       warnings.push(`Low language-detection confidence (${result.language_probability}) — pass --language <code> to force one.`);
     }
-    if (result.duration >= 1800 && ["tiny", "base"].includes(result.model)) {
-      warnings.push(`Long recording transcribed with the \`${result.model}\` model — re-run with --model small (or medium) if accuracy matters.`);
+    if (result.duration >= 1800 && BELOW_DEFAULT.includes(result.model)) {
+      warnings.push(`Long recording transcribed with the \`${result.model}\` model rather than the `
+        + `default \`${DEFAULT_MODEL}\` — re-run with --model ${DEFAULT_MODEL} if accuracy matters.`);
     }
     // Surfaced here as well as in the report so `_meta.md` and the JSON summary
     // carry it: a caller that reads only the summary must still learn that the

@@ -16,7 +16,7 @@ import {
   speakerCards, speakerRoster, buildSpeakersMd, cuesFromBeats, buildChaptersVtt, fileMapLines,
   SPEECH_MD_FILE, SPEECH_TXT_FILE, SPEAKERS_FILE, WCAG_TEXT_FILE, DESCRIPTIONS_FILE,
   CHAPTERS_FILE, DATA_DIR, dataPath, artifactPath, readArtifact, writeData, migrateFlatArtifacts,
-  buildWcagTranscription,
+  buildWcagTranscription, DEFAULT_MODEL, BELOW_DEFAULT, MODELS, modelIsCached,
   CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
@@ -2168,4 +2168,46 @@ test('the slice names the frame folder that actually holds the frames', () => {
   const legacy = buildSlice({ from: 0, to: 300, duration: 300, segments: segs([0, 5, 'hello']),
     frames: [{ t: 4, file: '001-00m04s.jpg' }] });
   assert.match(legacy, /- 0:04 — frames\/001-00m04s\.jpg/, 'an older directory still resolves');
+});
+
+// ---- model choice ------------------------------------------------------------------
+
+test('the default model is the accurate one, and the fast ones are the opt-in', () => {
+  assert.equal(DEFAULT_MODEL, 'medium');
+  assert.ok(BELOW_DEFAULT.includes('small'), 'small mangles domain vocabulary and is a trade, not a default');
+  assert.ok(!BELOW_DEFAULT.includes(DEFAULT_MODEL));
+  assert.ok(MODELS.some((m) => m.name === DEFAULT_MODEL), 'the default has to be a model the table knows');
+});
+
+test('a run below the default says so, and how far below', () => {
+  const rough = detectIssues({ segments: segs([0, 4, 'a line.']), duration: 10, model: 'base', warnings: [] });
+  assert.ok(rough.run.some((r) => /error-prone end of the range/.test(r)));
+  assert.ok(rough.run.some((r) => /--model medium/.test(r)));
+
+  const traded = detectIssues({ segments: segs([0, 4, 'a line.']), duration: 10, model: 'small', warnings: [] });
+  assert.ok(traded.run.some((r) => /rather than the default `medium`/.test(r)));
+  assert.ok(traded.run.some((r) => /domain vocabulary/.test(r)),
+    'the reason matters: small fails on exactly the words you would quote');
+  assert.ok(!traded.run.some((r) => /error-prone end/.test(r)), 'small is a trade, not a mistake');
+
+  const dflt = detectIssues({ segments: segs([0, 4, 'a line.']), duration: 10, model: 'medium', warnings: [] });
+  assert.ok(!dflt.run.some((r) => /--model/.test(r)), 'nothing to warn about when the default was used');
+});
+
+test('a model counts as downloaded only once its weights are on disk', () => {
+  const hub = mkdtempSync(join(tmpdir(), 'twt-hub-'));
+  const repo = 'Systran/faster-whisper-medium';
+  const snap = join(hub, 'models--Systran--faster-whisper-medium', 'snapshots', 'abc123');
+  assert.equal(modelIsCached(repo, hub), false, 'nothing there at all');
+
+  // An interrupted download: the small files land first, the 1.5 GB one does not.
+  mkdirSync(snap, { recursive: true });
+  writeFileSync(join(snap, 'config.json'), '{}');
+  writeFileSync(join(snap, 'tokenizer.json'), '{}');
+  assert.equal(modelIsCached(repo, hub), false,
+    'reporting this as ready is how a user is told to go ahead and then waits ten minutes');
+
+  writeFileSync(join(snap, 'model.bin'), 'weights');
+  assert.equal(modelIsCached(repo, hub), true);
+  rmSync(hub, { recursive: true, force: true });
 });

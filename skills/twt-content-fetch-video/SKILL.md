@@ -2,8 +2,8 @@
 name: twt-content-fetch-video
 surface: command
 category: content
-description: (v1.0.8) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
-version: 1.0.8
+description: (v1.0.9) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
+version: 1.0.9
 model: sonnet
 accepts_arguments: true
 inputs:
@@ -111,7 +111,13 @@ Never open `index.md` or anything under `data/` directly, and never read back a 
 **This multiplies by the number of sources.** Finish one recording end to end before starting the next, and carry nothing between them but the batch's settings: a second recording's speakers, chapters, and frames have nothing to do with the first's, and holding both is how a name from one transcript ends up in the other.
 
 ## Collect mode (dispatched by an orchestrator)
-If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--verbatim`** (the descriptive pass costs a vision pass per window per recording that the orchestrator did not budget for), use `--model base` with auto-detected language, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--verbatim`** (the descriptive pass costs a vision pass per window per recording that the orchestrator did not budget for), leave the model at its default and the language on auto-detect, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+
+Collect mode no longer forces a small model. It used to pass `--model base`, which is ~8x faster and
+loses the words a recording is about — and a collect-mode transcript is the one that arrives
+unreviewed and anonymous, so it is the one that can least afford to be guessing. The cost is real:
+budget total media duration x 0.3 of wall time, not x 0.04. An orchestrator that genuinely cannot
+spend it should pass `--model small` explicitly and say in its own report that it did.
 
 `captions.vtt` and `captions.srt` are still written — they cost nothing but the recognizer's own timings, or a copy of the publisher's track. A `--verbatim` run does not probe the media's subtitle streams, so where the file carries captions of its own the generated track duplicates them; the warning says so, and you pass that on rather than presenting the track as certainly needed.
 
@@ -154,41 +160,80 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-vide
 Read the `STATUS:` line:
 
 - `ok` — continue to Step 3.
-- `missing-package` — faster-whisper is not installed. **Ask before installing anything.** Tell the user it is a one-time `pip install faster-whisper` (~200MB of dependencies: ctranslate2, av, onnxruntime; no system ffmpeg needed), and that the first run of each model size additionally downloads its weights. Use AskUserQuestion: "Install faster-whisper now?" → *Install it* / *I'll install it myself* / *Cancel*. Only run the install command the check printed if they choose to install; re-run `check` afterwards.
+- `missing-package` — faster-whisper is not installed. **Ask before installing anything.** Tell the user it is a one-time `pip install faster-whisper` (~200MB of dependencies: ctranslate2, av, onnxruntime; no system ffmpeg needed), and that the first run of each model size additionally downloads its weights — the check's own model table says which sizes are already here, so quote that rather than the raw gigabytes. Use AskUserQuestion: "Install faster-whisper now?" → *Install it* / *I'll install it myself* / *Cancel*. Only run the install command the check printed if they choose to install; re-run `check` afterwards.
 - `missing-python` — STOP. Tell the user Python 3.9–3.14 is required and point them at the install line the check printed. Do not attempt to install Python.
 
 The descriptive pass needs nothing further: it decodes frames, captions, and extra audio tracks with PyAV, which faster-whisper already pulls in.
 
-## Step 3 — Choose model and language
-Ask both with a single AskUserQuestion call (they are independent fixed-option choices), each offering **You decide** (CONVENTIONS §4) — selecting it resolves only that question. One answer covers the whole batch. **Do not ask about depth**: every run produces the descriptive transcript.
+## Step 3 — Confirm the model, and the language
+The model **defaults to `medium`** — accuracy over speed, because a transcript nobody
+re-reads is the one that must not be guessing at the vocabulary. You are not asking the user to
+pick one from scratch; you are telling them what it will cost and offering the faster ones.
 
-**Model** — accuracy against time. Transcription runs on CPU at roughly 0.5–2× real time depending on size:
-- `tiny` (~75MB) — fastest, noticeably error-prone; rough notes only
-- `base` (~145MB) — fine for clear single-speaker audio
-- `small` (~484MB) — the default here: markedly better on accents, jargon, and crosstalk
-- `medium` (~1.5GB) — best quality; slow, and worth it for anything you will quote
+**First, find out what is already downloaded.** The `check` from Step 2 prints it:
 
-`small` is the floor worth recommending. The descriptive transcript is a deliverable someone will rely on, and speaker attribution degrades fast on a sloppy verbatim base — a mangled name is a name you then cannot match to an on-screen card.
+```
+default model: medium (accuracy over speed; override with --model <name>)
+  tiny              75 MB  downloaded
+  base             142 MB  downloaded
+  small            464 MB  downloaded
+  medium           1.5 GB  downloaded  <- default
+```
 
-**Language** — *Auto-detect* (default) or a specific language. Forcing the language with a code (`en`, `uk`, `de`, …) is more reliable for short clips, accented speech, or any recording that mixes languages. In a batch of mixed-language recordings, leave it on auto-detect: one forced code would mistranscribe every recording that is not in it.
+A size marked `not downloaded` is a **one-time** download on first use, and after that it is free
+forever. "1.5 GB" and "1.5 GB you already have" are different answers to *should I use the accurate
+one*, so never quote the size without saying which it is.
 
-**Then say what it will cost, and get a yes.** Add up the media durations and tell the user, before starting:
-- **Wall time** — roughly the total duration for `base`, more for larger models, plus a one-time model download on first use
-- **Your own pass** — total duration ÷ 5, rounded up, is the number of windows you will read and describe across all recordings. Say that number. Past ~10 windows it is real token spend, and past ~30 it is worth splitting the batch across runs
+**Then tell the user, before transcribing, in one short block:**
 
-If the total comes to more than ~10 windows, confirm before starting, and offer the alternative plainly: transcribe everything now and assemble the descriptive transcripts for a named subset, leaving the rest's inputs on disk for a later run (they need no re-transcription).
+- **Model** — `medium`, and whether its weights are already here or are a one-time `<size>` download
+- **Time** — total media duration × **0.3**, i.e. a 40-minute batch is roughly 12 minutes.
+  That ratio is measured, not guessed, but it is one machine's: say "roughly", and on a slow or
+  battery-limited laptop expect worse
+- **Your own pass** — total duration ÷ 5, rounded up, is the number of windows you will read and
+  describe. Say that number. Past ~10 windows it is real token spend, and past ~30 it is worth
+  splitting the batch across runs
+
+**Then offer the alternatives with AskUserQuestion** — one call covering model and language, each
+with **You decide** (CONVENTIONS §4), which resolves only that question. One answer covers the whole
+batch. **Do not ask about depth**: every run produces the descriptive transcript.
+
+Frame the model question as *keep the accurate default, or trade accuracy for speed*:
+
+| Option | Disk | Time vs `medium` | What it costs you |
+|---|---|---|---|
+| `medium` **(recommended, default)** | 1.5 GB | 1× | nothing — this is the accurate one |
+| `small` | 464 MB | ~0.35× | domain vocabulary. Measured on a film about *bereavement*, `small` produced "grievement", "grease", "greaves" and "grease-sensitive" — it fails on exactly the words you would quote |
+| `base` | 142 MB | ~0.12× | a lot. Rough notes only: it also lost "death" to "depth", a mishearing that reads as ordinary English and no confidence score can catch |
+| `large-v3` | 3.1 GB | slower than `medium` | nothing but time — offer it only if the user asks for the most accurate available, or the audio is hard (heavy accents, crosstalk, poor mic) |
+
+`tiny` exists and is not worth offering. If the user names it, pass it and say plainly that the
+result is not quotable.
+
+**The flag is `--model <name>`**, and it applies to every source in the batch. It is the only way the
+choice is made — there is no config file and no remembered preference, so a user who wants `small`
+every time has to say so every time, and should be told that rather than left to wonder.
+
+**Language** — *Auto-detect* (default) or a specific language. Forcing the language with a code
+(`en`, `uk`, `de`, …) is more reliable for short clips, accented speech, or any recording that mixes
+languages. In a batch of mixed-language recordings, leave it on auto-detect: one forced code would
+mistranscribe every recording that is not in it.
+
+**Get a yes before starting** if the total comes to more than ~10 windows, and offer the alternative
+plainly: transcribe everything now and assemble the descriptive transcripts for a named subset,
+leaving the rest's inputs on disk for a later run (they need no re-transcription).
 
 ## Step 4 — Transcribe
 **One command for the whole batch** — every source is a positional, and the tool loops. Substitute the chosen values; drop `--language` for auto-detect, and drop `--title`/`--captions` unless there is exactly one source:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<source>" "<source>" "<folder>" --model small --language en
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<source>" "<source>" "<folder>" --model medium --language en
 ```
 
 Single recording, with the extras it alone can take:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model small --language en --title "<what it is>" --captions "<vtt-url-or-path>"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model medium --language en --title "<what it is>" --captions "<vtt-url-or-path>"
 ```
 
 - **Anything longer than ~5 minutes of media in total: launch this with `run_in_background: true`** and check back — a foreground Bash call is capped at 10 minutes and will be killed mid-transcription. A batch is one background job, not one per file; do not fan out into several.
@@ -539,7 +584,9 @@ It re-reads every directory and rewrites the index from what is on disk now. Nev
 - Whether any line in `timeline.md` is marked `~` (could not be located in the recording's timings), and how many
 - How many beats the timeline holds, and that `wcag-transcription.json` / `.txt` carry the same number of rows — one per moment, `caption` for what was said and `informative_caption` for what a viewer who cannot see it needs told
 - How many voices `speakers.md` found, and whether any name in it is marked `[?]` — an almost-right spelling of a real person's name is the thing a reader will repeat in a deck and never check
-- Duration, detected language, model used, word count
+- Duration, detected language, word count, and the model — naming it as the default or as a
+  deliberate trade. Where the run used anything below `medium`, say so in the same breath as the
+  transcript itself: the wording is less reliable exactly where someone would want to quote it
 - What PART 3 says, in a sentence or two: how many lines the recognizer itself flagged, how many names it spelled inconsistently, and the specific things your review found — a user who reads nothing else should still learn that "by depth" is probably "by death"
 - Whether the review covered the full transcript or the flagged excerpts only
 - Which of the three sources `captions.vtt` came from — the publisher's own track copied verbatim, the media file's own subtitle stream extracted, or the recognizer. Where it was the recognizer, say plainly that it is unchecked machine transcription and should be read against the recording before it goes on the video. The run's JSON summary carries this in its `subtitles.origin`; do not infer it from the filename, which is the same either way

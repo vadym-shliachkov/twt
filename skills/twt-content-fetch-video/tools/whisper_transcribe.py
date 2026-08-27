@@ -3,7 +3,7 @@
 
 Invoked only by transcribe-video.mjs; not a user-facing entry point.
 
-  python whisper_transcribe.py --media <path> --out <json> [--model base]
+  python whisper_transcribe.py --media <path> --out <json> [--model medium]
                                [--language auto] [--device cpu]
                                [--compute-type int8]
 
@@ -31,7 +31,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--media", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--model", default="base")
+    ap.add_argument("--model", default="medium")
     ap.add_argument("--language", default="auto")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--compute-type", dest="compute_type", default="int8")
