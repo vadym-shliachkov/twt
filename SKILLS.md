@@ -537,7 +537,7 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.9
+**Version:** 1.0.10
 **Accepts arguments:** yes
 
 Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets the same content in the shapes different readers need it in. `transcript.md` is the **descriptive transcript** — each speaker named where they start speaking, with on-screen text, visible action and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. `timeline.md` is that content as **one stream with a timestamp on every beat**, for citing a moment. `speech.md` and `speech.txt` are the words alone, timed and untimed. `speakers.md` is who is in it. `wcag-transcription.json` / `.txt` are the accessibility rows. `captions.vtt` / `.srt`, `descriptions.vtt` and `chapters.vtt` are what you hang on the video. `index.md` is the speech, attributed, and the file the rest of the pipeline reads. The machinery that built them — segments, keyframes, stream layout, the caption diff — sits in `data/`, so the directory listing shows only what is worth opening. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.

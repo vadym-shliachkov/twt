@@ -1009,7 +1009,7 @@ flowchart TB
 ### /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.9
+**Version:** 1.0.10
 
 **Inputs:**
 - One or more direct URLs to video/audio files, Brightcove player-page URLs, local media paths, or a folder of media files

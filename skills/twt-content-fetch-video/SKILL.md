@@ -2,8 +2,8 @@
 name: twt-content-fetch-video
 surface: command
 category: content
-description: (v1.0.9) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
-version: 1.0.9
+description: (v1.0.10) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
+version: 1.0.10
 model: sonnet
 accepts_arguments: true
 inputs:
@@ -205,10 +205,17 @@ Frame the model question as *keep the accurate default, or trade accuracy for sp
 | `medium` **(recommended, default)** | 1.5 GB | 1× | nothing — this is the accurate one |
 | `small` | 464 MB | ~0.35× | domain vocabulary. Measured on a film about *bereavement*, `small` produced "grievement", "grease", "greaves" and "grease-sensitive" — it fails on exactly the words you would quote |
 | `base` | 142 MB | ~0.12× | a lot. Rough notes only: it also lost "death" to "depth", a mishearing that reads as ordinary English and no confidence score can catch |
-| `large-v3` | 3.1 GB | slower than `medium` | nothing but time — offer it only if the user asks for the most accurate available, or the audio is hard (heavy accents, crosstalk, poor mic) |
+| `large-v3-turbo` | 1.6 GB | ~1.4x | nothing but time. Measured most accurate of the four: 4 disagreements against the same caption track where `medium` had 9. Offer it when the user asks for the best available, or the audio is hard — heavy accents, crosstalk, a poor mic |
+| `large-v3` | 3.1 GB | slower still | untested here. `large-v3-turbo` is the same family with a distilled decoder, so reach for that first |
 
 `tiny` exists and is not worth offering. If the user names it, pass it and say plainly that the
 result is not quotable.
+
+**These numbers come from one 2:50 recording**, scored against the caption track its publisher
+wrote. That is a real measurement and it is also a sample of one: the ordering held cleanly across
+all four sizes, but do not quote the counts as though they generalise to every recording. What
+generalises is the shape — the small models fail on domain vocabulary, and domain vocabulary is
+what anyone reading a transcript is there for.
 
 **The flag is `--model <name>`**, and it applies to every source in the batch. It is the only way the
 choice is made — there is no config file and no remembered preference, so a user who wants `small`
