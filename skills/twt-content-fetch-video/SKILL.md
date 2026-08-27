@@ -274,7 +274,9 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-vide
 
 Add `--expect-descriptive` **only** once you have written that recording's `transcript.md` and run Step 9b's `timeline` command over it. Without the flag a missing `transcript.md` is a note, because the tool's own verify runs before you have written one; with it, a missing or malformed one is a failure. It also checks the shape: a `## Transcript` section, at least one `### [mm:ss]` heading in it, and a duration matching `index.md` — the three ways a descriptive transcript can look finished while carrying no timeline. And it fails any of the eight files the `timeline` command builds — `timeline.md`, `speech.md`, `speech.txt`, `speakers.md`, `wcag-transcription.json`, `wcag-transcription.txt`, `descriptions.vtt`, `chapters.vtt` — that is missing, malformed, or older than the `transcript.md` it was built from, and a `wcag-transcription.json` whose row count does not match the timeline's beats. A stale derived file is the failure worth catching: it is the one that looks the most citable and is quietly describing a draft that no longer exists.
 
-Read the `notes` as well as the `problems`. A note is not a stop, but the speaker-name note is the one to act on: it fires when a name in the transcript carries a capital letter inside a word and no `[?]`, which is what a lowercase `l` misread off a name card looks like every time.
+Read the `notes` as well as the `problems`. A note is not a stop, but the speaker-name note is the one to act on: it fires when a name in the transcript carries a capital letter inside a word and no `[?]`, which is what a lowercase `l` misread off a name card looks like every time. Two others are worth a line in your report rather than a fix: a `[?]` sitting mid-name inside a quoted card (the marker closes the whole name, so the card and the speaker label spell one doubt the same way), and a `descriptions.vtt` whose cues carry more narration than their windows hold.
+
+One `problem` is new and is a real stop: an `index.md` that declares `text_source: publisher-captions` while its words differ from the track. It means the derived files are a re-typing of the publisher's speech rather than the speech, and the fix is to re-run the `timeline` command — which reconciles the two and records what it changed — never to edit `index.md`.
 
 `run` already does this and exits 5 if it fails, so this is the check that catches what happened *after* the run — a partial copy, a stale directory, a hand-edited report. Run it whenever you did not watch the run finish, and again at the end of each descriptive pass. Anything it lists under `problems` is a stop: the fix is to re-run the tool, never to write the missing file yourself.
 
@@ -355,6 +357,8 @@ Rules that keep the result trustworthy:
   **The test that catches this every time: read the name back as a word.** If it carries a capital letter inside it (`TerriyIn`, `WilIiams`), or a letter run no English name has, you did not read a name — you read a lowercase `l` as a capital `I`, or the reverse. That name gets `[?]`, in the timeline *and* in the **Speakers** section, whatever the card seemed to say. `verify` flags an unmarked one, but it flags it after the transcript is written; the place to catch it is here, at the frame.
 
   **And the `[On screen:]` quote of that card carries the mark too.** A marker is what you *read*, so an uncertain card is quoted uncertainly — `[On screen: name card — "TerriyIn Rivers-Cannon [?] / School Social Work Association of America (SSWAA)".]` — never silently resolved to the spelling you settled on for the speaker label. Marking the label and then quoting the card as though it plainly said the resolved name is worse than not marking either: it presents the guess as the thing you saw, and it is the one place a reader would go to check. `verify`'s name check cannot catch this, because by then nothing in the file spells the name oddly any more.
+
+  **`[?]` closes the whole name, in both places.** `"Terrilyn Rivers-Cannon [?] / SSWAA"` on the card and `**Terrilyn Rivers-Cannon [?]:**` on the label — the same string, the mark last. Not `"Terrilyn [?] Rivers-Cannon"`: a marker dropped between a given name and a surname reads as doubt about one word rather than about the name, spells one doubt two ways across two files, and is what `descriptions.vtt` will quote, since it copies the card verbatim. Whichever part of the name is unreadable, the mark goes at the end and the doubt is explained once, in the **Speakers** section. `verify` notes a misplaced one.
 
 ## Step 9 — Assemble `transcript.md`
 
@@ -495,7 +499,7 @@ against the recording's own timings, and then writes **ten** files from that sin
 | `speakers.md` | every voice, the title on their name card, when they start, their share |
 | `wcag-transcription.json` | the beats as data — `time`, `informative_caption`, `caption`, `author` |
 | `wcag-transcription.txt` | the same rows as labelled stanzas, for a reviewer to read |
-| `descriptions.vtt` | the `[Visual: …]` / `[On screen: …]` markers as an audio-description track |
+| `descriptions.vtt` | the `[Visual: …]` / `[On screen: …]` markers as an audio-description track, with its own header saying whether the narration fits the gaps it has to be spoken in |
 | `chapters.vtt` | your chapter headings as player chapter markers |
 | `index.md` | rebuilt so its paragraphs carry the speaker names, for the skills downstream |
 
@@ -557,10 +561,43 @@ It measures against the publisher's caption cues where there are any (two or thr
 they place a line far more precisely than your chapter headings could) and the recognizer's segments
 otherwise. Markers take the time of the line they introduce, and are not stamped separately — a frame
 cannot place them that finely. A beat it could not locate keeps the previous beat's time and is marked
-`~` (`time_inferred: true` in the JSON), and the summary names those lines.
+`~` (`time_inferred: true` in the JSON), and the summary names those lines. A chapter heading takes
+the measured time of the first beat under it, so no stamp runs backwards across a heading and
+`chapters.vtt` brackets what it names — your `### [mm:ss]` is a reading, and the line under it is a
+measurement.
+
+**Four more things it does, all of them worth reading in the summary it prints.**
+
+*It puts the publisher's words back.* Where a caption track exists it is the wording every derived
+file claims to carry, and you have just re-typed that speech into `transcript.md`. Re-typing four
+hundred words tidies as it goes — and the tidy that matters is the one that leaves nothing behind:
+a word the recognizer dropped stays dropped, so `"grades K-12"` survives where the publisher wrote
+`"grades K through 12"`. The command aligns your beats against the track word by word and restores
+the differences, token by token, so only the words that changed move. Your punctuation, casing and
+hyphenation stay yours — a caption track full-stops mid-clause at its cue joins and hyphenates the
+same brand name two ways, and importing that would trade a real defect for a cosmetic one. Every
+restoration is listed in `_meta.md`, in `transcript.txt`, and in the JSON: nothing is changed
+silently. **Do not pre-empt this by copying wording out of `captions.vtt` yourself** — write the
+speech as you hear and read it, and let the command settle the difference.
+
+*It measures whether `descriptions.vtt` can actually be spoken.* A description is narrated aloud, so
+a cue holding sixty words in a 1.3-second gap is not dense, it is undelivered. Where the narration
+does not fit, the file's own header says so and calls itself an extended-description script rather
+than a track to hang on a player. That is usually the honest answer on a recording that talks without
+pausing, and it is not a defect in your writing — but it is worth a line in your report.
+
+*It amends `transcript.txt` and `_meta.md`.* Both were written before anyone had looked at the
+recording, and both still say so: `_meta.md` warns that pause-derived turn candidates are an artefact
+and to take the speakers from the frames, and `transcript.txt` signs off saying the name cards are
+what will settle it in the descriptive pass. You have now settled it. The command splices what it
+found into each, above the review section so a later `annotate` cannot wipe it.
+
+*It rebuilds `index.md`* with the speaker names attached, which is the file the downstream define
+skills open.
 
 The command is idempotent: run it twice and nothing changes, because it re-parses its own stamps
-rather than stacking a second one in front of the name. So re-running after any edit is always safe.
+rather than stacking a second one in front of the name, and it replaces its own amendments rather
+than repeating them. So re-running after any edit is always safe.
 
 Writing any of these by hand is the one thing that breaks it. Two hand-written accounts of one
 recording drift, and the drift is invisible — which is the whole reason they are derived. If a
@@ -598,6 +635,8 @@ It re-reads every directory and rewrites the index from what is on disk now. Nev
 - Whether the review covered the full transcript or the flagged excerpts only
 - Which of the three sources `captions.vtt` came from — the publisher's own track copied verbatim, the media file's own subtitle stream extracted, or the recognizer. Where it was the recognizer, say plainly that it is unchecked machine transcription and should be read against the recording before it goes on the video. The run's JSON summary carries this in its `subtitles.origin`; do not infer it from the filename, which is the same either way
 - Whether a publisher caption track was used and, if so, how many places it disagreed with the recognizer and what the worst of those were — a user who reads nothing else should learn that `index.md` carries the publisher's wording, not the machine's. If there was no caption track, say that the transcript has nothing checking it but the review
+- How many places the `timeline` command put the track's wording back into your own re-typing of it (`reconciled.restored` in its JSON), and what the worst of those were. This is not a criticism of the transcript and it is not optional to mention: it is the difference between a file that says it carries the publisher's words and one that does, and the same restoration is listed in `_meta.md` for anyone who wants all of them
+- Whether `descriptions.vtt` fits as a track or is an extended-description script — `described.overrun` against `described.cues` in the same JSON. If it overruns, say so plainly and say why (a recording that talks without pausing leaves nowhere to speak a description), so nobody hangs it on a player expecting it to work
 - That `verify` passed, or exactly what it flagged
 - How many keyframes were used, how many speakers you identified and on what basis, whether the file carried its own caption track or audio-description track, and how many windows you covered
 - Every warning the tool reported (empty transcript, low language confidence, a long recording run through a small model, a placeholder filename, no video stream, bitmap subtitles, a failed extraction), and what to do about each

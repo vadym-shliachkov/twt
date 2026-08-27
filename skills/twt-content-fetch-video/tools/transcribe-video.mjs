@@ -753,10 +753,16 @@ export function fileMapLines(descriptive) {
     [false, `\`${SPEAKERS_FILE}\``, "who speaks, their on-screen title, and how much of the recording is theirs"],
     [false, `\`${WCAG_FILE}\` / \`${WCAG_TEXT_FILE}\``,
       "one row per moment for an accessibility review — as data, and as text"],
-    [true, "`transcript.txt`", "the report: the transcript twice over, plus what in it is most likely wrong"],
-    [true, `\`${SUBTITLE_FILE}\` / \`${SRT_FILE}\``, "the caption track to hang on the video"],
+    [true, "`transcript.txt`", "the report — and the one file here carrying the *recognizer's* "
+      + "wording rather than the publisher's: its transcript twice over, every place the two "
+      + "disagree, and what in it is most likely wrong"],
+    [true, `\`${SUBTITLE_FILE}\` / \`${SRT_FILE}\``, "the caption track to hang on the video. Where the "
+      + "publisher shipped one this is their file copied byte for byte — their own headers and cue "
+      + "ids included, because an edited caption track is no longer the thing they published"],
     [false, `\`${DESCRIPTIONS_FILE}\``,
-      "the audio-description track — what is on screen, for a viewer who cannot see it"],
+      "what is on screen, for a viewer who cannot see it. Read its NOTE header before hanging it on "
+      + "a player: on a recording that talks without pausing, the descriptions do not fit between "
+      + "the lines and the file says so"],
     [false, `\`${CHAPTERS_FILE}\``, "chapter markers for the player's scrubber"],
     [true, "`_meta.md`", "this file"],
     [true, `\`${DATA_DIR}/\``, "what the tool computed to build the rest: segments, keyframes, stream "
@@ -1115,7 +1121,14 @@ export function buildReportTxt({ source, slug, title, result, warnings = [], iss
   L.push(...field("Model", `${result.model}   (device: ${result.device}, compute: ${result.compute_type})`));
   L.push(...field("Language", `${result.language || "unknown"}  (detection confidence ${result.language_probability})`));
   L.push(...field("Segments", String(result.segments.length)));
-  L.push(...field("Words", String(totalWords)));
+  // Two streams, two counts. One number labelled "Words" beside a caption track with a
+  // different total is how three files in this directory came to state three different
+  // word counts for one recording.
+  L.push(...field("Words", `${totalWords} recognized`
+    + (publisherCaptions?.words
+      ? `, ${publisherCaptions.words} in the publisher's track — PARTS 1 and 2 below count the `
+        + "first; index.md and the descriptive files carry the second"
+      : "")));
   L.push(...field("Processing time", `${result.transcribe_seconds}s`));
   L.push(...field("Transcribed on", fetchedAt));
   L.push("", "");
@@ -1269,6 +1282,60 @@ export function spliceReview(report, notes) {
   return report.slice(0, i + head.length) + wrapReview(notes).join("\n") + "\n" + report.slice(j);
 }
 
+// ---- what the descriptive pass settled ------------------------------------------
+// The report is written before anyone has looked at the recording, and it reads like
+// it: PART 3 signs off with "the lower-third frames are what will settle this in the
+// descriptive pass". Then the pass runs, settles it, and writes seven other files —
+// while the report, which has the most inviting filename in the directory, still
+// reads as an open to-do list and still carries the recognizer's wording. So
+// `timeline` splices its outcome back in rather than leaving the two a run apart.
+//
+// The block goes *above* the review heading deliberately: `spliceReview` rewrites
+// everything from that heading to END OF REPORT, so anything below it would be
+// destroyed the next time `annotate` runs.
+export const POSTSCRIPT_HEADING = "SETTLED BY THE DESCRIPTIVE PASS";
+
+export function spliceDescriptivePostscript(report, notes) {
+  const text = String(report || "").replace(/\r\n?/g, "\n");
+  const review = `${THIN}\n${REVIEW_HEADING}\n${THIN}\n`;
+  const at = text.indexOf(review);
+  if (at === -1) return null;
+  const head = `${THIN}\n${POSTSCRIPT_HEADING}\n${THIN}\n`;
+  // Idempotent: a second `timeline` run over the same directory replaces the block
+  // instead of stacking a second one on top of it.
+  const prev = text.lastIndexOf(head, at);
+  const from = prev === -1 ? at : prev;
+  // Joined into one blank-line-separated document first: `wrapReview` takes prose and
+  // wraps it to the report's column, and handing it an array stringifies to one line
+  // with commas between the paragraphs.
+  const body = `${head}\n${wrapReview(notes.join("\n\n")).join("\n")}\n\n\n`;
+  return text.slice(0, from) + body + text.slice(at);
+}
+
+// The same amendment for `_meta.md`, which is written at the same moment and goes
+// stale the same way: its Warnings section still says the turn count is an artefact
+// and to take the speakers from the frames, on a run where the frames have already
+// been read and eight of them named. The section is placed after the warnings and
+// before the closing note, so a reader meets the caveat and its resolution in order.
+export const META_POSTSCRIPT_HEADING = "## After the descriptive pass";
+const META_CLOSING = "\n> Machine transcription.";
+
+export function spliceMetaPostscript(meta, notes) {
+  let text = String(meta || "").replace(/\r\n?/g, "\n");
+  const prev = text.indexOf(`\n${META_POSTSCRIPT_HEADING}\n`);
+  if (prev !== -1) {
+    const end = text.indexOf(META_CLOSING, prev);
+    text = end === -1 ? `${text.slice(0, prev)}\n` : text.slice(0, prev) + text.slice(end);
+  }
+  // A note that already opens with a dash is a sub-item of the one above it — the
+  // list of places the wording was put back. It is indented under its parent rather
+  // than given a second bullet, which is what "- - [0:00] wording:" was.
+  const rendered = notes.map((l) => (/^\s*-\s/.test(l) ? `  ${l.trim()}` : `- ${l}`)).join("\n");
+  const block = `\n${META_POSTSCRIPT_HEADING}\n\n${rendered}\n`;
+  const at = text.indexOf(META_CLOSING);
+  return at === -1 ? `${text.replace(/\n+$/, "")}\n${block}` : text.slice(0, at) + block + text.slice(at);
+}
+
 // ---- publisher captions --------------------------------------------------------
 // A caption track the publisher shipped is human-authored, not guessed, so where
 // it exists it outranks the recognizer outright. Two things follow. It becomes
@@ -1365,12 +1432,26 @@ function diffWords(segments) {
   return out;
 }
 
-// The original tokens a run of differing entries came from, each named once —
-// two halves of one hyphenated word must not print that word twice.
-function spanText(words) {
+// The original tokens a run of entries came from, each named once — two halves of
+// one hyphenated word must not print that word twice.
+//
+// Keyed on `token_id`, not on the spelling: comparing the text itself collapses a
+// word genuinely said twice in a row ("that that student will never forget that
+// that teacher") down to one, which is wrong in a findings list and catastrophic in
+// `reconcileBeatText`, where this is what rebuilds the sentence.
+function joinTokens(entries) {
   const out = [];
-  for (const w of words) if (out[out.length - 1] !== w.src) out.push(w.src);
+  let last = null;
+  for (const e of entries) {
+    if (e.key === last) continue;
+    last = e.key;
+    out.push(e.src);
+  }
   return out.join(" ");
+}
+
+function spanText(words) {
+  return joinTokens(words.map((w) => ({ key: `a${w.token_id}`, src: w.src })));
 }
 
 // Myers' O(ND) diff. The two accounts are near-identical, so D — the number of
@@ -2071,6 +2152,119 @@ export function splitDelivery(speech) {
   return { delivery: m[1].trim() || null, speech: text.slice(m[0].length).trim() };
 }
 
+// ---- putting the publisher's own words back --------------------------------------
+// index.md, timeline.md, speech.md and the WCAG table all declare
+// `text_source: publisher-captions`, and `_meta.md` says in so many words that
+// index.md carries the caption wording. Until this ran, it very nearly did.
+//
+// The first index.md is built straight from the caption cues and is exact. Then the
+// descriptive pass names the speakers and every one of those files is rebuilt from
+// its beats — which are the model's *re-typing* of the same speech, out of
+// transcript.md. A model re-typing four hundred words tidies as it goes. It
+// hyphenates "one time", it adds a comma, and — the part that matters — it keeps the
+// recognizer's "grades K-12" over the publisher's "grades K through 12", because a
+// word the recognizer dropped is the one kind of difference that leaves nothing
+// behind to notice. The frontmatter still said publisher-captions. The words were no
+// longer the publisher's.
+//
+// So each beat is aligned against the reference stream word by word and re-emitted
+// from *its* tokens. The model keeps what only it can supply — where a beat starts,
+// who is speaking, what is on screen — and the words go back to whoever wrote them.
+// Nothing here is silent: every rewrite is returned, and ends up in `_meta.md` and
+// in the report.
+
+// Past this much disagreement the two are not accounts of the same speech — a
+// transcript for a different cut, a translation, a directory holding two runs — and
+// rewriting one from the other would be vandalism rather than reconciliation.
+export const RECONCILE_MAX_DRIFT = 0.25;
+
+export function reconcileBeatText(beats, refSegments) {
+  const spoken = (beats || []).filter((b) => b.kind === "speech");
+  const gave = (why, extra = {}) =>
+    ({ applied: false, why, changes: [], restored: 0, dropped: 0, drift: 0, ...extra });
+  if (!spoken.length) return gave("there are no speech beats to reconcile");
+
+  const a = [];
+  spoken.forEach((beat, i) => {
+    for (const w of diffWords([{ start: 0, text: splitDelivery(beat.speech).speech }])) {
+      a.push({ ...w, beat: i });
+    }
+  });
+  const b = diffWords(refSegments);
+  if (!a.length || !b.length) return gave("one of the two texts is empty");
+
+  const ops = editScript(a.map((w) => w.norm), b.map((w) => w.norm));
+  // Drift is the share of the *reference* that found no counterpart in the beats.
+  // Counting beat-only words here too would read a legitimate aside — speech outside
+  // the caption track, which every recording with an unsubtitled remark has — as a
+  // different transcript, and refuse to reconcile a file that badly needs it.
+  const orphaned = ops.filter((op) => op.op === "+").length;
+  const drift = Math.round((orphaned / b.length) * 1000) / 1000;
+  if (drift > RECONCILE_MAX_DRIFT) {
+    return gave(`the descriptive pass and the reference stream disagree about `
+      + `${Math.round(drift * 100)}% of the words — too far apart to be the same speech, so the `
+      + "beats were left exactly as the descriptive pass wrote them", { drift });
+  }
+
+  // Which of the descriptive pass's own tokens survive as written. A token is kept
+  // whole when every part of it lined up with the reference and nothing was pushed
+  // into the middle of it; anything else and the reference's tokens take its place.
+  //
+  // Keeping the rule at token granularity is the whole difference between a fix and
+  // a trade. Replacing a beat wholesale would import the publisher's typography along
+  // with their words — and a real caption track splits "…on the professionals as
+  // well. That they feel…" across a cue boundary mid-clause, and writes the brand's
+  // name unhyphenated in one cue and hyphenated in the next. This way "grades K-12."
+  // becomes "grades K through 12." while the comma four clauses earlier stays exactly
+  // where the descriptive pass put it. Punctuation, casing and hyphenation are
+  // transcription style, not a disagreement about what was said — the same rule
+  // `diffTranscripts` works by, and the one `verify` checks this file against.
+  const dirty = new Set();
+  for (const op of ops) {
+    if (op.op === "-") { dirty.add(a[op.ai].token_id); continue; }
+    if (op.op !== "+") continue;
+    const after = a[op.ai];
+    const before = a[op.ai - 1];
+    if (after && before && after.token_id === before.token_id) dirty.add(after.token_id);
+  }
+
+  // Every word is then filed under the beat it falls in. An insertion — a word the
+  // reference has and the beat does not — goes to the beat it sits in front of, which
+  // is what puts "through" back inside "grades K through 12" instead of at the head
+  // of the next speaker's line.
+  const perBeat = spoken.map(() => []);
+  const fromRef = (w) => ({ key: `r${w.token_id}`, src: w.src });
+  let here = 0;
+  let dropped = 0;
+  for (const op of ops) {
+    if (op.op === "-") { here = a[op.ai].beat; dropped += 1; continue; }
+    if (op.op === "=") {
+      const mine = a[op.ai];
+      here = mine.beat;
+      perBeat[here].push(dirty.has(mine.token_id)
+        ? fromRef(b[op.bi])
+        : { key: `a${mine.token_id}`, src: mine.src });
+      continue;
+    }
+    here = a[op.ai]?.beat ?? here;
+    perBeat[here].push(fromRef(b[op.bi]));
+  }
+
+  const changes = [];
+  spoken.forEach((beat, i) => {
+    const { delivery, speech: was } = splitDelivery(beat.speech);
+    // A beat no reference word landed in is speech the reference does not cover: an
+    // aside outside the caption track, a line the model heard and it did not.
+    // Emptying it would delete real content, so an empty rebuild is no rebuild and
+    // the beat keeps its own words.
+    const now = joinTokens(perBeat[i]);
+    if (!now || now === was) return;
+    changes.push({ beat, before: was, after: now });
+    beat.speech = delivery ? `*(${delivery})* ${now}` : now;
+  });
+  return { applied: true, why: null, changes, restored: changes.length, dropped, drift };
+}
+
 // One entry per reference word, carrying the time it is spoken at. Within a
 // segment the time is interpolated: a 10-second segment starting at 0:40 puts its
 // last word near 0:50, and rounding every word in it to 0:40 would make a beat
@@ -2145,6 +2339,37 @@ export function anchorBeats(beats, refWords) {
     floor = beat.time;
   }
   return { beats, unmatched };
+}
+
+// ---- chapters, snapped to what is under them -------------------------------------
+// A chapter stamp is the model's: written by eye while reading, rounded to the
+// second. The beats under it are measured against the caption track. Put the two in
+// one file and you get `### [0:55] The training gap` sitting directly above
+// `**[0:54] Jim Arey:**` — a heading that starts a second after the line it
+// introduces, timestamps that run backwards across it, and a chapters.vtt whose
+// third marker fires late. A heading is a label for its beats, so it takes their
+// time rather than keeping its own.
+export function snapChapters(beats, chapters) {
+  const first = new Map();
+  for (const beat of beats || []) {
+    if (!beat.chapter || !Number.isFinite(beat.time)) continue;
+    const at = first.get(beat.chapter);
+    if (at === undefined || beat.time < at) first.set(beat.chapter, beat.time);
+  }
+  let moved = 0;
+  let floor = 0;
+  for (const chapter of chapters || []) {
+    const at = first.get(chapter);
+    if (!Number.isFinite(at)) { floor = Number.isFinite(chapter.time) ? chapter.time : floor; continue; }
+    const to = Math.max(floor, at);
+    // Counted only when the change is visible: every stamp in these files is printed
+    // to the second, and a move of forty milliseconds is not something a reader can
+    // see or a note worth writing.
+    if (Math.floor(to) !== Math.floor(chapter.time)) moved += 1;
+    chapter.time = to;
+    floor = to;
+  }
+  return moved;
 }
 
 export function buildTimelineMd({ beats, chapters, meta }) {
@@ -2280,7 +2505,13 @@ export function buildWcagTranscription({ beats, chapters, meta }) {
           ...(beat.kind !== "speech" && beat.text ? [beat.text] : []),
         ],
         caption: speech,
-        author: beat.kind === "speech" ? beat.speaker : null,
+        // `[?]` is a note to a human reader, not part of anybody's name. Left inside
+        // this field it becomes the name: the curation and fact-ledger skills read
+        // this table as data and would carry "Terrilyn Rivers-Cannon [?]" onto a page
+        // as the spelling. The doubt is real and is kept — as its own flag, in the
+        // one shape a consumer can act on.
+        author: beat.kind === "speech" ? cleanSpeakerName(beat.speaker) : null,
+        author_uncertain: beat.kind === "speech" ? isUncertainName(beat.speaker) : false,
       };
     }),
   };
@@ -2389,7 +2620,8 @@ export function buildWcagText(doc) {
     out.push(e.caption || "(no speech)");
     out.push("");
     out.push("author:");
-    out.push(e.author || "(nobody speaking)");
+    const uncertain = "  [?] — read off a keyframe, the glyphs were not certain";
+    out.push(e.author ? `${e.author}${e.author_uncertain ? uncertain : ""}` : "(nobody speaking)");
     out.push("", "-".repeat(REPORT_WIDTH), "");
   }
   return out.join("\n");
@@ -2408,6 +2640,16 @@ const CARD_MARKER = /name card|lower third|lower-third|title card|caption bar/i;
 const CARD_QUOTE = /["“”]([^"“”]{2,240})["“”]/g;
 
 function normName(s) { return String(s || "").toLowerCase().replace(/\[\?\]/g, "").replace(/[^a-z]+/g, ""); }
+
+// A `[?]` marks a name read off a downscaled keyframe whose glyphs were not certain.
+// It belongs beside the name wherever a person is reading, and never inside a field
+// something else parses — so the two are separated once, here, and every caller
+// picks the form it needs.
+export function isUncertainName(name) { return /\[\s*\?\s*\]/.test(String(name || "")); }
+
+export function cleanSpeakerName(name) {
+  return String(name || "").replace(/\s*\[\s*\?\s*\]\s*/g, " ").replace(/\s+/g, " ").trim();
+}
 
 // Pull `"Maria Collins / Vice President / New York Life Foundation"` out of the
 // `[On screen: name card — …]` markers, split off the name, and keep the rest as the
@@ -2496,6 +2738,14 @@ export function buildSpeakersMd({ beats, meta }) {
     out.push(`| ${r.name} | ${r.role || "—"} | ${fmtTime(r.first, forceHours)} | ${r.lines} `
       + `| ${r.words} | ${r.share}% | ${fmtTime(r.seconds, forceHours)} |`);
   }
+  // The total is printed because it is the number a reader will otherwise reach for a
+  // calculator to get, and because it is the one that has to match the report's — the
+  // two counted different streams and stated different totals for one recording.
+  const totals = rows.reduce((t, r) => ({
+    lines: t.lines + r.lines, words: t.words + r.words, seconds: t.seconds + r.seconds,
+  }), { lines: 0, words: 0, seconds: 0 });
+  out.push(`| **All ${rows.length} speakers** | | | **${totals.lines}** | **${totals.words}** `
+    + `| **100%** | **${fmtTime(totals.seconds, forceHours)}** |`);
   out.push("");
   const unnamed = rows.filter((r) => r.uncertain);
   if (unnamed.length) {
@@ -2535,17 +2785,105 @@ export function cuesFromBeats(beats, { durationSeconds = 0 } = {}) {
   return cues;
 }
 
-export function buildDescriptionsVtt(cues, { source, meta }) {
-  const note = [
+// ---- does the description fit in the gap it has to be spoken in? -----------------
+// A description cue is not a subtitle. A subtitle is read, so a long one in a short
+// window is merely brisk; a description is *spoken aloud*, so a long one in a short
+// window is not delivered at all — the narration is still on the previous shot when
+// the next three have gone by, or the player cuts it off.
+//
+// Nothing here was measuring that, and the arithmetic is unforgiving. The cue
+// boundaries come from the beats, so a shot change one second before a line lands
+// gets a one-second window; the model, describing what it sees, writes sixty words
+// of on-screen text into it. That is twenty-four seconds of speech in a 1.3-second
+// gap, and the file said "hang it on the video as <track kind=descriptions>".
+//
+// So it is measured, and the file says what the measurement was. A track that does
+// not fit is still worth writing — it is the complete record of the picture, it is
+// what the WCAG table and transcript.md carry, and it is the script a describer
+// edits down. It is just not a thing to hang on a player unchallenged, and now it
+// does not claim to be.
+
+// Ordinary described-video narration, ~160 words per minute. Deliberately not the
+// fastest a synthesiser can be pushed to: a description read at 220 wpm over
+// dialogue is technically audible and practically useless.
+export const AD_WORDS_PER_SECOND = 2.7;
+// Under this much overrun a cue is tight, not broken, and flagging it would bury the
+// ones that are seventeen times too long.
+const AD_SLACK_SECONDS = 0.5;
+
+export function fitDescriptionCues(cues, { wordsPerSecond = AD_WORDS_PER_SECOND } = {}) {
+  const rows = (cues || []).map((cue, i) => {
+    const words = wordCount(String(cue.text || "").replace(/\s+/g, " "));
+    const window = Math.max(0, (Number(cue.end) || 0) - (Number(cue.start) || 0));
+    const need = words / wordsPerSecond;
+    return {
+      ...cue,
+      n: i + 1,
+      words,
+      window: round3(window),
+      need: round3(need),
+      over: round3(Math.max(0, need - window)),
+      overrun: need > window + AD_SLACK_SECONDS,
+    };
+  });
+  const over = rows.filter((r) => r.overrun);
+  const ratio = (r) => r.need / Math.max(r.window, 0.001);
+  return {
+    cues: rows,
+    total: rows.length,
+    overrun: over.length,
+    overrunCues: over.map((r) => r.n),
+    worst: over.length ? over.reduce((a, r) => (ratio(r) > ratio(a) ? r : a)) : null,
+    needSeconds: round3(rows.reduce((n, r) => n + r.need, 0)),
+    windowSeconds: round3(rows.reduce((n, r) => n + r.window, 0)),
+  };
+}
+
+function describedNote({ source, meta, fit }) {
+  const head = [
     "NOTE",
     "Audio-description track from /twt-content-fetch-video.",
     `Source: ${redactUrl(source).url}`,
     `Generated: ${meta.fetchedAt} from transcript.md`,
-    "What is on screen at each moment, for a viewer who cannot see it. Hang it on the",
-    "video as <track kind=\"descriptions\">, not as captions — the speech is in",
-    "captions.vtt. Written from keyframes by a model, so it describes what the picture",
-    "showed, not what a described-video producer would have chosen to say.",
-  ].join("\n");
+    "What is on screen at each moment, for a viewer who cannot see it. Written from",
+    "keyframes by a model, so it describes what the picture showed, not what a",
+    "described-video producer would have chosen to say.",
+  ];
+  if (!fit || !fit.overrun) {
+    head.push(
+      "",
+      "Every cue holds narration that fits the window it has, at about 160 words per",
+      "minute. Hang it on the video as <track kind=\"descriptions\">, not as captions —",
+      "the speech is in captions.vtt.",
+    );
+    return head.join("\n");
+  }
+  const worst = fit.worst;
+  const speech = Number.isFinite(meta.speechSeconds) && Number.isFinite(meta.durationSeconds)
+    ? ` Speech already occupies ${Math.round(meta.speechSeconds)}s of the ${Math.round(meta.durationSeconds)}s`
+      + " recording, so there is little silence to speak into."
+    : "";
+  head.push(
+    "",
+    "THIS IS AN EXTENDED DESCRIPTION SCRIPT, NOT A DROP-IN TRACK.",
+    `${fit.overrun} of ${fit.total} cues carry more narration than their window holds at ~160`,
+    `words per minute: the script needs about ${Math.round(fit.needSeconds)}s of speech spread over`,
+    `${Math.round(fit.windowSeconds)}s of cue time.` + speech,
+    ...(worst
+      ? [`Worst is cue ${worst.n} at ${formatVttTime(worst.start)} — ${worst.words} words in a `
+        + `${worst.window.toFixed(2)}s window.`]
+      : []),
+    `Overrunning cues: ${fit.overrunCues.join(", ")}.`,
+    "",
+    "Use it as the text alternative, as the script a describer edits down, or with a",
+    "player that pauses the video for description. Hung on an ordinary",
+    "<track kind=\"descriptions\"> it will talk over the dialogue and be cut off.",
+  );
+  return head.join("\n");
+}
+
+export function buildDescriptionsVtt(cues, { source, meta, fit = null }) {
+  const note = describedNote({ source, meta, fit: fit || fitDescriptionCues(cues) });
   const blocks = cues.map((cue, i) => [
     String(i + 1),
     `${formatVttTime(cue.start)} --> ${formatVttTime(cue.end)}`,
@@ -2592,6 +2930,99 @@ export function buildSrt(cues) {
   ].join("\n")).join("\n");
 }
 
+// ---- the amendment both of the early files get ------------------------------------
+// One account, written once, spliced into `transcript.txt` and `_meta.md` alike —
+// because the failure being fixed here is two files disagreeing, and the surest way
+// to reintroduce it is to write the correction twice.
+
+// A long recording can reconcile forty lines. Listing all of them turns an amendment
+// into a second transcript; the full list is in the `timeline` command's JSON.
+export const MAX_POSTSCRIPT_CHANGES = 12;
+
+export function descriptivePostscript({ voices = [], reconciled, fit, chaptersMoved = 0,
+  unmatched = [], meta = {}, forceHours = false }) {
+  const out = [];
+
+  if (voices.length) {
+    const names = voices.map((v) => v.name).join(", ");
+    out.push(`Speakers are settled: ${voices.length} named voice(s) — ${names} — read off the `
+      + "recording's own name cards and written up in speakers.md with their titles and share of "
+      + "the running time. Any note above about pause-derived turn candidates, or about taking the "
+      + "speakers from the frames, describes the state of this file before that happened.");
+  } else {
+    out.push("The descriptive pass named nobody: no on-screen name card was legible and no speaker "
+      + "could be identified from the picture. The speech in index.md is unattributed, which is the "
+      + "honest outcome and not an omission.");
+  }
+
+  if (reconciled?.applied) {
+    const changes = reconciled.changes || [];
+    if (!changes.length) {
+      out.push("The words in index.md, timeline.md, speech.md, speech.txt and "
+        + "wcag-transcription.json / .txt were checked against the publisher's caption track word "
+        + "for word and matched it exactly. Nothing was rewritten.");
+    } else {
+      out.push(`The words in index.md, timeline.md, speech.md, speech.txt and `
+        + `wcag-transcription.json / .txt are the publisher's caption track, word for word — the `
+        + `punctuation and hyphenation are the descriptive pass's, which is where transcription `
+        + `style belongs. Re-typing the speech had changed the wording in ${changes.length} `
+        + "place(s); every one was put back:");
+      for (const c of changes.slice(0, MAX_POSTSCRIPT_CHANGES)) {
+        out.push(`- [${fmtTime(c.beat?.time ?? 0, forceHours)}] `
+          + `"${c.before}" -> "${c.after}"`);
+      }
+      if (changes.length > MAX_POSTSCRIPT_CHANGES) {
+        out.push(`- …and ${changes.length - MAX_POSTSCRIPT_CHANGES} more; the full list is in the `
+          + "`timeline` command's JSON output.");
+      }
+    }
+  } else if (reconciled?.why) {
+    out.push(`The speech was not reconciled against a reference track: ${reconciled.why}. The `
+      + "words in index.md and the files beside it are the descriptive pass's, and `text_source` "
+      + "in their frontmatter says which stream they came from.");
+  }
+
+  if (chaptersMoved) {
+    out.push(`${chaptersMoved} chapter heading(s) moved to the measured time of the first beat `
+      + "underneath them. A heading is written by eye and rounded to the second while the lines "
+      + "under it are measured, which is how a chapter came to start after the line it introduces.");
+  }
+
+  if (fit && fit.total) {
+    if (fit.overrun) {
+      const worst = fit.worst;
+      out.push(`descriptions.vtt does not fit as an ordinary description track: ${fit.overrun} of `
+        + `${fit.total} cues carry more narration than their window holds at ~160 words per minute`
+        + (worst ? ` (worst is cue ${worst.n}, ${worst.words} words in ${worst.window.toFixed(2)}s)` : "")
+        + `. The whole script needs about ${Math.round(fit.needSeconds)}s of speech`
+        + (Number.isFinite(meta.speechSeconds) && meta.durationSeconds
+          ? `, and speech already occupies ${Math.round(meta.speechSeconds)}s of the `
+            + `${Math.round(meta.durationSeconds)}s recording`
+          : "")
+        + ". Treat it as the text alternative or as a describer's script — the file's own NOTE "
+        + "header says the same thing to whoever opens it next.");
+    } else {
+      out.push(`descriptions.vtt fits: all ${fit.total} cues hold narration deliverable inside `
+        + "their window at ~160 words per minute, so it can be hung on the video as "
+        + "<track kind=\"descriptions\"> as it stands.");
+    }
+  }
+
+  if (unmatched.length) {
+    out.push(`${unmatched.length} line(s) could not be located in the recording's own timings and `
+      + "carry the previous beat's time instead — marked `~` in timeline.md and "
+      + "`time_inferred: true` in wcag-transcription.json.");
+  }
+
+  // Named rather than called "this report": the same paragraph is spliced into
+  // `_meta.md`, which has no PARTs and where "this report" points at nothing.
+  out.push("PARTS 1 and 2 of `transcript.txt` are unchanged and still carry the recognizer's own "
+    + "wording, which is the point of them: they are the second opinion the caption track is "
+    + "checked against, and rewriting them would leave nothing to check.");
+
+  return out;
+}
+
 // Reads the directory, builds the file, returns what it did. The reference stream
 // is the publisher's caption track where there is one — its cues are two or three
 // seconds long against the recognizer's five to ten, so it locates a line several
@@ -2626,8 +3057,23 @@ export function writeTimeline(dir) {
     try { refSegments = JSON.parse(readArtifact(dir, "segments.json") || "{}").segments || []; } catch { refSegments = []; }
   }
 
+  // Before anything is located or rendered: put the reference stream's own words
+  // back into the beats. The descriptive pass re-typed them, and a re-typing is not
+  // the publisher's caption track however close it lands — which is what every one
+  // of the files below claims to be carrying. Reconciling first also sharpens the
+  // anchor underneath it, since it is then matching the reference against itself.
+  const reconciled = textSource === "publisher-captions" && refSegments.length
+    ? reconcileBeatText(beats, refSegments)
+    : {
+      applied: false, changes: [], restored: 0, dropped: 0, drift: 0,
+      why: "no publisher caption track — the beats are the only account of the words there is",
+    };
+
   const { unmatched } = anchorBeats(beats, referenceWords(refSegments));
   const timed = foldMarkerBeats(beats);
+  // Headings take the time of the beats under them, so no stamp in these files runs
+  // backwards across a chapter boundary and chapters.vtt brackets what it names.
+  const chaptersMoved = snapChapters(timed, chapters);
 
   const fm = (name, src) => ((src || "").match(new RegExp(`^${name}:\\s*(.+)\\s*$`, "m")) || [])[1] || null;
   const index = read("index.md") || "";
@@ -2640,6 +3086,10 @@ export function writeTimeline(dir) {
     language: fm("language", index) || fm("language", prose) || "unknown",
     textSource,
     fetchedAt: fm("fetched_at", index) || new Date().toISOString().slice(0, 10),
+    // How much of the recording is already talking. It is what decides whether a
+    // description track has anywhere at all to be spoken, so descriptions.vtt says it.
+    speechSeconds: round3((refSegments || []).reduce((n, s) =>
+      n + Math.max(0, (Number(s.end) || 0) - (Number(s.start) || 0)), 0)),
   };
 
   // transcript.md is stamped first, so the two files built from it below are never
@@ -2675,10 +3125,11 @@ export function writeTimeline(dir) {
   // directory's contents into something a video player can act on rather than
   // something a person has to read and re-key.
   const describedCues = cuesFromBeats(timed, { durationSeconds: meta.durationSeconds });
+  const fit = fitDescriptionCues(describedCues);
   const descriptions = describedCues.length ? join(dir, DESCRIPTIONS_FILE) : null;
   if (descriptions) {
     writeFileSync(descriptions,
-      buildDescriptionsVtt(describedCues, { source: meta.source, meta }), "utf8");
+      buildDescriptionsVtt(describedCues, { source: meta.source, meta, fit }), "utf8");
   }
   const chaptersVtt = buildChaptersVtt(chapters, { durationSeconds: meta.durationSeconds, meta });
   if (chaptersVtt) writeFileSync(join(dir, CHAPTERS_FILE), chaptersVtt, "utf8");
@@ -2695,12 +3146,36 @@ export function writeTimeline(dir) {
       note: "_Speech below is grouped by speaker and attributed from the descriptive pass in "
         + "`transcript.md`; `speech.md` carries the same words with a timestamp on every line, "
         + "`speech.txt` with none at all, and `wcag-transcription.json` / `.txt` carry them as an "
-        + "accessibility table. What is on screen is in `transcript.md` and `timeline.md`._",
+        + "accessibility table. What is on screen is in `transcript.md` and `timeline.md`._"
+        + (reconciled.applied
+          ? "\n\n_The words are the publisher's own caption track, word for word: the descriptive "
+            + "pass supplies who is speaking, when, and the punctuation — never the wording. "
+            + "`_meta.md` lists every place the two had come apart._"
+          : ""),
     });
     if (restamped && restamped !== index) {
       writeFileSync(join(dir, "index.md"), restamped, "utf8");
       indexRestamped = true;
     }
+  }
+
+  // Last: the two files written before any of this was known. They are why a reader
+  // opening `transcript.txt` met "the lower-third frames are what will settle this in
+  // the descriptive pass" on a run where the pass had already settled it and named
+  // eight people. Amending them costs one splice each, and is the difference between
+  // a directory that agrees with itself and one that argues.
+  const forceHours = (meta.durationSeconds || 0) >= 3600;
+  const voices = speakerRoster(timed, { durationSeconds: meta.durationSeconds });
+  const postscript = descriptivePostscript({
+    voices, reconciled, fit, chaptersMoved, unmatched, meta, forceHours,
+  });
+  const amended = [];
+  for (const [name, splice] of [["transcript.txt", spliceDescriptivePostscript],
+    ["_meta.md", spliceMetaPostscript]]) {
+    const src = read(name);
+    if (!src) continue;
+    const next = splice(src, postscript);
+    if (next && next !== src) { writeFileSync(join(dir, name), next, "utf8"); amended.push(name); }
   }
 
   return {
@@ -2715,11 +3190,30 @@ export function writeTimeline(dir) {
     chaptersFile: chaptersVtt ? join(dir, CHAPTERS_FILE) : null,
     indexRestamped,
     proseRestamped,
+    amended,
     beats: timed.length,
     speechBeats: timed.filter((b) => b.kind === "speech").length,
     markers: timed.reduce((n, b) => n + (b.markers || []).length, 0),
     describedCues: describedCues.length,
-    voices: speakerRoster(timed, { durationSeconds: meta.durationSeconds }).length,
+    described: {
+      cues: fit.total,
+      overrun: fit.overrun,
+      overrunCues: fit.overrunCues,
+      needSeconds: fit.needSeconds,
+      windowSeconds: fit.windowSeconds,
+      speechSeconds: meta.speechSeconds,
+    },
+    reconciled: {
+      applied: reconciled.applied,
+      why: reconciled.why,
+      drift: reconciled.drift,
+      restored: reconciled.restored,
+      changes: reconciled.changes.map((c) => ({
+        at: fmtTime(c.beat.time, forceHours), kind: c.kind, before: c.before, after: c.after,
+      })),
+    },
+    chaptersMoved,
+    voices: voices.length,
     chapters: chapters.length,
     reference: textSource,
     referenceSegments: refSegments.length,
@@ -2742,6 +3236,27 @@ function doTimeline() {
   if (result.indexRestamped) {
     console.error("note: index.md was rebuilt from the descriptive pass — its paragraphs now carry "
       + "the speaker names, which is what the downstream pipeline skills read.");
+  }
+  const changed = result.reconciled?.changes?.length || 0;
+  if (changed) {
+    console.error(`note: ${changed} place(s) where the descriptive pass had re-typed the speech `
+      + "differently from the publisher's caption track were put back to the track's wording — "
+      + "each one is listed in _meta.md and transcript.txt.");
+  } else if (result.reconciled && !result.reconciled.applied && result.reconciled.why) {
+    console.error(`note: the speech was not reconciled against a reference track — ${result.reconciled.why}.`);
+  }
+  if (result.described?.overrun) {
+    console.error(`note: ${result.described.overrun} of ${result.described.cues} description cue(s) `
+      + "carry more narration than their window holds — descriptions.vtt is an extended-description "
+      + "script, not a track to hang on a player unedited. Its NOTE header says so.");
+  }
+  if (result.chaptersMoved) {
+    console.error(`note: ${result.chaptersMoved} chapter heading(s) moved to the measured time of `
+      + "the first beat under them.");
+  }
+  if (result.amended?.length) {
+    console.error(`note: ${result.amended.join(" and ")} amended with what this pass settled — `
+      + "they were written before any of it was known.");
   }
 }
 
@@ -2766,6 +3281,23 @@ const REPORT_MARKERS = ["PART 1 - ", "PART 2 - ", "PART 3 - POSSIBLE ISSUES", RE
 function countIn(text, re) {
   const m = String(text || "").match(re);
   return m ? Number(m[1]) : null;
+}
+
+// index.md's speech, back as timed segments, so it can be diffed against the track
+// it claims to be carrying. Both shapes the file ever takes are matched: the one
+// written before the descriptive pass, `**[0:00]** …`, and the one written after it,
+// `**[0:00] Maria Collins:** …`. Everything else in the body — the heading, the
+// italic note, the frontmatter — is not speech and is not compared.
+export function indexSpeechSegments(indexMd) {
+  const body = String(indexMd || "").replace(/\r\n?/g, "\n").replace(/^---\n[\s\S]*?\n---\n/, "");
+  const out = [];
+  for (const line of body.split("\n")) {
+    const m = line.match(/^\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\][^*]*\*\*\s*(.*)$/);
+    if (!m) continue;
+    const text = splitDelivery(m[2].trim()).speech;
+    if (text) out.push({ start: parseStamp(m[1]) || 0, text });
+  }
+  return out;
 }
 
 export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
@@ -2958,6 +3490,25 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
           + "name card looks like. Check the frame, or mark the name uncertain — an almost-right "
           + "spelling of a real person's name is worse than admitting the glyphs were unreadable.");
       }
+
+      // …and the same marker in the wrong place. An uncertain name card is quoted
+      // uncertainly — that rule is right and is in the skill. What goes wrong is
+      // *where*: the speaker label reads `Terrilyn Rivers-Cannon [?]` and the card
+      // beside it reads `"Terrilyn [?] Rivers-Cannon / SSWAA"`, with the mark buried
+      // mid-name. Two spellings of one doubt, and descriptions.vtt inherits whichever
+      // the card used. The marker closes the name it qualifies, in both places.
+      const misplaced = [...new Set([...prose.matchAll(/["“]([^"“”\n]{2,240})["”]/g)]
+        .map((m) => m[1])
+        .filter((q) => /\[\s*\?\s*\]/.test(q))
+        .filter((q) => !/\[\s*\?\s*\]$/.test(q.split(/\s*[/|·—–]\s*/)[0].trim())))];
+      if (misplaced.length) {
+        notes.push(`\`[?]\` sits inside a name rather than after it, in quoted on-screen text: `
+          + `${misplaced.slice(0, 3).map((q) => `"${q}"`).join(", ")}`
+          + `${misplaced.length > 3 ? `, and ${misplaced.length - 3} more` : ""}. The marker `
+          + "closes the whole name — `\"Terrilyn Rivers-Cannon [?] / SSWAA\"` — so the card and "
+          + "the speaker label spell one doubt the same way. `descriptions.vtt` quotes the card "
+          + "verbatim and carries whichever form is used here.");
+      }
     }
   }
 
@@ -2975,6 +3526,26 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
       problems.push("A publisher caption track is present but index.md still declares "
         + "`text_source: speech-recognition` — downstream would read the recognizer's guess "
         + "while the publisher's own wording sits unused beside it.");
+    } else {
+      // The claim, checked against the words rather than taken on trust. It went
+      // wrong exactly once and invisibly: index.md is built from the caption cues and
+      // is exact, then the descriptive pass rebuilds it from its own re-typing of the
+      // same speech and the frontmatter carries over unchanged. What survives is a
+      // file that says publisher-captions and says "grades K-12" where the publisher
+      // wrote "grades K through 12" — a dropped word being the one difference that
+      // leaves nothing behind for a reader to notice.
+      const track = parseCaptions(read(CAPTIONS_FILE) || read(publisherTrackFile("srt")) || "");
+      const drift = track ? diffTranscripts(indexSpeechSegments(index), captionSegments(track.cues)) : [];
+      if (drift.length) {
+        const shown = drift.slice(0, 3).map((d) =>
+          `at ${d.at} index.md has ${d.asr ? `"${d.asr}"` : "nothing"} where the track has `
+          + `${d.captions ? `"${d.captions}"` : "nothing"}`);
+        problems.push(`index.md declares \`text_source: publisher-captions\` but its words differ `
+          + `from ${CAPTIONS_FILE} in ${drift.length} place(s) — ${shown.join("; ")}`
+          + `${drift.length > 3 ? "; and more" : ""}. Every file built from it carries the same `
+          + `wording, so the whole directory is quietly a re-typing rather than the track. Re-run `
+          + `\`timeline "<dir>"\`, which reconciles the two and records what it changed.`);
+      }
     }
   }
 
@@ -3012,6 +3583,28 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   if (existsSync(join(dir, LEGACY_GENERATED_CAPTIONS_FILE))) {
     notes.push(`${LEGACY_GENERATED_CAPTIONS_FILE} is left over from an older run — the caption track `
       + `is ${SUBTITLE_FILE} now, whoever wrote the words. Delete it before anyone ships the wrong one.`);
+  }
+
+  // A description is spoken, not read, so a cue whose narration does not fit its
+  // window is not merely dense — it is not delivered. Re-measured here rather than
+  // trusted from the file's own NOTE header, because the header is only right for as
+  // long as nobody has edited the cues underneath it.
+  const describedRaw = read(DESCRIPTIONS_FILE);
+  const describedTrack = describedRaw ? parseCaptions(describedRaw) : null;
+  if (describedTrack) {
+    const fit = fitDescriptionCues(describedTrack.cues);
+    const claims = /kind="descriptions">, not as captions/.test(describedRaw);
+    if (fit.overrun) {
+      const worst = fit.worst;
+      notes.push(`${DESCRIPTIONS_FILE}: ${fit.overrun} of ${fit.total} cues carry more narration `
+        + `than their window holds at ~${Math.round(AD_WORDS_PER_SECOND * 60)} words per minute`
+        + (worst ? ` (worst is cue ${worst.n} — ${worst.words} words in ${worst.window.toFixed(2)}s)` : "")
+        + ". It is an extended-description script, not a track to hang on an ordinary player"
+        + (claims
+          ? ", and its NOTE header still tells the reader to do exactly that. Re-run "
+            + `\`timeline "<dir>"\`, which measures the fit and writes the header to match.`
+          : " — its NOTE header says so."));
+    }
   }
 
   const reviewed = Boolean(report) && !report.includes(REVIEW_PENDING);
@@ -3616,7 +4209,13 @@ async function runOne({ source, py, outRoot }) {
       await ingestCaptions({ captionsUrl, outDir, asrSegments: result.segments, warnings });
     // Two different things that both get called "captions": the track the publisher
     // shipped (this) and any subtitle stream inside the media file (descriptive.captions).
-    const publisherCaptions = { cues: captionCues || 0, used: Boolean(captions && captions.length) };
+    const publisherCaptions = {
+      cues: captionCues || 0,
+      used: Boolean(captions && captions.length),
+      // Counted here so the report can name both totals rather than printing one
+      // number labelled "Words" beside a track that holds a different one.
+      words: (captions || []).reduce((n, s) => n + wordCount(s.text), 0),
+    };
 
     writeFileSync(indexPath, buildIndexMd({
       source: sourceRef, slug, title, result, fetchedAt, captionSegments: captions,

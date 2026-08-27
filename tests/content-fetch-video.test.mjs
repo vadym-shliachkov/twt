@@ -2056,7 +2056,10 @@ test('chapters.vtt is the chapter list a player can act on, or nothing at all', 
   const dir = granularDir();
   writeTimeline(dir);
   const vtt = readFileSync(join(dir, CHAPTERS_FILE), 'utf8');
-  assert.match(vtt, /^Chapter 1\n00:00:00\.000 --> 00:00:22\.000\nWhy a life insurer took this on$/m);
+  // 22.600, not the heading's own 0:22: the stamp in the prose was written by eye and
+  // the line under it is measured, so the heading takes the line's time.
+  assert.match(vtt, /^Chapter 1\n00:00:00\.000 --> 00:00:22\.600\nWhy a life insurer took this on$/m);
+  assert.match(vtt, /^Chapter 2\n00:00:22\.600 --> /m);
   assert.ok(parseCaptions(vtt));
   assert.equal(buildChaptersVtt([], { durationSeconds: 20 }), null,
     'an empty chapters track would look like a broken one');
@@ -2210,4 +2213,403 @@ test('a model counts as downloaded only once its weights are on disk', () => {
   writeFileSync(join(snap, 'model.bin'), 'weights');
   assert.equal(modelIsCached(repo, hub), true);
   rmSync(hub, { recursive: true, force: true });
+});
+
+// ---- the publisher's words, all the way through ------------------------------------
+// Everything below exists because of one silent failure. index.md and the five files
+// built beside it declare `text_source: publisher-captions`; _meta.md says index.md
+// carries the caption wording. The first index.md is built from the cues and is
+// exact — and then the descriptive pass rebuilds every one of them out of its own
+// re-typing of the same speech, and the frontmatter carries over untouched. What
+// reached the pipeline said "grades K-12" where the publisher had written "grades K
+// through 12", under a heading claiming to be the publisher's own track.
+
+import {
+  reconcileBeatText, snapChapters, fitDescriptionCues, AD_WORDS_PER_SECOND,
+  indexSpeechSegments, spliceDescriptivePostscript, spliceMetaPostscript,
+  descriptivePostscript, buildDescriptionsVtt, POSTSCRIPT_HEADING, META_POSTSCRIPT_HEADING,
+  cleanSpeakerName, isUncertainName, RECONCILE_MAX_DRIFT, CAPTIONS_FILE,
+} from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
+
+const vtt = (...rows) => ['WEBVTT', '', ...rows.map(([a, b, text]) =>
+  `${formatVttTime(a)} --> ${formatVttTime(b)}\n${text}\n`)].join('\n');
+
+// The publisher wrote "K through 12" and "one time"; the recognizer dropped the
+// "through" and the descriptive pass re-typed the rest. Both doubled words are real:
+// spanText used to collapse "that that" to "that" when it rebuilt a sentence.
+const PUB_VTT = vtt(
+  [0, 4, 'Support grieving students'],
+  [4, 8, 'in grades K through 12.'],
+  [8, 12, "It's not a one time event."],
+  [12, 18, 'That that student will never forget that that teacher was there.'],
+);
+
+const RETYPED_PROSE = [
+  '---', 'title: T', 'duration: 0:00:20', '---', '',
+  '## Transcript', '',
+  '### [0:00] Opening', '',
+  '[Visual: fade up from black.]', '',
+  '[On screen: name card — "Ada Lovelace / Director / Somewhere".]', '',
+  "**Ada Lovelace:** Support grieving students in grades K-12. It's not a one-time event.", '',
+  '[On screen: name card — "Terrilyn Rivers-Cannon / School Social Work Association".]', '',
+  '**Terrilyn Rivers-Cannon [?]:** That that student will never forget that that teacher was'
+    + ' there.', '',
+].join('\n');
+
+function reconcileDir({ prose = RETYPED_PROSE, captions = PUB_VTT } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-reconcile-'));
+  const asr = segs(
+    [0, 8, 'Support grieving students in grades K-12.'],
+    [8, 12, "It's not a one-time event."],
+    [12, 18, 'That that student will never forget that that teacher was there.'],
+  );
+  writeFileSync(join(dir, 'index.md'),
+    '---\nsource: https://example.com/v.mp4\ntype: video\ntitle: T\nduration: 0:00:20\n'
+    + 'language: en\nengine: faster-whisper\nmodel: small\ntext_source: publisher-captions\n'
+    + 'segments: 3\nfetched_at: 2026-08-26\n---\n\n# T\n\n**[0:00]** everything in one lump.\n');
+  writeFileSync(join(dir, 'segments.json'), JSON.stringify({ segments: asr }));
+  writeFileSync(join(dir, '_meta.md'),
+    '# Transcript metadata — v.mp4\n\n- **Segments:** 3\n\n## Warnings\n\n'
+    + '- The recognizer returned back-to-back segment times, so pause-based turn detection is'
+    + ' blind on this file.\n\n> Machine transcription. Names, jargon, and numbers are the least'
+    + ' reliable parts.\n');
+  writeFileSync(join(dir, 'transcript.txt'),
+    'PART 1 - x\nPART 2 - TIMESTAMPED SEGMENTS (all 3 items)\nPART 3 - POSSIBLE ISSUES\n'
+    + `${'-'.repeat(REPORT_WIDTH)}\n${REVIEW_HEADING}\n${'-'.repeat(REPORT_WIDTH)}\n\n`
+    + 'The 7 lower-third frames are what will settle this in the descriptive pass.\n\n'
+    + `${'='.repeat(REPORT_WIDTH)}\nEND OF REPORT\n${'='.repeat(REPORT_WIDTH)}\n`);
+  writeFileSync(join(dir, 'media.json'), JSON.stringify({ has_video: false }));
+  writeFileSync(join(dir, 'outline.json'), JSON.stringify({ windows: [] }));
+  writeData(dir, CAPTIONS_FILE, captions);
+  writeSubtitles({ outDir: dir, source: 'a.mp4', result: { model: 'small', duration: 20, segments: asr } });
+  writeFileSync(join(dir, 'transcript.md'), prose);
+  return dir;
+}
+
+test('a word the recognizer dropped comes back from the publisher\'s track', () => {
+  const dir = reconcileDir();
+  const out = writeTimeline(dir);
+  assert.equal(out.reconciled.applied, true);
+
+  // The whole point: every file the pipeline reads carries the publisher's wording.
+  for (const name of ['index.md', TIMELINE_FILE, SPEECH_MD_FILE, SPEECH_TXT_FILE, WCAG_TEXT_FILE]) {
+    const text = readFileSync(join(dir, name), 'utf8');
+    assert.match(text, /grades K through 12/, `${name} lost the publisher's "through"`);
+    assert.ok(!/grades K-12/.test(text), `${name} still carries the recognizer's "K-12"`);
+  }
+  const wcag = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8'));
+  assert.ok(wcag.entries.some((e) => /grades K through 12/.test(e.caption)));
+
+  // And the change is on the record in both directions, not applied quietly.
+  const restored = out.reconciled.changes.find((c) => /K through 12/.test(c.after));
+  assert.ok(restored, "the restoration has to be on the record, not just in the file");
+  assert.match(restored.before, /K-12/);
+  assert.match(readFileSync(join(dir, '_meta.md'), 'utf8'), /K through 12/);
+  assert.match(readFileSync(join(dir, 'transcript.txt'), 'utf8'), /K through 12/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('rebuilding a sentence keeps a word that was genuinely said twice', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const index = readFileSync(join(dir, 'index.md'), 'utf8');
+  assert.match(index, /That that student will never forget that that teacher was there\./,
+    'collapsing "that that" to "that" would be the tool inventing a different sentence');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a difference of hyphen or full stop alone is left exactly as it was', () => {
+  const dir = reconcileDir();
+  const out = writeTimeline(dir);
+  const index = readFileSync(join(dir, 'index.md'), 'utf8');
+  // The publisher's cue says "a one time event."; the descriptive pass hyphenated it.
+  // Nothing was said differently, so nothing is rewritten — the same rule
+  // diffTranscripts works by, and the one verify checks this file against.
+  assert.match(index, /a one-time event/);
+  assert.equal(out.reconciled.changes.length, 1, 'the dropped word, and nothing else');
+  assert.match(out.reconciled.changes[0].after, /K through 12/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("the publisher's own cue-boundary punctuation is not adopted along with the words", () => {
+  // A real caption track breaks a clause across two cues and full-stops the join:
+  // "…on the professionals as well." / "That they feel equipped." Restoring the words
+  // must not import that, or a fix for a dropped word becomes a mangled sentence.
+  const beats = [{
+    kind: 'speech', speaker: 'A',
+    speech: "there's a great impact on the professionals as well, that they feel prepared.",
+  }];
+  const out = reconcileBeatText(beats, segs(
+    [0, 3, "there's a great impact on the professionals as well."],
+    [3, 6, 'That they feel prepared.'],
+  ));
+  assert.equal(out.changes.length, 0);
+  assert.equal(beats[0].speech,
+    "there's a great impact on the professionals as well, that they feel prepared.");
+});
+
+test('a beat the reference stream does not cover keeps its own words', () => {
+  const beats = [
+    { kind: 'speech', speaker: 'A', speech: 'in grades K-12.' },
+    { kind: 'speech', speaker: 'B', speech: 'An aside the caption track never carried at all.' },
+  ];
+  const out = reconcileBeatText(beats, segs([0, 4, 'in grades K through 12.']));
+  assert.equal(out.applied, true);
+  assert.equal(beats[0].speech, 'in grades K through 12.');
+  assert.equal(beats[1].speech, 'An aside the caption track never carried at all.',
+    'emptying it would delete real speech, which is worse than leaving it unreconciled');
+});
+
+test('a stage direction survives the words being replaced under it', () => {
+  const beats = [{ kind: 'speech', speaker: 'A', speech: '*(voice-over)* in grades K-12.' }];
+  reconcileBeatText(beats, segs([0, 4, 'in grades K through 12.']));
+  assert.equal(beats[0].speech, '*(voice-over)* in grades K through 12.');
+});
+
+test('two texts too far apart are left alone rather than rewritten into each other', () => {
+  const beats = [{ kind: 'speech', speaker: 'A', speech: 'the quick brown fox jumps over the lazy dog' }];
+  const out = reconcileBeatText(beats, segs([0, 4, 'entirely different words about something else here']));
+  assert.equal(out.applied, false);
+  assert.ok(out.drift > RECONCILE_MAX_DRIFT);
+  assert.match(out.why, /too far apart/);
+  assert.equal(beats[0].speech, 'the quick brown fox jumps over the lazy dog');
+});
+
+test('verify catches an index.md that claims the caption track and does not carry it', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  assert.equal(verifyArtifacts(dir).ok, true, 'a reconciled directory is clean');
+
+  // Put the recognizer's wording back, exactly as the descriptive pass used to leave it.
+  const index = readFileSync(join(dir, 'index.md'), 'utf8');
+  writeFileSync(join(dir, 'index.md'), index.replace('K through 12', 'K-12'));
+  const bad = verifyArtifacts(dir);
+  assert.equal(bad.ok, false);
+  assert.match(bad.problems.join('\n'), /text_source: publisher-captions.*differ/s);
+  assert.match(bad.problems.join('\n'), /through/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('index.md gives its speech back as segments, named or not', () => {
+  const named = indexSpeechSegments('---\na: b\n---\n\n# T\n\n_a note._\n\n**[0:06] Ada Lovelace:** hello there.\n');
+  assert.deepEqual(named, [{ start: 6, text: 'hello there.' }]);
+  const anon = indexSpeechSegments('---\na: b\n---\n\n# T\n\n**[1:02]** hello there.\n');
+  assert.deepEqual(anon, [{ start: 62, text: 'hello there.' }]);
+});
+
+// ---- chapters ----------------------------------------------------------------------
+
+test('a chapter never starts after the line it introduces', () => {
+  const chapter = { time: 22, title: 'Forming the coalition' };
+  const beats = [
+    { kind: 'markers', time: 22, markers: ['[Visual: a cut.]'], chapter },
+    { kind: 'speech', time: 22.6, speaker: 'A', speech: 'Together, our organizations…', chapter },
+  ];
+  assert.equal(snapChapters(beats, [chapter]), 0, 'a move inside the same printed second is not a move');
+  assert.equal(chapter.time, 22);
+
+  const late = { time: 25, title: 'Later' };
+  const lateBeats = [{ kind: 'speech', time: 22.6, speaker: 'A', speech: 'x', chapter: late }];
+  assert.equal(snapChapters(lateBeats, [late]), 1);
+  assert.equal(late.time, 22.6);
+});
+
+test('snapped chapters stay in order even when a beat lands before the one above it', () => {
+  const a = { time: 0, title: 'A' };
+  const b = { time: 30, title: 'B' };
+  const beats = [
+    { kind: 'speech', time: 10, speaker: 'x', speech: 'one', chapter: a },
+    { kind: 'speech', time: 5, speaker: 'x', speech: 'two', chapter: b },
+  ];
+  snapChapters(beats, [a, b]);
+  assert.ok(b.time >= a.time, 'a chapter list that runs backwards is worse than an imprecise one');
+});
+
+// ---- descriptions that can actually be spoken ---------------------------------------
+
+test('a description cue that cannot be spoken in its window is measured as such', () => {
+  const words = (n) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+  const fit = fitDescriptionCues([
+    { start: 0, end: 10, text: `[Visual: ${words(20)}]` },
+    { start: 10, end: 11.32, text: `[On screen: ${words(57)}]` },
+  ]);
+  assert.equal(fit.overrun, 1);
+  assert.deepEqual(fit.overrunCues, [2]);
+  assert.equal(fit.worst.n, 2);
+  assert.ok(fit.needSeconds > fit.windowSeconds);
+  assert.ok(AD_WORDS_PER_SECOND * 60 > 140 && AD_WORDS_PER_SECOND * 60 < 180,
+    'the rate has to be a describer speaking, not a synthesiser being pushed');
+});
+
+test('descriptions.vtt says which of the two things it is', () => {
+  const meta = { fetchedAt: '2026-08-26', durationSeconds: 20, speechSeconds: 19 };
+  const fits = [{ start: 0, end: 10, text: '[Visual: a short one.]' }];
+  assert.match(buildDescriptionsVtt(fits, { source: 'a.mp4', meta }),
+    /Hang it on the video as <track kind="descriptions">/);
+
+  const words = Array.from({ length: 60 }, (_, i) => `w${i}`).join(' ');
+  const over = [{ start: 0, end: 1.32, text: `[On screen: ${words}]` }];
+  const vttText = buildDescriptionsVtt(over, { source: 'a.mp4', meta });
+  assert.match(vttText, /EXTENDED DESCRIPTION SCRIPT, NOT A DROP-IN TRACK/);
+  assert.match(vttText, /Overrunning cues: 1\./);
+  assert.match(vttText, /speech already occupies|Speech already occupies/);
+  assert.ok(!/Hang it on the video as <track kind="descriptions">, not as captions/.test(vttText),
+    'a track that cannot be spoken must not tell the reader to hang it on a player');
+  assert.ok(parseCaptions(vttText), 'it is still valid WebVTT either way');
+});
+
+test('verify re-measures the description fit rather than trusting the header', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const words = Array.from({ length: 80 }, (_, i) => `w${i}`).join(' ');
+  writeFileSync(join(dir, DESCRIPTIONS_FILE),
+    'WEBVTT\n\nNOTE\nHang it on the video as <track kind="descriptions">, not as captions —\n'
+    + `\n1\n00:00:00.000 --> 00:00:02.000\n[On screen: ${words}]\n`);
+  const out = verifyArtifacts(dir);
+  assert.match(out.notes.join('\n'), /extended-description script/);
+  assert.match(out.notes.join('\n'), /NOTE header still tells the reader to do exactly that/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- the uncertainty marker stays a note to a human ---------------------------------
+
+test('[?] is a flag in the data and a marker in the prose, never part of the name', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const wcag = JSON.parse(readFileSync(join(dir, WCAG_FILE), 'utf8'));
+  const row = wcag.entries.find((e) => e.author && /Terrilyn/.test(e.author));
+  assert.equal(row.author, 'Terrilyn Rivers-Cannon', 'the curation skills read this field as the spelling');
+  assert.equal(row.author_uncertain, true, 'the doubt is kept, in a shape a consumer can act on');
+  assert.match(readFileSync(join(dir, WCAG_TEXT_FILE), 'utf8'), /Terrilyn Rivers-Cannon\s+\[\?\]/);
+  assert.match(readFileSync(join(dir, SPEAKERS_FILE), 'utf8'), /Terrilyn Rivers-Cannon \[\?\]/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('cleanSpeakerName and isUncertainName split the two jobs the marker was doing', () => {
+  assert.equal(cleanSpeakerName('Terrilyn Rivers-Cannon [?]'), 'Terrilyn Rivers-Cannon');
+  assert.equal(cleanSpeakerName('Terrilyn [ ? ] Rivers-Cannon'), 'Terrilyn Rivers-Cannon');
+  assert.equal(isUncertainName('Terrilyn Rivers-Cannon [?]'), true);
+  assert.equal(isUncertainName('Ada Lovelace'), false);
+  assert.equal(cleanSpeakerName(null), '');
+});
+
+test('verify flags the marker buried inside a name in a quoted card', () => {
+  const dir = reconcileDir({
+    prose: RETYPED_PROSE.replace('"Terrilyn Rivers-Cannon / School',
+      '"Terrilyn [?] Rivers-Cannon / School'),
+  });
+  writeTimeline(dir);
+  const out = verifyArtifacts(dir);
+  assert.match(out.notes.join("\n"), /\[\?\]` sits inside a name rather than after it/);
+  assert.match(out.notes.join('\n'), /Terrilyn \[\?\] Rivers-Cannon/);
+
+  // …and the same card with the marker in the right place raises nothing.
+  const clean = reconcileDir();
+  writeTimeline(clean);
+  assert.ok(!verifyArtifacts(clean).notes.join("\n").includes("sits inside a name"));
+  rmSync(clean, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- the two files that used to be a run behind ---------------------------------------
+
+test('the report stops asking for what the descriptive pass has already settled', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const report = readFileSync(join(dir, 'transcript.txt'), 'utf8');
+  assert.match(report, new RegExp(POSTSCRIPT_HEADING));
+  assert.match(report, /Speakers are settled: 2 named voice\(s\)/);
+  assert.match(report, /Ada Lovelace/);
+  assert.match(report, /PARTS 1 and 2 of `transcript.txt` are unchanged/);
+  assert.ok(report.indexOf(POSTSCRIPT_HEADING) < report.indexOf(REVIEW_HEADING),
+    'below the review heading the next `annotate` would delete it');
+
+  const meta = readFileSync(join(dir, '_meta.md'), 'utf8');
+  assert.match(meta, new RegExp(META_POSTSCRIPT_HEADING));
+  assert.ok(meta.indexOf('## Warnings') < meta.indexOf(META_POSTSCRIPT_HEADING),
+    'the caveat, then its resolution, in that order');
+  assert.ok(meta.indexOf(META_POSTSCRIPT_HEADING) < meta.indexOf('> Machine transcription'));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('splicing the amendment twice replaces it rather than stacking it', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const once = readFileSync(join(dir, 'transcript.txt'), 'utf8');
+  // The report wraps to its own column, so these are matched on the flattened text.
+  const flat = (s) => s.replace(/\s+/g, " ");
+  assert.match(flat(once), /changed the wording in 1 place\(s\)/);
+
+  // The second run reads a transcript.md this command has already reconciled, so it
+  // truthfully reports a clean file rather than repeating the first run's findings.
+  // What must not change is the number of amendments in the file.
+  const out = writeTimeline(dir);
+  const twice = readFileSync(join(dir, 'transcript.txt'), 'utf8');
+  assert.equal(twice.split(POSTSCRIPT_HEADING).length - 1, 1);
+  assert.equal(out.reconciled.changes.length, 0);
+  assert.match(twice, /matched it\s+exactly\. Nothing was rewritten\./);
+  assert.equal(twice.split(REVIEW_HEADING).length - 1, 1, 'and nothing below it was disturbed');
+
+  // From there it is a fixed point: nothing is left to settle, so nothing moves.
+  const metaTwice = readFileSync(join(dir, '_meta.md'), 'utf8');
+  writeTimeline(dir);
+  assert.equal(readFileSync(join(dir, 'transcript.txt'), 'utf8'), twice);
+  assert.equal(readFileSync(join(dir, '_meta.md'), 'utf8'), metaTwice);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('annotating the review afterwards leaves the amendment where it is', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const spliced = spliceReview(readFileSync(join(dir, 'transcript.txt'), 'utf8'), 'a later read-through.');
+  assert.match(spliced, new RegExp(POSTSCRIPT_HEADING));
+  assert.match(spliced, /a later read-through\./);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the amendment says plainly when there was no track to reconcile against', () => {
+  const lines = descriptivePostscript({
+    voices: [], reconciled: { applied: false, why: 'no publisher caption track', changes: [] },
+    fit: null, chaptersMoved: 0, unmatched: [], meta: {},
+  });
+  const text = lines.join('\n');
+  assert.match(text, /named nobody/);
+  assert.match(text, /not reconciled against a reference track: no publisher caption track/);
+});
+
+test('the two splices no-op on a file that is not the shape they expect', () => {
+  assert.equal(spliceDescriptivePostscript('not a report', ['x']), null);
+  assert.match(spliceMetaPostscript('# meta\n\nno closing note here\n', ['x']),
+    new RegExp(`${META_POSTSCRIPT_HEADING}\\n\\n- x`));
+});
+
+// ---- the counts that used to disagree ------------------------------------------------
+
+test('speakers.md totals its own table', () => {
+  const dir = reconcileDir();
+  writeTimeline(dir);
+  const md = readFileSync(join(dir, SPEAKERS_FILE), 'utf8');
+  const rows = [...md.matchAll(/^\| (?!\*\*All)(?!-)([^|]+)\|[^|]*\|[^|]*\|\s*(\d+)\s*\|\s*(\d+)\s*\|/gm)];
+  const words = rows.reduce((n, r) => n + Number(r[3]), 0);
+  assert.match(md, new RegExp(`\\*\\*All ${rows.length} speakers\\*\\*.*\\*\\*${words}\\*\\*`));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('the report names both word counts rather than one unlabelled number', () => {
+  const result = {
+    duration: 20, model: 'small', device: 'cpu', compute_type: 'int8', language: 'en',
+    language_probability: 1, transcribe_seconds: 3, segments: segs([0, 8, 'in grades K-12.']),
+  };
+  const txt = buildReportTxt({
+    source: 'a.mp4', slug: 'a', result, issues: { counts: {}, segments: [], run: [], variants: [] },
+    fetchedAt: '2026-08-26', descriptive: null, captionDiff: [], subtitles: null,
+    publisherCaptions: { cues: 4, used: true, words: 4 },
+  });
+  assert.match(txt, /Words .*3 recognized, 4 in the publisher's track/s);
+
+  const noTrack = buildReportTxt({
+    source: 'a.mp4', slug: 'a', result, issues: { counts: {}, segments: [], run: [], variants: [] },
+    fetchedAt: '2026-08-26', descriptive: null, captionDiff: [], subtitles: null,
+  });
+  assert.match(noTrack, /Words \.+ 3 recognized\n/);
 });
