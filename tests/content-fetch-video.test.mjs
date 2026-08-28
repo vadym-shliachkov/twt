@@ -18,6 +18,8 @@ import {
   CHAPTERS_FILE, DATA_DIR, dataPath, artifactPath, readArtifact, writeData, migrateFlatArtifacts,
   buildWcagTranscription, DEFAULT_MODEL, BELOW_DEFAULT, MODELS, modelIsCached,
   CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
+  fmtBytes, mediaProfile, sourceLine, extractedLine, longRunNote, prepareAudio,
+  LONG_RUN_SECONDS,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -2612,4 +2614,195 @@ test('the report names both word counts rather than one unlabelled number', () =
     fetchedAt: '2026-08-26', descriptive: null, captionDiff: [], subtitles: null,
   });
   assert.match(noTrack, /Words \.+ 3 recognized\n/);
+});
+
+// ---- the source profile, and the audio the recognizer is actually handed --------
+// The change these cover: the container used to go straight into faster-whisper,
+// whose decode_audio holds the whole track in RAM (measured 333 MB peak on 30
+// minutes of audio, against 40 MB for the streaming extractor, and it grows with
+// duration). Everything below is the seam that keeps the container out.
+
+test('fmtBytes switches to GB where MB stops being readable', () => {
+  assert.equal(fmtBytes(0), null);
+  assert.equal(fmtBytes(5 * 1048576), '5.0 MB');
+  assert.equal(fmtBytes(1073741823), '1024.0 MB');
+  assert.equal(fmtBytes(5e9), '4.66 GB');
+});
+
+test('mediaProfile derives the bitrate that tells a master from a delivery file', () => {
+  // The reported case: 5 GB across half an hour.
+  assert.equal(mediaProfile({ bytes: 5e9, duration: 1800 }).mbps, 22.2);
+  // A normal 1080p delivery file, an order of magnitude down.
+  assert.equal(mediaProfile({ bytes: 5e8, duration: 1800 }).mbps, 2.2);
+  // Neither number is invented when the inputs are missing.
+  assert.equal(mediaProfile({ bytes: 0, duration: 1800 }).mbps, null);
+  assert.equal(mediaProfile({ bytes: 5e9, duration: 0 }).mbps, null);
+  assert.equal(mediaProfile({}).shrank, null);
+});
+
+test('mediaProfile reports how much of the container the recognizer skipped', () => {
+  assert.equal(mediaProfile({ bytes: 5e9, duration: 1800, audioBytes: 57.6e6 }).shrank, 87);
+  // A small clip whose WAV is larger than its source must not claim a saving.
+  assert.equal(mediaProfile({ bytes: 112235, duration: 6, audioBytes: 193240 }).shrank, 1);
+});
+
+test('the source line names size, duration, bitrate and what is in the file', () => {
+  const line = sourceLine({
+    bytes: 5e9, duration: 1800, streams: [{ type: 'video' }, { type: 'audio' }, { type: 'audio' }],
+  });
+  assert.equal(line, 'source: 4.66 GB, 0:30:00, 22.2 Mbit/s (video + audio)');
+  assert.match(sourceLine({ bytes: 0, duration: 12, streams: [] }),
+    /size unknown, 0:00:12 \(unknown streams\)/);
+});
+
+test('the extracted line claims a saving only when there was one', () => {
+  assert.equal(extractedLine({ bytes: 5e9, duration: 1800, audioBytes: 57.6e6 }),
+    'extracted 16 kHz mono audio: 54.9 MB — 87x less to read than the container');
+  assert.equal(extractedLine({ bytes: 112235, duration: 6, audioBytes: 193240 }),
+    'extracted 16 kHz mono audio: 0.2 MB');
+});
+
+test('a long recording is warned about before the wait, and blamed on the model not the file', () => {
+  assert.equal(longRunNote({ duration: LONG_RUN_SECONDS - 1, model: 'medium' }), null);
+  assert.equal(longRunNote({ duration: 0, model: 'medium' }), null);
+  const note = longRunNote({ duration: 3600, model: 'medium' });
+  assert.match(note, /1:00:00 of audio at `medium`/);
+  // The estimate is scaled by the measured table, not quoted from `medium` for
+  // every size: `base` is ~8x faster, and saying "about an hour" for it is wrong
+  // by most of an order of magnitude.
+  assert.match(longRunNote({ duration: 3600, model: 'medium' }), /roughly 1:00:00 of wall time/);
+  assert.match(longRunNote({ duration: 3600, model: 'base' }), /roughly 0:07:12 of wall time/);
+  // An untimed size is told it is untimed rather than handed a made-up number.
+  const untimed = longRunNote({ duration: 3600, model: 'tiny' });
+  assert.match(untimed, /`tiny` has not been timed here/);
+  assert.doesNotMatch(untimed, /roughly \d/);
+  // The point of the sentence: shrinking the source does not shorten the wait.
+  assert.match(note, /smaller source file does not shorten it, only a smaller --model does/);
+});
+
+test('_meta.md reports the container and the bytes the recognizer actually read', () => {
+  const result = {
+    duration: 1800, model: 'medium', device: 'cpu', compute_type: 'int8',
+    language: 'en', language_probability: 0.99, transcribe_seconds: 1700, segments: [],
+  };
+  const md = buildMetaMd({
+    source: 'master.mov', localPath: 'master.mov', bytes: 5e9, audioBytes: 57.6e6,
+    result, warnings: [], keptSource: true, descriptive: null,
+  });
+  assert.match(md, /- \*\*Size:\*\* 4\.66 GB \(22\.2 Mbit\/s\)/);
+  assert.match(md, /- \*\*Read by the recognizer:\*\* 54\.9 MB, extracted to 16 kHz mono before transcription — 87x less than the container/);
+
+  // Where extraction did not happen, the file says so rather than staying silent
+  // about which of the two numbers the run actually paid for.
+  const fellBack = buildMetaMd({
+    source: 'master.mov', localPath: 'master.mov', bytes: 5e9, audioBytes: 0,
+    result, warnings: ['x'], keptSource: true, descriptive: null,
+  });
+  assert.match(fellBack, /Read by the recognizer:\*\* the whole container/);
+
+  // And with no size known at all it stays quiet instead of guessing.
+  const noBytes = buildMetaMd({
+    source: 'a.mp4', localPath: 'a.mp4', bytes: 0, result, warnings: [],
+    keptSource: true, descriptive: null,
+  });
+  assert.doesNotMatch(noBytes, /Read by the recognizer/);
+});
+
+// prepareAudio shells out to media_probe.py. The tests drive it through a stub
+// interpreter instead: `py` is just {exe, args}, so a Node script standing in for
+// Python exercises the real branching without needing PyAV on the test machine.
+function stubPy(dir, { probe, wavBytes = 4096, failAudio = false }) {
+  const script = join(dir, 'stub.mjs');
+  writeFileSync(script, [
+    "import { writeFileSync } from 'node:fs';",
+    'const a = process.argv.slice(2);',
+    'const cmd = a[1];',
+    'const at = (n) => a[a.indexOf(n) + 1];',
+    `if (cmd === 'probe') writeFileSync(at('--out'), ${JSON.stringify(JSON.stringify(probe))});`,
+    "else if (cmd === 'audio') {",
+    `  if (${failAudio}) process.exit(5);`,
+    `  writeFileSync(at('--out'), Buffer.alloc(${wavBytes}));`,
+    '}',
+  ].join('\n'), 'utf8');
+  return { exe: process.execPath, args: [script] };
+}
+
+test('prepareAudio hands the recognizer an extracted WAV, not the container', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-prep-'));
+  try {
+    const py = stubPy(dir, {
+      probe: { duration: 1800, audio_index: 1, streams: [{ type: 'video' }, { type: 'audio' }] },
+      wavBytes: 57600000,
+    });
+    const warnings = [];
+    const audio = prepareAudio({
+      py, mediaPath: join(dir, 'master.mov'), outDir: dir, bytes: 5e9, warnings, model: 'medium',
+    });
+    assert.equal(audio.extracted, true);
+    assert.notEqual(audio.path, join(dir, 'master.mov'));
+    assert.match(audio.path, /speech\.wav$/);
+    assert.equal(audio.bytes, 57600000);
+    assert.deepEqual(warnings, []);
+    // The probe it ran is left where the descriptive pass expects to find it, so
+    // that pass does not re-read the container to learn the same thing.
+    assert.equal(existsSync(dataPath(dir, 'media.json')), true);
+    assert.equal(audio.info.audio_index, 1);
+    rmSync(audio.tempDir, { recursive: true, force: true });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a file with no audio stops before the model loads, not with an IndexError after it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-prep-'));
+  try {
+    const py = stubPy(dir, { probe: { duration: 3, audio_index: null, streams: [{ type: 'video' }] } });
+    assert.throws(() => prepareAudio({
+      py, mediaPath: join(dir, 'silent.mp4'), outDir: dir, bytes: 1e6,
+      warnings: [], model: 'medium',
+    }), (err) => {
+      assert.equal(err.code, 2);
+      assert.match(err.lines[0], /no audio stream/);
+      assert.match(err.lines[1], /Streams in it: video\./);
+      return true;
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a failed extraction falls back to the container rather than failing the run', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-prep-'));
+  try {
+    const media = join(dir, 'odd.mkv');
+    const py = stubPy(dir, {
+      probe: { duration: 60, audio_index: 2, streams: [{ type: 'audio' }] }, failAudio: true,
+    });
+    const warnings = [];
+    const audio = prepareAudio({ py, mediaPath: media, outDir: dir, bytes: 1e6, warnings, model: 'medium' });
+    assert.equal(audio.extracted, false);
+    assert.equal(audio.path, media);
+    assert.equal(audio.tempDir, null);
+    assert.match(warnings[0], /stream 2 could not be extracted/);
+    // The transcript is still produced; only the cheap path was lost.
+    assert.match(warnings[0], /transcript is unaffected/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a probe that fails leaves the container path open instead of stopping the run', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'twt-prep-'));
+  try {
+    const media = join(dir, 'weird.avi');
+    const py = { exe: process.execPath, args: ['-e', 'process.exit(1)'] };
+    const warnings = [];
+    const audio = prepareAudio({ py, mediaPath: media, outDir: dir, bytes: 1e6, warnings, model: 'medium' });
+    assert.equal(audio.extracted, false);
+    assert.equal(audio.path, media);
+    assert.equal(audio.info, null);
+    assert.match(warnings[0], /stream probe failed/i);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

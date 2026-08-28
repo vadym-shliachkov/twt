@@ -115,12 +115,27 @@ def describe(container):
 
     ad = [s for s in audio if is_ad(s)]
     text_subs = [s for s in subs if s.get("text_based")]
+
+    # The track to transcribe. Named here rather than left as "stream 1" for the
+    # caller to guess, because the guess is wrong twice: a description track is a
+    # commentary *about* the film and is never the speech you want, and a dub muxed
+    # ahead of the original would otherwise win on stream order alone. So the
+    # description tracks come out first and a `default` flag beats position.
+    described = {s["index"] for s in ad}
+    speech = [s for s in audio if s["index"] not in described] or audio
+    primary = next((s for s in speech if "default" in s["dispositions"]),
+                   speech[0] if speech else None)
+
     return {
         "duration": round(duration_of(container), 3),
         "streams": streams,
         "has_video": bool(video),
         "video_index": video[0]["index"] if video else None,
         "audio_tracks": len(audio),
+        # None means there is nothing to transcribe in this file at all — a
+        # distinct answer from "the transcript came back empty", and the caller
+        # is expected to stop rather than hand a silent film to a recognizer.
+        "audio_index": primary["index"] if primary else None,
         # Only a *secondary* track can be the description track: with one audio
         # stream there is nothing to describe against, whatever it is labelled.
         "audio_description_index": ad[0]["index"] if (ad and len(audio) > 1) else None,

@@ -100,6 +100,11 @@ const MEDIA_EXT = /\.(mp4|m4v|mov|mkv|webm|avi|wmv|flv|mpe?g|m4a|mp3|wav|aac|ogg
 // Transcription is unattended, and a transcript nobody re-reads is exactly the one
 // that must not be guessing at the vocabulary. On the machine this was measured on,
 // `medium` ran at 3.3x real time — an hour of audio in eighteen minutes.
+// Past this, transcription is long enough that the wait wants saying out loud
+// before it starts rather than being discovered. Half an hour of audio is about
+// half an hour of CPU at `medium`.
+export const LONG_RUN_SECONDS = 1800;
+
 export const DEFAULT_MODEL = "medium";
 // Below the default. `tiny` and `base` are the error-prone end and are called that;
 // `small` is a deliberate trade and gets a milder note.
@@ -482,6 +487,59 @@ export function nonSpeechGaps(segments, duration, min = GAP_MIN_SECONDS) {
   return gaps;
 }
 
+// ---- what the source costs to read ----------------------------------------------
+
+// MB below a gigabyte and GB above it. "4768.4 MB" is a number nobody converts in
+// their head, and this figure exists precisely to be recognised on sight.
+export function fmtBytes(bytes) {
+  if (!bytes) return null;
+  return bytes >= 1073741824
+    ? `${(bytes / 1073741824).toFixed(2)} GB`
+    : `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+// The two numbers that say whether a source is going to be painful to read: its
+// bitrate, and how much of it survives the reduction to speech. A delivery file
+// runs 2-8 Mbit/s; an editing master runs 20 and up, and at that rate better than
+// 99% of what a decoder reads is picture the recognizer discards.
+export function mediaProfile({ bytes = 0, duration = 0, audioBytes = 0 } = {}) {
+  const mbps = bytes && duration ? Math.round(((bytes * 8) / duration / 1e6) * 10) / 10 : null;
+  const shrank = bytes && audioBytes ? Math.round(bytes / audioBytes) : null;
+  return { bytes, duration, audioBytes, mbps, shrank };
+}
+
+export function sourceLine({ bytes, duration, streams = [] }) {
+  const { mbps } = mediaProfile({ bytes, duration });
+  const kinds = [...new Set((streams || []).map((s) => s.type))].join(" + ") || "unknown streams";
+  return `source: ${fmtBytes(bytes) || "size unknown"}, ${fmtTime(duration, true)}`
+    + `${mbps === null ? "" : `, ${mbps} Mbit/s`} (${kinds})`;
+}
+
+export function extractedLine({ bytes, audioBytes, duration }) {
+  const { shrank } = mediaProfile({ bytes, duration, audioBytes });
+  const less = shrank && shrank > 1 ? ` — ${shrank}x less to read than the container` : "";
+  return `extracted 16 kHz mono audio: ${fmtBytes(audioBytes)}${less}`;
+}
+
+// Said before the wait, not after it. The size fix below makes a big file cheap to
+// *read*; it does nothing to the recognizing, which is the part that takes the
+// hour. Conflating the two is how "I shrank the file and it is still slow" happens.
+export function longRunNote({ duration, model }) {
+  if (!duration || duration < LONG_RUN_SECONDS) return null;
+  // MODELS.relTime is measured against `medium`, and only some sizes have been
+  // timed. Quoting `medium`'s figure for `tiny` would be wrong by most of an order
+  // of magnitude, so an untimed size is told it is untimed rather than given a
+  // number that reads as measured.
+  const rel = (MODELS.find((m) => m.name === model) || {}).relTime;
+  const estimate = rel
+    ? `expect very roughly ${fmtTime(Math.round(duration * rel), true)} of wall time on CPU`
+    : `\`${model}\` has not been timed here — for scale, \`medium\` on CPU runs at about the `
+      + "recording's own length";
+  return `${fmtTime(duration, true)} of audio at \`${model}\` — ${estimate}. That is the `
+    + "recognizing, not the reading: a smaller source file does not shorten it, only a smaller "
+    + "--model does.";
+}
+
 function round3(n) { return Math.round((n || 0) * 1000) / 1000; }
 function words(text, n) { return text.split(/\s+/).filter(Boolean).slice(0, n).join(" "); }
 function lastWords(text, n) {
@@ -778,8 +836,9 @@ export function fileMapLines(descriptive) {
 }
 
 export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSource, descriptive,
-  captionSource, publisherCaptions = null }) {
+  captionSource, publisherCaptions = null, audioBytes = 0 }) {
   const src = redactUrl(source);
+  const profile = mediaProfile({ bytes, duration: result.duration, audioBytes });
   const extras = descriptive ? [
     "",
     "## Descriptive-pass inputs",
@@ -804,7 +863,16 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
       ? `- **Signed URL:** the \`${src.redacted.join("`, `")}\` value${src.redacted.length > 1 ? "s were" : " was"} redacted above — it is a time-limited credential and does not belong in a committed artifact. The link will not re-fetch as written.`
       : null,
     `- **Local media:** ${keptSource ? localPath : "downloaded to a temp file and deleted after transcription"}`,
-    bytes ? `- **Size:** ${(bytes / 1048576).toFixed(1)} MB` : null,
+    bytes ? `- **Size:** ${fmtBytes(bytes)}${profile.mbps === null ? "" : ` (${profile.mbps} Mbit/s)`}` : null,
+    // Both numbers, because the gap between them is the answer to "why did a 5 GB
+    // file take the same time as a 200 MB one" — the size was never what the
+    // recognizer read.
+    audioBytes
+      ? `- **Read by the recognizer:** ${fmtBytes(audioBytes)}, extracted to 16 kHz mono before `
+        + `transcription${profile.shrank > 1 ? ` — ${profile.shrank}x less than the container` : ""}`
+      : (bytes
+        ? "- **Read by the recognizer:** the whole container — the audio could not be lifted out first (see Warnings)"
+        : null),
     `- **Duration:** ${fmtTime(result.duration, true)}`,
     `- **Engine:** faster-whisper (local, offline) — model \`${result.model}\`, ${result.device}/${result.compute_type}`,
     `- **Language:** ${result.language || "unknown"} (detection confidence ${result.language_probability})`,
@@ -3633,19 +3701,102 @@ function pyTranscribe(py, media, outJson) {
   { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
 }
 
+// ---- what the recognizer is actually handed --------------------------------------
+
+// Whisper resamples every input to 16 kHz mono, so the audio is lifted out first
+// and the container never reaches the recognizer.
+//
+// The reason is memory, not speed, and the difference is measured. Handed a file,
+// faster-whisper calls its own `decode_audio`, which materialises the entire track
+// in RAM as one float32 array and peaks at roughly three times the size of that
+// array while it concatenates: 30 minutes of audio measured at 333 MB peak RSS
+// against 110 MB of actual samples. That figure scales with *duration* — two hours
+// is about 1.3 GB — and it is paid on top of the model's own footprint, which for
+// `medium` is another 1.5 GB. The extractor below streams packet by packet to disk
+// and measured 40 MB peak on the same file, flat in duration.
+//
+// What this does NOT buy is time: on a 608 MB container both paths came back in
+// 2.4s, and extracting is a second pass, so it can be marginally slower. Anyone
+// tempted to sell this as a speed fix should re-measure first. What it does buy,
+// besides the memory: a file with no audio stream now fails in a sentence before
+// the model loads rather than as `IndexError: tuple index out of range` after it,
+// the source's size and bitrate get printed before the long silent wait instead of
+// after it, and the probe it needs is the one the descriptive pass was going to run
+// anyway.
+//
+// Deliberately not conditional on size — one path is one thing to debug — and
+// lossless in the only sense that applies, because 16 kHz mono is what the
+// recognizer was going to reduce the audio to regardless.
+export function prepareAudio({ py, mediaPath, outDir, bytes, warnings, model }) {
+  const container = { path: mediaPath, tempDir: null, extracted: false, bytes: 0, info: null };
+  // This is the first thing in a run that writes, so it makes its own home rather
+  // than inheriting one — the descriptive pass that used to create data/ now runs
+  // after it.
+  mkdirSync(join(outDir, DATA_DIR), { recursive: true });
+  const mediaJson = dataPath(outDir, "media.json");
+  if (pyProbe(py, ["probe", "--media", mediaPath, "--out", mediaJson]).status !== 0) {
+    warnings.push("The stream probe failed, so the audio could not be lifted out ahead of "
+      + "transcription and the recognizer was handed the whole container instead. The transcript "
+      + "is unaffected; on a large source this is the slow path, and it is where a run stalls.");
+    return container;
+  }
+  const info = readJson(mediaJson) || {};
+  container.info = info;
+
+  // No audio at all is a different answer from "the transcript came back empty",
+  // and it is worth an immediate stop: today it surfaces as a failure deep inside
+  // the recognizer, after the model has been loaded and the file read.
+  if (info.audio_index === null || info.audio_index === undefined) {
+    throw new RunFailure(2, [
+      "This file has no audio stream, so there is nothing to transcribe.",
+      `Streams in it: ${(info.streams || []).map((st) => st.type).join(", ") || "none"}.`,
+      "If what you want is what appears on screen rather than what is said, the frames carry it — but this command starts from speech.",
+    ]);
+  }
+
+  const duration = Number(info.duration) || 0;
+  console.error(sourceLine({ bytes, duration, streams: info.streams }));
+
+  const tempDir = mkdtempSync(join(tmpdir(), "twt-video-audio-"));
+  const wav = join(tempDir, "speech.wav");
+  const ex = pyProbe(py, ["audio", "--media", mediaPath,
+    "--stream", String(info.audio_index), "--out", wav]);
+  if (ex.status !== 0 || !existsSync(wav)) {
+    rmSync(tempDir, { recursive: true, force: true });
+    warnings.push(`Audio stream ${info.audio_index} could not be extracted, so the recognizer was `
+      + "handed the whole container instead. The transcript is unaffected; the run is slower, and "
+      + "on a very large source this is where it can stall.");
+    return container;
+  }
+
+  const wavBytes = statSync(wav).size;
+  console.error(extractedLine({ bytes, audioBytes: wavBytes, duration }));
+  const note = longRunNote({ duration, model });
+  if (note) console.error(note);
+  return { path: wav, tempDir, extracted: true, bytes: wavBytes, info };
+}
+
 // Everything a descriptive transcript needs that a machine can settle: which
 // streams exist, what the picture does, the file's own captions, and a real
 // audio-description track if the publisher shipped one.
-function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments = null }) {
+function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments = null,
+  probed = null }) {
   const out = { frames: 0, captions: 0, audio_description: false, files: [] };
   mkdirSync(join(outDir, DATA_DIR), { recursive: true });
 
   const mediaJson = dataPath(outDir, "media.json");
-  if (pyProbe(py, ["probe", "--media", mediaPath, "--out", mediaJson]).status !== 0) {
-    warnings.push("Stream probe failed — the descriptive extras (frames, captions, description track) were skipped.");
-    return null;
+  // The probe already ran, ahead of transcription, to find the stream to extract.
+  // Reading the container a second time to learn the same thing is the one cost
+  // this pass does not have to pay — and on a multi-gigabyte master it is not a
+  // small one.
+  let info = probed;
+  if (!info) {
+    if (pyProbe(py, ["probe", "--media", mediaPath, "--out", mediaJson]).status !== 0) {
+      warnings.push("Stream probe failed — the descriptive extras (frames, captions, description track) were skipped.");
+      return null;
+    }
+    info = readJson(mediaJson) || {};
   }
-  const info = readJson(mediaJson) || {};
   out.files.push(mediaJson);
   out.streams = (info.streams || []).length;
 
@@ -4145,6 +4296,7 @@ async function runOne({ source, py, outRoot }) {
   }
   const keepSource = has("--keep-source");
   let tempDir = null;
+  let audio = null;
   let mediaPath = isUrl ? null : resolve(mediaUrl);
   let bytes = mediaPath ? statSync(mediaPath).size : 0;
 
@@ -4174,8 +4326,12 @@ async function runOne({ source, py, outRoot }) {
     }
 
     const jsonPath = dataPath(outDir, "segments.json");
-    const args = [...py.args, WORKER, "--media", mediaPath, "--out", jsonPath,
-      "--model", flag("--model", DEFAULT_MODEL), "--language", flag("--language", "auto")];
+    const model = flag("--model", DEFAULT_MODEL);
+    // Speech only. See prepareAudio: the container is what makes a big file slow,
+    // and none of it past the audio stream is ever transcribed.
+    audio = prepareAudio({ py, mediaPath, outDir, bytes, warnings, model });
+    const args = [...py.args, WORKER, "--media", audio.path, "--out", jsonPath,
+      "--model", model, "--language", flag("--language", "auto")];
     const run = spawnSync(py.exe, args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
     // Exit 3 is the engine going missing mid-run — that is not this file's
     // problem, it is every remaining file's problem too, so it stops everything.
@@ -4229,7 +4385,8 @@ async function runOne({ source, py, outRoot }) {
     // is wanted (and is what collect mode passes, having no budget for the pass).
     const descriptive = has("--verbatim")
       ? null
-      : enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments: captions });
+      : enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments: captions,
+        probed: audio?.info || null });
 
     // The recording's one caption track. Written after the descriptive extraction
     // because that is what discovers the media's own subtitle stream, and an
@@ -4245,6 +4402,7 @@ async function runOne({ source, py, outRoot }) {
     writeFileSync(join(outDir, "_meta.md"),
       buildMetaMd({ source: sourceRef, localPath: mediaPath, bytes, result, warnings, descriptive,
         keptSource: !isUrl || keepSource, publisherCaptions,
+        audioBytes: audio?.extracted ? audio.bytes : 0,
         captionSource: captionSourceLine(subtitles) }), "utf8");
 
     // The human-readable report is written on every run, in both depths — it is
@@ -4289,6 +4447,10 @@ async function runOne({ source, py, outRoot }) {
     };
   } finally {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+    // The extracted WAV is a working file, not an artifact: it is derivable from a
+    // source the run already names, and leaving ~55 MB per recording behind in a
+    // batch is how a temp directory becomes the biggest thing on the disk.
+    if (audio?.tempDir) rmSync(audio.tempDir, { recursive: true, force: true });
   }
 }
 
