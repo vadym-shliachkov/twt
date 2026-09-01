@@ -63,6 +63,7 @@ flowchart TB
     twt_launch_audit["/twt-launch-audit"]:::skill
     twt_layout_define["/twt-layout-define"]:::skill
     twt_layout_validate["/twt-layout-validate"]:::skill
+    twt_link_check["/twt-link-check"]:::skill
     twt_marketplace_docs["/twt-marketplace-docs"]:::skill
     twt_mockup_define["/twt-mockup-define"]:::skill
     twt_mockup_validate["/twt-mockup-validate"]:::skill
@@ -408,6 +409,7 @@ flowchart TB
 
 - /twt-figma-dev-audit - Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
 - /twt-launch-audit - Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item
+- /twt-link-check - Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown
 - /twt-qa - Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
 - /twt-qa-a11y - Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 - /twt-qa-content - Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
@@ -2168,6 +2170,32 @@ flowchart TB
 |------|-------|
 | .twt-artifacts/design/layout/validation-report.md |  |
 
+### /twt-link-check
+
+**Category:** qa
+**Version:** 1.0.1
+
+**Inputs:**
+- A page URL, a site URL, or a path to a built HTML folder (first argument)
+- Optional scope word - `page` (this page only) or `site` (crawl); defaults to `site` for a URL
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Feeds into:**
+- Hard consumers: none
+- Soft consumers: none
+
+**Reads:**
+- <url>
+- site/
+
+**Writes:**
+| Path | Notes |
+|------|-------|
+| .twt-artifacts/link-check/<target-slug>/link-report.md |  |
+
 ### /twt-marketplace-docs
 
 **Category:** meta
@@ -3220,6 +3248,7 @@ flowchart TB
 | /twt-launch-audit | none | twt-qa, twt-content-approval-checklist, twt-seo, twt-status |
 | /twt-layout-define | none | twt-audience-define |
 | /twt-layout-validate | none | none |
+| /twt-link-check | none | none |
 | /twt-marketplace-docs | none | none |
 | /twt-mockup-define | none | none |
 | /twt-mockup-validate | none | none |
@@ -3273,6 +3302,7 @@ flowchart TB
   inherited/
   intake/
   launch/
+  link-check/
   pre-design/
   qa/
   reports/

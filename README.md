@@ -78,6 +78,7 @@ See [SKILLS.md](SKILLS.md) for the full reference.
 | /twt-html-site-creator | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | /twt-inherit-block-creator | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
 | /twt-launch-audit | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
+| /twt-link-check | qa | Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown |
 | /twt-marketplace-docs | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | /twt-positioning | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | /twt-pre-design | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |

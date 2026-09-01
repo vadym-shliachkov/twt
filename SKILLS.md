@@ -42,6 +42,7 @@ All commands use the `/twt-` prefix. Type the command name in Claude Code to run
 | [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
 | [/twt-inherit-block-creator](#twt-inherit-block-creator) | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
 | [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
+| [/twt-link-check](#twt-link-check) | qa | Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown |
 | [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
 | [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
 | [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
@@ -1556,6 +1557,43 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 - `launch-lint.mjs` exits 0: every finding carries a severity and owner from the closed vocabularies, a non-empty `where`, `evidence`, `impact`, and `action`, and the verdict matches the findings.
 - Every unanswered blocking interview question appears as an `UNVERIFIED` finding, so the verdict can never be a clean `GO` on silence. **The rules produce these, not the interview** — `launch-audit.mjs` emits one per unanswered blocking question on every path, including `--skip-interview` and subagent dispatch; the interview *removes* them by answering.
 - No category renders more than 5 issue blocks; withheld counts are stated.
+
+---
+
+## /twt-link-check
+
+**Category:** qa
+**Version:** 1.0.1
+**Accepts arguments:** yes
+
+Find the links that are actually broken. Every `<a href>` and every asset reference (`img`, `script`, `link`, `iframe`, `video`, `srcset`) is resolved for real — an HTTP probe for a live target, a disk lookup for a built folder — and each bad one is reported with its status code and **every place it appears**, so it can be fixed at the source.
+
+**Inputs:**
+- A page URL, a site URL, or a path to a built HTML folder (first argument)
+- Optional scope word - `page` (this page only) or `site` (crawl); defaults to `site` for a URL
+
+**Dependencies:**
+- Hard: none
+- Soft: none
+
+**Reads:**
+- <url>
+- site/
+
+**Writes:**
+- .twt-artifacts/link-check/<target-slug>/link-report.md
+
+**Non-goals:**
+- Doesn't fix anything — read-only against the site; the only file it writes is its own report
+- Doesn't replace `/twt-qa-links`, which is the offline structural check inside the QA phase (nav consistency, responsive tiers, manifest cross-checks). This one is the network probe that skill deliberately doesn't do
+- Doesn't render JavaScript — links injected by a client-side framework after load are invisible to it
+- Doesn't submit forms, follow `noindex` policy, or authenticate; anything behind a login reports as 401 and is left for a human
+
+**Success criteria:**
+- `.twt-artifacts/link-check/<target-slug>/link-report.md` exists, opening with a **Verdict** (FAIL = at least one blocker · REVISE = warnings only · PASS = clean) and severity counts
+- Every finding names the status, the target, and the page + line + element it was found on
+- A target linked from twenty pages is **one** finding with twenty sources, not twenty findings
+- The user is told the blocker count and the report path
 
 ---
 
