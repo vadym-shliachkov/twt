@@ -2,8 +2,8 @@
 name: twt-content-fetch-video
 surface: command
 category: content
-description: (v1.0.11) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
-version: 1.0.11
+description: (v1.0.12) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
+version: 1.0.12
 model: sonnet
 accepts_arguments: true
 inputs:
@@ -31,7 +31,7 @@ writes:
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/descriptions.vtt
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/chapters.vtt
   - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
-  - .twt-artifacts/pre-design/content/fetched/video/<slug>/data/ (segments.json, outline.json, media.json, frames.json, frames/, captions.json, caption-diff.json, publisher-captions.vtt, audio-description.md)
+  - .twt-artifacts/pre-design/content/fetched/video/<slug>/data/ (segments.json, outline.json, media.json, frames.json, frames/, captions.json, caption-diff.json, publisher-captions.vtt, audio-description.md, diarization.json)
 ---
 
 # /twt-content-fetch-video
@@ -43,7 +43,7 @@ writes:
 **Non-goals:**
 - Not a YouTube/Vimeo/Loom downloader — this takes **direct** media URLs, local files, or a folder of them, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
 - Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
-- Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
+- Speakers are named from context — a card, a self-introduction, being addressed by name — never from voice. Acoustic diarization is available and off by default (`--diarize`, one extra install): it separates voices and numbers them, so an interruption with no pause is no longer a missed handover, but it still names nobody. Without it, turn boundaries come from pauses between words
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
 - Doesn't correct the recognizer: PART 3 says what is likely wrong and where, and PARTS 1 and 2 stay exactly as the recognizer produced them. Preferring a publisher's caption track in `index.md` is not a correction — it is choosing the account written by a person over the one guessed from audio, and `text_source:` says which one is in the file
 - Doesn't burn captions into the video, and doesn't caption over a track someone already wrote — there is exactly one `captions.vtt` per recording, and where the publisher shipped a track it holds their words byte for byte, with the original archived in `data/`
@@ -52,7 +52,15 @@ Every descriptive run also produces `timeline.md`, `speech.md`, `speech.txt`, `s
 
 Every run also produces `transcript.txt`, the human-readable report: the whole transcript as continuous prose, the same transcript again as timestamped segments, and a PART 3 listing what in it is most likely wrong. It is written by the script, never by hand.
 
-**The descriptive transcript is not an option to be offered — it is the deliverable.** The only thing that turns it off is `--verbatim`, and the only caller that passes it is collect mode, which has no budget for the pass. A run that skipped the frame extraction cannot be upgraded into a descriptive one without decoding the media again, which is why the extraction happens by default even when the prose pass is deferred.
+**The descriptive transcript is not an option to be offered — it is the deliverable.** Two flags defer it and they are not the same thing. `--no-prose` runs the whole mechanical extraction — frames, the media's own captions, a description track, the outline — and simply leaves the reading for later; that is what collect mode passes, because the reading is the part it has no budget for. `--verbatim` skips the extraction too, for a run that genuinely wants nothing but speech. Never offer either as a choice.
+
+Whichever was used, `enrich` finishes the job without transcribing again:
+
+```
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" enrich "<out-dir>/<slug>" --media "<path to the recording>"
+```
+
+It reads the `segments.json` already in the directory and does only the extraction, so upgrading a deferred transcript costs the frame decode and nothing else. `run --force` would re-download the source and spend the entire recognition again to rebuild a file nobody had touched. `enrich` needs the media, so a URL source is only upgradable if the run kept it (`--keep-source`) or the file can be fetched again — say that when you report a deferred run.
 
 **Success criteria:**
 - **Every** source given gets its own `.twt-artifacts/pre-design/content/fetched/video/<slug>/` — one recording per directory, named from its own filename, never merged and never overwriting each other
@@ -70,7 +78,9 @@ Every run also produces `transcript.txt`, the human-readable report: the whole t
 - **Every** recording with speech has a `captions.vtt` and a `captions.srt`, whoever wrote the words: the publisher's track copied verbatim, the media file's own subtitle stream extracted, or the recognizer's timed text cut into cues. `_meta.md`, the report and what you tell the user all say which of the three it was, and a generated one is called unchecked machine output every time
 - `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
 - For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
-- The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
+- The slug, title and vocabulary are passed **into** the tool, never corrected afterwards by editing what it wrote
+- `_meta.md` says where the turn boundaries came from, and the report repeats it — a turn measured between voices and a turn guessed from a segment boundary are not the same claim and are never described the same way
+- A run that deferred the reading did so with `--no-prose`, leaving the frames, the outline and the media's own captions on disk. `--verbatim` appears only where speech alone was genuinely wanted
 - No signed-URL token reaches any file — the tool redacts them, and nothing you write puts one back
 - Nothing in `transcript.md` is invented: every speaker name, sound, visual, link, and citation traces to the audio, a frame, the file's own caption track, or its audio-description track
 
@@ -111,7 +121,9 @@ Never open `index.md` or anything under `data/` directly, and never read back a 
 **This multiplies by the number of sources.** Finish one recording end to end before starting the next, and carry nothing between them but the batch's settings: a second recording's speakers, chapters, and frames have nothing to do with the first's, and holding both is how a name from one transcript ends up in the other.
 
 ## Collect mode (dispatched by an orchestrator)
-If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--verbatim`** (the descriptive pass costs a vision pass per window per recording that the orchestrator did not budget for), leave the model at its default and the language on auto-detect, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+If `$ARGUMENTS` carries the token `subagent-collect`, you are running as a subagent and cannot ask anything (CONVENTIONS §13). Then: never call AskUserQuestion, never install anything, **pass `--no-prose`** (the reading costs a vision pass per window per recording that the orchestrator did not budget for), leave the model at its default and the language on auto-detect, never pass `--diarize`, and if the preflight reports `missing-package` or `missing-python`, write nothing and return a blocking note — engine not installed, transcript skipped, plus the install line — for the orchestrator to surface to the user.
+
+**`--no-prose`, not `--verbatim`.** This used to pass `--verbatim`, which skips the frame extraction as well as the reading — so every orchestrator-dispatched transcript arrived at a dead end, upgradable only by re-downloading the source and re-running the whole recognition. The extraction costs no model tokens; only the reading does. Deferring the reading is a budget decision, and throwing away the frames is not the same decision.
 
 Collect mode no longer forces a small model. It used to pass `--model base`, which is ~8x faster and
 loses the words a recording is about — and a collect-mode transcript is the one that arrives
@@ -119,9 +131,9 @@ unreviewed and anonymous, so it is the one that can least afford to be guessing.
 budget total media duration x 0.3 of wall time, not x 0.04. An orchestrator that genuinely cannot
 spend it should pass `--model small` explicitly and say in its own report that it did.
 
-`captions.vtt` and `captions.srt` are still written — they cost nothing but the recognizer's own timings, or a copy of the publisher's track. A `--verbatim` run does not probe the media's subtitle streams, so where the file carries captions of its own the generated track duplicates them; the warning says so, and you pass that on rather than presenting the track as certainly needed.
+`captions.vtt` and `captions.srt` are still written, and under `--no-prose` the media's own subtitle streams are probed like any other run, so a file that ships captions gets those rather than a guess at words somebody had already written down.
 
-Say in your return note that the transcripts are verbatim and that a plain `/twt-content-fetch-video` re-run on the same sources (with `--force`) would produce the descriptive ones. Several sources are still fine here — the batch itself costs nothing extra. There is no `timeline.md`, `speech.md`, `speech.txt`, `speakers.md`, `wcag-transcription.*`, `descriptions.vtt` or `chapters.vtt` either: every one is built from `transcript.md`, so a run with no descriptive pass has nothing to build them from — and `index.md` keeps its unattributed paragraphs, since nothing has named the speakers yet. Say that too, because a collect-mode transcript reaching curation is the one that arrives anonymous.
+Say in your return note that the descriptive transcripts are unassembled, and that `enrich` is **not** what finishes them — the extraction has already run, so what remains is the reading: a plain `/twt-content-fetch-video` run over the same directories assembles `transcript.md` from the slices already on disk, with no re-transcription and no re-download. Several sources are still fine here — the batch itself costs nothing extra. There is no `transcript.md` yet, and therefore no `timeline.md`, `speech.md`, `speech.txt`, `speakers.md`, `wcag-transcription.*`, `descriptions.vtt` or `chapters.vtt`: every one is built from `transcript.md`. `index.md` keeps its unattributed paragraphs, since nothing has named the speakers yet. Say that too, because a collect-mode transcript reaching curation is the one that arrives anonymous.
 
 Skip Step 5's review as well: it costs a read the orchestrator did not budget for. `transcript.txt` is still written, with its machine-detected findings and PART 3's review half left pending — say so in your return note so the user knows a `/twt-content-fetch-video` re-run would complete it.
 
@@ -165,6 +177,15 @@ Read the `STATUS:` line:
 
 The descriptive pass needs nothing further: it decodes frames, captions, and extra audio tracks with PyAV, which faster-whisper already pulls in.
 
+**Read the `device:` line too — it decides what everything below costs.** The check reports whether CTranslate2 can actually place a model on a GPU, and it checks both halves: a visible CUDA device *and* the cuBLAS/cuDNN libraries it needs. A machine with a card and no CUDA runtime reports `cpu` and says why, which is the honest answer — the card cannot be used until those libraries are installed. Runs pick the device themselves (`--device auto`); you never have to pass it. What changes is the estimate you give in Step 3:
+
+- `device: cuda` — transcription is roughly an order of magnitude faster than the CPU figures below. Quote the CPU number only if you say it is the slow case.
+- `device: cpu` — the Step 3 figures apply as written.
+
+Do not offer to install CUDA libraries, and do not treat a `cpu` line as a fault: it is much the more common configuration and the tool is built for it.
+
+The last line reports **diarization**, which is optional, off unless asked for, and separate from everything above. Mention it only if the user asks for speaker separation or the recording is a multi-speaker interview or panel — see Step 3b.
+
 ## Step 3 — Confirm the model, and the language
 The model **defaults to `medium`** — accuracy over speed, because a transcript nobody
 re-reads is the one that must not be guessing at the vocabulary. You are not asking the user to
@@ -187,9 +208,13 @@ one*, so never quote the size without saying which it is.
 **Then tell the user, before transcribing, in one short block:**
 
 - **Model** — `medium`, and whether its weights are already here or are a one-time `<size>` download
-- **Time** — total media duration × **0.3**, i.e. a 40-minute batch is roughly 12 minutes.
+- **Time** — on CPU, total media duration × **0.3**, i.e. a 40-minute batch is roughly 12 minutes.
   That ratio is measured, not guessed, but it is one machine's: say "roughly", and on a slow or
-  battery-limited laptop expect worse
+  battery-limited laptop expect worse. **If Step 2 reported `device: cuda`, this figure is the wrong
+  one** — a GPU run is roughly an order of magnitude faster, so quote minutes rather than tens of
+  minutes and stop treating the wait as the reason to reach for a smaller model. On a GPU the
+  accuracy trade below is close to free, and `large-v3-turbo` is the sensible default rather than
+  the special case
 - **Your own pass** — total duration ÷ 5, rounded up, is the number of windows you will read and
   describe. Say that number. Past ~10 windows it is real token spend, and past ~30 it is worth
   splitting the batch across runs
@@ -230,17 +255,68 @@ mistranscribe every recording that is not in it.
 plainly: transcribe everything now and assemble the descriptive transcripts for a named subset,
 leaving the rest's inputs on disk for a later run (they need no re-transcription).
 
+## Step 3a — Ask what the recording is about, in words
+
+The recognizer's failure on a specialist recording is not noise, it is a confident substitution of a
+common word for the uncommon one that was said: `small` turned *bereavement* into "grievement",
+*grief* into "grease", *grief-sensitive* into "grease-sensitive". Nothing downstream can catch that —
+it reads as ordinary English and scores perfectly. Naming those words in advance is the cheapest
+defence there is, it costs no time, and it helps every model size including the default.
+
+So ask, as a plain-text prompt, once per batch:
+
+> "Any names, product names, or jargon that will come up — people, organizations, acronyms, technical
+> terms? They bias the recognizer toward the words you would actually want to quote. Or say skip."
+
+Pass the answer as `--vocabulary "Terrilyn Rivers-Cannon, SSWAA, bereavement, grief-sensitive"`. The
+`--title` you already have is folded in automatically, so a well-named recording gets some of this for
+free and a placeholder filename contributes nothing. Keep it to the words that matter — a few dozen
+terms, not a paragraph; the tool truncates at 600 characters on a whole-term boundary and it would be
+truncating something you chose.
+
+The bias is applied to every window of the decode (as `hotwords`), and it is recorded in `_meta.md`
+and the report, because a transcript decoded with the recording's own vocabulary is not the same
+artifact as one decoded without it. It is a *bias*, not a constraint: it does not force those words to
+appear, and it cannot make the recognizer say something that was not said.
+
+## Step 3b — Speaker separation, only when it earns itself
+
+Every speaker label in a transcript ultimately comes from you reading a name card. What acoustic
+diarization changes is not *who* — it never names anyone — but *where*: it separates the voices and
+numbers them, so you stop having to infer handovers from silence.
+
+Offer it only when it would change the result:
+
+- **Offer it** for an interview, a panel, a two-hander, or any recording the user describes as having
+  several speakers — especially one where people talk over each other, since a handover with no pause
+  is exactly what pause detection cannot see
+- **Do not offer it** for a single-presenter talk, a screen walkthrough, or a voice-over. One voice
+  needs no separating, and the install is not free
+
+If it is worth offering and Step 2 reported diarization as not installed, use AskUserQuestion:
+"Separate the speakers acoustically?" → *Install it* (`pip install sherpa-onnx`, then a one-time ~44 MB
+model download) / *Not this time* / *You decide*. Only run the install and `fetch-models` lines the
+check printed if they choose to install. If they decline, say plainly what they are getting instead:
+turn boundaries derived from pauses between words, which miss a handover nobody paused for.
+
+When it runs, pass `--diarize`. Add `--speakers <n>` when the number of voices is known — from the
+user, or from the name cards you are about to read — because clustering a two-hander into three
+speakers is the common failure and a known count removes it outright. The result lands in
+`data/diarization.json` as `speaker_0`, `speaker_1`, … and each segment in `data/segments.json`
+carries its cluster. **Matching a cluster to a person is still your job, on the same evidence as
+always.** Never present a cluster number as an identity, and never let one override a name card.
+
 ## Step 4 — Transcribe
 **One command for the whole batch** — every source is a positional, and the tool loops. Substitute the chosen values; drop `--language` for auto-detect, and drop `--title`/`--captions` unless there is exactly one source:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<source>" "<source>" "<folder>" --model medium --language en
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<source>" "<source>" "<folder>" --model medium --language en --vocabulary "<terms from Step 3a>"
 ```
 
 Single recording, with the extras it alone can take:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model medium --language en --title "<what it is>" --captions "<vtt-url-or-path>"
+node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-video.mjs" run "<url-or-path>" --model medium --language en --title "<what it is>" --vocabulary "<terms>" --captions "<vtt-url-or-path>"
 ```
 
 - **Anything longer than ~5 minutes of media in total: launch this with `run_in_background: true`** and check back — a foreground Bash call is capped at 10 minutes and will be killed mid-transcription. A batch is one background job, not one per file; do not fan out into several.
@@ -257,10 +333,14 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/twt-content-fetch-video/tools/transcribe-vide
 - Frame extraction defaults suit most recordings; `--max-frames`, `--frame-gap`, and `--frame-width` are there for a slide deck that changes every few seconds or a long static talking head. They apply to every source in the batch.
 - **Name cards have their own detector, and it has its own knobs.** A lower third is a small change in a held shot — invisible to a whole-frame threshold, which is how an interview film loses three speakers' names to the gap between two keyframes. So the bottom of the frame is scored separately, and a frame is kept when that band moves and the rest of the picture does not. `--frame-band-threshold` (default `0.015`) is the floor and `--card-probe` (default `1.6`, seconds) is how far after each cut the titles are looked for; `--frame-threshold` (default `0.06`) still governs ordinary scene changes. Raise the band threshold on a recording with burnt-in subtitles or a live ticker, where the bottom of the frame never stops moving; set `--card-probe 0` to switch the pass off for a screen recording with no people in it.
 - `--captions <url-or-path>` takes the publisher's WebVTT or SRT. Drop it only when there is none — on a Brightcove page it is found automatically, so pass it only to override what was found. Exit 5 means a run finished but its output did not verify; the reasons are printed and none of them are fixable by editing a file.
-- `--verbatim` skips the descriptive extraction entirely. Only collect mode passes it — never offer it as a choice.
+- `--vocabulary "<terms>"` biases the decoder toward the words from Step 3a, on every window. It applies to the whole batch, and the per-recording `--title` is folded in on top of it.
+- **The device is chosen for you.** `--device auto` (the default) uses a GPU when CTranslate2 can actually place a model on one, and the CPU otherwise; `--compute-type` follows from that. Pass `--device cpu` only if the user asks for it. If a CUDA run fails mid-decode — usually a missing cuBLAS — the run falls back to the CPU, finishes, and records the fallback as a warning; report it, because the only other symptom is that the run took ten times the estimate.
+- `--no-word-timestamps` exists and you should not pass it. Word timings are what let the `timeline` command place a line on the word rather than on the 5-second segment that contains it, what lets a silence *inside* a segment be seen, and what makes turn detection work on a file whose segments butt up against each other. They cost roughly 15–25% of the decode and pay for it three times over.
+- `--diarize` (and optionally `--speakers <n>`) runs the acoustic speaker separation from Step 3b. Off unless the user asked for it; if the engine is not installed the run says so in a warning and carries on with pause-derived turns rather than failing.
+- `--no-prose` runs the full extraction and leaves only the reading undone — this is what collect mode passes. `--verbatim` skips the extraction as well, for a run that wants nothing but speech. Never offer either as a choice, and never pass `--verbatim` where `--no-prose` is meant: the extraction costs no model tokens, and a directory without it can only be upgraded by decoding the media again.
 - **Never pass `--out-dir` to a scratch location and copy the results into place afterwards.** Copying delivers the files one at a time and drops whatever the copy forgot — that is exactly how a directory ends up holding a transcript with no report beside it, looking finished. Pass the final destination the first time.
 
-Per recording the tool writes `index.md`, `_meta.md`, `transcript.txt` (the human-readable report) and `captions.vtt` / `captions.srt` at the top level, and everything it computed to build them into **`data/`**: `segments.json`, `media.json` (stream layout), `frames/` + `frames.json` (keyframes on visual change), `captions.json` (the file's own subtitle track, if it has a text-based one), `audio-description.md` (a real description track, transcribed, if the file has one), and `outline.json`. Speaker-turn candidates and non-speech spans are added to `data/segments.json`. With `--captions` (or a Brightcove page that has one) it also archives the publisher's track verbatim as `data/publisher-captions.vtt` alongside `data/caption-diff.json`, makes the caption wording the text `index.md` carries, and stamps `text_source: publisher-captions` into its frontmatter — the recognizer's own attempt stays in `data/segments.json` and PARTS 1–2 of the report.
+Per recording the tool writes `index.md`, `_meta.md`, `transcript.txt` (the human-readable report) and `captions.vtt` / `captions.srt` at the top level, and everything it computed to build them into **`data/`**: `segments.json`, `media.json` (stream layout), `frames/` + `frames.json` (keyframes on visual change), `captions.json` (the file's own subtitle track, if it has a text-based one), `audio-description.md` (a real description track, transcribed, if the file has one), `diarization.json` (only under `--diarize`), and `outline.json`. Speaker-turn candidates and non-speech spans are added to `data/segments.json`, along with each segment's per-word timings and — under `--diarize` — its speaker cluster. With `--captions` (or a Brightcove page that has one) it also archives the publisher's track verbatim as `data/publisher-captions.vtt` alongside `data/caption-diff.json`, makes the caption wording the text `index.md` carries, and stamps `text_source: publisher-captions` into its frontmatter — the recognizer's own attempt stays in `data/segments.json` and PARTS 1–2 of the report.
 
 **`data/` is not optional tidiness.** A recording's directory is the thing a person opens looking for the transcript, and a dozen machine files in it bury the four that are worth reading. Nothing in `data/` is content: never quote from it, never hand it to a define skill, and never hand-edit anything in it. A directory written by an older version of this tool has those files at its top level instead — the tool reads them there and moves them into `data/` the next time it writes.
 
@@ -317,7 +397,7 @@ What the notes must be:
 Never edit `transcript.txt` yourself — `annotate` is the only way prose gets into it, which is what keeps PARTS 1 and 2 identical to `data/segments.json`.
 
 ## Step 6 — The descriptive pass, one recording at a time
-A `--verbatim` run (collect mode only) stops here: run `verify` one last time (Step 4b), report as in Step 10, and finish. Every other run continues.
+A run that deferred the reading — `--no-prose` or `--verbatim`, both collect mode only — stops here: run `verify` one last time (Step 4b), report as in Step 10, and finish. Every other run continues.
 
 Steps 7–9 produce **one** recording's `transcript.md`. Repeat them for each directory the run produced, in the order the batch summary lists them, and **finish each recording completely — Step 7, Step 8, Step 9, `verify` — before opening the next one's outline.** Do not interleave: two recordings' windows in play at once is how a speaker from one lands in the other's transcript, and a batch interrupted mid-way should leave finished transcripts behind, not several half-written ones.
 
@@ -349,7 +429,9 @@ That prints, for that window only: its frames with timestamps, its speech in tur
 Rules that keep the result trustworthy:
 
 - **Dialogue is equal and equivalent.** Reproduce the speech from the slice as it was said. Fix obvious ASR damage only where the intent is unambiguous (a mangled product name you have seen on screen), never compress, paraphrase, or tidy away what someone actually said. Filler and false starts can go; content cannot.
-- **Speakers.** Name someone only from evidence: a self-introduction, an on-screen name card, being addressed by name, or a name the user gave you. Otherwise use a stable role label (`Presenter`, `Interviewer`, `Audience member`) and keep it consistent for the whole transcript. Turn numbers in the slice mark where a handover probably happened — they are candidates, not identities: two consecutive turns can be the same person resuming after a pause, and one turn can hide an interjection that had no pause before it. Merge and split them as the content demands, and never attach a name to a voice on a guess.
+- **Speakers.** Name someone only from evidence: a self-introduction, an on-screen name card, being addressed by name, or a name the user gave you. Otherwise use a stable role label (`Presenter`, `Interviewer`, `Audience member`) and keep it consistent for the whole transcript. Never attach a name to a voice on a guess.
+
+  **How much the turn numbers are worth depends on where they came from**, and `_meta.md` says which of the three it was. *Acoustic* (a `--diarize` run) means the boundary was measured between voices: trust it, and treat two consecutive turns as two speakers unless a name card says otherwise — but the cluster is `speaker_0`, not a person, and matching clusters to names is still entirely your job. *Derived from pauses between words* is the default and is a good inference: two consecutive turns can still be the same person resuming after a pause, and an interjection nobody paused for can still hide inside one. *Pause-derived from segment boundaries* is the fallback on a build with no word timings, and is barely more than a guess — take the speakers from the frames and treat the numbers as a hint about where to look. In every case, merge and split as the content demands.
 - **On-screen text, without redundancy.** Record text the picture carries that the speech does not: slide titles and their new bullets, captions on a chart, a URL, a name card, code on screen, a term the speaker never says aloud. Record it **once**, when it appears — not on every frame it persists through — and skip it entirely when the speaker reads it out, since the dialogue already carries it. Say what the text is on, not just what it says.
 - **Sounds.** Mark a sound only when there is evidence for it: something in a frame that makes it (a phone in hand, a door, applause), someone reacting to it or naming it, or the description track mentioning it. A silence in the slice is a silence — it is not evidence of an explosion. If a long silence has no visible cause, mark the silence itself and leave it at that.
 - **Action and events.** Describe what changes and what matters: someone entering, a demo failing, a gesture the speech relies on ("this bit here"), a cut to a different scene. Describe what is shown, in the present tense, without judging it and without inventing motive.
@@ -634,6 +716,16 @@ It re-reads every directory and rewrites the index from what is on disk now. Nev
 - Duration, detected language, word count, and the model — naming it as the default or as a
   deliberate trade. Where the run used anything below `medium`, say so in the same breath as the
   transcript itself: the wording is less reliable exactly where someone would want to quote it
+- Whether it ran on the GPU or the CPU (`device` in the JSON summary), and — this one always — if a
+  CUDA run fell back to the CPU mid-decode. The fallback's only other symptom is a run that took ten
+  times the estimate, so a user who is told nothing concludes the estimate was a lie
+- What vocabulary the decoder was biased toward, if any. It changed the words, so it belongs beside
+  them; and if the user gave none, say that the specialist terms in the transcript had nothing
+  steering them
+- Where the speaker-turn boundaries came from — acoustic, word pauses, or segment boundaries — using
+  the wording in `_meta.md` rather than inventing your own. If `--diarize` ran, how many voices it
+  separated, and plainly that it named none of them: the names in the transcript are yours, read off
+  cards. If it was asked for and the engine was missing, say that too
 - What PART 3 says, in a sentence or two: how many lines the recognizer itself flagged, how many names it spelled inconsistently, and the specific things your review found — a user who reads nothing else should still learn that "by depth" is probably "by death"
 - Whether the review covered the full transcript or the flagged excerpts only
 - Which of the three sources `captions.vtt` came from — the publisher's own track copied verbatim, the media file's own subtitle stream extracted, or the recognizer. Where it was the recognizer, say plainly that it is unchecked machine transcription and should be read against the recording before it goes on the video. The run's JSON summary carries this in its `subtitles.origin`; do not infer it from the filename, which is the same either way
@@ -644,7 +736,7 @@ It re-reads every directory and rewrites the index from what is on disk now. Nev
 - How many keyframes were used, how many speakers you identified and on what basis, whether the file carried its own caption track or audio-description track, and how many windows you covered
 - Every warning the tool reported (empty transcript, low language confidence, a long recording run through a small model, a placeholder filename, no video stream, bitmap subtitles, a failed extraction), and what to do about each
 - If the source URL was signed, that its token was redacted out of the artifacts and the stored link will not re-fetch as written. For a Brightcove page, that the durable player-page URL is what was stored, not the expiring CDN link the media came from
-- What this method cannot see, in one line: sounds with no visible source and no mention, visual detail falling between two keyframes, and speaker changes with no pause between them
+- What this method cannot see, in one line: sounds with no visible source and no mention, and visual detail falling between two keyframes. Add "and speaker changes with no pause between them" only when the run did **not** diarize — with `--diarize` that particular blindness is the one thing that was fixed, and repeating it as a caveat misdescribes the transcript in the user's hands
 - That this is machine transcription: names, jargon, and numbers are the least reliable parts, so anything destined for `facts.md` or published copy should be checked against the recording
-- Any recording whose descriptive transcript you did **not** assemble (a batch split for budget, an interrupted run): name it, and say its inputs are already on disk so a re-run needs no re-transcription
+- Any recording whose descriptive transcript you did **not** assemble (a batch split for budget, an interrupted run): name it, and say its inputs are already on disk so a re-run needs no re-transcription. If the run was `--verbatim`, say instead that the *extraction* is missing too and name the `enrich` command that supplies it — and, when the source was a URL the run did not keep, that `enrich` will need the file again
 - That the transcripts now feed `/twt-content-fetch` and the downstream define skills, and can be ingested into the project wiki with `/twt-wiki-fetch`

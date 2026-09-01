@@ -15,9 +15,11 @@
 //
 //   node transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]
 //        [--model medium] [--language auto] [--title <name>] [--slug <slug>]
-//        [--python <exe>] [--keep-source] [--force] [--verbatim] [--max-frames 60]
-//        [--frame-gap 4] [--frame-width 960] [--frame-threshold 0.06]
-//        [--frame-band-threshold 0.04] [--card-probe 1.6]
+//        [--device auto] [--compute-type auto] [--vocabulary "a, b, c"]
+//        [--diarize] [--speakers <n>] [--no-word-timestamps]
+//        [--python <exe>] [--keep-source] [--force] [--no-prose] [--verbatim]
+//        [--max-frames 60] [--frame-gap 4] [--frame-width 960]
+//        [--frame-threshold 0.06] [--frame-band-threshold 0.015] [--card-probe 1.6]
 //     Resolve the source, transcribe it locally with faster-whisper, and write
 //     index.md + segments.json + _meta.md + transcript.txt under <out-dir>/<slug>/.
 //     --title/--slug name the output: a CDN filename ("main.mp4") makes a useless
@@ -28,12 +30,28 @@
 //     captions.json from an embedded subtitle track, audio-description.md from a
 //     real description track, speaker-turn candidates and non-speech spans in
 //     segments.json, and outline.json. The prose transcript.md is written by the
-//     model from those, window by window. --verbatim skips that extraction for a
-//     speech-only run; --descriptive is accepted and ignored (it is the default).
-//     A recording that ships no captions of its own also gets generated-captions.vtt,
-//     built from the recognizer's timings — one WebVTT track for a video that had
-//     none. A recording that already has captions does not: the publisher's track,
-//     or the file's own subtitle stream, is the one to ship.
+//     model from those, window by window.
+//
+//     TWO WAYS TO SKIP THE PROSE, and they are not the same thing. --no-prose
+//     runs the whole mechanical extraction and simply leaves transcript.md
+//     unwritten, so `enrich` can finish it later for the cost of the reading
+//     alone. --verbatim skips the extraction too, for a run that genuinely wants
+//     nothing but speech; upgrading one of those means decoding the media again.
+//     Callers with no token budget for the prose pass — collect mode — want
+//     --no-prose. --descriptive is accepted and ignored (it is the default).
+//
+//     Every recording with speech gets captions.vtt + captions.srt, from the
+//     publisher's track, the media's own subtitle stream, or the recognizer, in
+//     that order of precedence. _meta.md and the report say which.
+//
+//   node transcribe-video.mjs enrich <transcript-dir> [--media <path>] [--diarize]
+//        [--max-frames 60] [--frame-gap 4] [--frame-width 960] …
+//     Run the deterministic descriptive extraction over a directory that already
+//     holds a transcript, without transcribing anything again. This is how a
+//     --no-prose or --verbatim run becomes a descriptive one: re-running `run
+//     --force` would re-download the source and spend the whole recognition
+//     again to arrive at the segments.json that is already sitting there.
+//     --media defaults to the local path _meta.md recorded, when there is one.
 //
 //     SEVERAL SOURCES. Every positional is a source: file paths, URLs, or a
 //     directory, which expands to the media files directly inside it. Each gets
@@ -60,9 +78,9 @@
 //     perfectly, so nothing mechanical can find it; this is the pass that can.
 //
 //   node transcribe-video.mjs captions <transcript-dir> [--force]
-//     (Re)build generated-captions.vtt from segments.json — for a directory
-//     transcribed before this file existed, or (with --force) for a recording
-//     whose published captions would otherwise suppress it.
+//     (Re)build captions.vtt + captions.srt from what is in the directory — for
+//     one transcribed before this file existed, or (with --force) to caption from
+//     the recognizer and ignore a publisher track that would otherwise be copied.
 //
 //   node transcribe-video.mjs annotate <transcript-dir> --notes <file>
 //     Splice those findings into PART 3 of transcript.txt. The report stays
@@ -83,6 +101,7 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WORKER = join(HERE, "whisper_transcribe.py");
 const PROBE = join(HERE, "media_probe.py");
+const DIARIZE = join(HERE, "diarize.py");
 const DEFAULT_OUT = ".twt-artifacts/pre-design/content/fetched/video";
 const MEDIA_EXT = /\.(mp4|m4v|mov|mkv|webm|avi|wmv|flv|mpe?g|m4a|mp3|wav|aac|ogg|opus|flac)$/i;
 
@@ -228,7 +247,10 @@ export function migrateFlatArtifacts(dir) {
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
-const BOOLEAN_FLAGS = new Set(["--keep-source", "--force", "--descriptive", "--verbatim", "--expect-descriptive"]);
+// A flag that takes no value has to be listed here or the positional scanner
+// swallows whatever follows it — `run video.mp4 --diarize` would lose the source.
+const BOOLEAN_FLAGS = new Set(["--keep-source", "--force", "--descriptive", "--verbatim",
+  "--no-prose", "--expect-descriptive", "--diarize", "--no-word-timestamps"]);
 
 function flag(name, dflt) {
   const i = argv.indexOf(name);
@@ -250,16 +272,19 @@ function usage(msg) {
   console.error("       transcribe-video.mjs probe <path> [--python <exe>]");
   console.error("       transcribe-video.mjs run <url-or-path> [<url-or-path> …] [--out-dir <dir>]");
   console.error("           [--model medium] [--language auto] [--title <name>] [--slug <slug>]");
-  console.error("           [--python <exe>] [--keep-source] [--force] [--verbatim]");
-  console.error("           [--max-frames 60] [--captions <url-or-path>]");
+  console.error("           [--device auto] [--compute-type auto] [--vocabulary \"a, b, c\"]");
+  console.error("           [--diarize] [--speakers <n>] [--no-word-timestamps]");
+  console.error("           [--python <exe>] [--keep-source] [--force] [--no-prose] [--verbatim]");
+  console.error("           [--max-frames 60] [--frame-gap 4] [--frame-width 960]");
+  console.error("           [--frame-threshold 0.06] [--frame-band-threshold 0.015] [--card-probe 1.6]");
+  console.error("           [--captions <url-or-path>]");
+  console.error("       transcribe-video.mjs enrich <transcript-dir> [--media <path>] [--diarize]");
   console.error("       transcribe-video.mjs batch-index <out-dir> --slugs <a,b,c> [--file <name>]");
-  console.error("           [--frame-gap 4] [--frame-width 960]");
-  console.error("           [--frame-threshold 0.06] [--frame-band-threshold 0.04] [--card-probe 1.6]");
-  console.error("  timeline <dir>            build timeline.md from transcript.md");
-  console.error("  captions <dir> [--force]  (re)build generated-captions.vtt from the transcript");
+  console.error("       transcribe-video.mjs timeline <transcript-dir>");
+  console.error("       transcribe-video.mjs captions <transcript-dir> [--force]");
   console.error("       transcribe-video.mjs verify <transcript-dir> [--expect-descriptive]");
   console.error("       transcribe-video.mjs slice <transcript-dir> [--window <n> | --from <t> --to <t>]");
-  console.error("           [--window-seconds 300]");
+  console.error("           [--window-seconds <n>]   (defaults to what outline.json was built with)");
   console.error("       transcribe-video.mjs review <transcript-dir> [--word-budget 4000]");
   console.error("       transcribe-video.mjs annotate <transcript-dir> --notes <file>");
   process.exit(2);
@@ -314,12 +339,61 @@ function doCheck() {
     return;
   }
   console.log(`faster-whisper: ${fw}`);
+
+  // The one number that decides what everything else in this skill costs. A CUDA
+  // placement runs the recognizer roughly an order of magnitude faster, which is
+  // the difference between "a 40-minute batch is about 12 minutes" and "about a
+  // minute", and it moves `large-v3-turbo` from a special case to the obvious
+  // default. It was never looked for: the worker was pinned to cpu/int8 and the
+  // report printed that as though it had been chosen.
+  const acc = accelerator(py);
+  if (acc.cuda) {
+    console.log(`device: cuda — ${acc.cuda} CUDA device(s) visible to CTranslate2`);
+    console.log(`  compute types: ${acc.computeTypes.join(", ") || "unknown"}`);
+    console.log("  runs use the GPU automatically; --device cpu forces the slow path");
+  } else {
+    console.log("device: cpu — no CUDA device is visible to CTranslate2"
+      + (acc.reason ? ` (${acc.reason})` : ""));
+    console.log("  timings below and in the skill's estimates are CPU timings");
+  }
+
   console.log(`default model: ${DEFAULT_MODEL} (accuracy over speed; override with --model <name>)`);
   for (const m of modelReport()) {
     console.log(`  ${m.name.padEnd(15)} ${m.disk.padStart(7)}  `
       + `${m.cached ? "downloaded" : "not downloaded"}${m.isDefault ? "  <- default" : ""}`);
   }
+
+  // Opt-in and off by default, so this reports rather than prompts.
+  const dia = diarizeState(py);
+  if (dia && dia.ready) {
+    console.log(`diarization: ready (sherpa-onnx ${dia.sherpa_onnx}) — pass --diarize to separate speakers acoustically`);
+  } else if (dia && dia.sherpa_onnx) {
+    console.log(`diarization: sherpa-onnx ${dia.sherpa_onnx} is installed, models are not`);
+    console.log(`  one-time ~${dia.download_mb} MB: python "${DIARIZE}" fetch-models`);
+  } else {
+    console.log("diarization: not installed (optional) — speaker turns come from pauses in the speech");
+    console.log(`  to enable: ${dia?.install || `${py.exe} -m pip install sherpa-onnx`}`
+      + `, then python "${DIARIZE}" fetch-models`);
+  }
   console.log("STATUS: ok");
+}
+
+// What CTranslate2 can actually place a model on. Asked of the same interpreter
+// that will run the transcription, because a second Python on the machine with a
+// different ctranslate2 build answers a question nobody asked.
+export function accelerator(py) {
+  const r = probe(py.exe, [...py.args, "-c",
+    "import json,ctranslate2 as c;n=c.get_cuda_device_count();"
+    + "print(json.dumps({'cuda':n,'types':sorted(c.get_supported_compute_types('cuda' if n else 'cpu'))}))"]);
+  if (r.status !== 0) {
+    return { cuda: 0, computeTypes: [], reason: "CTranslate2 could not be queried" };
+  }
+  try {
+    const parsed = JSON.parse(r.stdout.trim().split(/\r?\n/).pop());
+    return { cuda: parsed.cuda || 0, computeTypes: parsed.types || [], reason: null };
+  } catch {
+    return { cuda: 0, computeTypes: [], reason: "CTranslate2 gave no answer" };
+  }
 }
 
 // ---- Source resolution ---------------------------------------------------------
@@ -379,20 +453,99 @@ export function isGenericName(name) {
   return GENERIC_NAME.test(String(name || "").trim());
 }
 
-async function downloadTo(url, dir) {
-  const res = await fetch(url, { headers: { "user-agent": UA }, redirect: "follow" });
-  if (!res.ok) throw new Error(`download failed: HTTP ${res.status} ${res.statusText}`);
-  if (!res.body) throw new Error("download failed: empty response body");
-  const ct = res.headers.get("content-type") || "";
-  if (/^text\/html/i.test(ct)) {
-    throw new Error(`the URL returned an HTML page, not a media file (content-type: ${ct}). ` +
-      "This skill takes a direct link to a video/audio file, not a player or watch page.");
+// A media source is routinely gigabytes, the skill tells the user to run the
+// whole thing in the background, and this used to be one unguarded fetch piped
+// to a file. So a connection dropped nineteen minutes into a twenty-minute
+// download discarded all of it and surfaced as one line of "could not download
+// the source", with nothing on stderr in between to say it had ever started.
+export const DOWNLOAD_ATTEMPTS = 3;
+const PROGRESS_BYTES = 64 * 1048576;
+
+// Retries are for the transport giving out, not for the server saying no: a 404
+// or a 403 on a signed URL that has expired will say exactly the same thing three
+// times, and hiding it behind two more waits helps nobody.
+export function isRetryableStatus(status) {
+  return status === 408 || status === 429 || (status >= 500 && status < 600);
+}
+
+async function* counted(stream, onBytes) {
+  for await (const chunk of stream) { onBytes(chunk.length); yield chunk; }
+}
+
+async function downloadTo(url, dir, { attempts = DOWNLOAD_ATTEMPTS } = {}) {
+  let dest = null;
+  let contentType = "";
+  let have = 0;
+  let total = null;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const headers = { "user-agent": UA };
+    // Resume rather than restart. A server that ignores the Range header answers
+    // 200 with the whole file, which is handled below by starting the file again
+    // — the one thing that must not happen is appending a second whole copy onto
+    // a partial one, which produces a file that is the right shape and garbage.
+    if (have > 0) headers.range = `bytes=${have}-`;
+    let res;
+    try {
+      res = await fetch(url, { headers, redirect: "follow" });
+    } catch (err) {
+      lastError = err;
+      if (attempt === attempts) break;
+      console.error(`  download attempt ${attempt} failed (${err.cause?.message || err.message}); retrying …`);
+      continue;
+    }
+    if (!res.ok && !(have > 0 && res.status === 206)) {
+      const err = new Error(`download failed: HTTP ${res.status} ${res.statusText}`);
+      if (!isRetryableStatus(res.status) || attempt === attempts) throw err;
+      lastError = err;
+      console.error(`  download attempt ${attempt} failed (HTTP ${res.status}); retrying …`);
+      continue;
+    }
+    if (!res.body) throw new Error("download failed: empty response body");
+
+    if (dest === null) {
+      contentType = res.headers.get("content-type") || "";
+      if (/^text\/html/i.test(contentType)) {
+        throw new Error(`the URL returned an HTML page, not a media file (content-type: ${contentType}). ` +
+          "This skill takes a direct link to a video/audio file, not a player or watch page.");
+      }
+      let name = nameFromUrl(url);
+      if (!MEDIA_EXT.test(name)) name += extFromContentType(contentType);
+      dest = join(dir, name.replace(/[<>:"|?*\\/]/g, "-"));
+      const len = Number(res.headers.get("content-length"));
+      total = Number.isFinite(len) && len > 0 ? len : null;
+    }
+
+    const resuming = have > 0 && res.status === 206;
+    if (have > 0 && !resuming) {
+      console.error("  the server ignored the resume request — starting the download again");
+      have = 0;
+    }
+
+    let sinceReport = 0;
+    const onBytes = (n) => {
+      have += n;
+      sinceReport += n;
+      if (sinceReport < PROGRESS_BYTES) return;
+      sinceReport = 0;
+      const of = total ? ` of ${fmtBytes(total)}` : "";
+      console.error(`  … ${fmtBytes(have)}${of} downloaded`);
+    };
+    try {
+      await pipeline(counted(Readable.fromWeb(res.body), onBytes),
+        createWriteStream(dest, { flags: resuming ? "a" : "w" }));
+      return { path: dest, contentType, bytes: statSync(dest).size, attempts: attempt };
+    } catch (err) {
+      lastError = err;
+      // `have` now counts what did land, so the next attempt asks for the rest.
+      have = existsSync(dest) ? statSync(dest).size : 0;
+      if (attempt === attempts) break;
+      console.error(`  download interrupted after ${fmtBytes(have) || "0 bytes"} `
+        + `(${err.cause?.message || err.message}); resuming …`);
+    }
   }
-  let name = nameFromUrl(url);
-  if (!MEDIA_EXT.test(name)) name += extFromContentType(ct);
-  const dest = join(dir, name.replace(/[<>:"|?*\\/]/g, "-"));
-  await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
-  return { path: dest, contentType: ct, bytes: statSync(dest).size };
+  throw lastError || new Error("download failed");
 }
 
 // ---- Transcript assembly -------------------------------------------------------
@@ -458,10 +611,105 @@ export const TURN_GAP_ANY = 2.0;
 export const GAP_MIN_SECONDS = 3.0;
 // How much recording the descriptive pass reads and looks at in one go.
 export const WINDOW_SECONDS = 300;
+// The floor for the lower-third band pass, kept here so there is one number
+// rather than a default in this file and a different default in media_probe.py.
+export const FRAME_BAND_THRESHOLD = 0.015;
+
+// The flat word stream across every segment, when the recognizer produced word
+// timings. Segment boundaries are a decoding artefact — a segment routinely ends
+// a second after its last word, and two segments routinely butt up against each
+// other with a real pause hidden inside one of them — so a handover measured
+// between segments is measured against the wrong thing.
+export function wordStream(segments) {
+  const out = [];
+  for (const seg of segments) {
+    for (const w of seg.words || []) {
+      if (typeof w.start === "number" && typeof w.end === "number") out.push(w);
+    }
+  }
+  return out;
+}
+
+// Every silence in the speech long enough to be a handover, measured word to
+// word. This is what makes turn detection work on a file whose segments run
+// end-to-end: those files have pauses, the segmentation just was not showing
+// them, and the tool's own warning about "no measurable pauses" was describing
+// the segmentation rather than the recording.
+export function wordGapBoundaries(segments) {
+  const stream = wordStream(segments);
+  const bounds = [];
+  for (let i = 1; i < stream.length; i++) {
+    const gap = stream[i].start - stream[i - 1].end;
+    if (gap >= TURN_GAP_ANY || (gap >= TURN_GAP_SENTENCE && endsSentence(stream[i - 1].word || ""))) {
+      bounds.push(round3(stream[i].start));
+    }
+  }
+  return bounds;
+}
+
+// Which diarized speaker owns a span: the one holding most of it. Overlap rather
+// than midpoint, because a segment straddling a handover belongs to whoever is
+// speaking for most of it, and a midpoint test on a 6-second segment with a
+// handover at 3.1s flips on a tenth of a second.
+export function speakerAt({ start, end }, turns) {
+  let best = null;
+  let bestOverlap = 0;
+  for (const t of turns || []) {
+    const overlap = Math.min(end, t.end) - Math.max(start, t.start);
+    if (overlap > bestOverlap) { bestOverlap = overlap; best = t.speaker; }
+  }
+  return bestOverlap > 0 ? best : null;
+}
 
 // Speaker-turn *candidates*, not speaker identities: numbered handover points
-// the descriptive pass clusters into named speakers from context.
-export function assignTurns(segments) {
+// the descriptive pass clusters into named speakers from context. Three sources,
+// best first.
+//
+// With a diarization the turn number IS the acoustic speaker change, and each
+// segment additionally carries the cluster that produced it — so the descriptive
+// pass stops guessing where the handovers are and only has to answer which
+// cluster is which person, which is the question reading a name card is good at.
+// With word timings, handovers are real pauses in the speech. With neither, it
+// falls back to segment gaps, which is where this started and is blind on any
+// file whose segments butt up against each other.
+export function assignTurns(segments, { diarization = null } = {}) {
+  const turns = diarization && diarization.ok ? diarization.turns : null;
+  if (turns && turns.length) {
+    let turn = 0;
+    let prevSpeaker = null;
+    return segments.map((seg, i) => {
+      const speaker = speakerAt(seg, turns);
+      if (i && speaker && prevSpeaker && speaker !== prevSpeaker) turn += 1;
+      if (speaker) prevSpeaker = speaker;
+      return { ...seg, turn, speaker: speaker || null };
+    });
+  }
+
+  const bounds = wordGapBoundaries(segments);
+  if (bounds.length) {
+    let turn = 0;
+    let next = 0;
+    return segments.map((seg) => {
+      // Measured against the segment's first *word*, not its nominal start. A
+      // boundary is defined by word timings, and a segment routinely opens a
+      // fraction of a second before the word that begins it — so comparing
+      // against seg.start files a handover sitting exactly at the segment's
+      // opening word as a break *inside* the segment, leaving the segment on the
+      // previous speaker's turn number.
+      const first = (seg.words || [])[0];
+      const opensAt = first ? first.start : seg.start;
+      while (next < bounds.length && bounds[next] <= opensAt + 0.001) { turn += 1; next += 1; }
+      const row = { ...seg, turn };
+      // A boundary genuinely inside the segment: the segment is one lump of
+      // decoding, not one person's line, so the handover is recorded rather than
+      // rounded to an edge.
+      const inner = [];
+      while (next < bounds.length && bounds[next] < seg.end) { inner.push(bounds[next]); next += 1; }
+      if (inner.length) row.turn_breaks = inner;
+      return row;
+    });
+  }
+
   let turn = 0;
   let prev = null;
   return segments.map((seg) => {
@@ -479,9 +727,14 @@ export function assignTurns(segments) {
 export function nonSpeechGaps(segments, duration, min = GAP_MIN_SECONDS) {
   const gaps = [];
   let end = 0;
-  for (const seg of segments) {
-    if (seg.start - end >= min) gaps.push({ start: round3(end), end: round3(seg.start) });
-    end = Math.max(end, seg.end);
+  // Words when there are any: a segment's span covers its silences, so a
+  // five-second pause in the middle of one — a demo running, a slide landing —
+  // is invisible at segment resolution and is exactly the silence worth marking.
+  const stream = wordStream(segments);
+  const spans = stream.length ? stream : segments;
+  for (const span of spans) {
+    if (span.start - end >= min) gaps.push({ start: round3(end), end: round3(span.start) });
+    end = Math.max(end, span.end);
   }
   if (duration && duration - end >= min) gaps.push({ start: round3(end), end: round3(duration) });
   return gaps;
@@ -770,9 +1023,18 @@ function decodeLines(result) {
     if (d.condition_on_previous_text != null) {
       bits.push(`condition_on_previous_text ${d.condition_on_previous_text ? "on" : "off"}`);
     }
+    if (d.word_timestamps != null) bits.push(`word timestamps ${d.word_timestamps ? "on" : "off"}`);
     if (d.vad_filter != null) bits.push(`VAD ${d.vad_filter ? "on" : "off"}`);
     if (bits.length) out.push(`- **Decode:** ${bits.join(", ")}`);
   }
+  // Recorded because it changes the words. A transcript decoded with the recording's
+  // own vocabulary in the prompt is not the same artifact as one decoded without it,
+  // and six months later the only way to know which this was is to have written it down.
+  if (result.vocabulary) {
+    out.push(`- **Vocabulary bias:** \`${result.vocabulary}\` — supplied to the decoder as `
+      + `${result.decode?.hotwords ? "hotwords, applied to every window" : "an initial prompt, applied to the opening only"}`);
+  }
+  for (const note of result.device_notes || []) out.push(`- **Placement:** ${note}`);
   if (result.faster_whisper) out.push(`- **Engine build:** faster-whisper ${result.faster_whisper}`);
   if (out.length) {
     out.push("- **Reproducibility:** pinned decode settings make two runs comparable, but they are "
@@ -780,6 +1042,22 @@ function decodeLines(result) {
       + "can segment the same speech differently.");
   }
   return out;
+}
+
+// Three different claims, and they were all printed as "pause-derived". A turn
+// boundary measured between two voices is evidence; one measured between two
+// words is a good inference; one measured between two decoder segments is barely
+// more than a guess, and is the one the descriptive pass must not lean on.
+export function turnSourceNote(descriptive) {
+  switch (descriptive?.turn_source) {
+    case "diarization":
+      return "acoustic — measured between voices, still unnamed";
+    case "word-pauses":
+      return "derived from pauses between words, including pauses inside a segment";
+    default:
+      return "pause-derived from segment boundaries — approximate, unnamed, and blind to a "
+        + "handover with no pause";
+  }
 }
 
 // "Embedded caption cues: 0" beside a 57-cue publisher track that *was* the text
@@ -839,23 +1117,69 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
   captionSource, publisherCaptions = null, audioBytes = 0 }) {
   const src = redactUrl(source);
   const profile = mediaProfile({ bytes, duration: result.duration, audioBytes });
-  const extras = descriptive ? [
+  const extras = descriptiveInputsSection(descriptive, publisherCaptions);
+  const lines = buildMetaLines({ src, profile, result, warnings, keptSource, descriptive,
+    captionSource, audioBytes, bytes, localPath, source, extras });
+  return lines.filter((l) => l !== null).join("\n") + "\n";
+}
+
+// The "Descriptive-pass inputs" section, on its own so `enrich` can replace it in
+// an existing _meta.md. `enrich` cannot rebuild the whole file — the sizes, the
+// caption provenance and the kept-source line belong to the original run and would
+// have to be guessed — but leaving the section stale is worse than either: after an
+// `enrich --diarize` the file would still say the turns came from pauses while
+// segments.json says they were measured between voices, which is exactly the silent
+// drift the derived-file design exists to make impossible.
+export const META_DESCRIPTIVE_HEADING = "## Descriptive-pass inputs";
+
+export function descriptiveInputsSection(descriptive, publisherCaptions = null) {
+  if (!descriptive) return [];
+  return [
     "",
-    "## Descriptive-pass inputs",
+    META_DESCRIPTIVE_HEADING,
     "",
     `- **Keyframes extracted:** ${descriptive.frames}`,
     publisherCaptionLine(publisherCaptions),
     `- **Caption cues inside the media file:** ${descriptive.captions} (its own subtitle stream, separate from any published track)`,
     `- **Audio-description track:** ${descriptive.audio_description ? "found and transcribed to `audio-description.md`" : "none in this file"}`,
-    `- **Speaker-turn candidates:** ${descriptive.turns ?? 0} (pause-derived — boundaries are approximate and unnamed)`,
+    `- **Speaker-turn candidates:** ${descriptive.turns ?? 0} (${turnSourceNote(descriptive)})`,
+    descriptive.speakers
+      ? `- **Voices separated acoustically:** ${descriptive.speakers} — \`${(descriptive.speaker_labels || []).join("`, `")}\`. `
+        + "The clusters are unnamed: match each to a person from the name cards and self-introductions."
+      : null,
     `- **Non-speech spans:** ${descriptive.non_speech_spans ?? 0}`,
     `- **Reading windows:** ${descriptive.windows ?? 0}`,
     "",
     "> Sounds are inferred from silence and picture, not from an audio-event classifier:",
-    "> an off-screen noise with nothing on screen to show it can be missed. Speaker turns",
-    "> mark where a handover probably happened, not who spoke.",
-  ] : [];
-  const lines = [
+    "> an off-screen noise with nothing on screen to show it can be missed."
+      + (descriptive.turn_source === "diarization"
+        ? " Speaker turns are acoustic and unnamed."
+        : " Speaker turns mark where a handover probably happened, not who spoke."),
+  ].filter((l) => l !== null);
+}
+
+// Swap that section into an existing _meta.md, or add it where the original run had
+// none to write — which is the common case for `enrich`, since a --verbatim run
+// produces no descriptive section at all.
+export function spliceDescriptiveInputs(meta, descriptive, publisherCaptions = null) {
+  const block = descriptiveInputsSection(descriptive, publisherCaptions);
+  if (!block.length) return meta;
+  const lines = String(meta || "").split(/\r?\n/);
+  const start = lines.findIndex((l) => l.trim() === META_DESCRIPTIVE_HEADING);
+  if (start === -1) {
+    // Ahead of "## Warnings" when there is one, so the file keeps its shape.
+    const warn = lines.findIndex((l) => l.trim() === "## Warnings");
+    const at = warn === -1 ? lines.length : warn;
+    return [...lines.slice(0, at), ...block.slice(1), "", ...lines.slice(at)].join("\n");
+  }
+  let end = start + 1;
+  while (end < lines.length && !/^## /.test(lines[end])) end += 1;
+  return [...lines.slice(0, start), ...block.slice(1), "", ...lines.slice(end)].join("\n");
+}
+
+function buildMetaLines({ src, profile, result, warnings, keptSource, descriptive,
+  captionSource, audioBytes, bytes, localPath, source, extras }) {
+  return [
     `# Transcript metadata — ${sourceLabel(source)}`,
     "",
     `- **Source:** ${src.url}`,
@@ -890,7 +1214,6 @@ export function buildMetaMd({ source, localPath, bytes, result, warnings, keptSo
     "> Machine transcription. Names, jargon, and numbers are the least reliable parts —",
     "> verify anything you plan to quote or treat as fact against the source recording.",
   ];
-  return lines.filter((l) => l !== null).join("\n") + "\n";
 }
 
 // ---- possible-issue detection --------------------------------------------------
@@ -3376,7 +3699,14 @@ export function verifyArtifacts(dir, { expectDescriptive = false } = {}) {
   const read = (name) => readArtifact(dir, name);
   const present = (name) => existsSync(artifactPath(dir, name));
 
-  const descriptive = ["transcript.md", "media.json", "frames.json", "outline.json"].some(present);
+  // media.json is NOT evidence of a descriptive extraction. It is written by the
+  // audio-lifting step on every run, --verbatim included, so counting it here made
+  // every speech-only run of a video source demand the frames and the outline it
+  // had deliberately not produced — and fail its own verify, exit 5, on output
+  // that was exactly right. Collect mode passes --verbatim on every dispatched
+  // run, so that was the common path, not a corner. The real markers of the pass
+  // are the things only the pass writes.
+  const descriptive = ["transcript.md", "frames.json", "outline.json"].some(present);
   const required = [...REQUIRED_FILES, ...(descriptive ? ["media.json", "outline.json"] : [])];
 
   for (const name of required) {
@@ -3695,10 +4025,43 @@ function pyProbe(py, args) {
     { stdio: ["ignore", "ignore", "inherit"], windowsHide: true });
 }
 
-function pyTranscribe(py, media, outJson) {
-  return spawnSync(py.exe, [...py.args, WORKER, "--media", media, "--out", outJson,
-    "--model", flag("--model", DEFAULT_MODEL), "--language", flag("--language", "auto")],
-  { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+// Every call into the recognizer goes through one argument builder, so the
+// audio-description track is transcribed on the same device, at the same model,
+// with the same decode as the speech it sits beside. It previously took the
+// worker's own defaults, which is how one directory could hold two transcripts
+// made two different ways with nothing recording that it had happened.
+export function whisperArgs({ media, out, model, vocabulary = null, wordTimestamps = true }) {
+  const args = ["--media", media, "--out", out,
+    "--model", model || flag("--model", DEFAULT_MODEL),
+    "--language", flag("--language", "auto"),
+    "--device", flag("--device", "auto"),
+    "--compute-type", flag("--compute-type", "auto")];
+  if (vocabulary) args.push("--vocabulary", vocabulary);
+  if (!wordTimestamps) args.push("--no-word-timestamps");
+  return args;
+}
+
+function pyTranscribe(py, media, outJson, opts = {}) {
+  return spawnSync(py.exe, [...py.args, WORKER, ...whisperArgs({ media, out: outJson, ...opts })],
+    { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+}
+
+// The words the user says this recording is about. Whisper's failure mode on a
+// specialist recording is not noise, it is confident substitution of a common
+// word for the uncommon one that was actually said — "bereavement" as
+// "grievement", "grief-sensitive" as "grease-sensitive" — and the recording's own
+// title is very often made of exactly those words. So the title seeds it for free
+// and --vocabulary adds to it, rather than the two competing.
+export function vocabularyFor({ vocabulary, title }) {
+  const parts = [];
+  if (title && !isGenericName(title)) parts.push(String(title).trim());
+  if (vocabulary) parts.push(String(vocabulary).trim());
+  const joined = [...new Set(parts.filter(Boolean))].join(", ");
+  // The decoder prepends this to the prompt of every window, and a prompt long
+  // enough to crowd out the audio makes the transcript worse, not better —
+  // faster-whisper itself truncates at half the context. Cut it here instead, so
+  // what was dropped is knowable rather than silently gone inside the worker.
+  return joined.length > 600 ? joined.slice(0, 600).replace(/,[^,]*$/, "") : (joined || null);
 }
 
 // ---- what the recognizer is actually handed --------------------------------------
@@ -3780,7 +4143,7 @@ export function prepareAudio({ py, mediaPath, outDir, bytes, warnings, model }) 
 // streams exist, what the picture does, the file's own captions, and a real
 // audio-description track if the publisher shipped one.
 function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments = null,
-  probed = null }) {
+  probed = null, diarization = null }) {
   const out = { frames: 0, captions: 0, audio_description: false, files: [] };
   mkdirSync(join(outDir, DATA_DIR), { recursive: true });
 
@@ -3807,7 +4170,14 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
       "--out", framesJson, "--max", flag("--max-frames", "60"),
       "--min-gap", flag("--frame-gap", "4"), "--width", flag("--frame-width", "960"),
       "--threshold", flag("--frame-threshold", "0.06"),
-      "--band-threshold", flag("--frame-band-threshold", "0.04"),
+      // 0.015, matching media_probe.py's own default and the documented floor.
+      // This read 0.04 for as long as the band pass has existed, and because the
+      // flag is always passed explicitly the Python default was dead code — so
+      // the lower-third detector ran nearly three times less sensitive than the
+      // number everyone was reading. A name card is a small change in a held
+      // shot; at 0.04 it is exactly the change that does not clear the bar, which
+      // is the failure the band pass was added to fix.
+      "--band-threshold", flag("--frame-band-threshold", String(FRAME_BAND_THRESHOLD)),
       "--card-probe", flag("--card-probe", "1.6")]);
     if (r.status === 0) {
       frames = (readJson(framesJson) || {}).frames || [];
@@ -3873,13 +4243,26 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
   // Turn candidates and silences go back into segments.json; the outline is the
   // only whole-recording view the model is meant to read.
   const gaps = nonSpeechGaps(result.segments, result.duration);
+  const turned = assignTurns(result.segments, { diarization });
   const segmentsPath = dataPath(outDir, "segments.json");
   writeFileSync(segmentsPath, JSON.stringify({
-    ...result, segments: assignTurns(result.segments), non_speech: gaps,
+    ...result, segments: turned, non_speech: gaps,
+    diarization: diarization && diarization.ok
+      ? { speakers: diarization.speakers, labels: diarization.labels, engine: diarization.engine }
+      : null,
   }), "utf8");
   out.non_speech_spans = gaps.length;
-  const turned = assignTurns(result.segments);
   out.turns = new Set(turned.map((s) => s.turn)).size;
+  // Which of the three sources the turn numbers came from. Without this the count
+  // reads the same whether it was measured acoustically, inferred from pauses in
+  // the words, or guessed from segment boundaries — and those are three very
+  // different claims about how much the descriptive pass can lean on it.
+  out.turn_source = diarization && diarization.ok ? "diarization"
+    : (wordStream(result.segments).length ? "word-pauses" : "segment-pauses");
+  if (diarization && diarization.ok) {
+    out.speakers = diarization.speakers;
+    out.speaker_labels = diarization.labels;
+  }
 
   // Turn detection is pause detection, and some faster-whisper builds return
   // segments whose start is exactly the previous segment's end. Then there are no
@@ -3887,7 +4270,11 @@ function enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegmen
   // reads as "one speaker" when it means "this file cannot tell you". Say so,
   // rather than let a seven-speaker film go out reporting two turn candidates
   // under "Warnings: None".
-  if (result.segments.length > 4) {
+  // Only when turns came from segment boundaries. With word timings the pauses are
+  // measured inside the segments, and with a diarization the turns are not pauses
+  // at all — warning about blind pause detection in either case describes a
+  // mechanism that is no longer the one being used.
+  if (result.segments.length > 4 && out.turn_source === "segment-pauses") {
     const butts = result.segments.filter(
       (seg, i) => i && Math.abs(seg.start - result.segments[i - 1].end) < 0.005).length;
     out.contiguous_segments = butts;
@@ -3945,7 +4332,14 @@ function doSlice() {
   const segs = readJson(artifactPath(dir, "segments.json"));
   if (!segs) { console.error(`No segments.json under ${dir}. Run \`run --descriptive\` first.`); process.exit(2); }
 
-  const windowSeconds = Number(flag("--window-seconds", String(WINDOW_SECONDS))) || WINDOW_SECONDS;
+  // The outline is what numbered the windows, so it is what says how long one is.
+  // Reading the flag default instead meant a run with --window-seconds 180 built a
+  // twelve-window outline and then sliced 300-second spans out of it — every
+  // `--window n` past the first landing somewhere the outline never described,
+  // silently, with output that looks exactly like a correct slice.
+  const windowSeconds = Number(flag("--window-seconds", null))
+    || (readJson(artifactPath(dir, "outline.json")) || {}).window_seconds
+    || WINDOW_SECONDS;
   let from = parseTime(flag("--from", "0"));
   const nth = flag("--window", null);
   if (nth !== null) from = (Math.max(1, Number(nth)) - 1) * windowSeconds;
@@ -4109,6 +4503,169 @@ function doCaptions() {
     process.exit(1);
   }
   console.log(JSON.stringify({ ...written, forced }, null, 2));
+}
+
+// The media this directory was built from, if it is still reachable. `run`
+// records it in _meta.md, and records just as plainly when there is nothing to
+// record because the source was a URL streamed to a temp file.
+export function mediaFromMeta(meta) {
+  const line = (String(meta || "").match(/^- \*\*Local media:\*\*\s*(.+)$/m) || [])[1];
+  if (!line || /^downloaded to a temp file/i.test(line.trim())) return null;
+  return line.trim();
+}
+
+// ---- enrich: the descriptive extraction, without transcribing again -------------
+//
+// A --no-prose or --verbatim run leaves a real transcript behind and no frames to
+// describe it from. The only way to upgrade one used to be `run --force`, which
+// re-downloads the source and spends the entire recognition again to arrive at
+// the segments.json already sitting in the directory — on a forty-minute
+// recording, twelve minutes of CPU to recompute a file nobody had touched.
+// Collect mode defers the prose pass on *every* orchestrator-dispatched run, so
+// that was the normal path, not the edge case.
+function doEnrich() {
+  const dir = firstPositional();
+  if (!dir) usage("Missing <transcript-dir>.");
+  if (!existsSync(dir)) { console.error(`No such directory: ${dir}`); process.exit(2); }
+  migrateFlatArtifacts(dir);
+
+  const result = readJson(artifactPath(dir, "segments.json"));
+  if (!result || !Array.isArray(result.segments)) {
+    console.error(`No readable segments.json in ${dir} — there is no transcript here to enrich.`);
+    process.exit(2);
+  }
+
+  const meta = (() => { try { return readFileSync(join(dir, "_meta.md"), "utf8"); } catch { return ""; } })();
+  const mediaPath = flag("--media", null) || mediaFromMeta(meta);
+  if (!mediaPath || !existsSync(mediaPath)) {
+    console.error(mediaPath
+      ? `The media this transcript came from is no longer at ${mediaPath}.`
+      : "This transcript's source was a URL streamed to a temp file, so the media is gone.");
+    console.error("Frames, embedded captions and a description track can only come from the media itself —");
+    console.error("pass --media <path> pointing at the recording, or re-download it and pass that.");
+    console.error("Nothing was changed.");
+    process.exit(2);
+  }
+
+  const py = findPython(flag("--python", null));
+  if (!py) { console.error("No Python interpreter found. Run `check` for install guidance."); process.exit(3); }
+
+  // Where the original run used a publisher's caption track, the outline must quote
+  // *that* wording. It is the one whole-recording digest the descriptive pass reads,
+  // and seeding it with the account the run already rejected teaches the mishearing
+  // to the pass whose job is to catch it.
+  const publisher = readArtifact(dir, CAPTIONS_FILE);
+  const parsed = publisher ? parseCaptions(publisher) : null;
+  const textSegments = parsed ? captionSegments(parsed.cues) : null;
+
+  const warnings = [];
+  const descriptive = enrichDescriptive({ py, mediaPath: resolve(mediaPath), outDir: dir, result, warnings,
+    textSegments,
+    diarization: maybeDiarize({ py, mediaPath: resolve(mediaPath), outDir: dir, warnings, duration: result.duration }) });
+  if (!descriptive) {
+    console.error("The descriptive extraction failed; nothing was written.");
+    for (const w of warnings) console.error(`  - ${w}`);
+    process.exit(1);
+  }
+
+  // The point of doing this on a --verbatim directory: that run never probed the
+  // media's subtitle streams, so where the file carries captions of its own the
+  // captions.vtt beside it is the recognizer's guess at words somebody had
+  // already written down. Now that the stream has been read, the better track wins.
+  const index = (() => { try { return readFileSync(join(dir, "index.md"), "utf8"); } catch { return ""; } })();
+  let subtitles = null;
+  if (descriptive.captionCues && descriptive.captionCues.length) {
+    subtitles = writeSubtitles({
+      outDir: dir, source: (index.match(/^source:\s*(.+)$/m) || [])[1] || dir, result,
+      embeddedCues: descriptive.captionCues,
+      fetchedAt: (index.match(/^fetched_at:\s*(\S+)/m) || [])[1] || undefined,
+    });
+  }
+
+  // _meta.md was written before any of this existed and still describes a run that
+  // had no frames and no diarization. Its descriptive section is replaced from what
+  // was just measured; the rest of the file — sizes, caption provenance, the decode
+  // — belongs to the original run and is left exactly as it was.
+  if (meta) {
+    writeFileSync(join(dir, "_meta.md"),
+      spliceDescriptiveInputs(meta, descriptive, { cues: parsed ? parsed.cues.length : 0, used: Boolean(textSegments) }),
+      "utf8");
+  }
+
+  const verified = verifyArtifacts(dir);
+  console.log(JSON.stringify({
+    ok: verified.ok, outDir: dir, media: resolve(mediaPath), descriptive, subtitles,
+    warnings, verified: { ok: verified.ok, problems: verified.problems, notes: verified.notes },
+    next: "Assemble transcript.md window by window (slice), then run `timeline`.",
+  }, null, 2));
+  if (!verified.ok) process.exit(5);
+}
+
+// ---- optional acoustic diarization ----------------------------------------------
+
+export function diarizeState(py) {
+  const r = probe(py.exe, [...py.args, DIARIZE, "check"]);
+  if (r.status !== 0) return null;
+  try { return JSON.parse(r.stdout); } catch { return null; }
+}
+
+// Opt-in, and silent about itself unless asked for. Without --diarize nothing
+// here runs and nothing is installed; with it and no engine, the run says so and
+// carries on with pause-derived turns rather than failing over a pass that was
+// always additive.
+function maybeDiarize({ py, mediaPath, outDir, warnings, duration, probed = null }) {
+  if (!has("--diarize")) return null;
+  const st = diarizeState(py);
+  if (!st || !st.ready) {
+    warnings.push("--diarize was requested but the diarization engine is not ready"
+      + (st && !st.sherpa_onnx ? " (sherpa-onnx is not installed)" : " (the models are not downloaded)")
+      + ". Speaker turns fall back to pauses in the speech. Run `check` for the install line.");
+    return null;
+  }
+  // The audio-lifting step already probed this container. Reading a multi-gigabyte
+  // master a third time to learn the same stream index is the one cost none of
+  // this has to pay.
+  let info = probed;
+  if (!info) {
+    if (pyProbe(py, ["probe", "--media", mediaPath, "--out", dataPath(outDir, "media.json")]).status !== 0) {
+      warnings.push("Diarization skipped — the media could not be probed.");
+      return null;
+    }
+    info = readJson(dataPath(outDir, "media.json")) || {};
+  }
+  if (info.audio_index === null || info.audio_index === undefined) return null;
+
+  const tmp = mkdtempSync(join(tmpdir(), "twt-video-diar-"));
+  try {
+    const wav = join(tmp, "speech.wav");
+    if (pyProbe(py, ["audio", "--media", mediaPath, "--stream", String(info.audio_index), "--out", wav]).status !== 0) {
+      warnings.push("Diarization skipped — the audio could not be extracted for it.");
+      return null;
+    }
+    const out = dataPath(outDir, "diarization.json");
+    const args = [DIARIZE, "run", "--media", wav, "--out", out];
+    const speakers = flag("--speakers", null);
+    if (speakers) args.push("--speakers", String(speakers));
+    console.error(`diarizing ${fmtTime(duration || 0)} of audio …`);
+    const r = spawnSync(py.exe, [...py.args, ...args], { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+    if (r.status !== 0) {
+      warnings.push(`Diarization failed (exit ${r.status}) — speaker turns fall back to pauses in the speech.`);
+      return null;
+    }
+    const parsed = readJson(out);
+    if (parsed && parsed.ok) {
+      console.error(`  ${parsed.speakers} speaker(s) across ${parsed.turns.length} turns`);
+      // Named as clusters, not people. Nothing acoustic knows who anyone is, and a
+      // report that says "3 speakers" next to a transcript labelled Presenter /
+      // Interviewer invites the reader to assume the tool matched them up.
+      warnings.push(`Diarization separated ${parsed.speakers} voice(s) acoustically as `
+        + `${parsed.labels.join(", ")} — it does not name anyone. Match each cluster to a person `
+        + "from the name cards and self-introductions in the frames.");
+    }
+    return parsed;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 // ---- run -----------------------------------------------------------------------
@@ -4330,9 +4887,12 @@ async function runOne({ source, py, outRoot }) {
     // Speech only. See prepareAudio: the container is what makes a big file slow,
     // and none of it past the audio stream is ever transcribed.
     audio = prepareAudio({ py, mediaPath, outDir, bytes, warnings, model });
-    const args = [...py.args, WORKER, "--media", audio.path, "--out", jsonPath,
-      "--model", model, "--language", flag("--language", "auto")];
-    const run = spawnSync(py.exe, args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
+    const vocabulary = vocabularyFor({ vocabulary: flag("--vocabulary", null), title });
+    if (vocabulary) console.error(`biasing the decoder toward: ${vocabulary}`);
+    const run = spawnSync(py.exe, [...py.args, WORKER, ...whisperArgs({
+      media: audio.path, out: jsonPath, model, vocabulary,
+      wordTimestamps: !has("--no-word-timestamps"),
+    })], { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
     // Exit 3 is the engine going missing mid-run — that is not this file's
     // problem, it is every remaining file's problem too, so it stops everything.
     if (run.status === 3) process.exit(3);
@@ -4350,6 +4910,17 @@ async function runOne({ source, py, outRoot }) {
     // Surfaced here as well as in the report so `_meta.md` and the JSON summary
     // carry it: a caller that reads only the summary must still learn that the
     // mechanical check had nothing to work from.
+    // A CUDA run that quietly became a CPU run is the single hardest thing to
+    // explain after the fact — the transcript is fine, and the only symptom is
+    // that it took forty times as long as the estimate the user was given.
+    if ((result.device_notes || []).some((n) => /CUDA placement failed/i.test(n))) {
+      warnings.push(result.device_notes.find((n) => /CUDA placement failed/i.test(n)));
+    }
+    if (result.decode && result.decode.word_timestamps
+      && !result.segments.some((s) => (s.words || []).length)) {
+      warnings.push("Word timestamps were requested but this build returned none, so beats are "
+        + "anchored to 5-second segment starts and more of them will be marked `~` in the timeline.");
+    }
     if (result.segments.length && !result.segments.some((s) => typeof s.avg_logprob === "number")) {
       warnings.push("This faster-whisper build returned no per-segment confidence scores, so no "
         + "line could be flagged mechanically — the report's PART 3 is empty for reasons that have "
@@ -4383,10 +4954,19 @@ async function runOne({ source, py, outRoot }) {
     // actually read, and a run that skipped the frames cannot be upgraded into one
     // without re-decoding the media. --verbatim opts out where speech is all that
     // is wanted (and is what collect mode passes, having no budget for the pass).
+    //
+    // --no-prose is NOT --verbatim, and conflating them was the whole problem.
+    // Deferring the reading is a budget decision; throwing away the frames is a
+    // decision to make the recording undescribable without decoding it again.
+    // Callers with no tokens for the prose pass want the first and were getting
+    // the second, so every orchestrator-dispatched transcript arrived at a dead
+    // end. --verbatim now means only what it says: speech, nothing else.
     const descriptive = has("--verbatim")
       ? null
       : enrichDescriptive({ py, mediaPath, outDir, result, warnings, textSegments: captions,
-        probed: audio?.info || null });
+        probed: audio?.info || null,
+        diarization: maybeDiarize({ py, mediaPath, outDir, warnings, duration: result.duration,
+          probed: audio?.info || null }) });
 
     // The recording's one caption track. Written after the descriptive extraction
     // because that is what discovers the media's own subtitle stream, and an
@@ -4429,6 +5009,15 @@ async function runOne({ source, py, outRoot }) {
       ok: true, slug, outDir, title: titleFrom(slug, title),
       duration: fmtTime(result.duration, true),
       language: result.language, model: result.model,
+      device: result.device, computeType: result.compute_type,
+      vocabulary: result.vocabulary || null,
+      // What still has to happen to this directory, said in the summary rather
+      // than left for the caller to infer from which flag it happened to pass.
+      prose: has("--verbatim")
+        ? { state: "skipped", upgrade: `enrich "${outDir}" --media <path-to-the-recording>` }
+        : (has("--no-prose")
+          ? { state: "deferred", upgrade: "assemble transcript.md from the slices, then run `timeline`" }
+          : { state: "expected", upgrade: null }),
       segments: result.segments.length,
       words: totalWords,
       report: reportPath,
@@ -4599,6 +5188,7 @@ if (invokedDirectly) {
   else if (cmd === "batch-index") doBatchIndex();
   else if (cmd === "timeline") doTimeline();
   else if (cmd === "captions") doCaptions();
+  else if (cmd === "enrich") doEnrich();
   else if (cmd === "run") await doRun();
   else usage(cmd ? `Unknown command: ${cmd}` : "Missing command.");
 }

@@ -19,7 +19,9 @@ import {
   buildWcagTranscription, DEFAULT_MODEL, BELOW_DEFAULT, MODELS, modelIsCached,
   CUE_MAX_CHARS, CUE_LINE_CHARS, CUE_MIN_SECONDS, CUE_MAX_SECONDS,
   fmtBytes, mediaProfile, sourceLine, extractedLine, longRunNote, prepareAudio,
-  LONG_RUN_SECONDS,
+  LONG_RUN_SECONDS, wordStream, wordGapBoundaries, speakerAt,
+  whisperArgs, vocabularyFor, turnSourceNote, isRetryableStatus, mediaFromMeta,
+  FRAME_BAND_THRESHOLD, WINDOW_SECONDS,
 } from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
 
 // Build a segment list from [start, end, text] triples.
@@ -2805,4 +2807,246 @@ test('a probe that fails leaves the container path open instead of stopping the 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// ---- word timings, turn detection, diarization -----------------------------------
+
+// [start, end, text, [[wStart, wEnd, word], ...]]
+const wsegs = (...rows) => rows.map(([start, end, text, words]) => ({
+  start, end, text, words: (words || []).map(([s, e, w]) => ({ start: s, end: e, word: w })),
+}));
+
+test('wordStream flattens only the words that carry real timings', () => {
+  const segments = wsegs(
+    [0, 4, 'one two', [[0, 1, ' one'], [1.2, 2, ' two']]],
+    [4, 6, 'three', [[4, 5, ' three']]],
+  );
+  segments.push({ start: 6, end: 8, text: 'no words here' });
+  assert.deepEqual(wordStream(segments).map((w) => w.word.trim()), ['one', 'two', 'three']);
+  assert.deepEqual(wordStream([{ start: 0, end: 1, text: 'x' }]), []);
+});
+
+test('wordGapBoundaries finds a handover that segment boundaries hide', () => {
+  // One segment, and the pause is *inside* it — the exact case segment-gap turn
+  // detection cannot see, because there is no segment boundary at 5.4s at all.
+  const segments = wsegs([0, 9, 'Thanks. And now to you.', [
+    [0, 1.0, ' Thanks.'], [5.4, 6.0, ' And'], [6.0, 6.4, ' now'], [6.4, 7.0, ' to'], [7.0, 7.4, ' you.'],
+  ]]);
+  assert.deepEqual(wordGapBoundaries(segments), [5.4]);
+  // A gap under the sentence threshold is breath, not a handover.
+  assert.deepEqual(wordGapBoundaries(wsegs([0, 3, 'a b', [[0, 1, ' a.'], [1.5, 2, ' b']]])), []);
+});
+
+test('assignTurns prefers word pauses, and reports them per segment', () => {
+  const segments = wsegs(
+    [0, 9, 'Thanks. And now to you.', [[0, 1.0, ' Thanks.'], [5.4, 7.4, ' Yours.']]],
+    [9, 12, 'Right.', [[9.1, 9.6, ' Right.']]],
+  );
+  const turned = assignTurns(segments);
+  // The mid-segment handover is recorded on the segment it falls inside.
+  assert.deepEqual(turned[0].turn_breaks, [5.4]);
+  assert.equal(turned[0].turn, 0);
+  // The second handover sits at 9.1 — the second segment's first word — while the
+  // segment itself nominally opens at 9.0. Measured against the word, so the
+  // segment carries the new turn instead of filing its own opening as an
+  // internal break and staying on the previous speaker's number.
+  assert.equal(turned[1].turn, 1);
+  assert.equal(turned[1].turn_breaks, undefined);
+});
+
+test('assignTurns falls back to segment gaps when there are no word timings', () => {
+  // Pre-fix behaviour, preserved exactly for a build that returns no word timings.
+  const turned = assignTurns(segs([0, 4, 'One sentence.'], [7, 9, 'A reply.'], [9.1, 10, 'Same voice.']));
+  assert.deepEqual(turned.map((s) => s.turn), [0, 1, 1]);
+  assert.equal(turned[0].speaker, undefined);
+});
+
+test('assignTurns uses a diarization when it has one, and labels the clusters', () => {
+  const diarization = {
+    ok: true,
+    turns: [{ start: 0, end: 5, speaker: 'speaker_0' }, { start: 5, end: 12, speaker: 'speaker_1' }],
+  };
+  // Deliberately contiguous segment times: the pause detector is blind here, which
+  // is the file shape the tool used to warn about and could do nothing else for.
+  const turned = assignTurns(segs([0, 4.9, 'Hello.'], [4.9, 8, 'Hello back.'], [8, 12, 'Still me.']),
+    { diarization });
+  assert.deepEqual(turned.map((s) => s.speaker), ['speaker_0', 'speaker_1', 'speaker_1']);
+  assert.deepEqual(turned.map((s) => s.turn), [0, 1, 1]);
+});
+
+test('speakerAt picks the speaker holding most of the span, not the midpoint', () => {
+  const turns = [{ start: 0, end: 3.2, speaker: 'speaker_0' }, { start: 3.2, end: 10, speaker: 'speaker_1' }];
+  // Midpoint of 0-6 is 3.0 — inside speaker_0 — and overlap agrees here (3.2s vs 2.8s).
+  assert.equal(speakerAt({ start: 0, end: 6 }, turns), 'speaker_0');
+  assert.equal(speakerAt({ start: 3, end: 9 }, turns), 'speaker_1');
+  assert.equal(speakerAt({ start: 20, end: 30 }, turns), null);
+  assert.equal(speakerAt({ start: 0, end: 1 }, null), null);
+});
+
+test('nonSpeechGaps sees a silence buried inside one segment', () => {
+  // A demo running mid-answer: the segment spans it, so at segment resolution
+  // there is no gap here at all.
+  const segments = wsegs([0, 20, 'Watch this. Done.', [[0, 2, ' Watch this.'], [14, 16, ' Done.']]]);
+  // Both silences: the one inside the segment, and the tail after the last word.
+  assert.deepEqual(nonSpeechGaps(segments, 20), [{ start: 2, end: 14 }, { start: 16, end: 20 }]);
+  // Without word timings the old segment-level answer stands.
+  assert.deepEqual(nonSpeechGaps(segs([0, 20, 'Watch this. Done.']), 20), []);
+});
+
+test('turnSourceNote never calls an acoustic turn pause-derived', () => {
+  assert.match(turnSourceNote({ turn_source: 'diarization' }), /acoustic/i);
+  assert.match(turnSourceNote({ turn_source: 'word-pauses' }), /between words/i);
+  assert.match(turnSourceNote({ turn_source: 'segment-pauses' }), /blind to a handover/i);
+  assert.match(turnSourceNote(undefined), /blind to a handover/i);
+});
+
+// ---- placement, vocabulary -------------------------------------------------------
+
+test('whisperArgs always names a device and a compute type', () => {
+  const args = whisperArgs({ media: 'a.wav', out: 'b.json', model: 'medium' });
+  assert.equal(args[args.indexOf('--device') + 1], 'auto');
+  assert.equal(args[args.indexOf('--compute-type') + 1], 'auto');
+  assert.ok(!args.includes('--vocabulary'));
+  assert.ok(!args.includes('--no-word-timestamps'));
+});
+
+test('whisperArgs passes the vocabulary and can turn word timings off', () => {
+  const args = whisperArgs({ media: 'a.wav', out: 'b.json', model: 'small',
+    vocabulary: 'bereavement', wordTimestamps: false });
+  assert.equal(args[args.indexOf('--vocabulary') + 1], 'bereavement');
+  assert.ok(args.includes('--no-word-timestamps'));
+});
+
+test('vocabularyFor seeds from the title but never from a placeholder one', () => {
+  assert.equal(vocabularyFor({ vocabulary: null, title: 'Grief-Sensitive Schools' }),
+    'Grief-Sensitive Schools');
+  assert.equal(vocabularyFor({ vocabulary: 'SSWAA', title: 'Grief-Sensitive Schools' }),
+    'Grief-Sensitive Schools, SSWAA');
+  // A CDN placeholder is not vocabulary; biasing the decoder toward "main" is worse
+  // than biasing it toward nothing.
+  assert.equal(vocabularyFor({ vocabulary: null, title: 'main' }), null);
+  assert.equal(vocabularyFor({ vocabulary: null, title: null }), null);
+});
+
+test('vocabularyFor cuts an over-long list at a comma rather than mid-word', () => {
+  const long = Array.from({ length: 200 }, (_, i) => `term${i}`).join(', ');
+  const out = vocabularyFor({ vocabulary: long, title: null });
+  assert.ok(out.length <= 600);
+  assert.ok(!out.endsWith(','));
+  // The cut lands on a whole term, never a truncated one.
+  assert.ok(/^term\d+$/.test(out.split(', ').pop()));
+});
+
+// ---- download resilience ---------------------------------------------------------
+
+test('isRetryableStatus retries the transport, never the refusal', () => {
+  for (const s of [408, 429, 500, 502, 503]) assert.equal(isRetryableStatus(s), true, String(s));
+  // A 403 on an expired signed URL says the same thing three times.
+  for (const s of [400, 401, 403, 404, 410]) assert.equal(isRetryableStatus(s), false, String(s));
+});
+
+// ---- enrich ----------------------------------------------------------------------
+
+test('mediaFromMeta finds a kept source and refuses to invent a deleted one', () => {
+  assert.equal(mediaFromMeta('- **Local media:** C:/clips/talk.mp4\n'), 'C:/clips/talk.mp4');
+  assert.equal(
+    mediaFromMeta('- **Local media:** downloaded to a temp file and deleted after transcription\n'),
+    null);
+  assert.equal(mediaFromMeta(''), null);
+});
+
+// ---- the window the outline actually described -----------------------------------
+
+test('buildOutline records the window length it used, so slice can honour it', () => {
+  const outline = buildOutline({
+    segments: segs([0, 100, 'a'], [200, 300, 'b'], [400, 500, 'c']),
+    duration: 540, windowSeconds: 180,
+  });
+  assert.equal(outline.window_seconds, 180);
+  assert.equal(outline.windows.length, 3);
+  // Default stays what it was for every caller that does not ask.
+  assert.equal(buildOutline({ segments: segs([0, 10, 'a']), duration: 10 }).window_seconds,
+    WINDOW_SECONDS);
+});
+
+test('the lower-third floor matches media_probe.py, which is the number documented', () => {
+  // It read 0.04 here while media_probe.py defaulted to 0.015, and because the flag
+  // is always passed the Python default never applied. Measured on a translucent
+  // slim name strap: band 0.0305 against scene 0.0124 — kept at 0.015, dropped at 0.04.
+  assert.equal(FRAME_BAND_THRESHOLD, 0.015);
+});
+
+// ---- _meta.md stays in step with what was actually measured ----------------------
+
+import {
+  descriptiveInputsSection, spliceDescriptiveInputs, META_DESCRIPTIVE_HEADING,
+} from '../skills/twt-content-fetch-video/tools/transcribe-video.mjs';
+
+const desc = (over = {}) => ({
+  frames: 3, captions: 0, audio_description: false, turns: 4,
+  turn_source: 'word-pauses', non_speech_spans: 1, windows: 2, ...over,
+});
+
+test('descriptiveInputsSection names the acoustic case as acoustic', () => {
+  const plain = descriptiveInputsSection(desc()).join('\n');
+  assert.match(plain, /Speaker-turn candidates:\*\* 4 \(derived from pauses between words/);
+  assert.ok(!/Voices separated/.test(plain));
+
+  const diarized = descriptiveInputsSection(
+    desc({ turn_source: 'diarization', speakers: 2, speaker_labels: ['speaker_0', 'speaker_1'] })).join('\n');
+  assert.match(diarized, /acoustic — measured between voices/);
+  assert.match(diarized, /Voices separated acoustically:\*\* 2/);
+  // It must never read as though the tool worked out who anyone is.
+  assert.match(diarized, /clusters are unnamed/);
+  assert.match(diarized, /Speaker turns are acoustic and unnamed\./);
+});
+
+test('descriptiveInputsSection is empty when there was no descriptive pass', () => {
+  assert.deepEqual(descriptiveInputsSection(null), []);
+});
+
+test('spliceDescriptiveInputs replaces a stale section without touching the rest', () => {
+  const meta = [
+    '# Transcript metadata — talk.mp4',
+    '',
+    '- **Duration:** 0:00:21',
+    '- **Engine:** faster-whisper',
+    '',
+    META_DESCRIPTIVE_HEADING,
+    '',
+    '- **Keyframes extracted:** 0',
+    '- **Speaker-turn candidates:** 3 (derived from pauses between words)',
+    '',
+    '## Warnings',
+    '',
+    '- None.',
+    '',
+  ].join('\n');
+  const out = spliceDescriptiveInputs(meta,
+    desc({ turn_source: 'diarization', speakers: 2, speaker_labels: ['speaker_0', 'speaker_1'] }));
+  // The stale claim is gone, not merely joined by a second one.
+  assert.ok(!out.includes('Speaker-turn candidates:** 3'));
+  assert.match(out, /Speaker-turn candidates:\*\* 4 \(acoustic/);
+  // Exactly one descriptive section, and the rest of the file survives intact.
+  assert.equal(out.split(META_DESCRIPTIVE_HEADING).length - 1, 1);
+  assert.match(out, /# Transcript metadata — talk\.mp4/);
+  assert.match(out, /- \*\*Engine:\*\* faster-whisper/);
+  assert.match(out, /## Warnings/);
+  assert.match(out, /- None\./);
+});
+
+test('spliceDescriptiveInputs adds the section a verbatim run never wrote', () => {
+  // The common enrich case: the original run produced no descriptive section at all.
+  const meta = ['# Transcript metadata — talk.mp4', '', '- **Duration:** 0:00:21', '',
+    '## Warnings', '', '- None.', ''].join('\n');
+  const out = spliceDescriptiveInputs(meta, desc());
+  assert.match(out, /Keyframes extracted:\*\* 3/);
+  // Placed before Warnings, so the file keeps its shape.
+  assert.ok(out.indexOf(META_DESCRIPTIVE_HEADING) < out.indexOf('## Warnings'));
+  assert.equal(out.split(META_DESCRIPTIVE_HEADING).length - 1, 1);
+});
+
+test('spliceDescriptiveInputs leaves a file alone when there is nothing to say', () => {
+  const meta = '# Transcript metadata\n\n## Warnings\n\n- None.\n';
+  assert.equal(spliceDescriptiveInputs(meta, null), meta);
 });

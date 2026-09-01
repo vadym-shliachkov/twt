@@ -537,7 +537,7 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 ## /twt-content-fetch-video
 
 **Category:** content
-**Version:** 1.0.11
+**Version:** 1.0.12
 **Accepts arguments:** yes
 
 Turn recordings — a talk, a client walkthrough, a stakeholder interview, a screen capture, or a folder of all four — into clean, frontmatter-tagged Markdown so their content feeds brand, positioning, IA, and curation the same way fetched site and PDF content does. Every recording gets the same content in the shapes different readers need it in. `transcript.md` is the **descriptive transcript** — each speaker named where they start speaking, with on-screen text, visible action and sounds woven in between their lines, so someone who cannot watch or hear the recording gets the same information. `timeline.md` is that content as **one stream with a timestamp on every beat**, for citing a moment. `speech.md` and `speech.txt` are the words alone, timed and untimed. `speakers.md` is who is in it. `wcag-transcription.json` / `.txt` are the accessibility rows. `captions.vtt` / `.srt`, `descriptions.vtt` and `chapters.vtt` are what you hang on the video. `index.md` is the speech, attributed, and the file the rest of the pipeline reads. The machinery that built them — segments, keyframes, stream layout, the caption diff — sits in `data/`, so the directory listing shows only what is worth opening. Several sources in one command each get their own directory, and a batch index ties them together. Transcription runs locally and offline via faster-whisper; nothing is uploaded anywhere.
@@ -569,12 +569,12 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/descriptions.vtt
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/chapters.vtt
 - .twt-artifacts/pre-design/content/fetched/video/<slug>/_meta.md
-- .twt-artifacts/pre-design/content/fetched/video/<slug>/data/ (segments.json, outline.json, media.json, frames.json, frames/, captions.json, caption-diff.json, publisher-captions.vtt, audio-description.md)
+- .twt-artifacts/pre-design/content/fetched/video/<slug>/data/ (segments.json, outline.json, media.json, frames.json, frames/, captions.json, caption-diff.json, publisher-captions.vtt, audio-description.md, diarization.json)
 
 **Non-goals:**
 - Not a YouTube/Vimeo/Loom downloader — this takes **direct** media URLs, local files, or a folder of them, not a watch page. The one exception is a **Brightcove player page**, which the tool resolves itself (policy key → Playback API → MP4 rendition, and the publisher's caption track alongside it)
 - Not an audio-event classifier: sounds are read off the picture, the speech, and a real description track — a noise with no on-screen source and no mention can be missed
-- Not voice-biometric diarization: turn boundaries come from pauses, so an interruption with no pause between speakers can be missed, and speakers are named from context, never from voice
+- Speakers are named from context — a card, a self-introduction, being addressed by name — never from voice. Acoustic diarization is available and off by default (`--diarize`, one extra install): it separates voices and numbers them, so an interruption with no pause is no longer a missed handover, but it still names nobody. Without it, turn boundaries come from pauses between words
 - Doesn't summarize, curate, or judge the content for the pipeline (that's `/twt-curation-define`) — the descriptive transcript's own summary is an orientation intro, not curation
 - Doesn't correct the recognizer: PART 3 says what is likely wrong and where, and PARTS 1 and 2 stay exactly as the recognizer produced them. Preferring a publisher's caption track in `index.md` is not a correction — it is choosing the account written by a person over the one guessed from audio, and `text_source:` says which one is in the file
 - Doesn't burn captions into the video, and doesn't caption over a track someone already wrote — there is exactly one `captions.vtt` per recording, and where the publisher shipped a track it holds their words byte for byte, with the original archived in `data/`
@@ -595,7 +595,9 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 - **Every** recording with speech has a `captions.vtt` and a `captions.srt`, whoever wrote the words: the publisher's track copied verbatim, the media file's own subtitle stream extracted, or the recognizer's timed text cut into cues. `_meta.md`, the report and what you tell the user all say which of the three it was, and a generated one is called unchecked machine output every time
 - `transcript.txt` exists for every recording, with PART 3's review half filled in rather than left pending (except under `subagent-collect`, which has no budget for the read)
 - For more than one source: `_batch-<date>.md` sits at the `video/` root, was regenerated after the descriptive passes, and lists every recording — including any that failed
-- The slug and title are passed **into** the tool, never corrected afterwards by editing what it wrote
+- The slug, title and vocabulary are passed **into** the tool, never corrected afterwards by editing what it wrote
+- `_meta.md` says where the turn boundaries came from, and the report repeats it — a turn measured between voices and a turn guessed from a segment boundary are not the same claim and are never described the same way
+- A run that deferred the reading did so with `--no-prose`, leaving the frames, the outline and the media's own captions on disk. `--verbatim` appears only where speech alone was genuinely wanted
 - No signed-URL token reaches any file — the tool redacts them, and nothing you write puts one back
 - Nothing in `transcript.md` is invented: every speaker name, sound, visual, link, and citation traces to the audio, a frame, the file's own caption track, or its audio-description track
 
