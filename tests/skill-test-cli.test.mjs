@@ -189,3 +189,63 @@ test('flag() --name=value lets --patch carry a pasted diff starting with ---', (
   const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
   assert.equal(meta.findings[0].patch, '--- a/file\n+++ b/file');
 });
+
+// --scope narrows what is GRADED, at freeze time. Recording it without
+// applying it left the flag decorative: `--scope contract` still gated the
+// run on every quality criterion in the file.
+const TWO_DIM = [
+  '### C-001 · contract · a', '', '- **self-declared:** no', '',
+  '### C-002 · quality · b', '', '- **self-declared:** yes', '',
+].join('\n');
+
+test('criteria --freeze narrows criteriaIds to the scoped dimensions', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, TWO_DIM);
+  const out = run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--scope', 'contract']);
+  assert.match(out, /1 of 2 criteria in scope contract/);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.deepEqual(meta.criteriaIds, ['C-001']);
+  assert.deepEqual(meta.scope, ['contract']);
+  // selfDeclared is narrowed with it, so the weak-pass test reads the same set.
+  assert.deepEqual(meta.selfDeclared, []);
+});
+
+test('the default scope keeps every contract/dispatch/quality criterion', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, TWO_DIM);
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir]);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.deepEqual(meta.criteriaIds, ['C-001', 'C-002']);
+});
+
+test('a scope that selects no criterion exits 1 rather than freezing an ungradeable run', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, TWO_DIM);
+  assert.equal(runCode(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--scope', 'robustness']), 1);
+  assert.equal(existsSync(join(runDir, 'run.json')), false);
+});
+
+test('an out-of-scope criterion cannot block a pass: all in-scope PASS converges', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, TWO_DIM);
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--scope', 'contract']);
+  const verdicts = join(newDir(), 'v.json');
+  writeFileSync(verdicts, JSON.stringify({ 'C-001': 'PASS' }));
+  run(['ledger', runDir, '--iteration', '1', '--verdicts', verdicts]);
+  assert.match(run(['converged', runDir]), /converged-pass/);
+  run(['report', runDir]);
+  assert.match(readFileSync(join(runDir, 'report.md'), 'utf8'), /C-002 \(self-declared, out of scope\)/);
+});
+
+test('scope is whitespace-tolerant so a quoted "contract, quality" still filters', () => {
+  const runDir = newDir();
+  const critFile = join(newDir(), 'c.md');
+  writeFileSync(critFile, TWO_DIM);
+  run(['criteria', 'twt-demo', '--file', critFile, '--freeze', runDir, '--scope', 'contract, quality']);
+  const meta = JSON.parse(readFileSync(join(runDir, 'run.json'), 'utf8'));
+  assert.deepEqual(meta.criteriaIds, ['C-001', 'C-002']);
+});

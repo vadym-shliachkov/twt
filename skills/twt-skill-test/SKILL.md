@@ -51,7 +51,10 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
   plain-language stop reason, a per-iteration verdict table, the fidelity header,
   and (on `--fix`) either a commit SHA or a stated reason nothing landed.
 - A `--fix` run never edits anything outside `skills/twt-<name>/`, never touches
-  `version:`, and never touches `tests/skill-criteria/`.
+  `version:`, and never edits `tests/skill-criteria/` after Step 2 froze it
+  (Step 2 may *create* a missing rubric; nothing after it may change one).
+- A fix the run never re-graded is reported as `UNVERIFIED`, never folded in
+  with the fixes a later iteration actually evidenced.
 - A misbehaving runner (one that keeps reaching for the Skill tool despite the
   explicit prohibition) halts the run within 3 consecutive occurrences instead of
   looping unbounded.
@@ -82,15 +85,31 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
    - `--fix` — default OFF. Without it this is a report-only run: nothing under
      `skills/` is touched.
    - `--scope contract,dispatch,quality,robustness` — default
-     `contract,dispatch,quality`. `robustness` is opt-in because each extra
-     fixture is a full additional run per iteration.
-   - `--iterations N` — default 3. **Hard-capped at 3 regardless of what is
-     passed** — this harness never runs a fourth iteration, full stop. Compute
-     `effectiveCap = min(N, 3)` now (an omitted `--iterations` means `N = 3`,
-     so `effectiveCap = 3`). Carry `effectiveCap` forward: it is Step 3's own
-     loop bound (not the literal number 3) and the `--cap` value passed to
-     every `converged` call in this run — `--iterations 1` must actually run
-     one iteration, not three.
+     `contract,dispatch,quality`. This is a **dimension filter, and it is
+     load-bearing**: Step 2's `--freeze` narrows the run's `criteriaIds` to
+     criteria whose `dimension:` is in the list, and that narrowed list is
+     the only thing `converged()` derives a pass from. A criterion in the
+     file but out of scope is never graded and reads `n/a` in the report —
+     so a scope that selects nothing is a hard error at freeze time (exit 1),
+     not a vacuous pass. `robustness` is opt-in because each extra fixture is
+     a full additional run per iteration.
+   - `--iterations N` — **Hard-capped at 3 regardless of what is passed** —
+     this harness never runs a fourth iteration, full stop. Compute
+     `effectiveCap` now, in this order:
+     - `--iterations N` given → `effectiveCap = min(N, 3)`.
+     - Not given, **and `--fix` was given** → `effectiveCap = 3`.
+     - Not given, and **`--fix` was not given** → `effectiveCap = 1`.
+       Without `--fix` nothing edits the skill between iterations, so
+       iteration 2 re-runs identical bytes against an identical fixture and
+       can only reproduce iteration 1's verdicts — at the cost of a second
+       full skill run plus a second grader dispatch. It would then stop as
+       `no-progress`, which reads as "the loop was thrashing" and misnames
+       what happened. A report is one iteration. Pass `--iterations 2` (or 3)
+       explicitly if you actually want to sample run-to-run variance.
+
+     Carry `effectiveCap` forward: it is Step 3's own loop bound (not the
+     literal number 3) and the `--cap` value passed to every `converged` call
+     in this run — `--iterations 1` must actually run one iteration, not three.
    - `--fixture <name>` — repeatable; `robustness` scope only.
 3. Confirm `skills/<skill>/SKILL.md` exists (Glob). If not, stop and name the
    closest match found under `skills/`.
@@ -107,8 +126,9 @@ hand-fixtured scopes. `/twt-skill-test` covers the other ~90.
 6. **Cost-class warning.** If `<skill>` is one of `twt-site`, `twt-site-dev`,
    `twt-design`, `twt-pre-design`, `twt-develop`, `twt-qa`, ask via
    **AskUserQuestion** (single-select, header "Orchestrator run"): "Proceed"
-   (three iterations of a full pipeline, and any sub-skill it dispatches is
-   mixed-version under injection) / "Reduce to 1 iteration" / "Cancel" / **You
+   (`effectiveCap` iterations of a full pipeline — name the number you actually
+   computed — and any sub-skill it dispatches is mixed-version under
+   injection) / "Reduce to 1 iteration" / "Cancel" / **You
    decide** (default Proceed — resolves only this question). Apply the answer
    before Step 2 — "Reduce to 1 iteration" sets `effectiveCap = 1` regardless
    of whatever `--iterations` value (or default) Step 1.2 computed; this is
@@ -214,13 +234,27 @@ cache path did not exist — pass that literal string, don't leave the flag off)
 `--target` takes the resolved `<target>` from Step 1.2, `--scope` the resolved
 scope list from Step 1.2 (comma-joined, e.g. `contract,dispatch,quality`).
 
-This writes the criteria file's SHA-256 and its ordered criterion-id list, plus
-these four values, into `<runDir>/run.json`; iterations 2 and 3 re-verify the
-hash and the run aborts (exit 4) on drift — the rubric cannot shift mid-run.
+This writes the criteria file's SHA-256 and its ordered **in-scope**
+criterion-id list, plus these four values, into `<runDir>/run.json`; iterations
+2 and 3 re-verify the hash and the run aborts (exit 4) on drift — the rubric
+cannot shift mid-run.
 
-## Step 3 — Iterate (bounded at `effectiveCap` iterations from Step 1.2 — 3 unless
-`--iterations` or the Step 1.6 cost-control answer lowered it — and at 3
-consecutive invalid dispatches)
+Two things to note in its output. It prints `N of M criteria in scope <list>`:
+if `N < M`, say so when you relay the result — the criteria it dropped were
+not graded and a pass does not cover them. And if `--scope` selects **none**
+of the file's criteria it exits 1 with the dimensions the file actually
+contains; widen `--scope` and re-freeze rather than proceeding.
+
+**If Step 2 derived the rubric rather than finding one**, the new
+`tests/skill-criteria/<skill>.md` is a tracked-path file that this run leaves
+uncommitted. Remember that: Step 5 stages it, and on a report-only run Step 6
+has to tell the user to commit it — an untracked file there makes the *next*
+run's `guard` report a dirty tree, which silently downgrades that run's
+`--fix` to report-only.
+
+## Step 3 — Iterate (bounded at `effectiveCap` iterations from Step 1.2 — 3 on a
+`--fix` run, 1 on a report-only one, unless `--iterations` or the Step 1.6
+cost-control answer set it — and at 3 consecutive invalid dispatches)
 
 Track one counter across the whole run: `consecutiveInvalid`, starting at 0. This
 exists because `converged()` deliberately excludes `invalidDispatch` iterations
@@ -339,16 +373,21 @@ says so):
    ```
 
    Follow it with the concrete, run-specific facts the grader needs and nothing
-   else: the criteria file's absolute path and the target directory's absolute
-   path. Do **not** give it the tested `SKILL.md`, the injected prompt, any prior
-   iteration's report, or the runner's reasoning.
+   else: the criteria file's absolute path, the target directory's absolute
+   path, and — when `--scope` dropped any criterion — the exact list of
+   criterion ids to grade, copied from `criteriaIds` in `<runDir>/run.json`,
+   with the instruction to ignore every other criterion in the file. Do **not**
+   give it the tested `SKILL.md`, the injected prompt, any prior iteration's
+   report, or the runner's reasoning.
 9. Write the grader's **raw response** verbatim to `<runDir>/iteration-N/verdicts.json`
    (Write tool). Spec §6 defines this file as raw grader output — evidence and
    all — and it is the only place that evidence survives to disk; do not
    reduce it before writing it here. Then, from that same response, build the
    flat verdict map `{ "C-001": "PASS", "C-002": "FAIL", ... }` — one entry
-   per criterion id in the frozen rubric, defaulting to `UNVERIFIABLE` for any
-   criterion the grader did not address — and write *that* reduced map
+   per id in `<runDir>/run.json`'s `criteriaIds` (the frozen **in-scope** list,
+   which is what `converged()` reads; an out-of-scope criterion gets no entry
+   at all, not an `UNVERIFIABLE` one), defaulting to `UNVERIFIABLE` for any
+   in-scope criterion the grader did not address — and write *that* reduced map
    separately to `<runDir>/iteration-N/verdict-map.json` (Write tool); Step 11's
    `ledger` call reads this second file, never `verdicts.json`. Keep the
    grader's cited evidence in context; it feeds this iteration's fix (Step 4,
@@ -356,6 +395,13 @@ says so):
 10. **Fix, only if `--fix` and this iteration's verdict map has any non-`PASS`
     entry.** Go to Step 4 now, before the ledger call, so the fix this round
     produced is recorded against this same iteration.
+
+    A fix is only ever evidenced by the *next* valid iteration's verdicts, so a
+    fix applied when `N == effectiveCap` is never re-graded — `report.mjs`
+    marks it `UNVERIFIED` and flags the commit that carries it. Still apply it
+    (a described, landed edit is more use to a human than a finding alone), but
+    say so when you relay: this edit rests on the grader's evidence, not on a
+    verdict.
 11. **Ledger:** `node tools/skill-test.mjs ledger <runDir> --iteration N --verdicts <runDir>/iteration-N/verdict-map.json [--fixes <comma-list from Step 4>]`.
 12. **Stop check:** `node tools/skill-test.mjs converged <runDir> --cap <effectiveCap>`.
     This also writes `stopReason` into `run.json`. Act on the result:
@@ -404,6 +450,11 @@ at the start — state this plainly in the report instead).
 1. `node tools/gen-docs.mjs` — a skill change and its regenerated docs land in
    the same commit, per the standing repo rule.
 2. Stage explicitly, never `git add -A`: `git add skills/<skill>/ SKILLS.md architecture.md README.md`.
+   **Add `tests/skill-criteria/<skill>.md` to that list if Step 2 derived it
+   this run.** It is a tracked-path file; leaving it untracked makes the next
+   run's Step 1.4 `guard` report a dirty tree and silently downgrade that run's
+   `--fix` to report-only. Committing a rubric Step 2 *created* is not the
+   prohibited act — Step 4's ban is on *editing* a frozen rubric mid-loop.
 3. One commit on `main` (no branches, no worktrees):
    `git commit -m "fix(<short-name>): address /twt-skill-test findings"`.
 4. **Stop. Do not push, ever** — there is no push flag in this design and none
@@ -427,11 +478,19 @@ Relay to the user, in this order:
    the *runner*, not the skill).
 2. The verdict table (criterion × iteration).
 3. Every proposed out-of-boundary patch from Step 4, if any.
-4. **Always state:** nothing was pushed, and the plugin cache your other
+4. Any fix marked `UNVERIFIED` in the report — name the iteration and say
+   plainly that no verdict backs it.
+5. If `--scope` dropped any criterion (Step 2's freeze printed `N of M`), name
+   the dimensions that went ungraded — a pass does not cover them.
+6. If Step 2 derived the rubric and Step 5 did not run (report-only, or
+   `mayCommit: false`), tell the user that `tests/skill-criteria/<skill>.md` is
+   new and uncommitted, and that leaving it so will make the next run's guard
+   see a dirty tree.
+7. **Always state:** nothing was pushed, and the plugin cache your other
    sessions load from (`cache/twt-marketplace/twt/<version>` recorded in Step
    1.5) is unaffected — if a fix was committed, it stays local to this working
    tree until a human pushes it.
-5. The report file's path.
+8. The report file's path.
 
 Target-dir handling: on `converged-pass` (not `-weak`), clean it up —
 `node tools/skill-test.mjs clean <target>`. On every other stop reason, leave it

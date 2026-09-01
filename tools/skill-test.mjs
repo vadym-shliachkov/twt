@@ -75,18 +75,30 @@ try {
     const checkDir = flag('check');
     if (freezeDir) {
       mkdirSync(freezeDir, { recursive: true });
+      // --scope selects which DIMENSIONS are graded, and it does so here, at
+      // freeze time, by narrowing criteriaIds — the single list converged()
+      // derives pass/fail from. Recording the scope without applying it (the
+      // pre-1.0.5 behaviour) made the flag decorative: `--scope contract`
+      // still gated the run on every quality criterion in the file.
+      const scope = flag('scope', 'contract,dispatch,quality').split(',').map(s => s.trim()).filter(Boolean);
+      const inScope = list.filter(c => scope.includes(c.dimension));
+      if (!inScope.length) {
+        const present = [...new Set(list.map(c => c.dimension))].join(', ') || '(none)';
+        console.error(`skill-test: --scope ${scope.join(',')} selects none of the ${list.length} criteria in ${file} (dimensions present: ${present}). Widen the scope or extend the rubric.`);
+        process.exit(1);
+      }
       initRun(freezeDir, {
         skill: arg1, criteriaHash: hash, criteriaFile: file,
-        scope: (flag('scope', 'contract,dispatch,quality')).split(','),
+        scope,
         // Default 'false', not 'true': a malformed/valueless --tree-clean
         // must not silently flip toward "the tree was clean" when it wasn't
         // measured — the safer default is to assume it was dirty.
         target: flag('target', ''), startTreeClean: flag('tree-clean', 'false') === 'true',
         dispatchFidelity: 'injected', pluginCacheVersion: flag('cache-version', 'unknown'),
-        substitutions: 0, selfDeclared: selfDeclaredIds(list), stopReason: null, commit: null,
-        criteriaIds: list.map(c => c.id),
+        substitutions: 0, selfDeclared: selfDeclaredIds(inScope), stopReason: null, commit: null,
+        criteriaIds: inScope.map(c => c.id),
       });
-      console.log(`criteria: frozen ${hash} (${list.length} criteria)`);
+      console.log(`criteria: frozen ${hash} (${inScope.length} of ${list.length} criteria in scope ${scope.join(',')})`);
     } else if (checkDir) {
       const frozen = readRun(checkDir).criteriaHash;
       if (frozen !== hash) {

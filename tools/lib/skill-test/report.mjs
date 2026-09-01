@@ -8,7 +8,7 @@ const STOP_MEANING = {
   'converged-pass': 'every criterion passed, including at least one not self-declared by the skill.',
   'converged-pass-weak': 'every criterion passed, but ALL of them were self-declared by the skill itself — this is a weak result (spec §9.3).',
   'no-progress': 'the verdict map was identical two iterations running; the loop was thrashing and stopped early.',
-  'iteration-cap': 'cap reached with failures outstanding.',
+  'iteration-cap': 'cap reached with failures outstanding. On a report-only run the cap is 1 by default (nothing edits the skill between iterations, so a second one could only reproduce the first), which makes this simply "the one graded iteration had failures".',
   'invalid-dispatch-cap': 'the runner called the Skill tool for the tested skill (or another twt: skill) 3 times running, despite the injected prompt explicitly forbidding it. The run was aborted rather than looping indefinitely — this is a finding about the runner, not about the skill under test.',
   'continue': 'the run ended before reaching a final verdict — either it is still in progress, or this loop\'s own iteration bound (not `converged()`\'s cap) is what stopped it: an invalid-dispatch iteration can leave the VALID iteration count under the cap even at the last attempted iteration, so `converged()` legitimately reports `continue` with no iterations left to spend.',
   'criteria-drift': 'the criteria file changed after being frozen for this run (spec §4.3) — the run was aborted rather than grading against a rubric that moved mid-loop. Re-run after deciding, separately and deliberately, whether the rubric change was intended.',
@@ -33,6 +33,11 @@ export function renderReport(run, { criteria }) {
     subKeys.length ? subKeys.map(n => `it.${n}=${subsByIter[n]}`).join(', ') : '(not recorded)'
   }`);
   L.push(`criteria: ${run.criteriaHash}`);
+  // The graded scope belongs in the header for the same reason the cache
+  // version does: a clean pass over `--scope contract` says nothing about the
+  // quality criteria in the same file, and the table below marks them n/a
+  // rather than failing them.
+  L.push(`scope: ${(run.scope || []).join(', ') || '(unrecorded)'}`);
   L.push(`target: ${run.target}`);
   L.push('```', '');
 
@@ -53,9 +58,16 @@ export function renderReport(run, { criteria }) {
   const headerCols = ['Criterion', 'Dimension', ...iterCols];
   L.push(`| ${headerCols.join(' | ')} |`);
   L.push(`|${headerCols.map(() => '---').join('|')}|`);
+  // criteriaIds is the frozen IN-SCOPE list. A criterion in the file but out
+  // of scope was never graded and never counted toward the stop reason — it
+  // must read as `n/a`, not as the `—` that means "the grader ignored it".
+  const scoped = Array.isArray(run.criteriaIds) && run.criteriaIds.length
+    ? new Set(run.criteriaIds) : null;
   for (const c of criteria) {
-    const label = c.selfDeclared ? `${c.id} (self-declared)` : c.id;
-    const cells = [label, c.dimension, ...iters.map(i => i.verdicts[c.id] ?? '—')];
+    const inScope = !scoped || scoped.has(c.id);
+    const tags = [c.selfDeclared ? 'self-declared' : null, inScope ? null : 'out of scope'].filter(Boolean);
+    const label = tags.length ? `${c.id} (${tags.join(', ')})` : c.id;
+    const cells = [label, c.dimension, ...iters.map(i => (inScope ? (i.verdicts[c.id] ?? '—') : 'n/a'))];
     L.push(`| ${cells.join(' | ')} |`);
   }
   L.push('');
@@ -96,11 +108,22 @@ export function renderReport(run, { criteria }) {
   }
 
   const withFixes = iters.filter(i => i.fixes.length);
+  // A fix is only evidenced by the NEXT valid iteration's verdicts. Fixes
+  // applied on the final iteration (cap reached, or the loop stopped straight
+  // after) are never re-graded — and Step 5 still commits them, so the report
+  // has to say which ones landed on nothing but the grader's say-so.
+  const reGraded = (n) => iters.some(i => i.n > n && !i.invalidDispatch);
+  const unverified = withFixes.filter(i => !reGraded(i.n));
   L.push('## Fixes applied', '');
   if (!withFixes.length) L.push('None — this was a report-only run, or no fix was attempted.', '');
   for (const i of withFixes) {
-    L.push(`**Iteration ${i.n}:**`);
+    L.push(`**Iteration ${i.n}:**${reGraded(i.n) ? '' : ' — **UNVERIFIED**'}`);
     for (const f of i.fixes) L.push(`- \`${f}\``);
+    if (!reGraded(i.n)) {
+      L.push('');
+      L.push('> No later iteration re-graded these edits, so nothing here is evidenced by a verdict.');
+      L.push('> Re-run `/twt-skill-test` on this skill to grade them.');
+    }
     L.push('');
   }
 
@@ -108,6 +131,9 @@ export function renderReport(run, { criteria }) {
   if (run.commit) {
     L.push(`Committed locally as \`${run.commit}\`. It has **not been pushed** and will not be — \`/twt-skill-test\` has no push flag (spec §2.3).`);
     L.push('Until you push, the **installed plugin still runs the older version**: this fix does not reach your other sessions.', '');
+    if (unverified.length) {
+      L.push(`⚠ This commit includes **unverified** edits from iteration ${unverified.map(i => i.n).join(', ')} — see *Fixes applied* above. Review them by hand before pushing.`, '');
+    }
   } else if (run.startTreeClean === false) {
     L.push('No commit was made — the working tree was already dirty when the run started.', '');
   } else {

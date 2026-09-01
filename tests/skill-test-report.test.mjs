@@ -145,3 +145,74 @@ test('a zero-iteration report has a valid GFM verdict table and an explained nul
   assert.match(md, /^\| Criterion \| Dimension \|$/m);
   assert.match(md, /^\|---\|---\|$/m);
 });
+
+// --scope is a real filter, not a recorded-and-ignored string. The header has
+// to name what was graded, and a criterion the scope dropped must read `n/a`
+// — the `—` cell means "the grader ignored an in-scope criterion", which is a
+// finding; an out-of-scope one is not.
+test('the fidelity header names the graded scope', () => {
+  const md = renderReport(RUN, { criteria: CRITERIA });
+  assert.match(md, /^scope: contract, quality$/m);
+});
+
+test('an out-of-scope criterion is labelled and rendered n/a, never as a missing verdict', () => {
+  const run = { ...RUN, scope: ['contract'], criteriaIds: ['C-001'] };
+  const md = renderReport(run, { criteria: CRITERIA });
+  assert.match(md, /^scope: contract$/m);
+  assert.match(md, /\| C-002 \(self-declared, out of scope\) \| quality \| n\/a \| n\/a \| n\/a \|/);
+  // The in-scope row is untouched.
+  assert.match(md, /\| C-001 \| contract \| FAIL \| PASS \| FAIL \|/);
+});
+
+test('with no criteriaIds recorded (a pre-scope run) every criterion still renders its verdicts', () => {
+  const { criteriaIds, ...run } = { ...RUN, criteriaIds: undefined };
+  const md = renderReport(run, { criteria: CRITERIA });
+  assert.doesNotMatch(md, /out of scope/);
+  assert.match(md, /\| C-002 \(self-declared\) \| quality \| PASS \| PASS \| PASS \|/);
+});
+
+// A fix is evidenced only by the NEXT valid iteration's verdicts. One applied
+// on the final iteration is committed by Step 5 having been graded by nothing.
+test('a fix applied on the final iteration is marked UNVERIFIED', () => {
+  const run = {
+    ...RUN,
+    iterations: [
+      { n: 1, verdicts: { 'C-001': 'FAIL', 'C-002': 'PASS' }, fixes: ['skills/twt-ia-define/SKILL.md'], invalidDispatch: false },
+      { n: 2, verdicts: { 'C-001': 'FAIL', 'C-002': 'PASS' }, fixes: ['skills/twt-ia-define/references/x.md'], invalidDispatch: false },
+    ],
+  };
+  const md = renderReport(run, { criteria: CRITERIA });
+  assert.match(md, /\*\*Iteration 1:\*\*$/m);            // re-graded by iteration 2
+  assert.match(md, /\*\*Iteration 2:\*\* — \*\*UNVERIFIED\*\*/);
+  assert.match(md, /No later iteration re-graded these edits/);
+});
+
+test('a fix followed only by an invalid-dispatch iteration is still UNVERIFIED', () => {
+  const run = {
+    ...RUN,
+    iterations: [
+      { n: 1, verdicts: { 'C-001': 'FAIL', 'C-002': 'PASS' }, fixes: ['skills/twt-ia-define/SKILL.md'], invalidDispatch: false },
+      { n: 2, verdicts: {}, fixes: [], invalidDispatch: true },
+    ],
+  };
+  const md = renderReport(run, { criteria: CRITERIA });
+  assert.match(md, /\*\*Iteration 1:\*\* — \*\*UNVERIFIED\*\*/);
+});
+
+test('a commit carrying an unverified fix says so in the Landing section', () => {
+  const run = {
+    ...RUN,
+    commit: 'abc1234',
+    iterations: [
+      { n: 1, verdicts: { 'C-001': 'FAIL', 'C-002': 'PASS' }, fixes: ['skills/twt-ia-define/SKILL.md'], invalidDispatch: false },
+    ],
+  };
+  const md = renderReport(run, { criteria: CRITERIA });
+  assert.match(md, /includes \*\*unverified\*\* edits from iteration 1/);
+});
+
+test('a commit whose every fix was re-graded carries no unverified warning', () => {
+  const md = renderReport({ ...RUN, commit: 'abc1234' }, { criteria: CRITERIA });
+  assert.match(md, /Committed locally as `abc1234`/);
+  assert.doesNotMatch(md, /unverified/);
+});
