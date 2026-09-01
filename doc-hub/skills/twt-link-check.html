@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Find the links that are actually broken. Every `&lt;a href&gt;` and every asset reference (`img`, `script`, `link`, `iframe`, `video`, `srcset`) is resolved">
+  <title>/twt-link-check | twt skills</title>
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  
+    <header class="site-header" data-header>
+      <a class="brand" href="../index.html" aria-label="twt skills home">
+        <span class="logo-pair" aria-hidden="true">
+          <img class="logo-dark" src="../assets/logo.svg" alt="" width="56" height="56">
+        </span>
+        <span>twt</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" data-menu-toggle>
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav" aria-label="Primary" data-nav>
+        <a href="../index.html">Home</a>
+        <a href="../blocks/general.html">General</a><a href="../blocks/pre-design.html">Pre-design</a><a href="../blocks/design.html">Design</a><a href="../blocks/develop.html">Develop</a><a href="../blocks/qa.html">QA</a><a href="../blocks/fidelity.html">Fidelity</a>
+      </nav>
+    </header>
+  <main>
+    
+      
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <a href="../index.html">Home</a>
+      <span>/</span><a href="../blocks/qa.html">QA</a><span>/</span><strong class="breadcrumb-command">/twt-link-check</strong>
+    </nav>
+      <section class="skill-hero docs-hero">
+        <div class="reveal">
+          <p class="eyebrow">QA · qa</p>
+          <h1>/twt-link-check</h1>
+          <p class="lede">Find the links that are actually broken. Every <code>&lt;a href&gt;</code> and every asset reference (<code>img</code>, <code>script</code>, <code>link</code>, <code>iframe</code>, <code>video</code>, <code>srcset</code>) is resolved for real — an HTTP probe for a...</p>
+          <div class="fact-row">
+            <span>Version 1.0.1</span>
+            <span>Arguments: yes</span>
+            <span class="token-usage token-usage--low token-usage--compact" data-token-usage="low" aria-label="Token usage: Low">
+    <span class="token-usage__label">Token usage</span>
+    <span class="token-meter" aria-hidden="true"><i class="is-filled"></i><i></i><i></i><i></i></span>
+    <strong>Low</strong>
+  </span>
+          </div>
+        </div>
+      </section>
+      <section class="detail-grid">
+        <section class="detail-panel wide reveal">
+    <h2>Purpose</h2>
+    <p>Find the links that are actually broken. Every <code>&lt;a href&gt;</code> and every asset reference (<code>img</code>, <code>script</code>, <code>link</code>, <code>iframe</code>, <code>video</code>, <code>srcset</code>) is resolved for real — an HTTP probe for a live target, a disk lookup for a built folder — and each bad one is reported with its status code and <strong>every place it appears</strong>, so it can be fixed at the source.</p>
+  </section>
+        
+        <section class="detail-panel reveal">
+    <h2>Parameters it can expect</h2>
+    <ul><li>A page URL, a site URL, or a path to a built HTML folder (first argument)</li><li>Optional scope word - <code>page</code> (this page only) or <code>site</code> (crawl); defaults to <code>site</code> for a URL</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>What it reads</h2>
+    <ul class="file-list"><li><code>&lt;url&gt;</code><span class="file-desc">The website URL you give it.</span></li><li><code>site/</code><span class="file-desc">The built static website.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Result it provides</h2>
+    <ul class="file-list"><li><code>.twt-artifacts/link-check/&lt;target-slug&gt;/link-report.md</code><span class="file-desc">A Markdown document.</span></li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Boundaries</h2>
+    <ul><li>Doesn't fix anything — read-only against the site; the only file it writes is its own report</li><li>Doesn't replace <code>/twt-qa-links</code>, which is the offline structural check inside the QA phase (nav consistency, responsive tiers, manifest cross-checks). This one is the network probe that skill deliberately doesn't do</li><li>Doesn't render JavaScript — links injected by a client-side framework after load are invisible to it</li><li>Doesn't submit forms, follow <code>noindex</code> policy, or authenticate; anything behind a login reports as 401 and is left for a human</li></ul>
+  </section>
+        <section class="detail-panel reveal">
+    <h2>Success criteria</h2>
+    <ul><li><code>.twt-artifacts/link-check/&lt;target-slug&gt;/link-report.md</code> exists, opening with a <strong>Verdict</strong> (FAIL = at least one blocker · REVISE = warnings only · PASS = clean) and severity counts</li><li>Every finding names the status, the target, and the page + line + element it was found on</li><li>A target linked from twenty pages is <strong>one</strong> finding with twenty sources, not twenty findings</li><li>The user is told the blocker count and the report path</li></ul>
+  </section>
+      </section>
+  </main>
+  
+    <footer class="site-footer">
+      <span class="logo-pair footer-logo" aria-hidden="true">
+        <img class="logo-dark" src="../assets/logo.svg" alt="" width="36" height="36">
+      </span>
+      <p>Copyright &copy; 2026 twt Skills Marketplace.</p>
+    </footer>
+  <script src="../assets/app.js"></script>
+</body>
+</html>

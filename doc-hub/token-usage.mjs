@@ -88,6 +88,7 @@ export const TOKEN_USAGE_BY_SKILL = Object.freeze({
   'twt-launch-audit': 'high',
   'twt-layout-define': 'mid',
   'twt-layout-validate': 'mid',
+  'twt-link-check': 'low',
   'twt-marketplace-docs': 'low',
   'twt-mockup-define': 'high',
   'twt-mockup-validate': 'mid',
