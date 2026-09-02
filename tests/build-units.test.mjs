@@ -23,6 +23,15 @@ function sandbox() {
   return root;
 }
 
+// Rewrite a file's line endings from whatever the checkout produced.
+//
+// A bare replace of LF with CRLF, run on a file git already checked out AS
+// CRLF, doubles the carriage return and yields a genuinely different file.
+// These tests must normalise to LF first, or they pass only on a working tree
+// that happens to match the fixture as authored. This one did not, and failed
+// on the first fresh clone.
+const toCRLF = (t) => t.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+
 function edit(root, rel, fn) {
   const p = join(root, rel);
   writeFileSync(p, fn(readFileSync(p, 'utf8')));
@@ -274,7 +283,7 @@ test('--check tolerates CRLF in a SYNTHESIZED file, but still catches a real edi
   const manifest = join(root, 'plugins/twt-alpha/.claude-plugin/plugin.json');
   const mkt = join(root, '.claude-plugin/marketplace.json');
   for (const f of [note, manifest, mkt]) {
-    writeFileSync(f, readFileSync(f, 'utf8').replace(/\n/g, '\r\n'));
+    writeFileSync(f, toCRLF(readFileSync(f, 'utf8')));
   }
   assert.deepEqual(buildUnits(root, { check: true }).drift, [],
     'a checkout line-ending difference is not drift');
@@ -292,7 +301,7 @@ test('--check still catches a CRLF-only edit to a COPIED file', () => {
   const root = sandbox();
   buildUnits(root);
   const copied = join(root, 'plugins/twt-alpha/tools/shared.mjs');
-  writeFileSync(copied, readFileSync(copied, 'utf8').replace(/\n/g, '\r\n'));
+  writeFileSync(copied, toCRLF(readFileSync(copied, 'utf8')));
   const res = buildUnits(root, { check: true });
   assert.ok(res.drift.some((d) => d.includes('shared.mjs')), `got ${JSON.stringify(res.drift)}`);
 });
@@ -307,7 +316,7 @@ test('a vendored file hash does not change with line endings', () => {
   const before = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
 
   const src = join(root, 'tools/shared.mjs');
-  writeFileSync(src, readFileSync(src, 'utf8').replace(/\n/g, '\r\n'));
+  writeFileSync(src, toCRLF(readFileSync(src, 'utf8')));
   buildUnits(root);
   const after = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
 
