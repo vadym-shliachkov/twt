@@ -22,8 +22,7 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
-const path = require('path');
+const { once } = require('./lib/once.js');
 
 function readStdin() {
   try { return fs.readFileSync(0, 'utf8'); } catch (e) { return ''; }
@@ -49,14 +48,11 @@ if (!/^mcp__(?:[a-z0-9]+_)*figma(?:_[a-z0-9]+)*__(get_design_context|get_metadat
   process.exit(0);
 }
 
-// Once per session. A missing/!unwritable temp dir must not break the call, so
-// every failure path here falls through to "say nothing".
-const session = String(data.session_id || '').replace(/[^a-zA-Z0-9_-]/g, '_') || 'nosession';
-const marker = path.join(os.tmpdir(), `twt-figma-read-${session}`);
-try {
-  if (fs.existsSync(marker)) process.exit(0);
-  fs.writeFileSync(marker, String(Date.now()));
-} catch (e) {
+// Once per session, not once per call: this is a nag about reading discipline,
+// and repeating it on every read would train the reader to ignore it. The
+// shared helper gives session scope when the key is reduced to the session id.
+// A missing or unwritable temp dir falls through to "act", never to a crash.
+if (!once('figma-read', JSON.stringify({ session_id: data.session_id || '' }))) {
   process.exit(0);
 }
 

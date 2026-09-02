@@ -20,6 +20,7 @@
 'use strict';
 
 const fs = require('fs');
+const { once } = require('./lib/once.js');
 
 function readStdin() {
   try { return fs.readFileSync(0, 'utf8'); } catch (e) { return ''; }
@@ -83,8 +84,12 @@ function allow(reason) {
 function defer() { process.exit(0); } // no output -> normal permission flow
 
 function main() {
+  const raw = readStdin() || '{}';
+  // Every generated unit ships this script, so with a unit AND the bundle
+  // installed it is registered twice and fires twice per tool call. Act once.
+  if (!once('scope-guard', raw)) return defer();
   let data;
-  try { data = JSON.parse(readStdin() || '{}'); } catch (e) { return defer(); }
+  try { data = JSON.parse(raw); } catch (e) { return defer(); }
 
   const root = canon(process.env.CLAUDE_PROJECT_DIR || process.cwd());
   if (!root) return defer();

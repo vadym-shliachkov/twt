@@ -40,6 +40,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { once } = require('./lib/once.js');
 
 // ---- paths ---------------------------------------------------------------
 
@@ -149,8 +150,13 @@ function event(line) {
 
 function handleHook() {
   if (!armed()) return; // inert
+  let raw = '';
+  try { raw = fs.readFileSync(0, 'utf8') || '{}'; } catch { return; }
+  // Guards the STDIN path only. --arm / --event / --summarize are explicit
+  // calls a skill makes on purpose and must never be suppressed.
+  if (!once('debug-log', raw)) return;
   let payload = {};
-  try { payload = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { return; }
+  try { payload = JSON.parse(raw); } catch { return; }
   const ev = payload.hook_event_name || payload.hookEventName;
   const tool = payload.tool_name || payload.toolName;
   const input = payload.tool_input || payload.toolInput || {};
