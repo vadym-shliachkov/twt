@@ -106,7 +106,12 @@ function assetPaths(abs, src) {
 // own resolution. Exporting the compiled /g regexes instead would share their
 // lastIndex state across callers - a real bug, not a style preference.
 export function depSpecifiers(src) {
-  const imports = [...src.matchAll(/(?:from\s*|import\s*\(\s*|require\(\s*)['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
+  // `import\s+` catches the bare side-effect form, `import "./x.mjs"`, which the
+  // other three branches all miss: it has no `from`, no paren, no require. No
+  // file in the repo uses it today, which is exactly why it would be missed
+  // silently the day one does - and a missed edge means a vendored plugin
+  // shipping without a file it needs.
+  const imports = [...src.matchAll(/(?:from\s*|import\s*\(\s*|require\(\s*|import\s+)['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
   const assets = [];
   for (const m of src.matchAll(/(?:join|resolve)\(\s*(?:HERE|ROOT|__dirname|[A-Z][A-Z0-9_]*)\s*,\s*((?:['"][^'"]+['"]\s*,\s*)*['"][^'"]+['"])\s*\)/g)) {
     const parts = [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);

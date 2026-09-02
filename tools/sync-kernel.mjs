@@ -41,6 +41,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSy
 import { join, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pluginRoots, skillFiles } from "./lib/plugin-roots.mjs";
+import { syncFiles, MANIFEST } from "./lib/vendor.mjs";
 import { closure, depSpecifiers } from "./split-readiness.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -190,7 +191,9 @@ function skillRefs(pluginName) {
   return [...refs];
 }
 
-export const MANIFEST = ".vendored.json";
+// Both now live in tools/lib/vendor.mjs, which the unit build also uses.
+// Re-exported so existing importers keep working until this file retires.
+export { MANIFEST, syncFiles };
 
 // The recorded set from the last sync. Directories are expanded to files at
 // vendor time, so this is always a flat file list.
@@ -205,26 +208,6 @@ function planFor(plugin) {
   // Recorded but no longer reached: the copy lingers as an unexplained file.
   plan.stale = [...recordedVendored(plugin.root)].filter((r) => !plan.vendor.includes(r)).sort();
   return plan;
-}
-
-// Exported and root-parameterised so the copy/verify half can be tested against
-// real temp directories rather than mocked. Byte comparison, not mtime or size:
-// a same-length edit is exactly the drift that must not slip through.
-export function syncFiles(rels, fromRoot, toRoot, { check = false } = {}) {
-  const missing = [], drifted = [], copied = [];
-  for (const rel of rels) {
-    const from = join(fromRoot, rel);
-    const to = join(toRoot, rel);
-    if (check) {
-      if (!existsSync(to)) { missing.push(rel); continue; }
-      if (!readFileSync(from).equals(readFileSync(to))) drifted.push(rel);
-    } else {
-      mkdirSync(dirname(to), { recursive: true });
-      copyFileSync(from, to);
-      copied.push(rel);
-    }
-  }
-  return { missing, drifted, copied };
 }
 
 // ---- run --------------------------------------------------------------------
