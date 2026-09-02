@@ -51,64 +51,76 @@ for (const fp of files) {
 
 // When any skill bumped this session, advance the manifests once each.
 //
-// Which plugin.json to bump is no longer a constant: the repo hosts several
-// plugins (.claude-plugin/marketplace.json `plugins[]`, each with a `source`
-// dir), and a skill edited under ./plugins/<name>/ must bump THAT plugin's
-// version, not the monolith's. Longest matching source path wins, so a nested
-// plugin beats the monolith's "./". marketplace.json's own version tracks the
-// registry itself, so it advances whenever anything in it did.
+// Versions are per UNIT now, and a unit is not a directory.
+//
+// Every skill is authored in the monolith; which plugin it SHIPS in is declared
+// by its `unit:` frontmatter, and per-unit versions live in
+// .claude-plugin/units.json. marketplace.json is GENERATED from that registry,
+// so bumping it directly would be overwritten by the next build - the registry
+// is the thing to move.
+//
+// The rebuild at the end is not optional. Each generated unit's plugin.json
+// carries the version, so skipping it leaves committed output disagreeing with
+// the registry, and CI then fails on the next push with a misleading blame.
 const pluginBumped = [];
 const manifestPaths = [];
 if (bumped.length) {
   const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const mktPath = path.join(root, '.claude-plugin', 'marketplace.json');
+  const unitsPath = path.join(root, '.claude-plugin', 'units.json');
+  const rootManifest = path.join(root, '.claude-plugin', 'plugin.json');
 
-  let registry = [];
-  try {
-    const mkt = JSON.parse(fs.readFileSync(mktPath, 'utf8'));
-    registry = (mkt.plugins || []).map((p) => ({
-      name: p.name,
-      root: path.resolve(root, p.source || './'),
-    }));
-  } catch {}
-
-  const ownerOf = (fp) => {
-    const abs = path.resolve(fp);
-    return registry
-      .filter((p) => abs === p.root || abs.startsWith(p.root + path.sep))
-      .sort((a, b) => b.root.length - a.root.length)[0];
+  const nextPatch = (v) => {
+    const sv = String(v || '').match(/^(\d+)\.(\d+)\.(\d+)$/);
+    return sv ? sv[1] + '.' + sv[2] + '.' + (+sv[3] + 1) : null;
   };
 
-  // Only the plugins that actually own a bumped file.
-  const touched = new Map();
+  // Which units own a bumped skill, read from each file's own frontmatter.
+  const touchedUnits = new Set();
   for (const fp of files) {
-    const owner = ownerOf(fp);
-    if (owner) touched.set(owner.root, owner);
-  }
-
-  const manifests = [...touched.values()].map((p) => ({
-    file: path.join(p.root, '.claude-plugin', 'plugin.json'),
-    key: ['version'],
-  }));
-  // The registry version moves whenever any plugin in it did.
-  manifests.push({ file: mktPath, key: ['metadata', 'version'] });
-
-  for (const { file, key } of manifests) {
     try {
-      const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-      let node = json;
-      for (let i = 0; i < key.length - 1 && node; i++) node = node[key[i]];
-      const leaf = key[key.length - 1];
-      if (!node || typeof node[leaf] !== 'string') continue;
-      const sv = node[leaf].match(/^(\d+)\.(\d+)\.(\d+)$/);
-      if (!sv) continue;
-      const nextV = `${sv[1]}.${sv[2]}.${+sv[3] + 1}`;
-      node[leaf] = nextV;
-      manifestPaths.push(file);
-      fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\n');
-      pluginBumped.push(`${path.basename(path.dirname(path.dirname(file))) === path.basename(root) ? '' : path.basename(path.dirname(path.dirname(file))) + '/'}${path.basename(file)} \u2192 ${nextV}`);
+      const m = fs.readFileSync(fp, 'utf8').match(/^unit:[ \t]*(\S+)[ \t]*$/m);
+      if (m) touchedUnits.add(m[1]);
     } catch {}
   }
+
+  try {
+    const reg = JSON.parse(fs.readFileSync(unitsPath, 'utf8'));
+    let moved = false;
+    for (const unit of touchedUnits) {
+      const u = reg.units && reg.units[unit];
+      if (!u) continue;
+      const nv = nextPatch(u.version);
+      if (!nv) continue;
+      u.version = nv;
+      moved = true;
+      pluginBumped.push(unit + ' → ' + nv);
+    }
+    // The registry version moves whenever any unit in it did.
+    if (moved && reg.marketplace) {
+      const nv = nextPatch(reg.marketplace.version);
+      if (nv) {
+        reg.marketplace.version = nv;
+        pluginBumped.push('marketplace → ' + nv);
+      }
+    }
+    if (moved) {
+      fs.writeFileSync(unitsPath, JSON.stringify(reg, null, 2) + '\n');
+      manifestPaths.push(unitsPath);
+    }
+  } catch {}
+
+  // The bundle's own manifest still tracks the repo as a whole.
+  try {
+    const json = JSON.parse(fs.readFileSync(rootManifest, 'utf8'));
+    const nv = nextPatch(json.version);
+    if (nv) {
+      json.version = nv;
+      fs.writeFileSync(rootManifest, JSON.stringify(json, null, 2) + '\n');
+      manifestPaths.push(rootManifest);
+      pluginBumped.push('plugin.json → ' + nv);
+    }
+  } catch {}
+
 }
 
 if (bumped.length) {
@@ -138,6 +150,22 @@ if (bumped.length) {
     docsResult = r.status === 0 ? 'docs synced' : 'docs sync failed (run /twt-marketplace-docs manually)';
   } catch {
     docsResult = 'docs sync failed (run /twt-marketplace-docs manually)';
+  }
+
+  // Regenerate the unit plugins LAST. gen-docs re-stamps each SKILL.md
+  // description from its version, and every unit ships a copy of those files -
+  // so rebuilding before that ran would bake in the pre-stamp text and CI would
+  // fail --check on the next push.
+  try {
+    const rb = spawnSync(process.execPath, [path.join(root, 'tools', 'build-units.mjs')], { cwd: root, encoding: 'utf8', timeout: 120000 });
+    if (rb.status === 0) {
+      manifestPaths.push(path.join(root, '.claude-plugin', 'marketplace.json'));
+      manifestPaths.push(path.join(root, 'plugins'));
+    } else {
+      docsResult += '; unit build failed (run node tools/build-units.mjs)';
+    }
+  } catch {
+    docsResult += '; unit build failed (run node tools/build-units.mjs)';
   }
 
   // Auto-commit the bumped files so the next session never opens with uncommitted
