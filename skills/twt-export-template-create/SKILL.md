@@ -139,3 +139,22 @@ If the script is missing, stop with: "Export theme helper missing — run this f
 ## Step 5 — Report
 
 Tell the user: theme name/slug, theme dir, which tokens were overridden (and any kept for contrast reasons), font decision, reference-doc build result, preview path, and how to use it: `--theme <slug>` on any export command or pick it from the export theme menu.
+
+## Standalone
+
+This skill ships in the `twt-export` unit, which installs without the pipeline.
+When the rest of it is absent:
+
+- **`/twt-brand-define` absent:** do not dispatch it. Ask the user directly, in
+  one plain-text prompt, for the brand's core colors, its heading and body
+  typefaces, and a one-line description of its tone. Map their answers onto the
+  Step 3 token roles exactly as you would map a brand brief, and note
+  `source: interview` in the report.
+- **`.twt-artifacts/pre-design/brand/brand-brief.md` absent:** the same. A
+  missing brief changes where the values come from, never whether the theme can
+  be built - the house defaults are a complete, valid starting point.
+- **`.twt-artifacts/design/design-system/tokens.css` absent:** skip the token
+  import and keep the house values, saying so in the report. Never invent token
+  values to stand in for a design system that was never run.
+
+The contrast rule in Step 3 still applies to whatever values you end up with.

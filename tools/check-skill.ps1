@@ -189,6 +189,33 @@ if (Test-Path $unitsPath) {
         Fail "BAD UNIT in ${Path}: unit '$unit' is not registered in .claude-plugin/units.json"
     }
 }
+
+# Standalone contract: a cross-unit soft dependency or a cross-unit input must
+# be documented under a '## Standalone' heading, because the skill text is the
+# only thing that travels into a run. Severity follows the unit's ready flag -
+# a warning while the family is still being taught to run alone, an error once
+# the unit is offered for install. Flipping ready is the definition of done.
+$reportTool = Join-Path $marketplaceRoot 'tools/standalone-report.mjs'
+if (Test-Path $reportTool) {
+    $reportOut = (& node $reportTool --todo 2>$null) -join "`n"
+    $missing = @()
+    $inBlock = $false
+    foreach ($line in ($reportOut -split "`n")) {
+        if ($line -match "^$([regex]::Escape($expectedName))\s+\(unit") { $inBlock = $true; continue }
+        if ($inBlock -and $line -match '^\S') { break }
+        if ($inBlock -and $line -match 'MISSING from ## Standalone: (.+)$') { $missing += $Matches[1].Trim() }
+        if ($inBlock -and $line -match 'HARD ABORT on a cross-unit input: (.+)$') { $missing += "hard abort on $($Matches[1].Trim())" }
+    }
+    if ($missing.Count -gt 0) {
+        $isReady = $false
+        if (Test-Path $unitsPath) {
+            $u = (Get-Content -LiteralPath $unitsPath -Raw -Encoding UTF8 | ConvertFrom-Json).units.$unit
+            if ($u -and $u.ready) { $isReady = $true }
+        }
+        $msg = "STANDALONE GAP in ${Path}: no '## Standalone' entry for $($missing -join '; ')"
+        if ($isReady) { Fail $msg } else { Write-Warning $msg }
+    }
+}
 $gateRequired = @('twt-site','twt-site-dev','twt-pre-design','twt-design','twt-develop','twt-qa')
 $blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke','twt-skill-test')
 $blockExemptPrefix = @('twt-content-fetch-','twt-export-')

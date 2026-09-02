@@ -692,3 +692,15 @@ Tell the user:
 - Any §12 row marked `N/A — corpus`, and what samples would fix it
 - In Refine mode: what was merged, what got promoted or demoted, whether the profile format was raised, and any Manual-overrides disagreement recorded
 - Next step: `/twt-write-as-me <your text or file>`
+
+## Standalone
+
+This skill ships in the `twt-write-as-me` unit, which installs without the
+pipeline. When the rest of it is absent:
+
+- **`/twt-content-fetch` absent:** do not dispatch it, and do not tell the user
+  to run it. Read local samples directly with the Read tool, and a URL with
+  WebFetch. For a PDF, a Word document, a Figma file or a video, say plainly
+  that this install cannot extract that format and ask for a text or Markdown
+  version instead. Everything above about sample quality and volume is
+  unchanged; only the way the text arrives is.
