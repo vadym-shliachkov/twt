@@ -2173,7 +2173,7 @@ flowchart TB
 ### /twt-link-check
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.0.2
 
 **Inputs:**
 - A page URL, a site URL, or a path to a built HTML folder (first argument)

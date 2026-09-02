@@ -1563,7 +1563,7 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 ## /twt-link-check
 
 **Category:** qa
-**Version:** 1.0.1
+**Version:** 1.0.2
 **Accepts arguments:** yes
 
 Find the links that are actually broken. Every `<a href>` and every asset reference (`img`, `script`, `link`, `iframe`, `video`, `srcset`) is resolved for real — an HTTP probe for a live target, a disk lookup for a built folder — and each bad one is reported with its status code and **every place it appears**, so it can be fixed at the source.
