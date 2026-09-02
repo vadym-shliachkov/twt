@@ -1,0 +1,7 @@
+/* doc-hub-light · doctype layer: components (twt-component-define catalog)
+   One component per H3 — each starts its own visual unit, and variant/state
+   matrices tighten so wide catalogs stay on the page. */
+
+h3 { margin-top: 1.8em; padding-top: .7em; border-top: 1px dashed var(--tx-rule); }
+table { font-size: .85em; }
+code { white-space: nowrap; }

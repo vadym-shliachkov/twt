@@ -1,0 +1,17 @@
+{
+  "name": "twt-site",
+  "version": "1.0.0",
+  "description": "Master orchestrators that run the full pipeline, plus the marketplace meta skills.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "orchestrator",
+    "pipeline",
+    "workflow"
+  ]
+}

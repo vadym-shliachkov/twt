@@ -1,0 +1,8 @@
+{
+  "vendored": [
+    "tools/lib/contrast.mjs"
+  ],
+  "hashes": {
+    "tools/lib/contrast.mjs": "1d44723e78ce3a546a578e41eed3d857641e8d0c1748bef972a73df1dea67e49"
+  }
+}

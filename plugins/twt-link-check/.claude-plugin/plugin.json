@@ -1,0 +1,17 @@
+{
+  "name": "twt-link-check",
+  "version": "1.0.0",
+  "description": "Probe every link and asset on a page, a whole site, or a built folder and report the bad ones.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "links",
+    "404",
+    "audit"
+  ]
+}

@@ -1,0 +1,7 @@
+/* doc-hub-light · doctype layer: tokens (twt-design-system-define tokens.md)
+   Token tables ARE the content — value cells keep their mono treatment, token
+   names never wrap mid-identifier, and long scale tables stay readable. */
+
+table { font-size: .86em; }
+td:first-child, th:first-child { white-space: nowrap; }
+td code { white-space: nowrap; }

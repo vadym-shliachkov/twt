@@ -1,18 +1,21 @@
-# Vendored files - DO NOT EDIT HERE
+# Generated - DO NOT EDIT ANYTHING IN THIS DIRECTORY
 
-These are byte-identical copies of shared code from the marketplace monolith.
-They exist because this plugin installs on its own, and a plugin cannot reach
-into another plugin's files at runtime.
+`plugins/twt-export/` is build output. It is regenerated in full by:
 
-Edit the canonical copy at the repo root, then run:
+    node tools/build-units.mjs
 
-    node tools/sync-kernel.mjs
-
-CI runs `node tools/sync-kernel.mjs --check`, so an edit made here instead of
-at the source fails the build rather than silently diverging.
+Edit the canonical copy in the repo root's authored tree (`skills/`, `tools/`,
+`templates/`, `hooks/`), then rebuild. CI runs `--check`, so an edit made here
+instead of at the source fails the build rather than diverging silently.
 
 | vendored file | canonical source |
 |---|---|
+| `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md` | `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md` |
+| `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md` | `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md` |
+| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md` |
+| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json` |
+| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md` |
+| `.twt-artifacts/self-test/brand-report-check/validation-report.md` | `.twt-artifacts/self-test/brand-report-check/validation-report.md` |
 | `templates/themes/doc-hub-light/css/components.css` | `templates/themes/doc-hub-light/css/components.css` |
 | `templates/themes/doc-hub-light/css/doc.css` | `templates/themes/doc-hub-light/css/doc.css` |
 | `templates/themes/doc-hub-light/css/doctypes/brand-brief.css` | `templates/themes/doc-hub-light/css/doctypes/brand-brief.css` |
@@ -34,3 +37,13 @@ at the source fails the build rather than silently diverging.
 | `templates/themes/doc-hub-light/reference/reference.docx` | `templates/themes/doc-hub-light/reference/reference.docx` |
 | `templates/themes/doc-hub-light/reference/reference.pptx` | `templates/themes/doc-hub-light/reference/reference.pptx` |
 | `templates/themes/doc-hub-light/theme.json` | `templates/themes/doc-hub-light/theme.json` |
+| `tools/build-reference-docs.py` | `tools/build-reference-docs.py` |
+| `tools/export-doctype.mjs` | `tools/export-doctype.mjs` |
+| `tools/export-document.mjs` | `tools/export-document.mjs` |
+| `tools/export-html.mjs` | `tools/export-html.mjs` |
+| `tools/export-presentation.mjs` | `tools/export-presentation.mjs` |
+| `tools/export-source-create.mjs` | `tools/export-source-create.mjs` |
+| `tools/export-theme-create.mjs` | `tools/export-theme-create.mjs` |
+| `tools/export-transform.mjs` | `tools/export-transform.mjs` |
+| `tools/pdf-render.mjs` | `tools/pdf-render.mjs` |
+| `tools/theme.mjs` | `tools/theme.mjs` |

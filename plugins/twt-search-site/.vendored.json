@@ -1,0 +1,8 @@
+{
+  "vendored": [
+    "tools/site-crawl.mjs"
+  ],
+  "hashes": {
+    "tools/site-crawl.mjs": "9668d497657ac121acc55d1d668505e69507a7d8bc081a0a4994cc977d9609b5"
+  }
+}

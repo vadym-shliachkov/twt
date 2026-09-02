@@ -1,0 +1,213 @@
+---
+name: twt-content-approval-checklist
+surface: command
+category: content
+family: content-approval
+role: tool
+unit: twt-develop
+description: (v1.4.3) Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets
+version: 1.4.3
+accepts_arguments: true
+inputs:
+  - Optional project notes, page scope, Figma URL, or path to a sitemap/layout/mockup/design artifact
+dependencies:
+  hard: []
+  soft:
+    - twt-text-analysis
+    - twt-design-system-define
+    - twt-layout-define
+    - twt-mockup-define
+    - twt-seo-define
+reads:
+  - Figma URL or Figma design context supplied via $ARGUMENTS
+  - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md
+  - .twt-artifacts/pre-design/content/text-analysis/<page-slug>/optimized.md
+  - .twt-artifacts/design/design-system/tokens.md
+  - .twt-artifacts/design/design-system/observed-components.md
+  - .twt-artifacts/design/layout/layouts/
+  - .twt-artifacts/design/layout/*.md
+  - .twt-artifacts/design/mockup/pages/
+  - .twt-artifacts/design/mockup/*.html
+  - .twt-artifacts/design/assets/manifest.md
+  - .twt-artifacts/pre-design/ia/sitemap.md
+  - .twt-artifacts/pre-design/curation/
+  - .twt-artifacts/pre-design/seo/seo-map.md
+writes:
+  - .twt-artifacts/content-approval/checklist-spec.json
+  - .twt-artifacts/content-approval/content-approval-checklist.xlsx
+  - .twt-artifacts/content-approval/content-approval-checklist-report.md
+---
+
+# /twt-content-approval-checklist
+
+## Intent
+
+**Purpose:** Create the content approval workbook that proves every page, shared header/footer item, asset, link, video, and SEO field has a human-approved value before implementation. It is used when not all content exists at project start, including Figma-first workflows where the design may contain lorem ipsum, placeholder copy, draft links, and unapproved media references.
+
+**Non-goals:**
+- Does not write approved content into the site; use `/twt-content-approval-implement` for that.
+- Does not invent final approved content; inferred or recommended values stay in `recommended content` until the user approves them.
+- Does not create cover, index, or summary sheets; the only non-page worksheets are the two dedicated `Shared header` and `Shared footer` sheets.
+
+**Success criteria:**
+- `.twt-artifacts/content-approval/content-approval-checklist.xlsx` exists and has one worksheet per project page **plus** a dedicated `Shared header` and `Shared footer` worksheet (sheet count = page count + 2).
+- Every worksheet contains only these columns: `Block name`, `field type`, `current content`, `recommended content`, `approved content`, `ready to implement (true, false)`.
+- When a Figma URL/design context is provided, visible Figma copy and media/link references are captured into `current content`, including lorem/placeholder content, so humans can approve, replace, or reject it.
+- Discovered text copy is run through `/twt-text-analysis` (analysis-only) and only **validated suggested versions** are placed in `recommended content`; when text-analysis says `No better wording found`, reviewers keep the current copy unless they choose to revise it manually.
+- The `ready to implement` cell is colored by its value — **green when `true`, pink when `false`** — and that single cell is the only readiness signal (rows are not blanket-highlighted).
+- Shared header and footer content lives only on its own two worksheets — never duplicated onto page worksheets; each page worksheet carries only that page's body fields, text, links, images, videos, and SEO metadata.
+- Collection blocks (Work, Portfolio, Blog, Services, Team, Products, …) are expanded, not flattened: their category/filter labels become an approvable **taxonomy** on the listing sheet, and each implied item-detail (and, where the IA uses category archives, category) page gets its **own** worksheet — so the approval set matches the real page count, not just the top-level nav.
+- Boolean ready cells use a true/false dropdown, unreadied rows are visually obvious, and the report states page count, row count, missing sources, **the pages synthesised from collections/taxonomies**, and next steps.
+
+---
+
+Arguments passed to this command: $ARGUMENTS
+
+## Bash call shape — keep every call allowlist-matchable
+The permission rules `/twt-setup` seeds match commands that *start with the binary* (`node "<path>/tool.mjs" <args>`); a call that doesn't match forces a manual prompt even when the binary is allowlisted. So for **every** Bash call in this run: never prefix a command with `VAR=` assignments (`CLAUDE_PROJECT_DIR=… node …` matches nothing), never write multi-line scripts that set and expand shell variables (`OUT=…; node … "$OUT"`), and never combine `cd` with pipes or redirection — those shapes can't be statically analyzed. One command per Bash call, literal paths as arguments; the bundled tools take the project dir as an argument and read no env vars.
+
+## Step 1 - Check Excel dependency
+
+The workbook itself is generated by the bundled `tools/checklist-xlsx.py` (Step 5), which needs `openpyxl`. Verify it is available before doing the discovery work. Run a shell check:
+
+```powershell
+python -c "import openpyxl"
+```
+
+If that fails, install it in the same shell environment and re-check:
+
+```powershell
+python -m pip install openpyxl
+python -c "import openpyxl"
+```
+
+On Windows where `python` is unavailable but `py` exists, use `py -m pip install openpyxl`. If installation fails because of permissions or network restrictions, stop and report the exact install command the user must run.
+
+## Step 2 - Discover pages and source materials
+
+Find the project page list from the best available source, in this order:
+1. Figma URL/design context supplied in `$ARGUMENTS` (frames/screens/pages become workbook pages).
+2. `.twt-artifacts/design/layout/layouts/*.md`
+3. `.twt-artifacts/design/layout/*.md` (fallback for existing projects that wrote page layouts directly under `layout/`; ignore `validation-report.md` and `decisions.md`).
+4. `.twt-artifacts/design/mockup/pages/*.html`
+5. `.twt-artifacts/design/mockup/*.html` (fallback for existing projects that wrote page mockups directly under `mockup/`; ignore `index.html`).
+6. `.twt-artifacts/pre-design/ia/sitemap.md`
+7. User-provided page list in `$ARGUMENTS`
+
+If no page list can be discovered, ask for the sitemap or page names as free-form text. Normalize each page to a worksheet name under Excel's 31-character limit, keeping names human-readable and unique.
+
+Read available design-system and layout artifacts to infer the content scope:
+- Figma text layers, component instances, frame names, visible URLs, image/video placeholders, media filenames, alt-like labels, and SEO-looking annotations when a Figma source is provided.
+- Component/block inventory from `tokens.md`, `components.md`, page layouts (`layout/layouts/*.md` or `layout/*.md`), and mockup HTML (`mockup/pages/*.html` or page-level `mockup/*.html`).
+- Existing copy, links, image paths, video embeds, and forms from mockups or build output if present.
+- Asset requirements from `.twt-artifacts/design/assets/manifest.md`.
+
+Put source values found in Figma/design/mockups into `current content` exactly enough for review, even when the value is lorem ipsum, placeholder copy, a draft CTA, or a fake URL. Use `recommended content` for the model's proposed replacement or for notes such as `Needs approved final copy`, `Needs final asset URL`, or `Looks like lorem ipsum - replace before ready`. Mark inferred rows as recommendations, not approvals.
+
+### Step 2a - Expand collections/taxonomies into real pages (do not treat a listing as flat text)
+
+A block like **Work**, **Portfolio**, **Projects**, **Case studies**, **Services**, **Blog**, **News**, **Team**, or **Products** is **not** a single text section — it is a *collection* backed by a **taxonomy** (its category / filter labels). Filter chips such as `filter_labels: All · Branding · Web · Strategy` are the **taxonomy terms**, and each item in the collection (and usually each category) is its **own page** that needs content approval. Recognising this is the difference between approving "a Work section" and approving the site that Work section actually implies.
+
+When you detect a collection block (a repeating card/list of items, especially one paired with category/filter labels), expand it before building the workbook:
+
+1. **Promote the taxonomy.** Add the collection's category/filter terms as approvable rows on the listing page's sheet under a `Taxonomy` block — one row per term (`taxonomy:term` field type), so a human approves the actual category set (names, order, which "All"/default) rather than leaving filter labels as decorative copy. Note where new terms are still needed.
+2. **Add a detail-page worksheet.** Generate at least one **item detail page** worksheet (e.g. `Work — project detail`) representing the template every collection item uses: title, role/meta, hero/media, body sections, gallery, links, prev/next, SEO. If concrete items are known (from the sitemap, Figma frames, or content sources), add a worksheet per known item (named uniquely, 31-char limit); if only the pattern is known, add one representative `… — detail (template)` worksheet and note in the report how many real item pages it stands in for.
+3. **Add category/archive pages when the IA implies them.** If filtering navigates to per-category archive URLs (not just client-side filtering on one page), add a `… — category (archive)` worksheet for the category template too, and capture its SEO fields.
+
+Use the sitemap (`pre-design/ia/sitemap.md`) and curation outlines (`pre-design/curation/`) as the source of truth for which detail/category pages exist; fall back to the layout/mockup if the sitemap is silent. Record every page you synthesised this way (and why) in the Step 6 report so the user can confirm the expanded page set is correct.
+
+### Step 2b - Run text-analysis to fill `recommended content`
+
+Quality-check the discovered copy before building the workbook, and use the result to seed the `recommended content` column. `/twt-text-analysis` is **analysis-only** — it never edits anything; it scores each text block and proposes an improved version only when the rewrite passes its safe-fix and validation gates. Per CONVENTIONS rule 5, **dispatch it via the Agent tool — do not re-implement its scoring.**
+
+For each discovered page (and the two shared sheets), do this:
+
+1. **Assemble that page's text copy** into one markdown buffer — the headline/body/CTA/microcopy strings you pulled into `current content` from the mockup, layout, curation outline, or Figma — and persist it to `.twt-artifacts/pre-design/content/text-analysis/<page-slug>/source.md` (so the child analyzes a file on disk). Skip non-text rows (links, images, videos, SEO slugs); text-analysis judges prose, not URLs.
+2. **Dispatch** `/twt-text-analysis` on that file with the `subagent-collect` token (no questions, no apply). Issue the per-page dispatches as a single parallel batch where practical — each writes to its own `<page-slug>/` folder, so there is no write conflict.
+3. **Read back** `.twt-artifacts/pre-design/content/text-analysis/<page-slug>/analysis-report.md` (and `optimized.md`) with the Read tool. For every block whose report has `Decision: Rewrite recommended` and a **Suggested Version** that is not `No better wording found.`, put that suggested text into the matching field's **`recommended content`** cell. Match blocks to fields by their text — a block whose original equals the `current content` of a field maps to that field.
+4. Where a block has `Decision: Keep original`, `Manual review only`, `Minor improvement suggested`, or `Suggested Version: No better wording found.`, leave `recommended content` as the normal note (`Needs approved final copy`, etc.) — do not fabricate a suggestion. Where text-analysis explains a missing fact in `Reason` or `Weaknesses`, surface that note in `recommended content` so the reviewer knows what information is missing.
+
+If text-analysis is unavailable or returns nothing for a page, continue without it — the workbook still builds; just fall back to the standard `recommended content` notes. Record in the Step 6 report how many fields received a text-analysis suggestion.
+
+## Step 3 - Assemble the workbook spec
+
+The workbook is **script-generated** — you assemble a JSON spec (the judgment: which worksheets, blocks, and rows), and the bundled builder owns every workbook mechanic (headers, banner rows, zebra shading, the green/pink ready cell, data validation, widths). Do not write openpyxl code yourself.
+
+Write the spec to `.twt-artifacts/content-approval/checklist-spec.json`:
+
+```json
+{
+  "worksheets": [
+    { "name": "Shared header",
+      "blocks": [
+        { "name": "Primary navigation",
+          "rows": [
+            { "field_type": "text:logo_text", "current": "Acme", "recommended": "Needs approved final copy" }
+          ] } ] }
+  ]
+}
+```
+
+Worksheet order is preserved: one worksheet per discovered page, **plus two dedicated shared worksheets** — `Shared header` (placed first) and `Shared footer` (placed last). Do not add cover, index, hidden, or summary sheets. Row keys: `field_type` (required), `current`, `recommended`, `approved` (normally omitted), `ready` (defaults false). Worksheet names are truncated to Excel's 31-character limit by the builder — keep them unique within that limit yourself.
+
+The spec's fields map onto the workbook's fixed six-column layout:
+
+| Column | Meaning |
+|--------|---------|
+| Block name | Page area or reusable block name, for example `Shared header`, `Hero`, `Pricing cards`, `Footer`, `SEO metadata`. |
+| field type | A stable content key such as `text:headline`, `link:primary_cta_url`, `image:hero`, `video:demo_embed`, `seo:slug`, `seo:meta_title`, `seo:schema`. |
+| current content | The current value found in the design/mockup/site, or blank when content is still missing. |
+| recommended content | The proposed copy, target URL, asset filename/path, image alt text, video URL/embed/transcript note, or SEO recommendation. |
+| approved content | The final human-approved value. Leave blank until approved. |
+| ready to implement (true, false) | `false` by default; set `true` only when `approved content` is final and safe to implement. |
+
+For media rows, use links or paths in `approved content`:
+- Images: final file path or URL plus alt text and optional caption, separated by clear labels.
+- Videos: hosted URL, embed URL/code, transcript/caption requirement, thumbnail path, and poster alt text.
+- Documents/downloads: file path or URL plus link label.
+
+## Step 4 - Group rows into labeled block sections
+
+Blocks in the spec become labeled, visually separated sections in the workbook (the builder renders each block as a banner row + its field rows + a spacer). Order blocks top to bottom in the page's reading order, and within each block order rows by family for scannability: `text:*`, then `link:*`, then `image:*` / `video:*` / `file:*`, then `form:*`.
+
+Header and footer are global, so they get their **own** worksheets and must **not** be repeated on any page worksheet.
+
+**Page worksheets** — for each discovered page (including the detail/category pages synthesised in Step 2a), include these row groups in a readable order, and include **no** header or footer rows:
+1. `SEO metadata`: `seo:slug`, `seo:page_title`, `seo:keywords`, `seo:meta_title`, `seo:meta_description`, `seo:schema`, and any canonical/open-graph fields found or needed (these are per-page, so they stay on the page sheet). **When `.twt-artifacts/pre-design/seo/seo-map.md` has an entry for the page**, seed each row's `recommended content` from the map — slug, primary+secondary keywords, meta title draft, meta description draft, schema type — suffixing the value with `(from seo-map)` so the reviewer knows its provenance; the value still lands in `recommended content` only (never `approved content` — SEO recommendations are approved in this workbook like all other content). Pages missing from the map, or when the map is absent, fall back to the standard notes (`Needs approved final copy`, etc.).
+2. Page-specific blocks from the design/layout, each with all dynamic text, links, image/video/file assets, form labels, placeholders, validation messages, and microcopy.
+3. For a **collection/listing page** (per Step 2a): a `Taxonomy` block whose rows are the category/filter terms (`taxonomy:term`), so the approved category set is explicit — not buried in a filter-chip text field. For an **item-detail / category-archive page**: the full template field set (title, role/meta, hero/media, body sections, gallery, links, prev/next) so the per-item content is approvable like any other page.
+
+**`Shared header` worksheet** — captured once, here only: logo text/image, navigation labels, navigation URLs, utility links, language/social/search items, and the global CTA.
+
+**`Shared footer` worksheet** — captured once, here only: footer navigation, contact details, legal links, newsletter/signup copy, social links, copyright, and any compliance text.
+
+If a specific page uses a header or footer **variant** that differs from the global one, record that difference as extra rows on the `Shared header` / `Shared footer` sheet and name the affected page(s) in `Block name` (for example `Header — checkout (no nav)`) — never scatter header/footer rows back onto page worksheets.
+
+## Step 5 - Generate the workbook
+
+Run the bundled builder (Bash, one command):
+
+```bash
+python "${CLAUDE_PLUGIN_ROOT}/tools/checklist-xlsx.py" build --spec ".twt-artifacts/content-approval/checklist-spec.json" --out ".twt-artifacts/content-approval/content-approval-checklist.xlsx"
+```
+
+(On Windows where `python` is unavailable but `py` exists, use `py`.) It prints a ```json summary (worksheet / block / row counts) — capture it for the Step 6 report. The builder guarantees, identically on every run, all the review-friendliness rules: frozen header row; compact key columns and wide wrapped content columns; each block as a **merged banner row** (bold, white on accent, thick top border) followed by its field rows (thin borders, zebra shading that restarts at every banner, de-emphasized repeated `Block name`) and a clean spacer row; a `true,false` dropdown on the ready column defaulting to `false`; and **the green/pink fill on only the `ready to implement` cell**, applied via conditional formatting so it re-evaluates when a reviewer edits the value (banner and spacer rows get no readiness fill, and no sheet-wide autofilter is added). A blank `field type` is what marks a banner row as a divider, not data, so the implement step skips it.
+
+If the builder errors (bad spec), fix the spec and re-run — never fall back to hand-writing the workbook. The workbook is for stakeholders to scan, fill, approve, and hand back — no LLM-oriented clutter.
+
+## Step 6 - Write the report
+
+Write `.twt-artifacts/content-approval/content-approval-checklist-report.md` with:
+- Workbook path.
+- Page count, the two shared worksheets (`Shared header`, `Shared footer`), and all worksheet names.
+- Block-section count per worksheet, plus total row count and rows by field family: text, link, image, video, file, form, SEO.
+- Source artifacts used and missing source artifacts.
+- **Text-analysis pass:** how many pages were analyzed and how many `recommended content` cells were filled with a text-analysis suggested version (and any pages skipped because the analysis was unavailable/empty).
+- **SEO-map pass:** whether `pre-design/seo/seo-map.md` was found, and how many `seo:*` `recommended content` cells were seeded from it (plus pages the map didn't cover).
+- **Collections/taxonomies expanded:** each collection block detected, the taxonomy terms promoted, and the detail/category worksheets synthesised from it (with how many real item pages a `(template)` worksheet represents).
+- Any assumptions or inferred blocks that need human review.
+- Next step: fill `approved content`, set ready cells to `true`, then run `/twt-content-approval-implement`.
+
+## Step 7 - Report
+
+Tell the user where the workbook and report were written, whether `openpyxl` had to be installed, how many worksheets and rows were created, and what must be filled before implementation.

@@ -1,7 +1,7 @@
 {
   "name": "twt-write-as-me",
   "version": "1.0.0",
-  "description": "Write or rewrite text in your own voice: build a reproducible writing-fingerprint profile from your samples, then generate against it with a mechanical source-contamination check.",
+  "description": "Standalone: build a reproducible writing-fingerprint profile from your samples, then generate against it.",
   "author": {
     "name": "Vadym Shliachkov",
     "email": "vadim@xivic.com"
@@ -12,7 +12,6 @@
   "keywords": [
     "writing",
     "style-transfer",
-    "voice",
-    "claude-code"
+    "voice"
   ]
 }

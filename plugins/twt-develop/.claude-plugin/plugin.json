@@ -1,0 +1,18 @@
+{
+  "name": "twt-develop",
+  "version": "1.0.0",
+  "description": "Phase 3: build the design into a static HTML site, an Elementor child theme, or an existing codebase.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "html",
+    "elementor",
+    "wordpress",
+    "build"
+  ]
+}

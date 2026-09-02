@@ -5,24 +5,24 @@
     "email": "vadim@xivic.com"
   },
   "metadata": {
-    "description": "Marketplace hosting the twt web-design pipeline plugin and its split-out standalone plugins.",
+    "description": "Marketplace hosting the twt web-design pipeline plugin and its standalone units.",
     "version": "1.0.144"
   },
   "plugins": [
     {
       "name": "twt",
       "source": "./",
-      "description": "Four-phase web-design pipeline: /twt-* orchestrators + dispatched sub-skills, hooks, and runtime tools."
-    },
-    {
-      "name": "twt-write-as-me",
-      "source": "./plugins/twt-write-as-me",
-      "description": "Standalone: /twt-write-as-me + /twt-write-as-me-analysis — author-voice generation with a deterministic contamination check. No pipeline dependency."
+      "description": "Four-phase web-design pipeline: every twt skill in one install."
     },
     {
       "name": "twt-export",
       "source": "./plugins/twt-export",
-      "description": "Standalone: /twt-export + the pdf/docx/presentation/theme sub-commands. Markdown to polished documents and slides. No pipeline dependency."
+      "description": "Standalone: Markdown to polished PDF, DOCX, and PPTX/slide exports with themeable house styles."
+    },
+    {
+      "name": "twt-write-as-me",
+      "source": "./plugins/twt-write-as-me",
+      "description": "Standalone: build a reproducible writing-fingerprint profile from your samples, then generate against it."
     }
   ]
 }

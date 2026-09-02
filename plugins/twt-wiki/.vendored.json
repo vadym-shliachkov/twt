@@ -1,0 +1,26 @@
+{
+  "vendored": [
+    "templates/wiki/AGENTS.md",
+    "tools/check-validation-report.mjs",
+    "tools/score-rubric.mjs",
+    "tools/wiki-drain.mjs",
+    "tools/wiki-facts-merge.mjs",
+    "tools/wiki-harvest.mjs",
+    "tools/wiki-index.mjs",
+    "tools/wiki-init.mjs",
+    "tools/wiki-lint.mjs",
+    "tools/wiki-sources-mark.mjs"
+  ],
+  "hashes": {
+    "templates/wiki/AGENTS.md": "ba7887917ef35ac83c1809ea82519da7619cea73ee72503e000b359ab1e343a8",
+    "tools/check-validation-report.mjs": "17ebab8e5d2730de92ff346e28579acfad30dee6217fb59f60457db11bc3fc89",
+    "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e",
+    "tools/wiki-drain.mjs": "73e0355ccadf3cc148423500883975ffea764e0e16d37320cb1577c22a61f823",
+    "tools/wiki-facts-merge.mjs": "1daf98b63e13f39525cdd56f48b1404943765fa3039b386f09579338f9e23b27",
+    "tools/wiki-harvest.mjs": "87e8c72aef3d2c32463df4a563d5fffe427aa633e1aa78c4273d546911c820a0",
+    "tools/wiki-index.mjs": "794eabf93cf14fb81015c97d89c6cebc1bd13ba91510d2e3e58b9e01ed7e67e6",
+    "tools/wiki-init.mjs": "5aebf4c7b79ad0a723a5bada2c2db3658f96ab7a7b837c08628f0245409b603b",
+    "tools/wiki-lint.mjs": "4fc112e48fcfe50a6ec529bfbf3d475e86aafa901804ad8cc27751bda19036af",
+    "tools/wiki-sources-mark.mjs": "46f9c9930b630511a147699682bbb7f39396e9fcc8f065785179fbaf2427f6d7"
+  }
+}

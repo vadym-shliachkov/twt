@@ -1,0 +1,16 @@
+{
+  "name": "twt-search-site",
+  "version": "1.0.0",
+  "description": "Search a website for an exact string and report every page link with surrounding context.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "search",
+    "crawler"
+  ]
+}

@@ -45,12 +45,18 @@ test('a cluster whose computed-path dependency is contested reports it', () => {
   assert.match(verdict, /^VENDORABLE/);
 });
 
-test('a split-out cluster is no longer contested on what was vendored to it', () => {
-  // The other half of the same fact, and the payoff of the split: twt-export
-  // owns its tools and carries its own themes, so nothing is contested and it
-  // is cleanly separable. A regression that re-contested it would show here.
-  const { contested } = analyze(EXPORT);
-  assert.deepEqual(contested, [], `export is its own plugin now, got: ${JSON.stringify(contested)}`);
+test('the export cluster contests templates/themes with the monolith', () => {
+  // This used to assert the opposite. When export was a HAND-PLACED plugin it
+  // owned a checked-in copy of the themes, so nothing was contested. Units
+  // reversed that: export is authored in the monolith like everything else and
+  // its themes are vendored by tools/build-units.mjs at build time, so the
+  // contention is real again - and is a cost to pay, not a blocker.
+  const { contested, verdict } = analyze(EXPORT);
+  assert.ok(
+    contested.some((f) => f === 'templates/themes' || f.startsWith('templates/themes/')),
+    `expected templates/themes contested, got: ${JSON.stringify(contested)}`,
+  );
+  assert.match(verdict, /^VENDORABLE/);
 });
 
 test('computed data paths are followed, not just import edges', () => {

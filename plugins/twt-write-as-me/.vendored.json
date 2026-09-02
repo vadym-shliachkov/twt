@@ -1,0 +1,8 @@
+{
+  "vendored": [
+    "tools/write-as-me-contamination.mjs"
+  ],
+  "hashes": {
+    "tools/write-as-me-contamination.mjs": "faff1954cbfb67f0c967235779c2d64f5e68a7873c87607447a31e00d28b3fdd"
+  }
+}

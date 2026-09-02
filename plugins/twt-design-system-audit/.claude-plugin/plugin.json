@@ -1,0 +1,17 @@
+{
+  "name": "twt-design-system-audit",
+  "version": "1.0.0",
+  "description": "Audit a real design's system quality and cross-page block consistency from a Figma file or site URL.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "design-system",
+    "audit",
+    "consistency"
+  ]
+}

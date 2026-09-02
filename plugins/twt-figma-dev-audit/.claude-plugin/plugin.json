@@ -1,0 +1,17 @@
+{
+  "name": "twt-figma-dev-audit",
+  "version": "1.0.0",
+  "description": "Audit a Figma file for developer readiness before implementation starts.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "figma",
+    "audit",
+    "handoff"
+  ]
+}

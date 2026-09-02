@@ -1,0 +1,16 @@
+{
+  "vendored": [
+    "hooks/lib/once.js",
+    "hooks/twt-debug-log.js",
+    "tools/check-decisions.mjs",
+    "tools/check-validation-report.mjs",
+    "tools/score-rubric.mjs"
+  ],
+  "hashes": {
+    "hooks/lib/once.js": "52e58eaf7db05c6ec798ed2cee7a668ef0454b09546fe3d1e468422acff33ec1",
+    "hooks/twt-debug-log.js": "02ebfd57680ad94e1f11e52eab82240b8013ef2b2189827e9d6812c5e028a550",
+    "tools/check-decisions.mjs": "63e83043f2cb828a47a97d080c4a5a2cf641d4099889a4289b12430f81cce194",
+    "tools/check-validation-report.mjs": "17ebab8e5d2730de92ff346e28579acfad30dee6217fb59f60457db11bc3fc89",
+    "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e"
+  }
+}

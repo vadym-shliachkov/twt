@@ -1,0 +1,17 @@
+{
+  "name": "twt-wiki",
+  "version": "1.0.0",
+  "description": "The project wiki: durable memory of decisions, ideas, entities, and cited facts.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "wiki",
+    "knowledge-base",
+    "memory"
+  ]
+}

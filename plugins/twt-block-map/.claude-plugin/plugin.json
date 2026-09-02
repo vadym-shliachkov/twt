@@ -1,0 +1,17 @@
+{
+  "name": "twt-block-map",
+  "version": "1.0.0",
+  "description": "Map a site's block architecture: nested block tree, name-blind identity, and a page-to-block reuse matrix.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "architecture",
+    "blocks",
+    "audit"
+  ]
+}

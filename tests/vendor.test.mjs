@@ -88,6 +88,73 @@ test('a reference escaping the repo root is ignored, not followed', () => {
   assert.deepEqual(files, ['tools/a.mjs']);
 });
 
+test('a computed path resolving to the REPO ROOT is not a dependency', () => {
+  // tools/wiki-init.mjs computes its own repo root with `const ROOT =
+  // join(HERE, '..')`, purely so it can build a real path a line later. Treating
+  // that as a dependency made the first real build vendor the ENTIRE repo into
+  // the wiki unit - node_modules, docs, and plugins/ itself, which then fed the
+  // next build its own output and made the tree grow every run.
+  const root = scratch({
+    'tools/wiki-init.mjs': [
+      'const HERE = ".";',
+      'const ROOT = join(HERE, "..");',
+      'const a = join(ROOT, "templates", "wiki");',
+    ].join('\n'),
+    'templates/wiki/AGENTS.md': 'x\n',
+    'node_modules/pkg/index.js': 'y\n',
+    'README.md': 'z\n',
+  });
+  const { files } = closureFrom(root, ['tools/wiki-init.mjs']);
+  assert.ok(files.includes('templates/wiki/AGENTS.md'), 'the real dependency is still found');
+  assert.ok(!files.includes('README.md'), 'the repo root must not be expanded');
+  assert.ok(!files.some((f) => f.startsWith('node_modules/')), 'node_modules must never be vendored');
+  assert.equal(files.length, 2, `expected just the tool and its template, got ${JSON.stringify(files)}`);
+});
+
+test('the generated tree is never vendored back into itself', () => {
+  // Otherwise each build carries the previous build's output and the tree
+  // grows without bound - which is exactly what happened.
+  const root = scratch({
+    'tools/a.mjs': 'const p = join(ROOT, "plugins", "twt-demo");\n',
+    'plugins/twt-demo/skills/x/SKILL.md': 'x\n',
+  });
+  const { files } = closureFrom(root, ['tools/a.mjs']);
+  assert.deepEqual(files, ['tools/a.mjs']);
+});
+
+test('a HERE-anchored path resolves against the FILE, a ROOT-anchored one against the REPO', () => {
+  // The walker cannot know what a variable holds, so it reads the variable's
+  // NAME. HERE/__dirname mean the file's directory; ROOT/REPO mean the repo.
+  // Guessing both anchors for every path pulled the repo's own README.md,
+  // SKILLS.md and AGENTS.md into three units on the first real build.
+  const root = scratch({
+    'tools/a.mjs': [
+      'const p = join(HERE, "..", "templates", "here-target.md");',
+      'const q = join(ROOT, "templates", "root-target.md");',
+    ].join('\n'),
+    'templates/here-target.md': 'h\n',
+    'templates/root-target.md': 'r\n',
+  });
+  const { files } = closureFrom(root, ['tools/a.mjs']);
+  assert.ok(files.includes('templates/here-target.md'), 'HERE resolves against the file');
+  assert.ok(files.includes('templates/root-target.md'), 'ROOT resolves against the repo');
+});
+
+test('a path anchored on a runtime output variable is not a dependency', () => {
+  // ART, OUT, WIKI, REPORTS and friends name directories a tool WRITES at run
+  // time. Resolving them against the repo root pulled unrelated files in.
+  const root = scratch({
+    'tools/a.mjs': [
+      'const p = join(WIKI, "AGENTS.md");',
+      'const q = join(OUT, "README.md");',
+    ].join('\n'),
+    'AGENTS.md': 'a\n',
+    'README.md': 'b\n',
+  });
+  const { files } = closureFrom(root, ['tools/a.mjs']);
+  assert.deepEqual(files, ['tools/a.mjs'], 'neither output path is a source dependency');
+});
+
 test('output is sorted and deduplicated, and a cycle terminates', () => {
   const root = scratch({
     'tools/a.mjs': 'import "./c.mjs";\nimport "./b.mjs";\n',
@@ -128,4 +195,34 @@ test('--check reports a missing copy and writes nothing', () => {
   const c = syncFiles(['tools/a.mjs'], from, to, { check: true });
   assert.deepEqual(c.missing, ['tools/a.mjs']);
   assert.deepEqual(c.copied, []);
+});
+
+test('a bare top-level computed path is a scan or write target, not a dependency', () => {
+  // join(REPO, 'tools') in launch-audit/harvest.mjs is a directory it SCANS at
+  // run time; following it vendored all 78 files of tools/ into the qa unit.
+  // join(ROOT, 'SKILLS.md') in gen-docs.mjs is a file it WRITES; following it
+  // put the repo's own docs inside the site unit. No static walker can tell a
+  // read from a write, but neither is ever one segment deep when it is real.
+  const root = scratch({
+    'tools/a.mjs': [
+      'const p = join(ROOT, "tools");',
+      'const q = join(ROOT, "SKILLS.md");',
+      'const r = join(ROOT, "templates", "wiki");',
+    ].join('\n'),
+    'tools/unrelated.mjs': 'x\n',
+    'SKILLS.md': 'y\n',
+    'templates/wiki/AGENTS.md': 'z\n',
+  });
+  const { files } = closureFrom(root, ['tools/a.mjs']);
+  assert.ok(!files.includes('tools/unrelated.mjs'), 'a scanned directory is not vendored');
+  assert.ok(!files.includes('SKILLS.md'), 'a written file is not vendored');
+  assert.ok(files.includes('templates/wiki/AGENTS.md'), 'a real two-segment dependency still is');
+});
+
+test('a DECLARED single-segment ref is still honoured', () => {
+  // The depth rule applies only to paths the walker DISCOVERS. A ref a skill
+  // author wrote deliberately is always followed.
+  const root = scratch({ 'LICENSE': 'mit\n' });
+  const { files } = closureFrom(root, ['LICENSE']);
+  assert.deepEqual(files, ['LICENSE']);
 });

@@ -1,0 +1,134 @@
+/* doc-hub-light component layer — classes emitted by tools/export-transform.mjs.
+   Contract: tx-doc-header, tx-kv(--summary), tx-score(--good/--mid/--low),
+   tx-chip(--ok/--warn/--danger/--info), tx-swatch, tx-table-wide, tx-finding, tx-toc. */
+
+/* Document header: H1 + accent bar + optional meta line */
+.tx-doc-header{margin:0 0 30px}
+.tx-doc-header h1{margin:0 0 .2em}
+.tx-doc-header .hs-accent-bar{margin:0 0 14px}
+.tx-doc-header .tx-meta{font-size:.9rem;color:var(--tx-muted);margin:0}
+
+/* Key-value grid (metadata runs, brief identity blocks) */
+dl.tx-kv{display:grid;grid-template-columns:minmax(140px,max-content) 1fr;gap:6px 18px;margin:1em 0;padding:14px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
+dl.tx-kv dt{font-family:var(--tx-font-heading);font-weight:600;font-size:.82rem;letter-spacing:.02em;color:var(--tx-ink);align-self:baseline}
+dl.tx-kv dd{margin:0;font-size:.95rem;align-self:baseline}
+/* Summary variant: leading metadata of a report — card row on print/wide.
+   Wider min-column keeps it to two roomy cards per row (not three cramped ones);
+   long values (prose notes, file paths) span the whole row via --wide. */
+dl.tx-kv--summary{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;background:transparent;border:none;padding:0}
+dl.tx-kv--summary .tx-kv__cell{background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius);padding:11px 15px;min-width:0}
+dl.tx-kv--summary .tx-kv__cell--wide{grid-column:1/-1}
+dl.tx-kv--summary dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);font-weight:600}
+dl.tx-kv--summary dd{font-size:1.02rem;color:var(--tx-ink);margin-top:3px;overflow-wrap:anywhere}
+dl.tx-kv--summary dd code{overflow-wrap:anywhere;word-break:break-word}
+.tx-score--na{color:var(--tx-muted);border-color:var(--tx-rule);background:var(--tx-panel)}
+.tx-chip--neutral{color:var(--tx-muted);background:var(--tx-panel)}
+
+/* Labeled field card ('**Label:** value' paragraphs in briefs/specs) */
+.tx-field{break-inside:avoid;margin:14px 0;padding:12px 16px 13px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-left:3px solid var(--tx-accent);border-radius:var(--tx-radius)}
+.tx-field__label{display:block;font-family:var(--tx-font-heading);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);margin:0 0 4px}
+.tx-field__body{font-size:.97rem;color:var(--tx-text);line-height:1.55}
+.tx-field__body code{overflow-wrap:anywhere}
+
+/* Score chips (NN/100) */
+.tx-score{display:inline-block;font-family:var(--tx-font-mono);font-size:.82em;font-weight:500;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);white-space:nowrap}
+.tx-score--good{color:var(--tx-ok);border-color:color-mix(in srgb,var(--tx-ok) 35%,white);background:color-mix(in srgb,var(--tx-ok) 8%,white)}
+.tx-score--mid{color:var(--tx-warn);border-color:color-mix(in srgb,var(--tx-warn) 35%,white);background:color-mix(in srgb,var(--tx-warn) 8%,white)}
+.tx-score--low{color:var(--tx-danger);border-color:color-mix(in srgb,var(--tx-danger) 35%,white);background:color-mix(in srgb,var(--tx-danger) 8%,white)}
+
+/* Severity / finding chips */
+.tx-chip{display:inline-block;font-family:var(--tx-font-heading);font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.tx-chip--ok{color:var(--tx-ok);background:color-mix(in srgb,var(--tx-ok) 10%,white)}
+.tx-chip--warn{color:var(--tx-warn);background:color-mix(in srgb,var(--tx-warn) 12%,white)}
+.tx-chip--danger{color:var(--tx-danger);background:color-mix(in srgb,var(--tx-danger) 10%,white)}
+.tx-chip--info{color:var(--tx-accent);background:color-mix(in srgb,var(--tx-accent) 10%,white)}
+
+/* Wiki page meta card — frontmatter rendered back by the wikiMetaHeader transform */
+.tx-wiki-meta{margin:-14px 0 26px;padding:12px 16px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
+.tx-wiki-meta__row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.tx-wiki-type{font-family:var(--tx-font-mono);font-size:.74rem;color:var(--tx-muted)}
+.tx-wiki-updated{font-size:.8rem;color:var(--tx-muted)}
+.tx-wiki-tags{font-size:.78rem;color:var(--tx-muted);font-style:italic}
+.tx-wiki-summary{margin:8px 0 0;font-size:.95rem;color:var(--tx-ink)}
+.tx-wiki-sources{margin-top:8px;font-size:.78rem;color:var(--tx-muted)}
+.tx-wiki-sources code{font-size:.85em;overflow-wrap:anywhere}
+
+/* Palette swatch (hex cells in brief palette tables) */
+.tx-swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid var(--tx-rule);vertical-align:-2px;margin-right:7px}
+
+/* Wide findings tables: tighter type, zebra, no harsh grid */
+table.tx-table-wide{font-size:.84em}
+table.tx-table-wide th,table.tx-table-wide td{border:none;border-bottom:1px solid var(--tx-rule);padding:5px 9px}
+table.tx-table-wide thead th{background:var(--tx-panel);border-bottom:2px solid var(--tx-rule)}
+table.tx-table-wide tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--tx-panel) 55%,white)}
+
+/* Finding card (Where / Problem / Recommendation) */
+.tx-finding{break-inside:avoid;margin:1em 0;padding:14px 18px;border:1px solid var(--tx-rule);border-left:3px solid var(--tx-accent);border-radius:var(--tx-radius);background:var(--tx-surface)}
+.tx-finding dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0}
+.tx-finding dt{font-family:var(--tx-font-heading);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--tx-muted)}
+.tx-finding dd{margin:0;font-size:.95rem}
+
+/* Table of contents (long reports) — unmarked index; heading text self-labels */
+nav.tx-toc{margin:1.2em 0 1.6em;padding:12px 18px;background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:var(--tx-radius)}
+nav.tx-toc .tx-toc-title{font-family:var(--tx-font-heading);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--tx-muted);margin:0 0 6px}
+nav.tx-toc ul{margin:0;padding:0;list-style:none;columns:2;column-gap:32px;font-size:.92rem}
+nav.tx-toc li{margin:0 0 3px;break-inside:avoid}
+nav.tx-toc a{text-decoration:none}
+
+/* ── Text-analysis per-block review cards (twt-text-analysis, report profile) ──
+   One card per "## Block N — Type" section: a header band (block no. + type +
+   score/finding chips), purpose lead, the original quote, metric bars, reason /
+   weakness notes, and — only when a validated rewrite exists — a suggestion box. */
+.tx-block{break-inside:avoid;margin:16px 0;padding:18px 20px 17px;border:1px solid var(--tx-rule);border-left:3px solid var(--tx-muted);border-radius:var(--tx-radius);background:var(--tx-surface)}
+/* summary-table Block-number links → jump to the matching card */
+.tx-blink{color:var(--tx-accent);font-weight:600;text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--tx-accent) 35%,transparent)}
+.tx-block--ok{border-left-color:var(--tx-ok)}
+.tx-block--warn{border-left-color:var(--tx-warn)}
+.tx-block--danger{border-left-color:var(--tx-danger)}
+.tx-block--neutral{border-left-color:var(--tx-rule)}
+.tx-block__head{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;margin:0 0 13px}
+.tx-block__n{font-family:var(--tx-font-mono);font-size:.72rem;font-weight:500;color:var(--tx-muted);letter-spacing:.03em}
+.tx-block__type{font-family:var(--tx-font-heading);font-size:1rem;font-weight:700;color:var(--tx-ink);margin:0;line-height:1.2}
+.tx-block__chips{margin-left:auto;display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tx-block__decision{font-size:.74rem;color:var(--tx-muted);font-style:italic}
+.tx-block__purpose{margin:0 0 15px;color:var(--tx-text);font-size:.95rem}
+/* The Original is the verbatim copy under review — render it as a distinct quote
+   panel (inset panel fill + ink left rule + ink body) so it reads independently
+   from the analyst's reason/weakness prose, not as another labelled note. */
+.tx-block__orig{margin:0 0 15px;padding:9px 13px 10px;background:var(--tx-panel);border-left:3px solid var(--tx-ink);border-radius:0 8px 8px 0}
+.tx-orig__body{margin-top:3px;min-width:0;color:var(--tx-ink)}
+.tx-orig__body pre{margin:0}
+.tx-orig__body code,.tx-orig__body pre,.tx-suggest__body code,.tx-suggest__body pre{overflow-wrap:anywhere}
+/* Verbatim originals/rewrites can be long — wrap in the paged PDF instead of clipping */
+.tx-orig__body pre,.tx-suggest__body pre{white-space:pre-wrap;word-break:break-word}
+.tx-k{font-family:var(--tx-font-heading);font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx-muted);white-space:nowrap;flex:none;padding-top:2px}
+.tx-k--accent{color:var(--tx-ok)}
+/* metric bars — two per row, proportional fill coloured by score tier */
+.tx-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px 24px;margin:0 0 15px}
+.tx-metric{display:grid;grid-template-columns:minmax(88px,auto) 1fr auto;align-items:center;gap:9px;font-size:.8rem}
+.tx-metric__name{color:var(--tx-text);line-height:1.2}
+.tx-metric__track{height:5px;border-radius:999px;background:var(--tx-panel);border:1px solid var(--tx-rule);overflow:hidden;min-width:36px}
+.tx-metric__fill{display:block;height:100%;border-radius:999px}
+.tx-metric__fill--good{background:var(--tx-ok)}
+.tx-metric__fill--mid{background:var(--tx-warn)}
+.tx-metric__fill--low{background:var(--tx-danger)}
+.tx-metric__val{font-family:var(--tx-font-mono);font-size:.74rem;color:var(--tx-ink);text-align:right;min-width:20px}
+.tx-metric__val--na{color:var(--tx-muted)}
+.tx-metric--note{grid-template-columns:1fr}
+.tx-metric--note .tx-metric__name{color:var(--tx-muted);font-style:italic}
+.tx-block__scaffold{margin:0 0 15px;color:var(--tx-muted);font-style:italic;font-size:.85rem}
+/* reason / weakness notes — shared 2-col grid so the descriptions align in one column */
+.tx-block__notes{display:grid;grid-template-columns:minmax(72px,max-content) 1fr;gap:11px 16px;align-items:baseline;margin:0 0 14px;font-size:.9rem;color:var(--tx-text)}
+.tx-note{display:contents}
+.tx-note--warn>span:last-child{color:var(--tx-ink)}
+.tx-block__tags{display:flex;flex-wrap:wrap;gap:6px 8px}
+.tx-tag{font-size:.72rem;color:var(--tx-muted);background:var(--tx-panel);border:1px solid var(--tx-rule);border-radius:999px;padding:1px 9px}
+.tx-tag b{color:var(--tx-ink);font-weight:600}
+/* suggested rewrite — only rendered when a validated improvement exists */
+.tx-block__suggest{margin:15px 0 0;padding:12px 14px;border:1px solid color-mix(in srgb,var(--tx-ok) 30%,var(--tx-rule));border-radius:10px;background:color-mix(in srgb,var(--tx-ok) 5%,var(--tx-surface))}
+.tx-suggest__body{margin:4px 0 0;color:var(--tx-ink);font-size:.95rem}
+.tx-suggest__body code,.tx-suggest__body pre{overflow-wrap:anywhere}
+.tx-suggest__checks{display:flex;flex-wrap:wrap;gap:5px 8px;margin-top:8px}
+.tx-check{font-size:.7rem;padding:1px 8px;border-radius:999px;border:1px solid var(--tx-rule);color:var(--tx-text)}
+.tx-check--ok{color:var(--tx-ok);background:color-mix(in srgb,var(--tx-ok) 8%,white)}
+.tx-check--no{color:var(--tx-danger);background:color-mix(in srgb,var(--tx-danger) 8%,white)}

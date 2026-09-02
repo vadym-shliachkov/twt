@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Write|Edit|NotebookEdit|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-scope-guard.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "Task|Agent|Skill|AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js\""
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__(?:[a-z0-9]+_)*figma(?:_[a-z0-9]+)*__(get_design_context|get_metadata|get_screenshot)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-figma-read-guard.js\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task|Agent|Skill|AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/twt-debug-log.js\""
+          }
+        ]
+      }
+    ]
+  }
+}

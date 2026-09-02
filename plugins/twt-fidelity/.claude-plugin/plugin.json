@@ -1,0 +1,17 @@
+{
+  "name": "twt-fidelity",
+  "version": "1.0.0",
+  "description": "Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "fidelity",
+    "figma",
+    "pixel-diff"
+  ]
+}

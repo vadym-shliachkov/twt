@@ -113,12 +113,33 @@ export function depSpecifiers(src) {
   // shipping without a file it needs.
   const imports = [...src.matchAll(/(?:from\s*|import\s*\(\s*|require\(\s*|import\s+)['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
   const assets = [];
-  for (const m of src.matchAll(/(?:join|resolve)\(\s*(?:HERE|ROOT|__dirname|[A-Z][A-Z0-9_]*)\s*,\s*((?:['"][^'"]+['"]\s*,\s*)*['"][^'"]+['"])\s*\)/g)) {
-    const parts = [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
+  for (const m of src.matchAll(/(?:join|resolve)\(\s*(HERE|ROOT|__dirname|[A-Z][A-Z0-9_]*)\s*,\s*((?:['"][^'"]+['"]\s*,\s*)*['"][^'"]+['"])\s*\)/g)) {
+    const parts = [...m[2].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
     if (!parts.length || parts.some((x) => /[<>*${}]/.test(x))) continue;
+    parts.anchor = m[1];
     assets.push(parts);
   }
   return { imports, assets };
+}
+
+// What the anchor VARIABLE of a computed path means, by name.
+//
+// The walker cannot know what a variable holds, so it reads the name. This is
+// not cosmetic: resolving every computed path against BOTH the file's directory
+// and the repo root pulled the repo's own README.md, SKILLS.md, architecture.md
+// and AGENTS.md into three units on the first real build, because expressions
+// like join(WIKI, 'AGENTS.md') and join(OUT, 'README.md') happen to name files
+// that exist at the root.
+//
+//   "file"  the file's own directory  - HERE, __dirname
+//   "repo"  the repository root       - ROOT, REPO, *_ROOT
+//   null    a runtime OUTPUT location - ART, OUT, WIKI, REPORTS, DS, ...
+//           These are directories a tool WRITES into, never source it depends
+//           on, so they are not dependencies at all.
+export function anchorKind(name) {
+  if (name === "HERE" || name === "__dirname") return "file";
+  if (name === "ROOT" || name === "REPO" || /_ROOT$/.test(name)) return "repo";
+  return null;
 }
 
 function closure(startRefs) {

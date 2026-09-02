@@ -1,0 +1,937 @@
+#!/usr/bin/env node
+// gen-preview.mjs — deterministic generator for the design-system preview.html.
+//
+// The design-system preview used to be hand-written by the MODEL on every run,
+// which made it (a) drift in structure between projects and (b) hit recurring
+// CSS-class collisions (e.g. a `.chip` swatch class colliding with the `.chip`
+// tag-atom class, collapsing every color block — the original bug this fixes).
+// This script renders the styleguide from tokens.css so it is byte-for-byte
+// consistent across projects and the color blocks can never collapse: every
+// class is namespaced `gp-`.
+//
+//   node gen-preview.mjs <projectDir> [--mode tokens-only] [--check]
+//     <projectDir>  target project root (reads .twt-artifacts/design/design-system/)
+//     --mode tokens-only   render only Tier 1 (for design-system mode 5)
+//     --check       compute + print the contrast JSON only; do NOT write preview.html
+//                   (read-only mode for /twt-design-system-validate, which must not
+//                    modify artifacts — gives it deterministic contrast evidence)
+//
+// Reads:
+//   .twt-artifacts/design/design-system/tokens.css   (authoritative custom props)
+//   .twt-artifacts/design/design-system/observed-components.md (preferred component inventory — analysis-mode observations)
+//   .twt-artifacts/design/design-system/tokens.md     (fallback inventory — §3.2/3.3/3.4)
+//
+// Writes:
+//   .twt-artifacts/design/design-system/preview.html
+//
+// Tiers use the project's tech vocabulary: Tokens → Primitives → Components → Modules
+// (the atomic-design hierarchy, relabelled). Tier 1 (Tokens) and the WCAG contrast
+// matrix are 100% scripted. Tiers 2–4 are scripted SHELLS — one captioned cell per
+// inventory item with a `<!-- gp:fill <Name> -->` slot the model fills with the
+// project-specific specimen markup. The script never guesses component markup.
+//
+// Also prints a ```json block to stdout (qa-scan style) with the contrast results
+// so the calling skill can read AA failures without re-parsing the HTML. Exit 0
+// always (evidence, not pass/fail); exit 2 on bad usage.
+'use strict';
+
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { readHouseCss } from './house-style.mjs';
+import { projectFontLinks } from './lib/google-fonts.mjs';
+import { parseCssVars, makeResolver, parseColor, isGradient, composite, relLum, ratio, buildContrastMatrix } from './lib/contrast.mjs';
+
+const projectDir = process.argv[2];
+const tokensOnly = process.argv.includes('--mode') &&
+  process.argv[process.argv.indexOf('--mode') + 1] === 'tokens-only';
+const checkOnly = process.argv.includes('--check');
+// preview.html now documents TOKENS ONLY by default; the full
+// Primitives/Components/Modules catalog lives in the component gallery
+// (/twt-component-define → component/gallery.html), which preview links to.
+// Pass --with-components to also inline the component shells (legacy behavior).
+const withComponents = process.argv.includes('--with-components') && !tokensOnly;
+// Where the component gallery lives, relative to preview.html.
+// gallery.html is written into design-system/component/ (same folder as preview.html → no ../).
+const COMPONENTS_HREF = 'component/gallery.html';
+if (!projectDir) {
+  console.error('usage: gen-preview.mjs <projectDir> [--mode tokens-only]');
+  process.exit(2);
+}
+const DS = join(projectDir, '.twt-artifacts', 'design', 'design-system');
+const CSS = join(DS, 'tokens.css');
+// observed-components.md is the current name; components.md at the DS root is
+// the pre-rename analysis inventory older projects still carry (renamed to
+// stop colliding with the catalog at component/components.md).
+const OBSERVED_MD = join(DS, 'observed-components.md');
+const COMPONENTS_MD = existsSync(OBSERVED_MD) ? OBSERVED_MD : join(DS, 'components.md');
+const TOKENS_MD = join(DS, 'tokens.md');
+const OUT = join(DS, 'preview.html');
+
+if (!existsSync(CSS)) {
+  console.log(`gen-preview: no tokens.css at ${CSS} — nothing to render. Run design-system first.`);
+  process.exit(0);
+}
+
+// ---- CSS custom-property parsing --------------------------------------------
+// Parsing + color math live in tools/lib/contrast.mjs, shared with qa-scan.mjs
+// (a11y contrast) so design-phase and QA-phase ratios can never disagree.
+const cssText = readFileSync(CSS, 'utf8');
+const { vars, order } = parseCssVars(cssText);
+const resolveVal = makeResolver(vars);
+
+// ---- categorize tokens ------------------------------------------------------
+const colorTokens = [], gradientTokens = [];
+const fsTokens = [], lhTokens = new Map(), fwTokens = [], trackTokens = [], fontTokens = [];
+const spaceTokens = [], radiusTokens = [], shadowTokens = [];
+const durTokens = [], easeTokens = [], gridTokens = [];
+
+for (const name of order) {
+  const raw = vars.get(name);
+  const resolved = resolveVal(raw);
+  if (/^--(lh|line-height)/.test(name)) { lhTokens.set(name, resolved); continue; }
+  if (/^--(fs|font-size)/.test(name)) { fsTokens.push({ name, raw, resolved }); continue; }
+  if (/^--(fw|font-weight)/.test(name)) { fwTokens.push({ name, resolved }); continue; }
+  if (/^--(tracking|letter-spacing)/.test(name)) { trackTokens.push({ name, resolved }); continue; }
+  if (/^--(font|f)$/.test(name) || /^--font(-family)?/.test(name)) { fontTokens.push({ name, resolved }); continue; }
+  if (/^--(space|spacing|gap)-/.test(name)) { spaceTokens.push({ name, resolved }); continue; }
+  if (/^--(r$|rl$|radius)/.test(name)) { radiusTokens.push({ name, resolved }); continue; }
+  if (/^--shadow/.test(name)) { shadowTokens.push({ name, resolved }); continue; }
+  if (/^--(dur|duration)/.test(name)) { durTokens.push({ name, resolved }); continue; }
+  if (/^--ease/.test(name)) { easeTokens.push({ name, resolved }); continue; }
+  if (/^--(max|bp-|breakpoint|grid|container|gutter)/.test(name)) { gridTokens.push({ name, resolved }); continue; }
+  if (isGradient(resolved)) { gradientTokens.push({ name, raw, resolved }); continue; }
+  const c = parseColor(resolved);
+  if (c) { colorTokens.push({ name, raw, resolved, color: c }); continue; }
+}
+
+// ---- contrast matrix --------------------------------------------------------
+// Built by the shared lib (tools/lib/contrast.mjs) — intended-polarity pairs only.
+const { rows: contrastRows, failures, textSet, surfaceSet } = buildContrastMatrix(colorTokens);
+
+// ---- color palette split: primitive (raw value) vs semantic (var() alias) ---
+const primitiveColors = colorTokens.filter((t) => !/^\s*var\s*\(/.test(t.raw));
+const semanticColors  = colorTokens.filter((t) =>  /^\s*var\s*\(/.test(t.raw));
+// Sort primitives lightest → darkest so the palette reads as a tonal ramp.
+primitiveColors.sort((a, b) => relLum(b.color) - relLum(a.color));
+
+// ---- alpha display context ----------------------------------------------------
+// An alpha primitive painted flat on a white card is meaningless — a white-alpha
+// hairline literally disappears and reads as a duplicate of --color-white. Every
+// alpha chip is therefore rendered composited over the surface it is used on:
+// light alpha tones → the darkest solid primitive (the Ink-like surface they sit
+// on), dark alpha tones (shadows, scrims) → white.
+const darkestSolid = [...primitiveColors]
+  .filter((t) => t.color.a >= 1)
+  .sort((a, b) => relLum(a.color) - relLum(b.color))[0] || null;
+function displayContext(t) {
+  if (t.color.a >= 1) return null;
+  const lightAlpha = relLum(t.color) > 0.5;
+  if (lightAlpha && darkestSolid) return { name: darkestSolid.name, color: darkestSolid.color };
+  return { name: 'white', color: { r: 255, g: 255, b: 255, a: 1 } };
+}
+const effColor = (t) => { const ctx = displayContext(t); return ctx ? composite(t.color, ctx.color) : t.color; };
+const cssRgb = (c) => `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
+
+// Near-duplicate detection within the primitive palette (Euclidean RGB distance).
+// Two colors within 22/255 (~8.6%) are visually near-identical and flag a
+// consolidation opportunity (e.g. --color-bg-section vs --color-accent-pale).
+// Distances use the EFFECTIVE color — alpha tones composited over their display
+// surface — and only same-surface pairs are compared (a white-alpha fill on Ink
+// never co-occurs with a solid on white). Tokens sharing a name stem
+// (--color-ink / --color-ink-mid, --color-shadow-weak/-soft/-strong) are an
+// intentional state/elevation ramp and are not flagged; the flag is reserved for
+// accidental duplicates across roles.
+function rgbDist(c1, c2) {
+  return Math.sqrt((c1.r - c2.r) ** 2 + (c1.g - c2.g) ** 2 + (c1.b - c2.b) ** 2);
+}
+const NEAR_DUP_DIST = 22;
+const STATE_SUFFIX = /-(alpha|weak|soft|strong|mid|light|lighter|lightest|dark|darker|darkest|hover|active|subtle|muted|deep|faint|dim|low|high|xs|sm|md|lg|xl|\d+)$/;
+function stemOf(name) {
+  let s = name.toLowerCase();
+  while (STATE_SUFFIX.test(s)) s = s.replace(STATE_SUFFIX, '');
+  return s;
+}
+const primNearDups = new Map();
+for (let i = 0; i < primitiveColors.length; i++) {
+  for (let j = i + 1; j < primitiveColors.length; j++) {
+    const A = primitiveColors[i], B = primitiveColors[j];
+    if (stemOf(A.name) === stemOf(B.name)) continue;
+    const ctxA = displayContext(A), ctxB = displayContext(B);
+    if ((ctxA ? ctxA.name : null) !== (ctxB ? ctxB.name : null)) continue;
+    if (rgbDist(effColor(A), effColor(B)) <= NEAR_DUP_DIST) {
+      if (!primNearDups.has(A.name)) primNearDups.set(A.name, []);
+      if (!primNearDups.has(B.name)) primNearDups.set(B.name, []);
+      primNearDups.get(A.name).push(B.name);
+      primNearDups.get(B.name).push(A.name);
+    }
+  }
+}
+const nearDupPairs = [];
+for (const [name, dups] of primNearDups) {
+  for (const d of dups) if (name < d) nearDupPairs.push([name, d]);
+}
+
+// A gradient whose resolved stops are all within near-dup distance of each other
+// reads as a flat fill — it costs a token but adds nothing visible.
+function gradientStopColors(t) {
+  const out = [];
+  for (const m of String(t.resolved).match(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi) || []) {
+    const c = parseColor(m);
+    if (c) out.push(c.a < 1 ? composite(c, { r: 255, g: 255, b: 255, a: 1 }) : c);
+  }
+  return out;
+}
+const flatGradients = gradientTokens.filter((t) => {
+  const stops = gradientStopColors(t);
+  if (stops.length < 2) return false;
+  let max = 0;
+  for (let i = 0; i < stops.length; i++) for (let j = i + 1; j < stops.length; j++) max = Math.max(max, rgbDist(stops[i], stops[j]));
+  return max <= NEAR_DUP_DIST;
+}).map((t) => t.name);
+
+// Semantic token grouping by purpose — ordered so the most common groups appear first.
+const SEM_GROUPS = [
+  { key: 'bg',     label: 'Background & Surface', re: /\b(bg|background|surface|canvas|page|section)\b/i },
+  { key: 'text',   label: 'Text & Ink',            re: /\b(text|ink|body|label|heading|caption|muted|on)\b/i },
+  { key: 'border', label: 'Border & Rule',         re: /\b(border|rule|divide|separator|outline|line)\b/i },
+  { key: 'accent', label: 'Accent & Brand',        re: /\b(accent|brand|primary|secondary|cta|interactive|link)\b/i },
+  { key: 'state',  label: 'State & Feedback',      re: /\b(active|focus|hover|disabled|error|success|warning|danger|info|alert)\b/i },
+];
+const semBuckets = new Map([...SEM_GROUPS.map((g) => [g.key, []]), ['other', []]]);
+for (const t of semanticColors) {
+  let placed = false;
+  for (const g of SEM_GROUPS) { if (g.re.test(t.name)) { semBuckets.get(g.key).push(t); placed = true; break; } }
+  if (!placed) semBuckets.get('other').push(t);
+}
+
+function swatchPrimitive(t) {
+  const dups = primNearDups.get(t.name);
+  const dupTag = dups && dups.length
+    ? `<span class="gp-dup">≈ near-dup: ${dups.map((n) => esc(n)).join(', ')}</span>` : '';
+  const ctx = displayContext(t);
+  const chip = ctx
+    ? `<div class="gp-chip" style="background:${cssRgb(ctx.color)}"><span class="gp-chip-alpha" style="background:var(${t.name})"></span></div>`
+    : `<div class="gp-chip" style="background:var(${t.name})"></div>`;
+  const ctxTag = ctx ? `<span class="gp-ctx">alpha tone · shown on ${esc(ctx.name)}</span>` : '';
+  return `<div class="gp-sw">${chip}` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>${ctxTag}${dupTag}</div></div>`;
+}
+function swatchSemantic(t) {
+  const am = t.raw.match(/var\(\s*(--[\w-]+)\s*\)/);
+  return `<div class="gp-sw gp-sw-sem">` +
+    `<div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(t.resolved)}</span>` +
+    (am ? `<span class="gp-alias">→ ${esc(am[1])}</span>` : '') +
+    `</div></div>`;
+}
+function renderColorSection() {
+  const primHtml = `
+  <h4 class="gp-sub2">Basic palette <span class="gp-cnt">${primitiveColors.length} raw colors</span></h4>
+  <p class="gp-legend">All unique raw color values on this site, sorted lightest → darkest. Every semantic token below references one of these. Alpha tones are shown composited over the surface they are used on (noted per swatch). Near-identical primitives are flagged — merge them unless they are a documented state/elevation ramp.</p>
+  <div class="gp-swatches">${primitiveColors.map(swatchPrimitive).join('')}${gradientTokens.map(gradientSwatch).join('')}</div>`;
+  if (!semanticColors.length) return primHtml;
+  const semHtml = [...SEM_GROUPS.map((g) => ({ label: g.label, items: semBuckets.get(g.key) })), { label: 'Other', items: semBuckets.get('other') }]
+    .filter((g) => g.items.length > 0)
+    .map((g) => `<h5 class="gp-sub3">${esc(g.label)}</h5><div class="gp-swatches">${g.items.map(swatchSemantic).join('')}</div>`)
+    .join('');
+  return primHtml + `
+  <h4 class="gp-sub2">Semantic tokens by purpose <span class="gp-cnt">${semanticColors.length} aliases</span></h4>
+  <p class="gp-legend">Purpose-mapped aliases — each → shows which basic palette color it references. All semantic tokens reuse primitives; no new raw values are introduced here.</p>
+  ${semHtml}`;
+}
+
+// ---- component inventory (Tiers 2–4) ----------------------------------------
+// Parse the first-column bold names + composition note from the §3.2/3.3/3.4
+// tables of observed-components.md (preferred) or tokens.md (fallback). Section numbers
+// are stable across the Tokens→Primitives→Components→Modules relabelling.
+function parseInventory() {
+  const file = existsSync(COMPONENTS_MD) ? COMPONENTS_MD : existsSync(TOKENS_MD) ? TOKENS_MD : null;
+  if (!file) return { primitives: [], components: [], modules: [] };
+  const text = readFileSync(file, 'utf8');
+  const lines = text.split(/\r?\n/);
+  const buckets = { '3.2': [], '3.3': [], '3.4': [] };
+  let cur = null;
+  for (const line of lines) {
+    const h = line.match(/^###\s+(3\.[234])\b/);
+    if (h) { cur = h[1]; continue; }
+    if (/^###\s+3\.[1567]\b/.test(line) || /^##\s+4\b/.test(line)) cur = null;
+    if (!cur) continue;
+    const row = line.match(/^\|\s*\*\*([^*]+)\*\*\s*\|([^|]*)\|/);
+    if (row) buckets[cur].push({ name: row[1].trim(), note: row[2].trim().replace(/`/g, '') });
+  }
+  return { primitives: buckets['3.2'], components: buckets['3.3'], modules: buckets['3.4'] };
+}
+const inv = parseInventory();
+
+// ---- typography text styles -------------------------------------------------
+// Parse the "Text styles" table from tokens.md §2.2 — one row per semantic role
+// (Display, Heading L, Body M, Button, …), each binding the REAL combination of
+// family · size · weight · line-height · tracking the design actually uses. We
+// render one live specimen per row instead of parading every weight and size in
+// isolation, so the preview shows only the combinations that exist, never the
+// full weight × size cross-product. Token references are matched by pattern, so
+// the column order in the table doesn't matter.
+const TS_PAT = {
+  family: /(--(?:font-family|font|ff)[\w-]*)/,
+  size:   /(--(?:font-size|fs)[\w-]*)/,
+  weight: /(--(?:font-weight|fw)[\w-]*)/,
+  lh:     /(--(?:line-height|lh)[\w-]*)/,
+  track:  /(--(?:tracking|letter-spacing)[\w-]*)/,
+};
+function parseTextStyles() {
+  if (!existsSync(TOKENS_MD)) return [];
+  const lines = readFileSync(TOKENS_MD, 'utf8').split(/\r?\n/);
+  const styles = [];
+  let inSection = false;
+  for (const line of lines) {
+    if (/^#{2,6}\s.*\btext styles?\b/i.test(line)) { inSection = true; continue; }
+    if (inSection && /^#{1,6}\s/.test(line)) { inSection = false; }
+    if (!inSection) continue;
+    const row = line.match(/^\|\s*\*\*([^*]+)\*\*\s*\|(.+)\|/);
+    if (!row) continue;
+    const rest = row[2];
+    const grab = (re) => { const m = rest.match(re); return m && vars.has(m[1]) ? m[1] : null; };
+    const ts = {
+      role:   row[1].trim(),
+      family: grab(TS_PAT.family),
+      size:   grab(TS_PAT.size),
+      weight: grab(TS_PAT.weight),
+      lh:     grab(TS_PAT.lh),
+      track:  grab(TS_PAT.track),
+    };
+    // Keep a row only if it binds a real type axis (size, weight, or family).
+    if (ts.size || ts.weight || ts.family) styles.push(ts);
+  }
+  return styles;
+}
+const textStyles = parseTextStyles();
+const resolvedOf = (name) => (name && vars.has(name) ? resolveVal(vars.get(name)) : null);
+
+// ---- HTML rendering ---------------------------------------------------------
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const projName = (() => {
+  const m = existsSync(TOKENS_MD) ? readFileSync(TOKENS_MD, 'utf8').match(/^#\s+Design System\s*[—-]\s*(.+)$/m) : null;
+  return m ? m[1].trim() : 'Project';
+})();
+
+function swatch(t) {
+  const val = t.resolved;
+  return `<div class="gp-sw"><div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>${esc(val)}${t.raw !== val ? ' · ' + esc(t.raw) : ''}</span></div></div>`;
+}
+function gradientSwatch(t) {
+  const flatTag = flatGradients.includes(t.name)
+    ? `<span class="gp-dup">≈ reads as a flat fill — the stops are visually identical; widen the span or drop the gradient</span>` : '';
+  return `<div class="gp-sw gp-sw-grad"><div class="gp-chip" style="background:var(${t.name})"></div>` +
+    `<div class="gp-meta"><b>${esc(t.name)}</b><span>gradient · ${esc(t.resolved)}</span>${flatTag}</div></div>`;
+}
+
+const tier1 = `
+<section class="gp-tier" id="gp-tokens">
+  <p class="gp-tag">Tier 1</p><h2 class="gp-th">Tokens</h2>
+  <p class="gp-legend">The subatomic particles — every design token, rendered live from <code>tokens.css</code>. Everything above is built only from these.</p>
+
+  <h3 class="gp-sub">Color</h3>
+  ${renderColorSection()}
+
+  <h3 class="gp-sub">Contrast (WCAG, intended text/surface pairs)</h3>
+  ${renderContrast()}
+
+  <h3 class="gp-sub">Typography</h3>
+  ${renderTypography()}
+
+  <h3 class="gp-sub">Spacing</h3>
+  <div>${spaceTokens.map(renderSpace).join('')}</div>
+
+  <h3 class="gp-sub">Radius</h3>
+  <div class="gp-tiles">${radiusTokens.map((t) => `<div class="gp-tile" style="border-radius:var(${t.name})"><span>${esc(t.name)} · ${esc(t.resolved)}</span></div>`).join('')}</div>
+
+  <h3 class="gp-sub">Shadows</h3>
+  <div class="gp-tiles">${shadowTokens.map((t) => `<div class="gp-shadowtile" style="box-shadow:var(${t.name})"><span>${esc(t.name)}</span></div>`).join('')}</div>
+
+  <h3 class="gp-sub">Motion</h3>
+  <div class="gp-motion">${durTokens.map((t) => `<div class="gp-mo" style="transition-duration:var(${t.name})"><span>${esc(t.name)} · ${esc(t.resolved)}</span></div>`).join('')}</div>
+  ${easeTokens.length ? `<p class="gp-legend">Easings: ${easeTokens.map((e) => `<code>${esc(e.name)}</code>`).join(' · ')}</p>` : ''}
+
+  <h3 class="gp-sub">Grid &amp; breakpoints</h3>
+  <ul class="gp-grid">${gridTokens.map((t) => `<li><code>${esc(t.name)}</code> — ${esc(t.resolved)}</li>`).join('')}</ul>
+</section>`;
+
+// Typography section. Preferred path: render one specimen per REAL text style
+// (family + size + weight + line-height + tracking) parsed from tokens.md §2.2 —
+// only the combinations the design actually uses, never every weight × size.
+// Fallback (no Text styles table — e.g. tokens-only mode or a legacy tokens.md):
+// render the raw type axes independently, as before.
+function renderTypography() {
+  if (textStyles.length) {
+    return `<p class="gp-legend">The real text styles — each row is one combination of family, size, weight, line-height and tracking that the design actually uses. Rendered live from <code>tokens.css</code>; only used combinations appear, not every possible weight × size.</p>
+    <div class="gp-type">${textStyles.map(renderTextStyle).join('')}</div>`;
+  }
+  return `${fontTokens.length ? `<div class="gp-type-fam">${fontTokens.map(renderFamily).join('')}</div>` : ''}
+    <h4 class="gp-sub2">Type scale (size · line-height)</h4>
+    <div class="gp-type">${fsTokens.map(renderType).join('')}</div>
+    ${fwTokens.length ? `<h4 class="gp-sub2">Weights</h4>
+    <div class="gp-type">${fwTokens.map(renderWeight).join('')}</div>` : ''}
+    ${trackTokens.length ? `<h4 class="gp-sub2">Tracking (letter-spacing)</h4>
+    <div class="gp-type">${trackTokens.map(renderTrack).join('')}</div>` : ''}`;
+}
+// One live specimen for a real text style. The caption shows the resolved
+// combination (the actual size/weight/etc. in use) and the bound token names, so
+// the specimen doubles as documentation of which tokens compose the role.
+function renderTextStyle(ts) {
+  const decls = [];
+  if (ts.family) decls.push(`font-family:var(${ts.family})`);
+  if (ts.size)   decls.push(`font-size:var(${ts.size})`);
+  if (ts.weight) decls.push(`font-weight:var(${ts.weight})`);
+  if (ts.lh)     decls.push(`line-height:var(${ts.lh})`);
+  if (ts.track)  decls.push(`letter-spacing:var(${ts.track})`);
+  const meta = [];
+  const fam = resolvedOf(ts.family); if (fam) meta.push(esc(fam.split(',')[0].replace(/["']/g, '').trim()));
+  const sz = resolvedOf(ts.size);    if (sz) meta.push(esc(sz));
+  const wt = resolvedOf(ts.weight);  if (wt) meta.push(esc(wt));
+  const lh = resolvedOf(ts.lh);      if (lh) meta.push('lh ' + esc(lh));
+  const tk = resolvedOf(ts.track);   if (tk && !/^(normal|0)$/.test(tk.trim())) meta.push(esc(tk));
+  const tokens = [ts.family, ts.size, ts.weight, ts.lh, ts.track].filter(Boolean).map(esc).join(' · ');
+  return `<div class="gp-spec"><span class="gp-spec-label"><b>${esc(ts.role)}</b>${meta.length ? ' · ' + meta.join(' · ') : ''}</span>` +
+    `<div style="${decls.join(';')}">Ag — the quick brown fox</div>` +
+    (tokens ? `<span class="gp-ts-tok">${tokens}</span>` : '') + `</div>`;
+}
+function renderType(t) {
+  const lhName = t.name.replace(/^--fs/, '--lh').replace(/^--font-size/, '--line-height');
+  const lh = lhTokens.has(lhName) ? `line-height:var(${lhName});` : '';
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="font-size:var(${t.name});${lh}">Ag — the quick brown fox</div></div>`;
+}
+// Weight specimens — each weight token rendered live so you SEE the weight,
+// not just read its numeric value in a legend.
+function renderWeight(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="font-weight:var(${t.name});font-size:1.5rem">Ag — the quick brown fox</div></div>`;
+}
+// Tracking specimens — letter-spacing applied live at a readable size.
+function renderTrack(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="letter-spacing:var(${t.name});font-size:1.25rem">Ag — the quick brown fox</div></div>`;
+}
+// Family specimens — each font-family rendered live at display size.
+function renderFamily(t) {
+  return `<div class="gp-spec"><span class="gp-spec-label">${esc(t.name)} · ${esc(t.resolved)}</span>` +
+    `<div style="font-family:var(${t.name});font-size:2rem">Ag — the quick brown fox</div></div>`;
+}
+// Resolve a length token to a pixel number so the spacing bars have real,
+// distinguishable widths. Most projects express spacing in rem/em (e.g.
+// `0.25rem`…`6.25rem`); the old px-only check fell through to width:100% for
+// every one of them, so all bars rendered identical full-width translucent
+// blocks (the "weird spacing" bug). Handle px/rem/em/pt and clamp the drawn
+// width so an outsized step (e.g. --space-hero) doesn't overflow the row.
+function lengthToPx(val) {
+  const m = String(val).trim().match(/^(-?\d*\.?\d+)\s*(px|rem|em|pt)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  const unit = (m[2] || 'px').toLowerCase();
+  if (unit === 'rem' || unit === 'em') return n * 16;
+  if (unit === 'pt') return n * (96 / 72);
+  return n;
+}
+function renderSpace(t) {
+  const SPACE_BAR_MAX = 520; // px — drawn-width cap so big steps stay in the row
+  const px = lengthToPx(t.resolved);
+  const w = px != null
+    ? `width:${Math.max(1, Math.min(px, SPACE_BAR_MAX))}px`
+    : 'width:100%;opacity:.5';
+  const over = px != null && px > SPACE_BAR_MAX ? ' <span class="gp-bar-over">(clamped)</span>' : '';
+  return `<div class="gp-bar-row"><span>${esc(t.name)} · ${esc(t.resolved)}${over}</span><div class="gp-bar" style="${w}"></div></div>`;
+}
+function renderContrast() {
+  if (!textSet.length || !surfaceSet.length) return `<p class="gp-legend">No text/surface token roles detected to pair.</p>`;
+  const rows = contrastRows.filter((r) => r.intended).sort((a, b) => a.ratio - b.ratio);
+  const cls = (v) => v === 'AA' ? 'gp-pass' : v === 'AA-large-only' ? 'gp-warn' : v === 'FAIL' ? 'gp-fail' : 'gp-na';
+  const body = rows.map((r) => `<tr><td><code>${esc(r.text)}</code></td><td><code>${esc(r.surface)}</code></td>` +
+    `<td>${r.ratio}:1</td><td class="${cls(r.verdict)}">${r.verdict}</td></tr>`).join('');
+  const note = failures.length
+    ? `<p class="gp-legend gp-fail"><b>${failures.length} AA failure(s)</b> for normal-size text — fix before build (darken the text token or lighten the surface).</p>`
+    : `<p class="gp-legend gp-pass">All intended text/surface pairings meet WCAG AA for normal text.</p>`;
+  return `<table class="gp-ct"><thead><tr><th>Text</th><th>Surface</th><th>Ratio</th><th>WCAG</th></tr></thead><tbody>${body}</tbody></table>${note}`;
+}
+
+// `wide` (used for Modules / Tier 4): modules are full-section compositions —
+// rendering them in the same narrow auto-fill grid as primitives/components
+// squeezes a hero/footer/CTA-band into a ~280px cell where it cannot be judged.
+// Wide mode lays them out one-per-row at full container width with room to breathe.
+function tierShells(title, tier, items, kind, wide = false) {
+  if (!items.length) return `<section class="gp-tier"><p class="gp-tag">${tier}</p><h2 class="gp-th">${title}</h2><p class="gp-legend">No ${kind} documented in §3.</p></section>`;
+  const cellCls = wide ? 'gp-cell gp-cell-wide' : 'gp-cell';
+  // Wide (module) cells put the label on top so the full-width specimen reads as the body;
+  // narrow (primitive/component) cells keep the label beneath the specimen as before.
+  const cell = (it) => wide
+    ? `<div class="${cellCls}" data-component="${esc(it.name)}">\n` +
+      `      <span class="gp-cap gp-cap-top"><b>${esc(it.name)}</b>${it.note ? ' — ' + esc(it.note) : ''}</span>\n` +
+      `      <!-- gp:fill ${esc(it.name)} — render one neutral specimen built only from var(--…) tokens; replace this comment -->\n` +
+      `    </div>`
+    : `<div class="${cellCls}" data-component="${esc(it.name)}">\n` +
+      `      <!-- gp:fill ${esc(it.name)} — render one neutral specimen built only from var(--…) tokens; replace this comment -->\n` +
+      `      <span class="gp-cap"><b>${esc(it.name)}</b>${it.note ? ' — ' + esc(it.note) : ''}</span>\n` +
+      `    </div>`;
+  const cells = items.map(cell).join('\n    ');
+  const invCls = wide ? 'gp-inv gp-inv-wide' : 'gp-inv';
+  return `<section class="gp-tier"><p class="gp-tag">${tier}</p><h2 class="gp-th">${esc(title)}</h2>` +
+    `<p class="gp-legend">${items.length} ${kind}, each composed from the tier${tier === 'Tier 2' ? ' below (Tokens)' : ' below'}. Neutral specimens only — not the real site.${wide ? ' Each module spans the full width so its real proportions can be evaluated.' : ''}</p>` +
+    `<div class="${invCls}">\n    ${cells}\n  </div></section>`;
+}
+
+const tiers234 = withComponents ? [
+  tierShells('Primitives', 'Tier 2', inv.primitives, 'primitives'),
+  tierShells('Components', 'Tier 3', inv.components, 'components'),
+  tierShells('Modules', 'Tier 4', inv.modules, 'modules', true),
+].join('\n') : '';
+
+// A prominent pointer to the component gallery (the breadth/depth catalog),
+// since preview.html no longer inlines the component shells by default.
+const compCount = inv.primitives.length + inv.components.length + inv.modules.length;
+const componentsLink = withComponents ? '' : `
+  <div class="gp-complink">
+    <span><b>Components</b> — ${compCount ? compCount + ' documented ' : ''}Primitives · Components · Modules live in the component gallery, built from these tokens. This sheet stays tokens-only.</span>
+    <a href="${esc(COMPONENTS_HREF)}">Open component gallery →</a>
+  </div>`;
+
+const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(projName)} — Design System Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap">
+${projectFontLinks(cssText, { 'ibm plex mono': [400, 500], inter: [400, 500, 600, 700], montserrat: [600, 700, 800, 900] })}
+<link rel="stylesheet" href="tokens.css">
+<style>${readHouseCss()}</style>
+<style>
+  /* gen-preview.mjs — all classes namespaced gp- to avoid collisions.
+     Chrome (layout, labels, legends) uses the doc-hub light palette so every
+     project's preview looks consistent. Token specimens use var(--…) from the
+     project's own tokens.css (linked above). */
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#101214;background:#f7f3e8;line-height:1.6}
+  .gp-wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .gp-head{padding:48px 0 8px}
+  .gp-head h1{margin:0 0 8px;font-size:2rem;font-weight:700;color:#101214}
+  .gp-tier{padding:48px 0;border-top:1px solid rgba(16,18,20,.14)}
+  .gp-tag{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#363b42;margin:0 0 4px;font-weight:600}
+  .gp-th{font-size:1.6rem;margin:0 0 8px;color:#101214;font-weight:700}
+  .gp-sub{font-size:1rem;margin:32px 0 12px;text-transform:uppercase;letter-spacing:.08em;color:#363b42}
+  .gp-legend{font-size:.85rem;color:#363b42;max-width:110ch;line-height:1.55}
+  .gp-legend code{font-family:ui-monospace,Menlo,monospace;font-size:.85em;background:rgba(16,18,20,.07);padding:1px 5px;border-radius:3px}
+  .gp-bar-over{color:#363b42;font-style:italic}
+  .gp-complink{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:8px 0 0;padding:18px 22px;border:1px solid rgba(16,18,20,.16);border-radius:12px;background:rgba(16,18,20,.04)}
+  .gp-complink b{font-size:1rem;color:#101214}
+  .gp-complink a{display:inline-block;padding:9px 16px;border-radius:8px;background:#101214;color:#f7f3e8;text-decoration:none;font-size:.85rem;font-weight:600;white-space:nowrap}
+  .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+  .gp-sw{border:1px solid rgba(16,18,20,.14);border-radius:8px;overflow:hidden}
+  .gp-chip{display:block;height:72px;width:100%;position:relative}
+  .gp-chip-alpha{position:absolute;inset:0;display:block}
+  .gp-ctx{display:block;font-size:.7rem;color:#363b42;font-style:italic;margin-top:2px}
+  .gp-sw-grad{grid-column:1/-1}
+  .gp-meta{padding:8px 10px;font-size:.78rem;background:#fff}
+  .gp-meta b{display:block;color:#101214}
+  .gp-meta span{color:#363b42;word-break:break-all;display:block}
+  /* color palette hierarchy */
+  .gp-sub2{font-size:.88rem;margin:24px 0 6px;font-weight:700;color:#363b42}
+  .gp-sub3{font-size:.75rem;margin:16px 0 5px;text-transform:uppercase;letter-spacing:.07em;color:#363b42}
+  .gp-cnt{font-size:.72rem;font-weight:400;letter-spacing:0;color:rgba(16,18,20,.45);margin-left:6px}
+  .gp-alias{font-size:.72rem;color:#363b42;font-style:italic;margin-top:2px}
+  .gp-dup{display:block;font-size:.7rem;color:#b45309;margin-top:3px}
+  .gp-sw-sem{opacity:.95}
+  .gp-ct{border-collapse:collapse;font-size:.82rem;margin:8px 0}
+  .gp-ct th,.gp-ct td{border:1px solid rgba(16,18,20,.14);padding:6px 10px;text-align:left}
+  .gp-ct th{background:rgba(16,18,20,.04);font-weight:600;color:#101214}
+  .gp-pass{color:#1a7f37}.gp-warn{color:#9a6700}.gp-fail{color:#c01724}.gp-na{color:#363b42}
+  .gp-type{display:grid;gap:16px}
+  .gp-type-fam{display:grid;gap:16px;margin-bottom:8px}
+  .gp-spec-label{display:block;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#363b42;margin-bottom:4px}
+  .gp-bar-row{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+  .gp-bar-row span{font-size:.8rem;color:#363b42;min-width:200px}
+  .gp-bar{background:#101214;height:14px;border-radius:2px}
+  .gp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:16px}
+  .gp-tile,.gp-shadowtile{height:88px;display:flex;align-items:flex-end;justify-content:center;padding:8px;font-size:.75rem;color:#363b42}
+  .gp-tile{background:rgba(16,18,20,.06);border:1px solid rgba(16,18,20,.12)}
+  .gp-shadowtile{background:#fff;border-radius:12px}
+  .gp-motion{display:flex;gap:16px;flex-wrap:wrap}
+  .gp-mo{height:60px;flex:1;min-width:140px;background:rgba(16,18,20,.06);border-radius:8px;display:flex;align-items:flex-end;padding:8px;font-size:.75rem;color:#363b42;transition-property:transform;transition-timing-function:ease}
+  .gp-mo:hover{transform:translateY(-6px)}
+  .gp-grid{font-size:.85rem;color:#363b42}
+  .gp-inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  /* Modules (Tier 4): one per row, full container width, taller */
+  .gp-inv-wide{display:block}
+  .gp-cell{border:1px solid rgba(16,18,20,.14);border-radius:12px;padding:20px;background:#fff}
+  .gp-cell-wide{width:100%;margin-bottom:24px;padding:28px}
+  .gp-cap{display:block;margin-top:12px;font-size:.78rem;color:#363b42}
+  .gp-cap-top{margin-top:0;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(16,18,20,.12)}
+  .gp-cap b{color:#101214}
+</style>
+<style>
+  /* doc-hub light skin — the canonical design-system look. Clean light page,
+     blue project label with a tri-color (red/blue/yellow) gradient underline,
+     Montserrat display headings, gradient-pill tier tags, dark action buttons,
+     rounded panel tables. Overrides the base chrome above. */
+  :root{
+    --gp-page:var(--hs-surface);
+    --gp-panel:var(--hs-surface);
+    --gp-panel-soft:var(--hs-panel-soft);
+    --gp-ink:var(--hs-ink);
+    --gp-text:var(--hs-text);
+    --gp-muted:var(--hs-muted);
+    --gp-rule:var(--hs-rule);
+    --gp-rule-soft:rgba(122,130,168,.18);
+    --gp-red:var(--hs-accent-red);
+    --gp-blue:var(--hs-accent-blue);
+    --gp-yellow:var(--hs-accent-yellow);
+    --gp-action:var(--hs-ink);
+    --gp-action-hover:#0e1630;
+    --gp-warning:var(--hs-warning);
+    --gp-danger:var(--hs-accent-red);
+    --gp-font-heading:var(--hs-font-heading);
+    --gp-font-body:var(--hs-font-body);
+    --gp-font-mono:var(--hs-font-mono);
+  }
+
+  html{background:var(--gp-page)}
+  body{
+    min-width:320px;
+    margin:0;
+    color:var(--gp-text);
+    background:var(--gp-page);
+    font-family:var(--gp-font-body);
+    line-height:1.55;
+    text-rendering:optimizeLegibility;
+  }
+  a{color:inherit}
+  code{font-family:var(--gp-font-mono);font-size:.88em;background:none;border:0;padding:0;color:inherit;border-radius:0}
+
+  .gp-wrap{max-width:1120px;margin:0 auto;padding:64px 24px 96px}
+
+  .gp-head{
+    position:relative;
+    min-height:0;
+    padding:24px 0 52px;
+    border-bottom:1px solid var(--gp-rule);
+  }
+  .gp-project{
+    display:block;
+    margin:0 0 26px;
+    color:var(--gp-blue);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(1.45rem,3vw,2.15rem);
+    font-weight:800;
+    line-height:1.12;
+    text-wrap:balance;
+  }
+  .gp-project::after{
+    content:"";
+    display:block;
+    width:72px;
+    height:4px;
+    margin:22px 0 0;
+    background:linear-gradient(90deg,var(--gp-red) 0 33%,var(--gp-blue) 33% 66%,var(--gp-yellow) 66% 100%);
+  }
+  .gp-head h1{
+    max-width:760px;
+    margin:0 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(3rem,6.8vw,5.75rem);
+    font-weight:800;
+    line-height:.98;
+    letter-spacing:0;
+    text-transform:none;
+    text-wrap:balance;
+  }
+  .gp-head .gp-legend{
+    max-width:760px;
+    margin:0;
+    padding:0;
+    color:var(--gp-text);
+    background:transparent;
+    border:0;
+    box-shadow:none;
+    font-size:1.05rem;
+  }
+
+  .gp-complink{
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:center;
+    gap:20px;
+    margin:32px 0 8px;
+    padding:20px 22px;
+    border:1px solid var(--gp-rule);
+    border-left:4px solid var(--gp-blue);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+  }
+  .gp-complink span{color:var(--gp-text);font-size:.9rem}
+  .gp-complink b{
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:.9rem;
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-complink a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 14px;
+    border:1px solid var(--gp-action);
+    border-radius:8px;
+    background:var(--gp-action);
+    color:#fff;
+    font-size:.82rem;
+    font-weight:600;
+    text-decoration:none;
+    box-shadow:none;
+    transition:transform 160ms ease-out,background-color 160ms ease-out,border-color 160ms ease-out;
+  }
+  .gp-complink a:hover{background:var(--gp-action-hover);border-color:var(--gp-action-hover)}
+  .gp-complink a:active{transform:scale(.97);box-shadow:none}
+  .gp-complink a:focus-visible{outline:3px solid rgba(122,130,168,.35);outline-offset:3px}
+
+  .gp-tier{
+    margin:0;
+    padding:64px 0;
+    border-top:1px solid var(--gp-rule);
+    background:transparent;
+    color:var(--gp-text);
+  }
+
+  .gp-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 8px;
+    color:var(--gp-blue);
+    font-family:var(--gp-font-heading);
+    font-size:.82rem;
+    font-weight:700;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  .gp-tag::before{
+    content:"";
+    width:30px;
+    height:6px;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--gp-yellow) 0 33%,var(--gp-red) 33% 66%,var(--gp-blue) 66% 100%);
+  }
+  .gp-th{
+    margin:0 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:clamp(1.8rem,3.4vw,3rem);
+    font-weight:800;
+    line-height:1.05;
+    letter-spacing:0;
+    text-transform:none;
+    text-wrap:balance;
+  }
+  .gp-sub{
+    display:block;
+    margin:56px 0 18px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:1.05rem;
+    font-weight:800;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  .gp-sub2{
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+    margin:36px 0 12px;
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-size:.95rem;
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-sub2 .gp-cnt{color:var(--gp-red);font-weight:700}
+  .gp-sub3{color:var(--gp-muted);font-family:var(--gp-font-heading);letter-spacing:0;text-transform:none}
+  .gp-legend{
+    max-width:92ch;
+    margin-bottom:20px;
+    color:var(--gp-text);
+    font-size:.92rem;
+    line-height:1.6;
+    text-wrap:pretty;
+  }
+  .gp-legend code{
+    color:var(--gp-ink);
+    background:var(--gp-panel-soft);
+    border:1px solid var(--gp-rule-soft);
+    padding:2px 6px;
+    border-radius:4px;
+  }
+
+  .gp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  .gp-sw{
+    overflow:hidden;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+    transition:transform 160ms ease-out,border-color 160ms ease-out,box-shadow 160ms ease-out;
+  }
+  @media (hover:hover) and (pointer:fine){
+    .gp-sw:hover{transform:translateY(-2px);border-color:rgba(11,104,183,.42);box-shadow:0 10px 24px rgba(9,14,34,.06)}
+  }
+  .gp-chip{height:72px;border-bottom:1px solid var(--gp-rule)}
+  .gp-meta{min-height:118px;padding:12px 12px 14px;background:var(--gp-panel);font-size:.74rem}
+  .gp-meta b{margin-bottom:4px;color:var(--gp-ink);line-height:1.25;word-break:break-word}
+  .gp-meta span,.gp-cnt,.gp-alias,.gp-bar-over,.gp-na{color:var(--gp-muted)}
+  .gp-dup{margin-top:5px;color:var(--gp-warning);line-height:1.35}
+  .gp-ctx{color:var(--gp-muted);line-height:1.35}
+  .gp-sw-grad .gp-meta{min-height:0}
+  .gp-sw-grad .gp-chip{height:56px}
+
+  .gp-ct{
+    width:100%;
+    margin:18px 0 28px;
+    border-collapse:separate;
+    border-spacing:0;
+    overflow:hidden;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    box-shadow:none;
+    font-size:.82rem;
+  }
+  .gp-ct th,.gp-ct td{border:0;border-bottom:1px solid var(--gp-rule);padding:12px 14px;text-align:left;vertical-align:top}
+  .gp-ct th{
+    background:var(--gp-panel-soft);
+    color:var(--gp-ink);
+    font-family:var(--gp-font-heading);
+    font-weight:700;
+    text-transform:none;
+  }
+  .gp-ct tr:last-child td{border-bottom:0}
+  .gp-pass{color:#1a7f37;font-weight:700}
+  .gp-warn{color:var(--gp-warning);font-weight:700}
+  .gp-fail{color:var(--gp-danger);font-weight:700}
+
+  .gp-type{display:grid;gap:14px}
+  .gp-type-fam{display:grid;gap:14px;margin-bottom:8px}
+  .gp-spec{overflow:hidden;padding:20px;border:1px solid var(--gp-rule);border-radius:8px;background:var(--gp-panel)}
+  .gp-spec-label{display:block;margin-bottom:8px;color:var(--gp-muted);font-size:.7rem;font-weight:600;letter-spacing:0}
+  .gp-spec-label b{color:#101214;font-weight:700}
+  .gp-ts-tok{display:block;margin-top:10px;color:rgba(16,18,20,.42);font-size:.64rem;letter-spacing:0}
+
+  .gp-bar-row{display:grid;grid-template-columns:minmax(150px,210px) 1fr;align-items:center;gap:18px;margin-bottom:12px}
+  .gp-bar-row span{min-width:0;color:var(--gp-muted);font-size:.8rem}
+  .gp-bar{height:12px;min-width:4px;border-radius:0;background:var(--gp-ink);box-shadow:none}
+
+  .gp-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
+  .gp-tile,.gp-shadowtile{
+    min-height:104px;
+    height:auto;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:12px;
+    border:1px solid var(--gp-rule);
+    color:var(--gp-muted);
+    background:var(--gp-panel);
+    text-align:center;
+    font-size:.75rem;
+  }
+
+  .gp-motion{display:flex;gap:14px;flex-wrap:wrap}
+  .gp-mo{min-height:60px;border-radius:8px;color:var(--gp-muted);background:var(--gp-panel-soft);border:1px solid var(--gp-rule)}
+
+  .gp-grid{
+    margin:0;
+    padding:20px 20px 20px 38px;
+    border:1px solid var(--gp-rule);
+    border-radius:8px;
+    background:var(--gp-panel);
+    color:var(--gp-text);
+    box-shadow:none;
+    font-size:.86rem;
+  }
+  .gp-grid li+li{margin-top:6px}
+
+  .gp-inv-wide{display:block}
+  .gp-cell{border:1px solid var(--gp-rule);border-radius:8px;background:var(--gp-panel)}
+  .gp-cell-wide{width:100%;margin-bottom:24px;padding:28px}
+  .gp-cap,.gp-cap-top{color:var(--gp-muted)}
+  .gp-cap-top{border-bottom:1px solid var(--gp-rule)}
+  .gp-cap b{color:var(--gp-ink)}
+
+  @media (max-width:760px){
+    .gp-wrap{padding:36px 16px 72px}
+    .gp-head{padding:12px 0 40px}
+    .gp-project{font-size:1.42rem}
+    .gp-head h1{font-size:clamp(2.6rem,14vw,4.2rem)}
+    .gp-complink{grid-template-columns:1fr;margin:24px 0 0;padding:16px}
+    .gp-complink a{width:100%;white-space:normal;text-align:center}
+    .gp-tier{padding:48px 0}
+    .gp-ct{display:block;overflow-x:auto}
+    .gp-bar-row{grid-template-columns:1fr;gap:6px}
+    .gp-sub{margin:44px 0 16px}
+    .gp-sub2{margin:32px 0 12px}
+  }
+</style>
+</head>
+<body>
+<div class="gp-wrap">
+  <header class="gp-head">
+    <p class="gp-project">Project name: ${esc(projName)}</p>
+    <h1>Design System</h1>
+    <p class="gp-legend">Token specimen sheet (not the site) — every design token rendered live from <code>tokens.css</code>${withComponents ? ', followed by neutral Primitive/Component/Module specimens' : ''}. The full component catalog (breadth + variant × state depth) lives in the component gallery. Generated by <code>gen-preview.mjs</code>.</p>
+  </header>
+  ${componentsLink}
+  ${tier1}
+  ${tiers234}
+  <section class="gp-tier">
+    <p class="gp-legend">Component catalog → <code>${esc(COMPONENTS_HREF)}</code> (run /twt-component-define if absent). Templates &amp; Pages → /twt-layout-define and /twt-mockup-define.</p>
+  </section>
+</div>
+</body>
+</html>`;
+
+if (!checkOnly) writeFileSync(OUT, html);
+
+// ---- machine-readable summary to stdout (qa-scan style) ---------------------
+const summary = {
+  tool: 'gen-preview',
+  mode: checkOnly ? 'check' : 'write',
+  out: checkOnly ? null : OUT,
+  counts: {
+    colors: colorTokens.length, gradients: gradientTokens.length,
+    type_steps: fsTokens.length, font_families: fontTokens.length,
+    font_weights: fwTokens.length, tracking_steps: trackTokens.length,
+    text_styles: textStyles.length,
+    spacing: spaceTokens.length,
+    radius: radiusTokens.length, shadows: shadowTokens.length,
+    primitives: inv.primitives.length, components: inv.components.length, modules: inv.modules.length,
+    contrast_pairs: contrastRows.filter((r) => r.intended).length,
+    contrast_aa_failures: failures.length,
+    near_dup_pairs: nearDupPairs.length,
+    flat_gradients: flatGradients.length,
+  },
+  contrast_failures: failures,
+  // Every intended text/surface pair with its COMPUTED ratio + verdict — the
+  // written contrast audit (tokens.md §5) must copy these numbers verbatim,
+  // never hand-estimate a ratio.
+  contrast_pairs: contrastRows.filter((r) => r.intended),
+  // consolidation warnings (non-fatal): near-identical primitives across roles +
+  // gradients whose stops read as one flat fill. Validators surface these.
+  near_dup_pairs: nearDupPairs.map(([a, b]) => ({ a, b })),
+  flat_gradients: flatGradients,
+};
+console.log(`gen-preview${checkOnly ? ' (check)' : ': wrote preview.html'} — ${colorTokens.length} colors, ${inv.primitives.length}+${inv.components.length}+${inv.modules.length} components, ${failures.length} AA contrast failure(s), ${nearDupPairs.length} near-dup pair(s), ${flatGradients.length} flat gradient(s).`);
+console.log('```json');
+console.log(JSON.stringify(summary, null, 2));
+console.log('```');
+process.exit(0);

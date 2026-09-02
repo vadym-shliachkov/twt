@@ -1,0 +1,16 @@
+{
+  "name": "twt-figma-read",
+  "version": "1.0.0",
+  "description": "Read a Figma design accurately before implementing it, with measured and estimated values kept honest.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "figma",
+    "tokens"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "vendored": [
+    "hooks/lib/once.js",
+    "hooks/twt-debug-log.js",
+    "tools/check-decisions.mjs",
+    "tools/ds-block-preview.mjs",
+    "tools/fidelity/diff.mjs",
+    "tools/fidelity/measure.mjs",
+    "tools/fidelity/pixdiff.mjs",
+    "tools/fidelity/report.mjs",
+    "tools/fidelity/spec.mjs",
+    "tools/fidelity/tolerance.mjs",
+    "tools/lib/contrast.mjs",
+    "tools/lib/resolve-playwright.mjs"
+  ],
+  "hashes": {
+    "hooks/lib/once.js": "52e58eaf7db05c6ec798ed2cee7a668ef0454b09546fe3d1e468422acff33ec1",
+    "hooks/twt-debug-log.js": "02ebfd57680ad94e1f11e52eab82240b8013ef2b2189827e9d6812c5e028a550",
+    "tools/check-decisions.mjs": "63e83043f2cb828a47a97d080c4a5a2cf641d4099889a4289b12430f81cce194",
+    "tools/ds-block-preview.mjs": "cfcb6448f80d6e823f797d20a66b6b79ae076962203d94f626af4f98899affb2",
+    "tools/fidelity/diff.mjs": "b20ca0f1b0eac94804cd8ccf938ae1b0f2e0ab8b5dd51130e2a10ac9c20cc340",
+    "tools/fidelity/measure.mjs": "9511671229770888b4c8c996047d6c397a38410fb51587dc2ebe7c3efac187b7",
+    "tools/fidelity/pixdiff.mjs": "af8c952cef8ad2fa065d8f41087f4a41873c2e75c1c931b406d90ea4c67e9a2e",
+    "tools/fidelity/report.mjs": "d9b9d4346f060223617a1cc83c5e0bceb55dbe3d288ea44b7b37efb79dd88a73",
+    "tools/fidelity/spec.mjs": "35e173e16fc63ce0aa293d19534e31483cfce16b749a836faf98fd5b0e241fde",
+    "tools/fidelity/tolerance.mjs": "1486b814291fbb0637ef0d13e12bc5b32ffcbf8e3598d00adc0d473da11678e8",
+    "tools/lib/contrast.mjs": "1d44723e78ce3a546a578e41eed3d857641e8d0c1748bef972a73df1dea67e49",
+    "tools/lib/resolve-playwright.mjs": "8d15c2fbd68a457ba2270bc70ba52b46af3d2024d2a49c6f4fd88869d2cfb437"
+  }
+}

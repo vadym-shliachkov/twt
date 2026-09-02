@@ -1,0 +1,28 @@
+{
+  "vendored": [
+    ".twt-artifacts/self-test/brand-report-check/validation-report.md",
+    "hooks/lib/once.js",
+    "hooks/twt-debug-log.js",
+    "tools/analysis-to-xlsx.py",
+    "tools/check-brand-validation-report.mjs",
+    "tools/check-decisions.mjs",
+    "tools/check-validation-report.mjs",
+    "tools/score-rubric.mjs",
+    "tools/seed-permissions.js",
+    "tools/site-crawl.mjs",
+    "tools/split-blocks.mjs"
+  ],
+  "hashes": {
+    ".twt-artifacts/self-test/brand-report-check/validation-report.md": "7db6b9bd35da41d25217eb561089986e8ac4e2c59b33c07c8c85647d3d908e98",
+    "hooks/lib/once.js": "52e58eaf7db05c6ec798ed2cee7a668ef0454b09546fe3d1e468422acff33ec1",
+    "hooks/twt-debug-log.js": "02ebfd57680ad94e1f11e52eab82240b8013ef2b2189827e9d6812c5e028a550",
+    "tools/analysis-to-xlsx.py": "09f048dcd3cfe53a137ac0215242e515458ff7e5df6049c7bf63aab362f5aac7",
+    "tools/check-brand-validation-report.mjs": "a73d2a6d5785b09f641d2a3036326df31198f88b784dfde039e83668dc18f01e",
+    "tools/check-decisions.mjs": "63e83043f2cb828a47a97d080c4a5a2cf641d4099889a4289b12430f81cce194",
+    "tools/check-validation-report.mjs": "17ebab8e5d2730de92ff346e28579acfad30dee6217fb59f60457db11bc3fc89",
+    "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e",
+    "tools/seed-permissions.js": "d7025960fd4e40628296366ec826e11764163bce1edf85b0dfb56f3e46ad4fac",
+    "tools/site-crawl.mjs": "9668d497657ac121acc55d1d668505e69507a7d8bc081a0a4994cc977d9609b5",
+    "tools/split-blocks.mjs": "9d009574ff0d64eb55e6756fb2174f9af6ced5fe3a2e0fdc5d7448bb91037850"
+  }
+}

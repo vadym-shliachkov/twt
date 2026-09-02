@@ -1,0 +1,17 @@
+{
+  "name": "twt-seo",
+  "version": "1.0.0",
+  "description": "Per-page keywords, slugs, meta drafts, schema, and a redesign redirect map.",
+  "author": {
+    "name": "Vadym Shliachkov",
+    "email": "vadim@xivic.com"
+  },
+  "homepage": "https://github.com/vadym-shliachkov/twt",
+  "repository": "https://github.com/vadym-shliachkov/twt",
+  "license": "MIT",
+  "keywords": [
+    "seo",
+    "meta",
+    "redirects"
+  ]
+}
