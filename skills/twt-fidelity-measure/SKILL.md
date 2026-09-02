@@ -3,6 +3,9 @@ name: twt-fidelity-measure
 surface: internal
 user-invocable: false
 category: fidelity
+family: fidelity
+role: measure
+unit: twt-fidelity
 description: (v1.0.1) Measure a built page against the reference spec and report every delta
 version: 1.0.1
 accepts_arguments: true

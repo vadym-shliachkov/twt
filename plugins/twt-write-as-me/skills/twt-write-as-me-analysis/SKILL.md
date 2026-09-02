@@ -2,6 +2,9 @@
 name: twt-write-as-me-analysis
 surface: command
 category: voice
+family: voice
+role: tool
+unit: twt-write-as-me
 description: (v1.0.6) Extract a reproducible writing-fingerprint profile from the author's own text samples
 version: 1.0.6
 accepts_arguments: true

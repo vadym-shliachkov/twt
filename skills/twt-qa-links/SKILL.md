@@ -2,6 +2,9 @@
 name: twt-qa-links
 surface: command
 category: qa
+family: qa
+role: audit
+unit: twt-qa
 description: (v1.1.4) Audit built or served pages for link integrity and declared responsive tiers
 version: 1.1.4
 model: sonnet

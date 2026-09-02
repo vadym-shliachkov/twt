@@ -2,6 +2,9 @@
 name: twt-develop
 surface: command
 category: develop
+family: develop
+role: pipeline
+unit: twt-develop
 description: (v1.3.15) Phase 3 full path — promote the Phase-2 design into the chosen build target
 version: 1.3.15
 accepts_arguments: true

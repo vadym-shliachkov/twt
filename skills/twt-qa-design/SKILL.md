@@ -2,6 +2,9 @@
 name: twt-qa-design
 surface: command
 category: qa
+family: qa
+role: audit
+unit: twt-qa
 description: (v1.1.6) Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system)
 version: 1.1.6
 model: sonnet

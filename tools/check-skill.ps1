@@ -5,7 +5,7 @@
 param([Parameter(Mandatory)][string]$Path)
 $ErrorActionPreference = "Stop"
 
-$required = @('name','surface','category','description','version','accepts_arguments','inputs','dependencies','reads','writes')
+$required = @('name','surface','category','family','role','unit','description','version','accepts_arguments','inputs','dependencies','reads','writes')
 # Non-skill tools that are allowed to appear in dependencies.hard / dependencies.soft.
 $KnownExternalDeps = @('figma-mcp','WebFetch')
 
@@ -152,6 +152,37 @@ if ($surface -notin @('command','internal')) {
     Fail "BAD SURFACE in ${Path}: surface must be 'command' or 'internal' (got '$surface'); it decides whether the setup-gate and Bash-call-shape rules apply"
 }
 $isCommand = $surface -eq 'command'
+
+# Packaging fields. family groups an orchestrator with the sub-skills it
+# dispatches; unit names the plugin the skill ships in; role says what it is.
+# tools/build-units.mjs gates on all three, and a skill missing one is invisible
+# to those gates - which is the failure that ships a plugin with half a family.
+# Spec: docs/superpowers/specs/2026-09-02-twt-install-units-design.md
+$validRoles = @('orchestrator','pipeline','fetch','define','validate','measure','audit','tool')
+if ($fm -match '(?m)^role:\s*(\S+)\s*$') { $role = $Matches[1] } else { $role = '' }
+if ($role -notin $validRoles) {
+    Fail "BAD ROLE in ${Path}: role must be one of $($validRoles -join ', ') (got '$role')"
+}
+if ($fm -match '(?m)^family:\s*(\S+)\s*$') { $family = $Matches[1] } else { $family = '' }
+if ($family -notmatch '^[a-z0-9-]+$') {
+    Fail "BAD FAMILY in ${Path}: family must be a kebab-case token (got '$family')"
+}
+# define and validate are dispatch-only by definition: a user-facing define
+# would bypass the orchestrator that sequences it against its validator.
+if (($role -eq 'define' -or $role -eq 'validate') -and $surface -ne 'internal') {
+    Fail "BAD SURFACE in ${Path}: role '$role' requires surface: internal"
+}
+if ($role -eq 'orchestrator' -and $expectedName -ne "twt-$family") {
+    Fail "BAD NAME in ${Path}: role orchestrator requires the name twt-$family (got '$expectedName')"
+}
+$unitsPath = Join-Path $marketplaceRoot '.claude-plugin/units.json'
+if ($fm -match '(?m)^unit:\s*(\S+)\s*$') { $unit = $Matches[1] } else { $unit = '' }
+if (Test-Path $unitsPath) {
+    $unitNames = ((Get-Content -LiteralPath $unitsPath -Raw -Encoding UTF8 | ConvertFrom-Json).units).PSObject.Properties.Name
+    if ($unitNames -notcontains $unit) {
+        Fail "BAD UNIT in ${Path}: unit '$unit' is not registered in .claude-plugin/units.json"
+    }
+}
 $gateRequired = @('twt-site','twt-site-dev','twt-pre-design','twt-design','twt-develop','twt-qa')
 $blockExempt = @('twt-setup','twt-marketplace-docs','twt-status','twt-eval-smoke','twt-skill-test')
 $blockExemptPrefix = @('twt-content-fetch-','twt-export-')

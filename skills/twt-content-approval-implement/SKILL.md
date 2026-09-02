@@ -2,6 +2,9 @@
 name: twt-content-approval-implement
 surface: command
 category: content
+family: content-approval
+role: tool
+unit: twt-develop
 description: (v1.1.8) Apply ready approved XLSX content into the built site or development artifacts
 version: 1.1.8
 model: sonnet

@@ -2,6 +2,9 @@
 name: twt-write-as-me
 surface: command
 category: voice
+family: voice
+role: tool
+unit: twt-write-as-me
 description: (v1.0.7) Generate or rewrite text in the author's own voice using their writing-style profile
 version: 1.0.7
 accepts_arguments: true

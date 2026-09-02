@@ -2,6 +2,9 @@
 name: twt-content-optimize
 surface: command
 category: content
+family: content
+role: tool
+unit: twt-pre-design
 description: (v1.2.3) Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion
 version: 1.2.3
 accepts_arguments: true

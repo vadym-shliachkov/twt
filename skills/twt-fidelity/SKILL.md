@@ -2,6 +2,9 @@
 name: twt-fidelity
 surface: command
 category: fidelity
+family: fidelity
+role: orchestrator
+unit: twt-fidelity
 description: (v1.0.4) Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image
 version: 1.0.4
 accepts_arguments: true

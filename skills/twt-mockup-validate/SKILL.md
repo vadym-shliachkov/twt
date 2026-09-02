@@ -3,6 +3,9 @@ name: twt-mockup-validate
 surface: internal
 user-invocable: false
 category: mockup
+family: mockup
+role: validate
+unit: twt-design
 description: (v1.2.3) Read-only critique of page mockups (token links, real content, factual integrity, responsiveness, a11y)
 version: 1.2.3
 accepts_arguments: false

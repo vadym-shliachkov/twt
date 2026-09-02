@@ -2,6 +2,9 @@
 name: twt-pre-design
 surface: command
 category: pre-design
+family: pre-design
+role: pipeline
+unit: twt-pre-design
 description: (v1.3.2) Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md
 version: 1.3.2
 accepts_arguments: true

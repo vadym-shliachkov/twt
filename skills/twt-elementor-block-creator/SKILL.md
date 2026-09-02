@@ -2,6 +2,9 @@
 name: twt-elementor-block-creator
 surface: command
 category: elementor
+family: elementor
+role: tool
+unit: twt-develop
 description: (v1.2.4) Build an Elementor widget or full-page template following project conventions
 version: 1.2.4
 accepts_arguments: true

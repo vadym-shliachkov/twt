@@ -3,6 +3,9 @@ name: twt-component-define
 surface: internal
 user-invocable: false
 category: component
+family: design-system
+role: define
+unit: twt-design
 description: (v1.3.14) Define component specs (components.md) and render a token-driven gallery.html (Primitives/Components/Modules)
 version: 1.3.14
 accepts_arguments: true

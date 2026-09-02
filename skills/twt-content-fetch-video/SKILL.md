@@ -2,6 +2,9 @@
 name: twt-content-fetch-video
 surface: command
 category: content
+family: content-fetch
+role: fetch
+unit: twt-pre-design
 description: (v1.0.12) Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own
 version: 1.0.12
 model: sonnet

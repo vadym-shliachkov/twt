@@ -3,6 +3,9 @@ name: twt-wiki-define
 surface: internal
 user-invocable: false
 category: wiki
+family: wiki
+role: define
+unit: twt-wiki
 description: (v1.0.13) Drain the wiki inbox and curate it into cited decision, idea, entity, and fact pages
 version: 1.0.13
 accepts_arguments: true

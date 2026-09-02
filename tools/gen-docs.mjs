@@ -149,7 +149,7 @@ function parseFrontmatter(text) {
       if (["inputs", "reads", "writes"].includes(key)) { ctx = key; continue; }
       if (key === "dependencies") { ctx = null; continue; }
       ctx = null;
-      if (["name", "surface", "category", "description", "version"].includes(key)) fm[key] = val.trim();
+      if (["name", "surface", "category", "family", "role", "unit", "trigger", "description", "version"].includes(key)) fm[key] = val.trim();
       else if (key === "accepts_arguments") fm.accepts_arguments = val.trim() === "true";
       continue;
     }

@@ -2,6 +2,9 @@
 name: twt-content-fetch-site
 surface: command
 category: content
+family: content-fetch
+role: fetch
+unit: twt-pre-design
 description: (v1.2.3) Fetch a website's content via the bundled crawler and save as clean Markdown
 version: 1.2.3
 model: sonnet

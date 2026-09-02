@@ -2,6 +2,9 @@
 name: twt-qa
 surface: command
 category: qa
+family: qa
+role: orchestrator
+unit: twt-qa
 description: (v1.0.12) Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md
 version: 1.0.12
 accepts_arguments: true

@@ -2,6 +2,9 @@
 name: twt-content-fetch
 surface: command
 category: content
+family: content-fetch
+role: orchestrator
+unit: twt-pre-design
 description: (v1.1.11) Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill
 version: 1.1.11
 accepts_arguments: true

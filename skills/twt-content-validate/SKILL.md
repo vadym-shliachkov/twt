@@ -3,6 +3,9 @@ name: twt-content-validate
 surface: internal
 user-invocable: false
 category: content
+family: content
+role: validate
+unit: twt-pre-design
 description: (v1.1.2) Score text quality (clarity, brevity, UX writing) with evidence-backed reasoning per criterion
 version: 1.1.2
 accepts_arguments: true

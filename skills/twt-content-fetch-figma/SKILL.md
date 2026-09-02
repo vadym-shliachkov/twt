@@ -2,6 +2,9 @@
 name: twt-content-fetch-figma
 surface: command
 category: content
+family: content-fetch
+role: fetch
+unit: twt-pre-design
 description: (v1.0.2) Extract a Figma file's visible text content and save as clean Markdown
 version: 1.0.2
 model: sonnet

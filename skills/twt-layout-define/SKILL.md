@@ -3,6 +3,9 @@ name: twt-layout-define
 surface: internal
 user-invocable: false
 category: layout
+family: layout
+role: define
+unit: twt-design
 description: (v1.3.2) Define per-page layout specs (section order, component slots, content map, breakpoints)
 version: 1.3.2
 accepts_arguments: true

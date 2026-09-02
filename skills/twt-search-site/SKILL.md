@@ -2,6 +2,9 @@
 name: twt-search-site
 surface: command
 category: search
+family: search
+role: tool
+unit: twt-search-site
 description: (v1.1.3) Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match
 version: 1.1.3
 model: haiku

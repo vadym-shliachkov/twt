@@ -2,6 +2,9 @@
 name: twt-wiki
 surface: command
 category: wiki
+family: wiki
+role: orchestrator
+unit: twt-wiki
 description: (v1.0.8) Initialize, ingest into, and curate the project wiki — the project's durable memory
 version: 1.0.8
 accepts_arguments: true

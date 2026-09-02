@@ -2,6 +2,9 @@
 name: twt-elementor-theme-creator
 surface: command
 category: elementor
+family: elementor
+role: tool
+unit: twt-develop
 description: (v1.2.3) Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script
 version: 1.2.3
 model: sonnet

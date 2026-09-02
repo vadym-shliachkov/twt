@@ -3,6 +3,9 @@ name: twt-brand-validate
 surface: internal
 user-invocable: false
 category: brand
+family: brand
+role: validate
+unit: twt-pre-design
 description: (v1.2.3) Critique brand-brief.md and write a validation-report.md (read-only critic)
 version: 1.2.3
 accepts_arguments: false

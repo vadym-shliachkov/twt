@@ -2,6 +2,9 @@
 name: twt-figma-design-system
 surface: command
 category: figma-export
+family: figma-export
+role: tool
+unit: twt-design
 description: (v1.0.2) Push the design system into a Figma file as variables, styles, and variant components
 version: 1.0.2
 accepts_arguments: true

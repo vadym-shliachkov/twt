@@ -2,6 +2,9 @@
 name: twt-eval-smoke
 surface: command
 category: meta
+family: meta
+role: tool
+unit: twt-site
 description: (v1.0.4) Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only)
 version: 1.0.4
 accepts_arguments: true

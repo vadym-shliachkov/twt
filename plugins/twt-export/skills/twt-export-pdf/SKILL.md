@@ -2,6 +2,9 @@
 name: twt-export-pdf
 surface: command
 category: export
+family: export
+role: tool
+unit: twt-export
 description: (v1.1.6) Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling
 version: 1.1.6
 model: sonnet

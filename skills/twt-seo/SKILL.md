@@ -2,6 +2,9 @@
 name: twt-seo
 surface: command
 category: seo
+family: seo
+role: orchestrator
+unit: twt-seo
 description: (v1.0.2) Orchestrate the SEO define/validate skills in a single define→validate pass
 version: 1.0.2
 accepts_arguments: true

@@ -2,6 +2,9 @@
 name: twt-design-system-audit
 surface: command
 category: design-system
+family: design-system-audit
+role: audit
+unit: twt-design-system-audit
 description: (v1.6.4) Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics
 version: 1.6.4
 accepts_arguments: true

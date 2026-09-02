@@ -3,6 +3,9 @@ name: twt-inherit-define
 surface: internal
 user-invocable: false
 category: inherit
+family: inherit
+role: define
+unit: twt-develop
 description: (v1.0.3) Discover an existing project's architecture and derive build conventions from it
 version: 1.0.3
 accepts_arguments: true

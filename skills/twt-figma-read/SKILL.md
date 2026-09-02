@@ -3,6 +3,10 @@ name: twt-figma-read
 surface: internal
 user-invocable: false
 category: figma
+family: figma
+role: tool
+unit: twt-figma-read
+trigger: model
 description: (v1.0.0) Read a Figma design accurately before implementing it — metadata-first node-tree read with variable-backed tokens, measured vs estimated kept honest
 version: 1.0.0
 model: sonnet

@@ -2,6 +2,9 @@
 name: twt-text-analysis
 surface: command
 category: content
+family: content
+role: tool
+unit: twt-pre-design
 description: (v1.4.3) Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes
 version: 1.4.3
 accepts_arguments: true

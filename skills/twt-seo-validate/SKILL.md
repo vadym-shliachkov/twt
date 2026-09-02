@@ -3,6 +3,9 @@ name: twt-seo-validate
 surface: internal
 user-invocable: false
 category: seo
+family: seo
+role: validate
+unit: twt-seo
 description: (v1.0.1) Critique seo-map.md — coverage, slug/keyword integrity, meta limits, redirect completeness; write validation-report.md
 version: 1.0.1
 accepts_arguments: false

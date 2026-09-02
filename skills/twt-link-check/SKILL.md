@@ -2,6 +2,9 @@
 name: twt-link-check
 surface: command
 category: qa
+family: link-check
+role: audit
+unit: twt-link-check
 description: (v1.0.2) Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown
 version: 1.0.2
 model: sonnet

@@ -2,6 +2,9 @@
 name: twt-status
 surface: command
 category: status
+family: meta
+role: tool
+unit: twt-site
 description: (v1.1.1) Detect stale pipeline artifacts — flag any output older than the inputs it was derived from
 version: 1.1.1
 model: haiku

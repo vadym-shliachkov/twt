@@ -3,6 +3,9 @@ name: twt-positioning-define
 surface: internal
 user-invocable: false
 category: positioning
+family: positioning
+role: define
+unit: twt-pre-design
 description: (v1.0.3) Build or refine positioning.md — audience, value props, promotion priorities
 version: 1.0.3
 accepts_arguments: true

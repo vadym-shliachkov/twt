@@ -2,6 +2,9 @@
 name: twt-site
 surface: command
 category: site
+family: site
+role: pipeline
+unit: twt-site
 description: (v1.13.9) Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development)
 version: 1.13.9
 accepts_arguments: true

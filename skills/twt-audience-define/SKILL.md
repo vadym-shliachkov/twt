@@ -3,6 +3,9 @@ name: twt-audience-define
 surface: internal
 user-invocable: false
 category: audience
+family: audience
+role: define
+unit: twt-pre-design
 description: (v1.0.2) Build or refine personas.md — personas seeded from positioning segments, with journey stages and conversion actions
 version: 1.0.2
 accepts_arguments: true

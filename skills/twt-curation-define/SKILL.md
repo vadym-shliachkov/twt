@@ -3,6 +3,9 @@ name: twt-curation-define
 surface: internal
 user-invocable: false
 category: curation
+family: curation
+role: define
+unit: twt-pre-design
 description: (v1.2.3) Decide keep/skip/elevate per content item; reconcile reusable facts into facts.md; produce inventory.md and per-page outlines
 version: 1.2.3
 accepts_arguments: true

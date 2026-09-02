@@ -2,6 +2,9 @@
 name: twt-export-presentation
 surface: command
 category: export
+family: export
+role: tool
+unit: twt-export
 description: (v1.2.2) Convert Markdown to PPTX or PDF slides via the presentation export script
 version: 1.2.2
 model: sonnet

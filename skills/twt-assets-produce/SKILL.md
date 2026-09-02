@@ -2,6 +2,9 @@
 name: twt-assets-produce
 surface: command
 category: assets
+family: assets
+role: tool
+unit: twt-design
 description: (v1.0.4) Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs
 version: 1.0.4
 model: sonnet

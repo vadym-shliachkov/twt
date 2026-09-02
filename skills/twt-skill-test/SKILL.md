@@ -2,6 +2,9 @@
 name: twt-skill-test
 surface: command
 category: meta
+family: meta
+role: tool
+unit: twt-site
 description: (v1.0.4) Agentic skill harness — derive frozen criteria, run a skill from the working tree, grade blind, optionally fix, re-run bounded (marketplace-dev only)
 version: 1.0.4
 accepts_arguments: true

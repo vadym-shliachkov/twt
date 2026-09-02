@@ -2,6 +2,9 @@
 name: twt-brand
 surface: command
 category: brand
+family: brand
+role: orchestrator
+unit: twt-pre-design
 description: (v1.2.3) Orchestrate the brand fetch/define/validate skills in a single define→validate pass
 version: 1.2.3
 accepts_arguments: true

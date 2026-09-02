@@ -2,6 +2,9 @@
 name: twt-html-block-creator
 surface: command
 category: html
+family: html
+role: tool
+unit: twt-develop
 description: (v1.1.3) Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS
 version: 1.1.3
 accepts_arguments: true

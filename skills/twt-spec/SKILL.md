@@ -2,6 +2,9 @@
 name: twt-spec
 surface: command
 category: spec
+family: spec
+role: orchestrator
+unit: twt-pre-design
 description: (v1.1.5) Orchestrate the spec define/validate skills in a single define→validate pass
 version: 1.1.5
 accepts_arguments: true

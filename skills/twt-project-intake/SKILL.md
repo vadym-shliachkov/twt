@@ -2,6 +2,9 @@
 name: twt-project-intake
 surface: command
 category: intake
+family: intake
+role: tool
+unit: twt-pre-design
 description: (v1.0.3) Normalize messy project notes into a clean site-instruction.md for /twt-site
 version: 1.0.3
 accepts_arguments: true

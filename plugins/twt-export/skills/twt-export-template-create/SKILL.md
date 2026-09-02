@@ -2,6 +2,9 @@
 name: twt-export-template-create
 surface: command
 category: export
+family: export
+role: tool
+unit: twt-export
 description: (v2.0.2) Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions
 version: 2.0.2
 accepts_arguments: true

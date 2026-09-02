@@ -3,6 +3,9 @@ name: twt-ia-define
 surface: internal
 user-invocable: false
 category: ia
+family: ia
+role: define
+unit: twt-pre-design
 description: (v1.1.1) Build or refine sitemap.md and functional-scope.md
 version: 1.1.1
 accepts_arguments: true

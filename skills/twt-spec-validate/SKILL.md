@@ -3,6 +3,9 @@ name: twt-spec-validate
 surface: internal
 user-invocable: false
 category: spec
+family: spec
+role: validate
+unit: twt-pre-design
 description: (v1.0.3) Critique specification.md and write a validation-report.md (read-only critic)
 version: 1.0.3
 accepts_arguments: false

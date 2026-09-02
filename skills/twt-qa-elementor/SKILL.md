@@ -2,6 +2,9 @@
 name: twt-qa-elementor
 surface: command
 category: qa
+family: qa
+role: audit
+unit: twt-qa
 description: (v1.1.4) Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint)
 version: 1.1.4
 model: sonnet

@@ -1,12 +1,20 @@
 <!-- Copy this file to skills/twt-<name>/SKILL.md when creating a new skill.
      Every skill is a directory, whatever its role - set `surface:` below to say
-     whether it is a user-facing entry point or dispatch-only. -->
+     whether it is a user-facing entry point or dispatch-only.
+
+     `family:`, `role:` and `unit:` decide PACKAGING. A family (an orchestrator
+     plus the sub-skills it dispatches) always ships whole, and `unit:` names the
+     plugin it ships in - see CONVENTIONS 19. Run /twt-marketplace-docs after,
+     then `node tools/build-units.mjs` to regenerate the plugin tree. -->
 <!-- Replace every <placeholder>, then delete this comment block. -->
 
 ---
 name: twt-<category>-<name>
 surface: <command|internal>   # command = user-facing entry point; internal = dispatch-only (*-define, *-validate, *-fetch)
 category: <category>
+family: <family>              # the orchestrator + sub-skill group it belongs to; usually the category
+role: <orchestrator|pipeline|fetch|define|validate|measure|audit|tool>
+unit: <twt-...>               # the plugin this ships in; must exist in .claude-plugin/units.json
 description: <one-line description, under ~100 chars>
 version: 1.0.0
 accepts_arguments: <true|false>

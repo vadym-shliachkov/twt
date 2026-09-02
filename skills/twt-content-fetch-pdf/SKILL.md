@@ -2,6 +2,9 @@
 name: twt-content-fetch-pdf
 surface: command
 category: content
+family: content-fetch
+role: fetch
+unit: twt-pre-design
 description: (v1.0.1) Extract a PDF's text content and save as clean Markdown
 version: 1.0.1
 model: sonnet

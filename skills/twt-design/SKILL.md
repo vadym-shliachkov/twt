@@ -2,6 +2,9 @@
 name: twt-design
 surface: command
 category: design
+family: design
+role: pipeline
+unit: twt-design
 description: (v1.3.9) Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md
 version: 1.3.9
 accepts_arguments: true

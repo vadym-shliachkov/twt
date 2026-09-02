@@ -2,6 +2,9 @@
 name: twt-wiki-query
 surface: command
 category: wiki
+family: wiki
+role: tool
+unit: twt-wiki
 description: (v1.0.7) Ask the project a question and get an answer cited to the wiki and its sources
 version: 1.0.7
 model: sonnet

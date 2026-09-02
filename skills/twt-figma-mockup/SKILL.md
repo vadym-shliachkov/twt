@@ -2,6 +2,9 @@
 name: twt-figma-mockup
 surface: command
 category: figma-export
+family: figma-export
+role: tool
+unit: twt-design
 description: (v1.0.2) Assemble the HTML page mockups in Figma as frames built from the pushed design-system library
 version: 1.0.2
 accepts_arguments: true

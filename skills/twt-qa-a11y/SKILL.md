@@ -2,6 +2,9 @@
 name: twt-qa-a11y
 surface: command
 category: qa
+family: qa
+role: audit
+unit: twt-qa
 description: (v1.1.5) Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast)
 version: 1.1.5
 model: sonnet

@@ -3,6 +3,9 @@ name: twt-spec-define
 surface: internal
 user-invocable: false
 category: spec
+family: spec
+role: define
+unit: twt-pre-design
 description: (v1.1.4) Interview the user (brainstorming-style) into a north-star specification.md
 version: 1.1.4
 accepts_arguments: true

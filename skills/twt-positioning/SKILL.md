@@ -2,6 +2,9 @@
 name: twt-positioning
 surface: command
 category: positioning
+family: positioning
+role: orchestrator
+unit: twt-pre-design
 description: (v1.1.5) Orchestrate positioning define/validate in a single define→validate pass
 version: 1.1.5
 accepts_arguments: true

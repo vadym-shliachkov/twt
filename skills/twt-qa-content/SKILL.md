@@ -2,6 +2,9 @@
 name: twt-qa-content
 surface: command
 category: qa
+family: qa
+role: audit
+unit: twt-qa
 description: (v1.2.4) Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem)
 version: 1.2.4
 model: sonnet

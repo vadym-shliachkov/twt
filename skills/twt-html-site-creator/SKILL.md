@@ -2,6 +2,9 @@
 name: twt-html-site-creator
 surface: command
 category: html
+family: html
+role: tool
+unit: twt-develop
 description: (v1.2.3) Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md)
 version: 1.2.3
 model: sonnet

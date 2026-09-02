@@ -3,6 +3,9 @@ name: twt-positioning-validate
 surface: internal
 user-invocable: false
 category: positioning
+family: positioning
+role: validate
+unit: twt-pre-design
 description: (v1.0.2) Critique positioning.md against brand and content signal; write validation-report.md
 version: 1.0.2
 accepts_arguments: false

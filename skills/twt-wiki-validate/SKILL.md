@@ -3,6 +3,9 @@ name: twt-wiki-validate
 surface: internal
 user-invocable: false
 category: wiki
+family: wiki
+role: validate
+unit: twt-wiki
 description: (v1.0.5) Lint the project wiki's health — structure, links, provenance, freshness — and write a validation-report.md (read-only critic)
 version: 1.0.5
 accepts_arguments: false

@@ -3,6 +3,9 @@ name: twt-component-validate
 surface: internal
 user-invocable: false
 category: component
+family: design-system
+role: validate
+unit: twt-design
 description: (v1.0.6) Read-only critique of components.md and gallery.html into validation-report.md
 version: 1.0.6
 accepts_arguments: false

@@ -3,6 +3,9 @@ name: twt-ia-validate
 surface: internal
 user-invocable: false
 category: ia
+family: ia
+role: validate
+unit: twt-pre-design
 description: (v1.0.2) Critique sitemap.md + functional-scope.md against positioning and content; write report
 version: 1.0.2
 accepts_arguments: false

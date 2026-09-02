@@ -2,6 +2,9 @@
 name: twt-marketplace-docs
 surface: command
 category: meta
+family: meta
+role: tool
+unit: twt-site
 description: (v1.0.5) Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter
 version: 1.0.5
 model: haiku

@@ -2,6 +2,9 @@
 name: twt-design-system
 surface: command
 category: design-system
+family: design-system
+role: orchestrator
+unit: twt-design
 description: (v1.3.3) Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules)
 version: 1.3.3
 accepts_arguments: true

@@ -3,6 +3,9 @@ name: twt-layout-validate
 surface: internal
 user-invocable: false
 category: layout
+family: layout
+role: validate
+unit: twt-design
 description: (v1.0.2) Read-only critique of per-page layout specs into validation-report.md
 version: 1.0.2
 accepts_arguments: false

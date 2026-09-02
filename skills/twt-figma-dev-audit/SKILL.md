@@ -2,6 +2,9 @@
 name: twt-figma-dev-audit
 surface: command
 category: qa
+family: figma-dev-audit
+role: audit
+unit: twt-figma-dev-audit
 description: (v1.0.8) Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build
 version: 1.0.8
 accepts_arguments: true

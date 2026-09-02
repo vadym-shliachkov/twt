@@ -2,6 +2,9 @@
 name: twt-block-map
 surface: command
 category: design-system
+family: block-map
+role: audit
+unit: twt-block-map
 description: (v1.0.3) Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix
 version: 1.0.3
 accepts_arguments: true

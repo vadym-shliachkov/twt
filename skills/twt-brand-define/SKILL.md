@@ -3,6 +3,9 @@ name: twt-brand-define
 surface: internal
 user-invocable: false
 category: brand
+family: brand
+role: define
+unit: twt-pre-design
 description: (v1.1.6) Build or refine the canonical brand-brief.md through guided dialogue
 version: 1.1.6
 accepts_arguments: true

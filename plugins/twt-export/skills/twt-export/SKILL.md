@@ -2,6 +2,9 @@
 name: twt-export
 surface: command
 category: export
+family: export
+role: orchestrator
+unit: twt-export
 description: (v1.1.3) Orchestrate PDF, DOCX, PPTX, and theme-based exports
 version: 1.1.3
 accepts_arguments: true

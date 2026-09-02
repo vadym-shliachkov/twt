@@ -3,6 +3,9 @@ name: twt-seo-define
 surface: internal
 user-invocable: false
 category: seo
+family: seo
+role: define
+unit: twt-seo
 description: (v1.0.2) Build or refine seo-map.md — per-page keywords, slugs, meta drafts, schema — plus a redirect map on redesigns
 version: 1.0.2
 accepts_arguments: true

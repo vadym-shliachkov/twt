@@ -3,6 +3,9 @@ name: twt-brand-fetch
 surface: internal
 user-invocable: false
 category: brand
+family: brand
+role: fetch
+unit: twt-pre-design
 description: (v1.1.5) Extract brand attributes and provided logo assets from a brand book, Figma, or screenshots into raw notes
 version: 1.1.5
 accepts_arguments: true
