@@ -32,11 +32,11 @@ jobs:
       - name: Derived docs are current (gen-docs --check)
         run: node tools/gen-docs.mjs --check
 
-      # Vendored kernel copies must match their canonical source byte-for-byte.
-      # Without this, editing the copy instead of the source diverges silently
-      # and only shows up as a runtime failure in an installed plugin.
-      - name: Vendored kernel is in sync (sync-kernel --check)
-        run: node tools/sync-kernel.mjs --check
+      # plugins/<unit>/ is committed build output. Without this, editing a
+      # generated copy instead of its source in the authored tree diverges
+      # silently and only shows up as a runtime failure in an installed plugin.
+      - name: Generated unit plugins are current (build-units --check)
+        run: node tools/build-units.mjs --check
 
       - name: Skill lint (check-skill.ps1 over every skill)
         shell: pwsh
