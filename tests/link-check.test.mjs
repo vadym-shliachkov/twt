@@ -323,3 +323,54 @@ test('pool never runs more than `limit` tasks at once', async () => {
   });
   assert.ok(peak <= 4, `peak concurrency was ${peak}`);
 });
+
+// ---- scheme-variant cross-referencing ----------------------------------------
+
+const { schemeBlindKey } = await import(new URL('../skills/twt-link-check/tools/link-check.mjs', import.meta.url));
+
+test('schemeBlindKey folds http/https but keeps host, path and query apart', () => {
+  assert.equal(schemeBlindKey('https://a.test/b'), schemeBlindKey('http://a.test/b'));
+  assert.notEqual(schemeBlindKey('https://a.test/b'), schemeBlindKey('https://a.test/c'));
+  assert.notEqual(schemeBlindKey('https://a.test/b'), schemeBlindKey('https://z.test/b'));
+  assert.notEqual(schemeBlindKey('https://a.test/b?x=1'), schemeBlindKey('https://a.test/b?x=2'));
+  assert.equal(schemeBlindKey('mailto:x@a.test'), null);
+  assert.equal(schemeBlindKey('not a url'), null);
+});
+
+test('buildFindings cross-references http/https variants of one resource without merging them', () => {
+  const mk = (url, status) => ({
+    type: 'http', kind: 'link', scope: 'external', key: url, display: url, url,
+    sources: [{ page: 'https://s.test/', line: 1, element: 'a', attr: 'href', raw: url }],
+    probe: { status, method: 'HEAD', chain: [] },
+  });
+  const findings = buildFindings({
+    targets: [mk('https://bot.test/', 403), mk('http://bot.test/', 403), mk('https://solo.test/', 404)],
+  });
+
+  // Not merged: still one finding per probed target, which is what the report's
+  // severity/status arithmetic reconciles against.
+  assert.equal(findings.length, 3);
+
+  const https = findings.find((f) => f.display === 'https://bot.test/');
+  const http = findings.find((f) => f.display === 'http://bot.test/');
+  const solo = findings.find((f) => f.display === 'https://solo.test/');
+
+  assert.deepEqual(https.schemeSiblings, ['http://bot.test/']);
+  assert.deepEqual(http.schemeSiblings, ['https://bot.test/']);
+  assert.equal(solo.schemeSiblings, undefined, 'a target with no scheme twin gets no cross-reference');
+});
+
+test('renderReport surfaces the scheme cross-reference in the rendered finding', () => {
+  const mk = (url) => ({
+    type: 'http', kind: 'link', scope: 'external', key: url, display: url, url,
+    sources: [{ page: 'https://s.test/', line: 1, element: 'a', attr: 'href', raw: url }],
+    probe: { status: 404, method: 'HEAD', chain: [] },
+  });
+  const result = {
+    mode: 'site', target: 'https://s.test/', pages: ['https://s.test/'], unreachablePages: [],
+    targets: [mk('https://twin.test/'), mk('http://twin.test/')],
+  };
+  const md = renderReport(result, buildFindings(result), { checkedAt: '2026-09-02' });
+  assert.match(md, /Same resource, other scheme: http:\/\/twin\.test\//);
+  assert.match(md, /Same resource, other scheme: https:\/\/twin\.test\//);
+});

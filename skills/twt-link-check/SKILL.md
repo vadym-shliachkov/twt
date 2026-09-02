@@ -67,6 +67,12 @@ A bare domain (`example.com`) is fine — the tool normalizes it to `https://`.
 - **Whole site** *(recommended)* — crawl internal pages, then check every link across all of them
 - **You decide** — pick `site` with a 50-page cap, and say that is what you did
 
+If `AskUserQuestion` is not available in your context — you were dispatched as a
+subagent, or the harness running you has no way to reach the user — do not stall
+and do not invent a text menu. Take the **You decide** branch (`site`, `--max 50`)
+and say plainly in your report that the scope was defaulted because the question
+could not be asked.
+
 Tell the user, informationally, which mode and target you settled on and where the report will land.
 
 ## Step 2 — Run the checker

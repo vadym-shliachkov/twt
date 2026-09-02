@@ -254,6 +254,20 @@ export function canonical(url) {
   } catch { return url; }
 }
 
+/**
+ * Scheme-blind identity: http://a/b and https://a/b share one key. Used only to
+ * cross-reference the two in the report - never to collapse them into one probe,
+ * because the schemes genuinely can answer differently and that difference is
+ * itself a finding (mixed content, http-only outages).
+ */
+export function schemeBlindKey(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return `${u.host}${u.pathname}${u.search}`;
+  } catch { return null; }
+}
+
 const hostOf = (url) => { try { return new URL(url).hostname; } catch { return ''; } };
 const isHtmlPath = (url) => { try { return !ASSET_EXT.test(new URL(url).pathname); } catch { return false; } };
 
@@ -705,6 +719,24 @@ export function buildFindings(result) {
     SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
     (b.sources.length - a.sources.length) ||
     String(a.display).localeCompare(String(b.display)));
+
+  // A page that links the same resource as both http:// and https:// produces two
+  // probes on purpose - the schemes can answer differently, and that difference is
+  // a real finding. But reporting them as two unrelated entries reads as two
+  // separate problems. Cross-reference them instead of merging: the reader sees
+  // they are one resource, and the 1:1 target-to-finding count the report's
+  // arithmetic rests on stays intact.
+  const byScheme = new Map();
+  for (const f of findings) {
+    const k = f.type === 'http' && f.url ? schemeBlindKey(f.url) : null;
+    if (!k) continue;
+    if (!byScheme.has(k)) byScheme.set(k, []);
+    byScheme.get(k).push(f);
+  }
+  for (const group of byScheme.values()) {
+    if (group.length < 2) continue;
+    for (const f of group) f.schemeSiblings = group.filter((g) => g !== f).map((g) => g.display);
+  }
   return findings;
 }
 
@@ -726,6 +758,9 @@ function renderFinding(f, n) {
   parts.push(`- Kind: ${meta.join(' · ')}`);
   if (f.probe?.chain?.length) {
     parts.push(`- Redirects: ${f.probe.chain.map((h) => `${h.status} → ${h.to}`).join(' → ')}`);
+  }
+  if (f.schemeSiblings?.length) {
+    parts.push(`- Same resource, other scheme: ${f.schemeSiblings.join(', ')} — checked separately, since http:// and https:// can answer differently.`);
   }
   parts.push(`- Referenced from ${f.sources.length} place(s):`);
   parts.push(renderSources(f));
