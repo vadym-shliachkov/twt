@@ -1,0 +1,86 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python bytecode from the bundled workers
+__pycache__/
+*.pyc
+
+# Logs & temp
+*.log
+*.tmp
+*.bak
+.playwright-mcp/
+
+# Generated artifacts (written into target projects, not this repo)
+.twt-artifacts/
+/dist-codex/
+/doc-hub-xivic/
+# /twt-skill-test run output — reproducible per run; tracking it would dirty
+# the tree after every run and block the NEXT --fix run's git guard.
+tests/skill-test-runs/
+/doc-landing/
+# Redundant with .twt-artifacts/ above, but explicit: a test run against the
+# launch-audit fixtures must never leave generated output tracked, even if
+# the global rule above is ever narrowed.
+tests/fixtures/*/.twt-artifacts/
+
+# Local Claude Code settings & docs
+.claude/settings.local.json
+/docs/
+
+# Subagent-driven-development scratch (ledger, task reports, review packages)
+.superpowers/
+
+# Agent instructions for THIS repo, kept local. Anchored with a leading slash:
+# unanchored, `AGENTS.md` matches at any depth, and it silently dropped
+# plugins/twt-wiki/templates/wiki/AGENTS.md - a file the wiki unit ships - out
+# of every commit, so a fresh clone failed `build-units --check` on it.
+# templates/wiki/AGENTS.md is plugin CONTENT (copied verbatim into every
+# scaffolded .project-wiki/) and is tracked, along with its vendored copies.
+/AGENTS.md
+/CLAUDE.md
+
+# Local environment / secrets
+.env
+.env.local
+# ...except the launch-audit dirty fixture's intentionally-committed decoy —
+# a fake, clearly-labeled placeholder value the HYG001 rule is supposed to
+# trip on, not a real secret. Without this negation the global .env rule
+# above silently drops it from every commit, and the fixture stops proving
+# what it claims to prove.
+!tests/fixtures/launch-dirty/.env
+
+# Node dependencies are installed, never committed.
+node_modules/
+# package.json and package-lock.json ARE committed: package.json declares the
+# marketplace's own playwright dependency, which tools/lib/resolve-playwright.mjs
+# tries before the project and global installs, and it carries the `npm test`
+# script. Without them a fresh clone can never install what the screenshot,
+# fidelity and design-system-audit skills need.
+# ...except the inherit-scan target fixtures (tests/fixtures/inherit-*),
+# which model host codebases the scanner reads facts from — without a real
+# package.json committed, scanProject would have nothing to read and the
+# dependency/script/packageManager assertions in tests/inherit-scan.test.mjs
+# would be exercising an empty object on every fresh clone or CI checkout.
+!tests/fixtures/inherit-next-tailwind/package.json
+!tests/fixtures/inherit-vite-modules/package.json
+!tests/fixtures/inherit-monorepo/package.json
+!tests/fixtures/inherit-monorepo/apps/web/package.json
+!tests/fixtures/inherit-monorepo/apps/admin/package.json
+!tests/fixtures/inherit-scss-aliases/package.json
+# ...and the inherit-scan fixture's throwaway node_modules file, which
+# proves the scanner's directory walk actually skips node_modules rather
+# than vacuously passing a "no leaked files" assertion because the file
+# was never there to leak in the first place (see the "walk skips
+# node_modules, dist, and dot-directories" test).
+!tests/fixtures/inherit-next-tailwind/node_modules/
+!tests/fixtures/inherit-next-tailwind/node_modules/junk-pkg/
+!tests/fixtures/inherit-next-tailwind/node_modules/junk-pkg/index.js

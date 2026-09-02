@@ -259,3 +259,40 @@ test('a failing gate writes nothing at all, not even a partial unit', () => {
   buildUnits(root);
   assert.ok(!existsSync(join(root, 'plugins')), 'no plugins directory is created on failure');
 });
+
+// ---- line endings -----------------------------------------------------------
+
+test('--check tolerates CRLF in a SYNTHESIZED file, but still catches a real edit', () => {
+  // The fresh-clone failure. Copied files are fine: git converts source and
+  // vendored copy identically, so they still match each other. But plugin.json,
+  // .vendored.json, VENDORED.md and marketplace.json are BUILT from an in-memory
+  // string with LF, and git hands them back as CRLF on checkout - so every unit
+  // reported three drifted files on a clean clone and CI failed on 50 of them.
+  const root = sandbox();
+  buildUnits(root);
+  const note = join(root, 'plugins/twt-alpha/VENDORED.md');
+  const manifest = join(root, 'plugins/twt-alpha/.claude-plugin/plugin.json');
+  const mkt = join(root, '.claude-plugin/marketplace.json');
+  for (const f of [note, manifest, mkt]) {
+    writeFileSync(f, readFileSync(f, 'utf8').replace(/\n/g, '\r\n'));
+  }
+  assert.deepEqual(buildUnits(root, { check: true }).drift, [],
+    'a checkout line-ending difference is not drift');
+
+  // The tolerance must not swallow a genuine change.
+  writeFileSync(note, readFileSync(note, 'utf8').replace('Generated', 'Handwritten'));
+  const after = buildUnits(root, { check: true });
+  assert.ok(after.drift.some((d) => d.includes('VENDORED.md')), `got ${JSON.stringify(after.drift)}`);
+});
+
+test('--check still catches a CRLF-only edit to a COPIED file', () => {
+  // Copied files are compared byte-for-byte on purpose: source and copy get the
+  // same treatment from git, so a line-ending difference between them is real
+  // drift, not a checkout artifact.
+  const root = sandbox();
+  buildUnits(root);
+  const copied = join(root, 'plugins/twt-alpha/tools/shared.mjs');
+  writeFileSync(copied, readFileSync(copied, 'utf8').replace(/\n/g, '\r\n'));
+  const res = buildUnits(root, { check: true });
+  assert.ok(res.drift.some((d) => d.includes('shared.mjs')), `got ${JSON.stringify(res.drift)}`);
+});

@@ -46,6 +46,17 @@ const REF_RE = /[$][{]CLAUDE_PLUGIN_ROOT[}][/]([^\s"'`)\]]+)/g;
 const GENERATED = ".twt-generated";
 const json = (o) => JSON.stringify(o, null, 2) + "\n";
 
+// Compare two GENERATED texts ignoring line endings.
+//
+// Copied files are still compared byte-for-byte, and must be: git gives a
+// source file and its vendored copy identical treatment, so any difference
+// between those two is real drift. The synthesized ones are different in kind -
+// plugin.json, .vendored.json, VENDORED.md and marketplace.json are built from
+// an in-memory string that always uses LF, and git hands them back as CRLF on
+// checkout under autocrlf. Comparing those raw reported three drifted files per
+// unit on a clean clone, so CI failed on 50 files nobody had touched.
+const sameText = (a, b) => a.replace(/\r\n/g, "\n") === b.replace(/\r\n/g, "\n");
+
 // ---- frontmatter ------------------------------------------------------------
 
 // Deliberately minimal: only the fields the build gates on. gen-docs owns the
@@ -327,7 +338,7 @@ export function buildUnits(repoRoot, { check = false, plan = false, only = null 
       for (const [rel, body] of extras) {
         const at = join(dest, rel);
         if (!existsSync(at)) drift.push(`${unit}: missing ${rel}`);
-        else if (readFileSync(at, "utf8") !== body) drift.push(`${unit}: edited ${rel}`);
+        else if (!sameText(readFileSync(at, "utf8"), body)) drift.push(`${unit}: edited ${rel}`);
       }
       const expected = new Set([...p.all, ...extras.map(([r2]) => r2)]);
       // Ignore anything the build would never vendor anyway. A test run can
@@ -371,7 +382,9 @@ export function buildUnits(repoRoot, { check = false, plan = false, only = null 
   const mp = json(marketplaceFor(reg, rootManifest));
   const mpPath = join(repoRoot, ".claude-plugin", "marketplace.json");
   if (check) {
-    if (!existsSync(mpPath) || readFileSync(mpPath, "utf8") !== mp) drift.push("marketplace.json is out of date");
+    if (!existsSync(mpPath) || !sameText(readFileSync(mpPath, "utf8"), mp)) {
+      drift.push("marketplace.json is out of date");
+    }
   } else {
     writeFileSync(mpPath, mp);
     written.push(".claude-plugin/marketplace.json");
