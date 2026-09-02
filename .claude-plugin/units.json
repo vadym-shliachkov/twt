@@ -1,0 +1,109 @@
+{
+  "marketplace": {
+    "name": "twt-marketplace",
+    "version": "1.0.144",
+    "description": "Marketplace hosting the twt web-design pipeline plugin and its standalone units."
+  },
+  "bundle": {
+    "name": "twt",
+    "description": "Four-phase web-design pipeline: every twt skill in one install."
+  },
+  "units": {
+    "twt-pre-design": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Phase 1: spec, brand, positioning, audience, IA, curation, and content fetching.",
+      "keywords": ["web-design", "brand", "positioning", "sitemap"]
+    },
+    "twt-design": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Phase 2: visual direction, design system, components, layouts, and HTML mockups.",
+      "keywords": ["design-system", "tokens", "mockup", "figma"]
+    },
+    "twt-develop": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Phase 3: build the design into a static HTML site, an Elementor child theme, or an existing codebase.",
+      "keywords": ["html", "elementor", "wordpress", "build"]
+    },
+    "twt-qa": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Phase 4: accessibility, content, design, link, and Elementor audits plus a launch-readiness gate.",
+      "keywords": ["qa", "accessibility", "audit", "launch"]
+    },
+    "twt-site": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Master orchestrators that run the full pipeline, plus the marketplace meta skills.",
+      "keywords": ["orchestrator", "pipeline", "workflow"]
+    },
+    "twt-export": {
+      "version": "1.0.0",
+      "ready": true,
+      "description": "Standalone: Markdown to polished PDF, DOCX, and PPTX/slide exports with themeable house styles.",
+      "keywords": ["export", "pdf", "docx", "pptx", "markdown"]
+    },
+    "twt-write-as-me": {
+      "version": "1.0.0",
+      "ready": true,
+      "description": "Standalone: build a reproducible writing-fingerprint profile from your samples, then generate against it.",
+      "keywords": ["writing", "style-transfer", "voice"]
+    },
+    "twt-wiki": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "The project wiki: durable memory of decisions, ideas, entities, and cited facts.",
+      "keywords": ["wiki", "knowledge-base", "memory"]
+    },
+    "twt-seo": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Per-page keywords, slugs, meta drafts, schema, and a redesign redirect map.",
+      "keywords": ["seo", "meta", "redirects"]
+    },
+    "twt-block-map": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Map a site's block architecture: nested block tree, name-blind identity, and a page-to-block reuse matrix.",
+      "keywords": ["architecture", "blocks", "audit"]
+    },
+    "twt-fidelity": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image.",
+      "keywords": ["fidelity", "figma", "pixel-diff"]
+    },
+    "twt-design-system-audit": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Audit a real design's system quality and cross-page block consistency from a Figma file or site URL.",
+      "keywords": ["design-system", "audit", "consistency"]
+    },
+    "twt-figma-dev-audit": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Audit a Figma file for developer readiness before implementation starts.",
+      "keywords": ["figma", "audit", "handoff"]
+    },
+    "twt-link-check": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Probe every link and asset on a page, a whole site, or a built folder and report the bad ones.",
+      "keywords": ["links", "404", "audit"]
+    },
+    "twt-search-site": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Search a website for an exact string and report every page link with surrounding context.",
+      "keywords": ["search", "crawler"]
+    },
+    "twt-figma-read": {
+      "version": "1.0.0",
+      "ready": false,
+      "description": "Read a Figma design accurately before implementing it, with measured and estimated values kept honest.",
+      "keywords": ["figma", "tokens"]
+    }
+  }
+}
