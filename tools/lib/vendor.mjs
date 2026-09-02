@@ -108,12 +108,17 @@ export function closureFrom(repoRoot, startRels) {
 // first real build vendor the entire repo into the wiki unit - node_modules,
 // docs, and plugins/ itself, so each build then carried the previous build's
 // output and the tree grew every run.
-function isVendorable(rel) {
+export function isVendorable(rel) {
   if (rel === "" || rel === ".") return false;      // the repo root
   const top = rel.split("/")[0];
   if (top === "plugins") return false;              // generated output, never a source
   if (top === "node_modules") return false;         // dependencies, not ours to copy
   if (top === ".git") return false;
+  // The artifact namespace is runtime OUTPUT. export-source-create.mjs writes
+  // .twt-artifacts/self-test/ during its self-test, and once that had run the
+  // export unit began carrying a generated deck as if it were source - making
+  // --check fail every time the self-test reran.
+  if (top === ".twt-artifacts" || top === ".project-wiki") return false;
   return true;
 }
 

@@ -30,5 +30,6 @@ instead of at the source fails the build rather than diverging silently.
 | `tools/house-style.mjs` | `tools/house-style.mjs` |
 | `tools/lib/plugin-roots.mjs` | `tools/lib/plugin-roots.mjs` |
 | `tools/lib/stamp-block.mjs` | `tools/lib/stamp-block.mjs` |
+| `tools/lib/units.mjs` | `tools/lib/units.mjs` |
 | `tools/seed-permissions.js` | `tools/seed-permissions.js` |
 | `tools/status-scan.mjs` | `tools/status-scan.mjs` |

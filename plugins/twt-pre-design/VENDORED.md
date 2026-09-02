@@ -10,7 +10,6 @@ instead of at the source fails the build rather than diverging silently.
 
 | vendored file | canonical source |
 |---|---|
-| `.twt-artifacts/self-test/brand-report-check/validation-report.md` | `.twt-artifacts/self-test/brand-report-check/validation-report.md` |
 | `hooks/lib/once.js` | `hooks/lib/once.js` |
 | `hooks/twt-debug-log.js` | `hooks/twt-debug-log.js` |
 | `tools/analysis-to-xlsx.py` | `tools/analysis-to-xlsx.py` |

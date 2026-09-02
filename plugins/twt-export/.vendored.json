@@ -1,11 +1,5 @@
 {
   "vendored": [
-    ".twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md",
-    ".twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md",
-    ".twt-artifacts/self-test/brand-report-check/validation-report.md",
     "templates/themes/doc-hub-light/css/components.css",
     "templates/themes/doc-hub-light/css/doc.css",
     "templates/themes/doc-hub-light/css/doctypes/brand-brief.css",
@@ -39,12 +33,6 @@
     "tools/theme.mjs"
   ],
   "hashes": {
-    ".twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md": "d29facf7234939c4622f559ce5992d3a6b2d5e32a2bc6fec93c1379c6bc66559",
-    ".twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md": "12e846e3dd1d39881f4e86e2fbc12aa9b7bef291a722a5662c003b75122e5ed2",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md": "d22ed79b1af5554f30642ab0e3260b5460fbe0b8c6365edc5c74fd774cf37dda",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json": "6ef00620d2bf00c3ba5ec80fe47f167189a84e4a7bc86adfd47c19d04fd32b1d",
-    ".twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md": "219db045b735da9eda1a6c1637b1edb87625be68497cc6eaaabc43c9fe640526",
-    ".twt-artifacts/self-test/brand-report-check/validation-report.md": "7db6b9bd35da41d25217eb561089986e8ac4e2c59b33c07c8c85647d3d908e98",
     "templates/themes/doc-hub-light/css/components.css": "b93269994097407ffaa8794af71ec6bcbd65242de584ecf7b5ee017283bfc416",
     "templates/themes/doc-hub-light/css/doc.css": "e8f80cef3e1b37a00212da4430a8e0729f0ffb1644aaf9f7c7939acf36d0f518",
     "templates/themes/doc-hub-light/css/doctypes/brand-brief.css": "180ebb714f36c8efe4a458ca7fe63786fbeecc3af31fa4d281fa25cb09e368b9",

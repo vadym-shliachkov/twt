@@ -4,72 +4,315 @@
 
 All commands use the `/twt-` prefix. Type the command name in Claude Code to run it.
 
-## Index
+Every skill ships in exactly one **unit** — an installable plugin. A unit always
+contains whole **families** (an orchestrator plus the sub-skills it dispatches),
+so installing one never leaves an orchestrator with nothing to orchestrate. The
+`twt` bundle contains every unit; install the bundle **or** individual units,
+never both.
 
-| command | category | description |
-|---------|----------|-------------|
-| [/twt-assets-produce](#twt-assets-produce) | assets | Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs |
-| [/twt-audience](#twt-audience) | audience | Orchestrate the audience define/validate skills in a single define→validate pass |
-| [/twt-block-map](#twt-block-map) | design-system | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
-| [/twt-block-preview](#twt-block-preview) | design-system | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
-| [/twt-brand](#twt-brand) | brand | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
-| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
-| [/twt-content-approval-implement](#twt-content-approval-implement) | content | Apply ready approved XLSX content into the built site or development artifacts |
-| [/twt-content-fetch](#twt-content-fetch) | content | Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill |
-| [/twt-content-fetch-doc](#twt-content-fetch-doc) | content | Extract a Word/Google Doc's content and save as clean Markdown |
-| [/twt-content-fetch-figma](#twt-content-fetch-figma) | content | Extract a Figma file's visible text content and save as clean Markdown |
-| [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content | Extract a PDF's text content and save as clean Markdown |
-| [/twt-content-fetch-site](#twt-content-fetch-site) | content | Fetch a website's content via the bundled crawler and save as clean Markdown |
-| [/twt-content-fetch-video](#twt-content-fetch-video) | content | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own |
-| [/twt-content-optimize](#twt-content-optimize) | content | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
-| [/twt-design](#twt-design) | design | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
-| [/twt-design-system](#twt-design-system) | design-system | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
-| [/twt-design-system-audit](#twt-design-system-audit) | design-system | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
-| [/twt-develop](#twt-develop) | develop | Phase 3 full path — promote the Phase-2 design into the chosen build target |
-| [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | Build an Elementor widget or full-page template following project conventions |
-| [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
-| [/twt-eval-smoke](#twt-eval-smoke) | meta | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
-| [/twt-export](#twt-export) | export | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
-| [/twt-export-docx](#twt-export-docx) | export | Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling |
-| [/twt-export-pdf](#twt-export-pdf) | export | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
-| [/twt-export-presentation](#twt-export-presentation) | export | Convert Markdown to PPTX or PDF slides via the presentation export script |
-| [/twt-export-template-create](#twt-export-template-create) | export | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
-| [/twt-fidelity](#twt-fidelity) | fidelity | Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image |
-| [/twt-figma-design-system](#twt-figma-design-system) | figma-export | Push the design system into a Figma file as variables, styles, and variant components |
-| [/twt-figma-dev-audit](#twt-figma-dev-audit) | qa | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
-| [/twt-figma-mockup](#twt-figma-mockup) | figma-export | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
-| [/twt-html-block-creator](#twt-html-block-creator) | html | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
-| [/twt-html-site-creator](#twt-html-site-creator) | html | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
-| [/twt-inherit-block-creator](#twt-inherit-block-creator) | inherit | Build blocks and pages into an existing project using its own architecture and idiom |
-| [/twt-launch-audit](#twt-launch-audit) | qa | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
-| [/twt-link-check](#twt-link-check) | qa | Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown |
-| [/twt-marketplace-docs](#twt-marketplace-docs) | meta | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
-| [/twt-positioning](#twt-positioning) | positioning | Orchestrate positioning define/validate in a single define→validate pass |
-| [/twt-pre-design](#twt-pre-design) | pre-design | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
-| [/twt-project-intake](#twt-project-intake) | intake | Normalize messy project notes into a clean site-instruction.md for /twt-site |
-| [/twt-qa](#twt-qa) | qa | Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md |
-| [/twt-qa-a11y](#twt-qa-a11y) | qa | Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast) |
-| [/twt-qa-content](#twt-qa-content) | qa | Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem) |
-| [/twt-qa-design](#twt-qa-design) | qa | Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system) |
-| [/twt-qa-elementor](#twt-qa-elementor) | qa | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
-| [/twt-qa-links](#twt-qa-links) | qa | Audit built or served pages for link integrity and declared responsive tiers |
-| [/twt-search-site](#twt-search-site) | search | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
-| [/twt-seo](#twt-seo) | seo | Orchestrate the SEO define/validate skills in a single define→validate pass |
-| [/twt-setup](#twt-setup) | meta | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
-| [/twt-site](#twt-site) | site | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
-| [/twt-site-dev](#twt-site-dev) | site-dev | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
-| [/twt-skill-test](#twt-skill-test) | meta | Agentic skill harness — derive frozen criteria, run a skill from the working tree, grade blind, optionally fix, re-run bounded (marketplace-dev only) |
-| [/twt-spec](#twt-spec) | spec | Orchestrate the spec define/validate skills in a single define→validate pass |
-| [/twt-status](#twt-status) | status | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
-| [/twt-text-analysis](#twt-text-analysis) | content | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
-| [/twt-wiki](#twt-wiki) | wiki | Initialize, ingest into, and curate the project wiki — the project's durable memory |
-| [/twt-wiki-query](#twt-wiki-query) | wiki | Ask the project a question and get an answer cited to the wiki and its sources |
-| [/twt-write-as-me](#twt-write-as-me) | voice | Generate or rewrite text in the author's own voice using their writing-style profile |
-| [/twt-write-as-me-analysis](#twt-write-as-me-analysis) | voice | Extract a reproducible writing-fingerprint profile from the author's own text samples |
+## Units
+
+### twt-block-map — in progress, not yet listed for install
+
+Map a site's block architecture: nested block tree, name-blind identity, and a page-to-block reuse matrix.
+
+1 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-block-map](#twt-block-map) | block-map | audit | Map a site's block architecture — nested block/subblock tree, name-blind identity, page↔block reuse matrix |
+
+### twt-design — in progress, not yet listed for install
+
+Phase 2: visual direction, design system, components, layouts, and HTML mockups.
+
+6 command(s) plus 9 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-assets-produce](#twt-assets-produce) | assets | tool | Fulfill the asset manifest — ingest provided files, generate placeholders, favicon/OG set, icon SVGs |
+| [/twt-block-preview](#twt-block-preview) | block-preview | tool | Screenshot an HTML file or URL — full page or a specific CSS-selector element; also runs batch block-capture for a design-system audit dir |
+| [/twt-design](#twt-design) | design | pipeline | Run the full Phase 2 pipeline and synthesize a Phase-3-ready design-brief.md |
+| [/twt-design-system](#twt-design-system) | design-system | orchestrator | Orchestrate design-system define/validate in a single define→validate pass, then always build the full component catalog (primitives/components/modules) |
+| [/twt-figma-design-system](#twt-figma-design-system) | figma-export | tool | Push the design system into a Figma file as variables, styles, and variant components |
+| [/twt-figma-mockup](#twt-figma-mockup) | figma-export | tool | Assemble the HTML page mockups in Figma as frames built from the pushed design-system library |
+
+### twt-design-system-audit — in progress, not yet listed for install
+
+Audit a real design's system quality and cross-page block consistency from a Figma file or site URL.
+
+1 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-design-system-audit](#twt-design-system-audit) | design-system-audit | audit | Audit a real design's system quality + cross-page block consistency from a Figma file and/or site URL — synthesizes (and cleans) the canonical system when none is given and produces a multi-page HTML report (homepage + per-page files) with per-block before/after visuals naming the exact page+block that drifts, plus 14-category DS comparison metrics |
+
+### twt-develop — in progress, not yet listed for install
+
+Phase 3: build the design into a static HTML site, an Elementor child theme, or an existing codebase.
+
+9 command(s) plus 1 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-content-approval-checklist](#twt-content-approval-checklist) | content-approval | tool | Create a human-readable XLSX content approval checklist for every project page, running text-analysis to fill recommended content and color the ready cell green/pink, expanding collections (Work/Blog/…) into taxonomy + detail-page worksheets |
+| [/twt-content-approval-implement](#twt-content-approval-implement) | content-approval | tool | Apply ready approved XLSX content into the built site or development artifacts |
+| [/twt-develop](#twt-develop) | develop | pipeline | Phase 3 full path — promote the Phase-2 design into the chosen build target |
+| [/twt-elementor-block-creator](#twt-elementor-block-creator) | elementor | tool | Build an Elementor widget or full-page template following project conventions |
+| [/twt-elementor-theme-creator](#twt-elementor-theme-creator) | elementor | tool | Scaffold a production-ready Hello Elementor child theme via the bundled scaffolder script |
+| [/twt-html-block-creator](#twt-html-block-creator) | html | tool | Build static HTML pages/sections with inlined partials, reuse-first, token-only CSS |
+| [/twt-html-site-creator](#twt-html-site-creator) | html | tool | Scaffold a dependency-free static HTML/CSS site via the bundled scaffolder (partials, mirrored tokens.css, conventions.md) |
+| [/twt-inherit-block-creator](#twt-inherit-block-creator) | inherit | tool | Build blocks and pages into an existing project using its own architecture and idiom |
+| [/twt-site-dev](#twt-site-dev) | site-dev | pipeline | Phase 3 express — from a Figma link, build/update the design system and jump to development, with an always-on dispatch trace |
+
+### twt-export — installable on its own
+
+Standalone: Markdown to polished PDF, DOCX, and PPTX/slide exports with themeable house styles.
+
+5 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-export](#twt-export) | export | orchestrator | Orchestrate PDF, DOCX, PPTX, and theme-based exports |
+| [/twt-export-docx](#twt-export-docx) | export | tool | Convert Markdown to a polished DOCX with the doc-hub-light theme and doc-type-aware styling |
+| [/twt-export-pdf](#twt-export-pdf) | export | tool | Convert Markdown to a polished PDF with the doc-hub-light theme and doc-type-aware styling |
+| [/twt-export-presentation](#twt-export-presentation) | export | tool | Convert Markdown to PPTX or PDF slides via the presentation export script |
+| [/twt-export-template-create](#twt-export-template-create) | export | tool | Create a whole reusable export theme (css layers, fonts, reference docs, preview) from brand or user style instructions |
+
+### twt-fidelity — in progress, not yet listed for install
+
+Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image.
+
+1 command(s) plus 2 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-fidelity](#twt-fidelity) | fidelity | orchestrator | Build a block or page to measured fidelity against a Figma frame, a reference URL, or an image |
+
+### twt-figma-dev-audit — in progress, not yet listed for install
+
+Audit a Figma file for developer readiness before implementation starts.
+
+1 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-figma-dev-audit](#twt-figma-dev-audit) | figma-dev-audit | audit | Audit a Figma file for developer readiness before implementation starts - what will block, slow, or misdirect the build |
+
+### twt-figma-read — in progress, not yet listed for install
+
+Read a Figma design accurately before implementing it, with measured and estimated values kept honest.
+
+0 command(s) plus 1 dispatched sub-skill(s).
+
+No slash command: this unit is reached by the model, not typed.
+
+### twt-link-check — in progress, not yet listed for install
+
+Probe every link and asset on a page, a whole site, or a built folder and report the bad ones.
+
+1 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-link-check](#twt-link-check) | link-check | audit | Probe every link and asset on a page, a whole site, or a built folder and report the bad ones (404/403/5xx, dead anchors, missing files) into Markdown |
+
+### twt-pre-design — in progress, not yet listed for install
+
+Phase 1: spec, brand, positioning, audience, IA, curation, and content fetching.
+
+14 command(s) plus 14 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-audience](#twt-audience) | audience | orchestrator | Orchestrate the audience define/validate skills in a single define→validate pass |
+| [/twt-brand](#twt-brand) | brand | orchestrator | Orchestrate the brand fetch/define/validate skills in a single define→validate pass |
+| [/twt-content-optimize](#twt-content-optimize) | content | tool | Score then rewrite text for clarity, brevity, and UX-writing quality — auto or per-suggestion |
+| [/twt-text-analysis](#twt-text-analysis) | content | tool | Block-type-aware text-quality audit with class-tagged validated suggestions only; never applies changes |
+| [/twt-content-fetch](#twt-content-fetch) | content-fetch | orchestrator | Detect provided sources (site, PDF, doc, Figma, video) and dispatch to the right content-fetch sub-skill |
+| [/twt-content-fetch-doc](#twt-content-fetch-doc) | content-fetch | fetch | Extract a Word/Google Doc's content and save as clean Markdown |
+| [/twt-content-fetch-figma](#twt-content-fetch-figma) | content-fetch | fetch | Extract a Figma file's visible text content and save as clean Markdown |
+| [/twt-content-fetch-pdf](#twt-content-fetch-pdf) | content-fetch | fetch | Extract a PDF's text content and save as clean Markdown |
+| [/twt-content-fetch-site](#twt-content-fetch-site) | content-fetch | fetch | Fetch a website's content via the bundled crawler and save as clean Markdown |
+| [/twt-content-fetch-video](#twt-content-fetch-video) | content-fetch | fetch | Transcribe one or many video/audio files (URLs, local paths, or a folder) into a descriptive timestamped transcript — speakers, on-screen text, and visible action woven into the timeline — plus a WebVTT caption track for any recording that ships none of its own |
+| [/twt-project-intake](#twt-project-intake) | intake | tool | Normalize messy project notes into a clean site-instruction.md for /twt-site |
+| [/twt-positioning](#twt-positioning) | positioning | orchestrator | Orchestrate positioning define/validate in a single define→validate pass |
+| [/twt-pre-design](#twt-pre-design) | pre-design | pipeline | Run the full Phase 1 pipeline and synthesize a Phase-2-ready pre-design-brief.md |
+| [/twt-spec](#twt-spec) | spec | orchestrator | Orchestrate the spec define/validate skills in a single define→validate pass |
+
+### twt-qa — in progress, not yet listed for install
+
+Phase 4: accessibility, content, design, link, and Elementor audits plus a launch-readiness gate.
+
+7 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-launch-audit](#twt-launch-audit) | launch-audit | audit | Audit a project's readiness to go to production - what blocks the launch, what is missing, and who owns each item |
+| [/twt-qa](#twt-qa) | qa | orchestrator | Run the applicable QA audits (local or live) and synthesize qa-report.md + gaps.md |
+| [/twt-qa-a11y](#twt-qa-a11y) | qa | audit | Audit built or served pages for accessibility (alt, headings, landmarks, labels, contrast) |
+| [/twt-qa-content](#twt-qa-content) | qa | audit | Audit built or served pages for content & IA fidelity (sitemap coverage, real content, lorem) |
+| [/twt-qa-design](#twt-qa-design) | qa | audit | Audit built HTML/CSS source for design & token fidelity (token-only, structure vs design system) |
+| [/twt-qa-elementor](#twt-qa-elementor) | qa | audit | Audit Elementor theme files for code hygiene (token-only CSS, widget registration, WPML, PHP lint) |
+| [/twt-qa-links](#twt-qa-links) | qa | audit | Audit built or served pages for link integrity and declared responsive tiers |
+
+### twt-search-site — in progress, not yet listed for install
+
+Search a website for an exact string and report every page link with surrounding context.
+
+1 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-search-site](#twt-search-site) | search | tool | Search a website for an exact string via the bundled crawler; report page links with ±100 chars of context per match |
+
+### twt-seo — in progress, not yet listed for install
+
+Per-page keywords, slugs, meta drafts, schema, and a redesign redirect map.
+
+1 command(s) plus 2 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-seo](#twt-seo) | seo | orchestrator | Orchestrate the SEO define/validate skills in a single define→validate pass |
+
+### twt-site — in progress, not yet listed for install
+
+Master orchestrators that run the full pipeline, plus the marketplace meta skills.
+
+6 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-eval-smoke](#twt-eval-smoke) | meta | tool | Behavioral smoke eval — run scoped skills against a seeded fixture and assert their postconditions mechanically (marketplace-dev only) |
+| [/twt-marketplace-docs](#twt-marketplace-docs) | meta | tool | Regenerate SKILLS.md, architecture.md, and the README table block from skill frontmatter |
+| [/twt-setup](#twt-setup) | meta | tool | One-time setup — merge the curated runtime permission allowlist into this project's settings to cut prompts during pipeline runs |
+| [/twt-skill-test](#twt-skill-test) | meta | tool | Agentic skill harness — derive frozen criteria, run a skill from the working tree, grade blind, optionally fix, re-run bounded (marketplace-dev only) |
+| [/twt-status](#twt-status) | meta | tool | Detect stale pipeline artifacts — flag any output older than the inputs it was derived from |
+| [/twt-site](#twt-site) | site | pipeline | Master orchestrator — run the full pre-design to QA pipeline with approval pauses, a design-already-done shortcut, per-phase reviews folded into a consolidated reports/ dashboard with a confirm-before-rerun decision gate, a post-Design text-quality pass that applies consistency/factual rewrites, an always-on dispatch trace, and an auto content-approval workbook after Pre-design+Design (or Development) |
+
+### twt-wiki — in progress, not yet listed for install
+
+The project wiki: durable memory of decisions, ideas, entities, and cited facts.
+
+2 command(s) plus 3 dispatched sub-skill(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-wiki](#twt-wiki) | wiki | orchestrator | Initialize, ingest into, and curate the project wiki — the project's durable memory |
+| [/twt-wiki-query](#twt-wiki-query) | wiki | tool | Ask the project a question and get an answer cited to the wiki and its sources |
+
+### twt-write-as-me — installable on its own
+
+Standalone: build a reproducible writing-fingerprint profile from your samples, then generate against it.
+
+2 command(s).
+
+| command | family | role | description |
+|---------|--------|------|-------------|
+| [/twt-write-as-me](#twt-write-as-me) | voice | tool | Generate or rewrite text in the author's own voice using their writing-style profile |
+| [/twt-write-as-me-analysis](#twt-write-as-me-analysis) | voice | tool | Extract a reproducible writing-fingerprint profile from the author's own text samples |
+
+## Every skill
+
+| skill | family | role | unit |
+|-------|--------|------|------|
+| /twt-assets-produce | assets | tool | twt-design |
+| /twt-audience | audience | orchestrator | twt-pre-design |
+| /twt-audience-define | audience | define | twt-pre-design |
+| /twt-audience-validate | audience | validate | twt-pre-design |
+| /twt-block-map | block-map | audit | twt-block-map |
+| /twt-block-preview | block-preview | tool | twt-design |
+| /twt-brand | brand | orchestrator | twt-pre-design |
+| /twt-brand-define | brand | define | twt-pre-design |
+| /twt-brand-fetch | brand | fetch | twt-pre-design |
+| /twt-brand-validate | brand | validate | twt-pre-design |
+| /twt-component-define | design-system | define | twt-design |
+| /twt-component-validate | design-system | validate | twt-design |
+| /twt-content-approval-checklist | content-approval | tool | twt-develop |
+| /twt-content-approval-implement | content-approval | tool | twt-develop |
+| /twt-content-fetch | content-fetch | orchestrator | twt-pre-design |
+| /twt-content-fetch-doc | content-fetch | fetch | twt-pre-design |
+| /twt-content-fetch-figma | content-fetch | fetch | twt-pre-design |
+| /twt-content-fetch-pdf | content-fetch | fetch | twt-pre-design |
+| /twt-content-fetch-site | content-fetch | fetch | twt-pre-design |
+| /twt-content-fetch-video | content-fetch | fetch | twt-pre-design |
+| /twt-content-optimize | content | tool | twt-pre-design |
+| /twt-content-validate | content | validate | twt-pre-design |
+| /twt-curation-define | curation | define | twt-pre-design |
+| /twt-curation-validate | curation | validate | twt-pre-design |
+| /twt-design | design | pipeline | twt-design |
+| /twt-design-system | design-system | orchestrator | twt-design |
+| /twt-design-system-audit | design-system-audit | audit | twt-design-system-audit |
+| /twt-design-system-define | design-system | define | twt-design |
+| /twt-design-system-validate | design-system | validate | twt-design |
+| /twt-develop | develop | pipeline | twt-develop |
+| /twt-direction-define | direction | define | twt-design |
+| /twt-elementor-block-creator | elementor | tool | twt-develop |
+| /twt-elementor-theme-creator | elementor | tool | twt-develop |
+| /twt-eval-smoke | meta | tool | twt-site |
+| /twt-export | export | orchestrator | twt-export |
+| /twt-export-docx | export | tool | twt-export |
+| /twt-export-pdf | export | tool | twt-export |
+| /twt-export-presentation | export | tool | twt-export |
+| /twt-export-template-create | export | tool | twt-export |
+| /twt-fidelity | fidelity | orchestrator | twt-fidelity |
+| /twt-fidelity-fetch | fidelity | fetch | twt-fidelity |
+| /twt-fidelity-measure | fidelity | measure | twt-fidelity |
+| /twt-figma-design-system | figma-export | tool | twt-design |
+| /twt-figma-dev-audit | figma-dev-audit | audit | twt-figma-dev-audit |
+| /twt-figma-mockup | figma-export | tool | twt-design |
+| /twt-figma-read | figma | tool | twt-figma-read |
+| /twt-html-block-creator | html | tool | twt-develop |
+| /twt-html-site-creator | html | tool | twt-develop |
+| /twt-ia-define | ia | define | twt-pre-design |
+| /twt-ia-validate | ia | validate | twt-pre-design |
+| /twt-inherit-block-creator | inherit | tool | twt-develop |
+| /twt-inherit-define | inherit | define | twt-develop |
+| /twt-launch-audit | launch-audit | audit | twt-qa |
+| /twt-layout-define | layout | define | twt-design |
+| /twt-layout-validate | layout | validate | twt-design |
+| /twt-link-check | link-check | audit | twt-link-check |
+| /twt-marketplace-docs | meta | tool | twt-site |
+| /twt-mockup-define | mockup | define | twt-design |
+| /twt-mockup-validate | mockup | validate | twt-design |
+| /twt-positioning | positioning | orchestrator | twt-pre-design |
+| /twt-positioning-define | positioning | define | twt-pre-design |
+| /twt-positioning-validate | positioning | validate | twt-pre-design |
+| /twt-pre-design | pre-design | pipeline | twt-pre-design |
+| /twt-project-intake | intake | tool | twt-pre-design |
+| /twt-qa | qa | orchestrator | twt-qa |
+| /twt-qa-a11y | qa | audit | twt-qa |
+| /twt-qa-content | qa | audit | twt-qa |
+| /twt-qa-design | qa | audit | twt-qa |
+| /twt-qa-elementor | qa | audit | twt-qa |
+| /twt-qa-links | qa | audit | twt-qa |
+| /twt-search-site | search | tool | twt-search-site |
+| /twt-seo | seo | orchestrator | twt-seo |
+| /twt-seo-define | seo | define | twt-seo |
+| /twt-seo-validate | seo | validate | twt-seo |
+| /twt-setup | meta | tool | twt-site |
+| /twt-site | site | pipeline | twt-site |
+| /twt-site-dev | site-dev | pipeline | twt-develop |
+| /twt-skill-test | meta | tool | twt-site |
+| /twt-spec | spec | orchestrator | twt-pre-design |
+| /twt-spec-define | spec | define | twt-pre-design |
+| /twt-spec-validate | spec | validate | twt-pre-design |
+| /twt-status | meta | tool | twt-site |
+| /twt-text-analysis | content | tool | twt-pre-design |
+| /twt-wiki | wiki | orchestrator | twt-wiki |
+| /twt-wiki-define | wiki | define | twt-wiki |
+| /twt-wiki-fetch | wiki | fetch | twt-wiki |
+| /twt-wiki-query | wiki | tool | twt-wiki |
+| /twt-wiki-validate | wiki | validate | twt-wiki |
+| /twt-write-as-me | voice | tool | twt-write-as-me |
+| /twt-write-as-me-analysis | voice | tool | twt-write-as-me |
 
 ---
 ## /twt-assets-produce
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** assets · **Role:** tool
 **Category:** assets
 **Version:** 1.0.4
 **Accepts arguments:** yes
@@ -122,6 +365,8 @@ Close the asset loop the manifest opens: for every row in `.twt-artifacts/design
 
 ## /twt-audience
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** audience · **Role:** orchestrator
 **Category:** audience
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -155,6 +400,8 @@ One-call audience workflow: define → validate in one pass (§9 — no iteratio
 
 ## /twt-block-map
 
+**Unit:** twt-block-map (install `twt-block-map` or the `twt` bundle)
+**Family:** block-map · **Role:** audit
 **Category:** design-system
 **Version:** 1.0.3
 **Accepts arguments:** yes
@@ -198,6 +445,8 @@ Map what a real site (or Figma file) is actually **made of** — every repeatabl
 
 ## /twt-block-preview
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** block-preview · **Role:** tool
 **Category:** design-system
 **Version:** 1.0.4
 **Accepts arguments:** yes
@@ -236,6 +485,8 @@ Take a playwright-powered screenshot of any HTML file or live URL — either the
 
 ## /twt-brand
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** brand · **Role:** orchestrator
 **Category:** brand
 **Version:** 1.2.3
 **Accepts arguments:** yes
@@ -271,6 +522,8 @@ One-call brand workflow: fetch (always; adaptive research when no source) → de
 
 ## /twt-content-approval-checklist
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** content-approval · **Role:** tool
 **Category:** content
 **Version:** 1.4.3
 **Accepts arguments:** yes
@@ -323,6 +576,8 @@ Create the content approval workbook that proves every page, shared header/foote
 
 ## /twt-content-approval-implement
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** content-approval · **Role:** tool
 **Category:** content
 **Version:** 1.1.8
 **Accepts arguments:** yes
@@ -366,6 +621,8 @@ Read the content approval workbook after stakeholder confirmation and update the
 
 ## /twt-content-fetch
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** orchestrator
 **Category:** content
 **Version:** 1.1.11
 **Accepts arguments:** yes
@@ -399,6 +656,8 @@ Single entry point for content ingest. Detects what kind of sources the user pro
 
 ## /twt-content-fetch-doc
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** fetch
 **Category:** content
 **Version:** 1.0.1
 **Accepts arguments:** yes
@@ -433,6 +692,8 @@ Pull a Word or Google Doc's content into the working directory as clean, frontma
 
 ## /twt-content-fetch-figma
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** fetch
 **Category:** content
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -468,6 +729,8 @@ Pull a Figma design's **visible text content** — headings, body copy, button/C
 
 ## /twt-content-fetch-pdf
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** fetch
 **Category:** content
 **Version:** 1.0.1
 **Accepts arguments:** yes
@@ -502,6 +765,8 @@ Pull a PDF's readable content into the working directory as clean, frontmatter-t
 
 ## /twt-content-fetch-site
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** fetch
 **Category:** content
 **Version:** 1.2.3
 **Accepts arguments:** yes
@@ -537,6 +802,8 @@ Pull a website's pages into the local working directory as clean, frontmatter-ta
 
 ## /twt-content-fetch-video
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content-fetch · **Role:** fetch
 **Category:** content
 **Version:** 1.0.12
 **Accepts arguments:** yes
@@ -606,6 +873,8 @@ Turn recordings — a talk, a client walkthrough, a stakeholder interview, a scr
 
 ## /twt-content-optimize
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content · **Role:** tool
 **Category:** content
 **Version:** 1.2.3
 **Accepts arguments:** yes
@@ -649,6 +918,8 @@ Improve a text using the `/twt-content-validate` rubric as the rating engine —
 
 ## /twt-design
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** design · **Role:** pipeline
 **Category:** design
 **Version:** 1.3.9
 **Accepts arguments:** yes
@@ -696,6 +967,8 @@ Drive the whole design phase end to end — design-system → component → layo
 
 ## /twt-design-system
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** design-system · **Role:** orchestrator
 **Category:** design-system
 **Version:** 1.3.3
 **Accepts arguments:** yes
@@ -738,6 +1011,8 @@ One-call design-system workflow: define (greenfield from `brand-brief.md`, or an
 
 ## /twt-design-system-audit
 
+**Unit:** twt-design-system-audit (install `twt-design-system-audit` or the `twt` bundle)
+**Family:** design-system-audit · **Role:** audit
 **Category:** design-system
 **Version:** 1.6.4
 **Accepts arguments:** yes
@@ -792,6 +1067,8 @@ Audit how good a design system is **and** how consistently a real design follows
 
 ## /twt-develop
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** develop · **Role:** pipeline
 **Category:** develop
 **Version:** 1.3.15
 **Accepts arguments:** yes
@@ -843,6 +1120,8 @@ Drive Phase 3 from the Phase-2 handoff: pick a build target, ensure its scaffold
 
 ## /twt-elementor-block-creator
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** elementor · **Role:** tool
 **Category:** elementor
 **Version:** 1.2.4
 **Accepts arguments:** yes
@@ -893,6 +1172,8 @@ Build an Elementor widget or full-page template that follows the project's exist
 
 ## /twt-elementor-theme-creator
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** elementor · **Role:** tool
 **Category:** elementor
 **Version:** 1.2.3
 **Accepts arguments:** no
@@ -937,6 +1218,8 @@ Scaffold a Hello Elementor child theme and write the canonical project conventio
 
 ## /twt-eval-smoke
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** meta · **Role:** tool
 **Category:** meta
 **Version:** 1.0.4
 **Accepts arguments:** yes
@@ -974,6 +1257,8 @@ The standing behavioral eval. Unit tests and structural checkers guard the *tool
 
 ## /twt-export
 
+**Unit:** twt-export (install `twt-export` or the `twt` bundle)
+**Family:** export · **Role:** orchestrator
 **Category:** export
 **Version:** 1.1.3
 **Accepts arguments:** yes
@@ -1031,6 +1316,8 @@ Orchestrate export creation across document and presentation formats. The skill 
 
 ## /twt-export-docx
 
+**Unit:** twt-export (install `twt-export` or the `twt` bundle)
+**Family:** export · **Role:** tool
 **Category:** export
 **Version:** 1.1.3
 **Accepts arguments:** yes
@@ -1073,6 +1360,8 @@ Convert a Markdown document into a polished DOCX using the marketplace's determi
 
 ## /twt-export-pdf
 
+**Unit:** twt-export (install `twt-export` or the `twt` bundle)
+**Family:** export · **Role:** tool
 **Category:** export
 **Version:** 1.1.6
 **Accepts arguments:** yes
@@ -1117,6 +1406,8 @@ Convert a Markdown document into a polished PDF using the marketplace's determin
 
 ## /twt-export-presentation
 
+**Unit:** twt-export (install `twt-export` or the `twt` bundle)
+**Family:** export · **Role:** tool
 **Category:** export
 **Version:** 1.2.2
 **Accepts arguments:** yes
@@ -1162,6 +1453,8 @@ Convert a Markdown slide deck into PPTX or PDF using the marketplace's determini
 
 ## /twt-export-template-create
 
+**Unit:** twt-export (install `twt-export` or the `twt` bundle)
+**Family:** export · **Role:** tool
 **Category:** export
 **Version:** 2.0.2
 **Accepts arguments:** yes
@@ -1205,6 +1498,8 @@ Create a named, reusable export theme — css layers, bundled fonts, reference d
 
 ## /twt-fidelity
 
+**Unit:** twt-fidelity (install `twt-fidelity` or the `twt` bundle)
+**Family:** fidelity · **Role:** orchestrator
 **Category:** fidelity
 **Version:** 1.0.4
 **Accepts arguments:** yes
@@ -1247,6 +1542,8 @@ Turn "close to the reference" into "measured against it." Acquire a reference (a
 
 ## /twt-figma-design-system
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** figma-export · **Role:** tool
 **Category:** figma-export
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -1290,6 +1587,8 @@ Push the canonical design system (`.twt-artifacts/design/design-system/`) into a
 
 ## /twt-figma-dev-audit
 
+**Unit:** twt-figma-dev-audit (install `twt-figma-dev-audit` or the `twt` bundle)
+**Family:** figma-dev-audit · **Role:** audit
 **Category:** qa
 **Version:** 1.0.8
 **Accepts arguments:** yes
@@ -1336,6 +1635,8 @@ Answer one question about a Figma file before anyone estimates or builds from it
 
 ## /twt-figma-mockup
 
+**Unit:** twt-design (install `twt-design` or the `twt` bundle)
+**Family:** figma-export · **Role:** tool
 **Category:** figma-export
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -1380,6 +1681,8 @@ Rebuild the Phase-2 HTML page mockups (`.twt-artifacts/design/mockup/pages/*.htm
 
 ## /twt-html-block-creator
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** html · **Role:** tool
 **Category:** html
 **Version:** 1.1.3
 **Accepts arguments:** yes
@@ -1425,6 +1728,8 @@ Build a static HTML page or a single section into the scaffolded `site/`, inlini
 
 ## /twt-html-site-creator
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** html · **Role:** tool
 **Category:** html
 **Version:** 1.2.3
 **Accepts arguments:** no
@@ -1470,6 +1775,8 @@ Scaffold a dependency-free static HTML/CSS site once per project and write the c
 
 ## /twt-inherit-block-creator
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** inherit · **Role:** tool
 **Category:** inherit
 **Version:** 1.0.5
 **Accepts arguments:** yes
@@ -1512,6 +1819,8 @@ Build a page or block **into an existing project's own architecture** — the co
 
 ## /twt-launch-audit
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** launch-audit · **Role:** audit
 **Category:** qa
 **Version:** 1.0.7
 **Accepts arguments:** yes
@@ -1562,6 +1871,8 @@ Answer one question about a project that thinks it is finished: **if we pushed t
 
 ## /twt-link-check
 
+**Unit:** twt-link-check (install `twt-link-check` or the `twt` bundle)
+**Family:** link-check · **Role:** audit
 **Category:** qa
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -1599,6 +1910,8 @@ Find the links that are actually broken. Every `<a href>` and every asset refere
 
 ## /twt-marketplace-docs
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** meta · **Role:** tool
 **Category:** meta
 **Version:** 1.0.5
 **Accepts arguments:** no
@@ -1638,6 +1951,8 @@ Regenerate all derived marketplace documentation (`SKILLS.md`, `architecture.md`
 
 ## /twt-positioning
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** positioning · **Role:** orchestrator
 **Category:** positioning
 **Version:** 1.1.5
 **Accepts arguments:** yes
@@ -1671,6 +1986,8 @@ One-call positioning workflow: define → validate in one pass (§9 — no itera
 
 ## /twt-pre-design
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** pre-design · **Role:** pipeline
 **Category:** pre-design
 **Version:** 1.3.2
 **Accepts arguments:** yes
@@ -1719,6 +2036,8 @@ Drive the whole pre-design phase end to end — content ingest → brand → pos
 
 ## /twt-project-intake
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** intake · **Role:** tool
 **Category:** intake
 **Version:** 1.0.3
 **Accepts arguments:** yes
@@ -1761,6 +2080,8 @@ Convert messy project notes, links, Figma references, document paths, and constr
 
 ## /twt-qa
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** orchestrator
 **Category:** qa
 **Version:** 1.0.12
 **Accepts arguments:** yes
@@ -1800,6 +2121,8 @@ One-call QA: pick the mode (local files, or live crawl if a URL is given), run t
 
 ## /twt-qa-a11y
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** audit
 **Category:** qa
 **Version:** 1.1.5
 **Accepts arguments:** yes
@@ -1834,6 +2157,8 @@ Read-only accessibility audit of the built HTML (local) or the rendered pages (l
 
 ## /twt-qa-content
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** audit
 **Category:** qa
 **Version:** 1.2.4
 **Accepts arguments:** yes
@@ -1872,6 +2197,8 @@ Read-only audit of content & information-architecture fidelity — every sitemap
 
 ## /twt-qa-design
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** audit
 **Category:** qa
 **Version:** 1.1.6
 **Accepts arguments:** yes
@@ -1910,6 +2237,8 @@ Read-only audit of design & token fidelity on the **source** files — CSS is to
 
 ## /twt-qa-elementor
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** audit
 **Category:** qa
 **Version:** 1.1.4
 **Accepts arguments:** yes
@@ -1944,6 +2273,8 @@ Read-only **code-hygiene** audit of the Elementor child theme — token-only CSS
 
 ## /twt-qa-links
 
+**Unit:** twt-qa (install `twt-qa` or the `twt` bundle)
+**Family:** qa · **Role:** audit
 **Category:** qa
 **Version:** 1.1.4
 **Accepts arguments:** yes
@@ -1979,6 +2310,8 @@ Read-only audit of link integrity (internal links/anchors resolve, nav consisten
 
 ## /twt-search-site
 
+**Unit:** twt-search-site (install `twt-search-site` or the `twt` bundle)
+**Family:** search · **Role:** tool
 **Category:** search
 **Version:** 1.1.3
 **Accepts arguments:** yes
@@ -2013,6 +2346,8 @@ Find every occurrence of a specific string across a website's pages and produce 
 
 ## /twt-seo
 
+**Unit:** twt-seo (install `twt-seo` or the `twt` bundle)
+**Family:** seo · **Role:** orchestrator
 **Category:** seo
 **Version:** 1.0.2
 **Accepts arguments:** yes
@@ -2046,6 +2381,8 @@ One-call SEO workflow: define → validate in one pass (§9 — no iteration loo
 
 ## /twt-setup
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** meta · **Role:** tool
 **Category:** meta
 **Version:** 1.0.4
 **Accepts arguments:** no
@@ -2079,6 +2416,8 @@ Pipeline runs issue dozens of routine Bash, WebFetch, and Figma read calls. With
 
 ## /twt-site
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** site · **Role:** pipeline
 **Category:** site
 **Version:** 1.13.9
 **Accepts arguments:** yes
@@ -2134,6 +2473,8 @@ Run the entire twt pipeline — Pre-design → Design → Content approval check
 
 ## /twt-site-dev
 
+**Unit:** twt-develop (install `twt-develop` or the `twt` bundle)
+**Family:** site-dev · **Role:** pipeline
 **Category:** site-dev
 **Version:** 1.5.15
 **Accepts arguments:** yes
@@ -2181,6 +2522,8 @@ The short path. From a Figma link, create or update the cross-phase design-syste
 
 ## /twt-skill-test
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** meta · **Role:** tool
 **Category:** meta
 **Version:** 1.0.4
 **Accepts arguments:** yes
@@ -2213,6 +2556,8 @@ The generic, agentic counterpart to `/twt-eval-smoke`. Point it at any
 
 ## /twt-spec
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** spec · **Role:** orchestrator
 **Category:** spec
 **Version:** 1.1.5
 **Accepts arguments:** yes
@@ -2247,6 +2592,8 @@ One-call spec workflow: define (interview into the north-star `specification.md`
 
 ## /twt-status
 
+**Unit:** twt-site (install `twt-site` or the `twt` bundle)
+**Family:** meta · **Role:** tool
 **Category:** status
 **Version:** 1.1.1
 **Accepts arguments:** yes
@@ -2282,6 +2629,8 @@ In the iterative design loop, editing an upstream artifact silently invalidates 
 
 ## /twt-text-analysis
 
+**Unit:** twt-pre-design (install `twt-pre-design` or the `twt` bundle)
+**Family:** content · **Role:** tool
 **Category:** content
 **Version:** 1.4.3
 **Accepts arguments:** yes
@@ -2324,6 +2673,8 @@ Analyze text quality block by block using Information Style, UX-writing, and cri
 
 ## /twt-wiki
 
+**Unit:** twt-wiki (install `twt-wiki` or the `twt` bundle)
+**Family:** wiki · **Role:** orchestrator
 **Category:** wiki
 **Version:** 1.0.8
 **Accepts arguments:** yes
@@ -2360,6 +2711,8 @@ The single entry point to the project wiki — `.project-wiki/`, the durable mem
 
 ## /twt-wiki-query
 
+**Unit:** twt-wiki (install `twt-wiki` or the `twt` bundle)
+**Family:** wiki · **Role:** tool
 **Category:** wiki
 **Version:** 1.0.7
 **Accepts arguments:** yes
@@ -2396,6 +2749,8 @@ Answer a question about the project from its durable memory — including the qu
 
 ## /twt-write-as-me
 
+**Unit:** twt-write-as-me (install `twt-write-as-me` or the `twt` bundle)
+**Family:** voice · **Role:** tool
 **Category:** voice
 **Version:** 1.0.7
 **Accepts arguments:** yes
@@ -2441,6 +2796,8 @@ Produce text that reads as if the author described in `writing-style-profile.md`
 
 ## /twt-write-as-me-analysis
 
+**Unit:** twt-write-as-me (install `twt-write-as-me` or the `twt` bundle)
+**Family:** voice · **Role:** tool
 **Category:** voice
 **Version:** 1.0.6
 **Accepts arguments:** yes

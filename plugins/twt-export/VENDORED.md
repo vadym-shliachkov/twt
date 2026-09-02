@@ -10,12 +10,6 @@ instead of at the source fails the build rather than diverging silently.
 
 | vendored file | canonical source |
 |---|---|
-| `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md` | `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.md` |
-| `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md` | `.twt-artifacts/self-test/.twt-artifacts/export/sources/self-test-deck.notes.md` |
-| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/preview-notes.md` |
-| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.json` |
-| `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md` | `.twt-artifacts/self-test/.twt-artifacts/export/templates/test-template/template.md` |
-| `.twt-artifacts/self-test/brand-report-check/validation-report.md` | `.twt-artifacts/self-test/brand-report-check/validation-report.md` |
 | `templates/themes/doc-hub-light/css/components.css` | `templates/themes/doc-hub-light/css/components.css` |
 | `templates/themes/doc-hub-light/css/doc.css` | `templates/themes/doc-hub-light/css/doc.css` |
 | `templates/themes/doc-hub-light/css/doctypes/brand-brief.css` | `templates/themes/doc-hub-light/css/doctypes/brand-brief.css` |

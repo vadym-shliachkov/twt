@@ -1,6 +1,5 @@
 {
   "vendored": [
-    ".twt-artifacts/self-test/brand-report-check/validation-report.md",
     "hooks/lib/once.js",
     "hooks/twt-debug-log.js",
     "tools/analysis-to-xlsx.py",
@@ -13,7 +12,6 @@
     "tools/split-blocks.mjs"
   ],
   "hashes": {
-    ".twt-artifacts/self-test/brand-report-check/validation-report.md": "7db6b9bd35da41d25217eb561089986e8ac4e2c59b33c07c8c85647d3d908e98",
     "hooks/lib/once.js": "52e58eaf7db05c6ec798ed2cee7a668ef0454b09546fe3d1e468422acff33ec1",
     "hooks/twt-debug-log.js": "02ebfd57680ad94e1f11e52eab82240b8013ef2b2189827e9d6812c5e028a550",
     "tools/analysis-to-xlsx.py": "09f048dcd3cfe53a137ac0215242e515458ff7e5df6049c7bf63aab362f5aac7",

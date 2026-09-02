@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { skillFiles } from "./lib/plugin-roots.mjs";
 import { loadUnits, validateRegistry } from "./lib/units.mjs";
-import { closureFrom, syncFiles, MANIFEST } from "./lib/vendor.mjs";
+import { closureFrom, syncFiles, MANIFEST, isVendorable } from "./lib/vendor.mjs";
 
 const BS = String.fromCharCode(92);
 const slash = (p) => p.split(BS).join("/");
@@ -330,7 +330,13 @@ export function buildUnits(repoRoot, { check = false, plan = false, only = null 
         else if (readFileSync(at, "utf8") !== body) drift.push(`${unit}: edited ${rel}`);
       }
       const expected = new Set([...p.all, ...extras.map(([r2]) => r2)]);
-      for (const f of everyFileUnder(dest)) if (!expected.has(f)) drift.push(`${unit}: stale ${f}`);
+      // Ignore anything the build would never vendor anyway. A test run can
+      // leave .twt-artifacts/ inside a unit, and those are gitignored - calling
+      // them drift would fail CI for a file nobody committed.
+      for (const f of everyFileUnder(dest)) {
+        if (expected.has(f) || !isVendorable(f)) continue;
+        drift.push(`${unit}: stale ${f}`);
+      }
       continue;
     }
 

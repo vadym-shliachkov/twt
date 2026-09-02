@@ -20,6 +20,7 @@
     "tools/house-style.mjs",
     "tools/lib/plugin-roots.mjs",
     "tools/lib/stamp-block.mjs",
+    "tools/lib/units.mjs",
     "tools/seed-permissions.js",
     "tools/status-scan.mjs"
   ],
@@ -39,11 +40,12 @@
     "templates/themes/doc-hub-light/css/profiles/spec.css": "7aa627ff4298a1b6327f24b72223f183bf85a419fdaaf2f6ecd6378bfe331e2d",
     "templates/themes/doc-hub-light/css/slide.css": "1780c8b2c16e57500208cf0f79964df9658f223592ae72008c892700bc143f53",
     "templates/themes/doc-hub-light/css/tokens.css": "2a2a8c96c6f6d54cb707d00ffcca5801de75dd9f1ae0d65dfb39bc1db767a2a1",
-    "tools/gen-docs.mjs": "d86cc1ddcc10a57cefda7b169d084108125795071f424569be73f17e0f9bfdb2",
+    "tools/gen-docs.mjs": "051771b8c22cd2a8116b6c9559315ad29b712d02056cc43575cc24782184c343",
     "tools/gen-report.mjs": "cab13fc690e02818eea0bbbc7fc29818f173ae10f75a67e653be6203760df793",
     "tools/house-style.mjs": "c3a802d163032a924f75f0a1f22cdc13c4e843a2a1c95000432888b1b91eae4c",
     "tools/lib/plugin-roots.mjs": "b029daa42f8390836ee7b18fbf6a8e731f94fcd8f00c7d7ea6b89b4959505c55",
     "tools/lib/stamp-block.mjs": "79eecfc0d180d45c91844a014426b41a68b54583b2ead0a9c113ddd7e883e778",
+    "tools/lib/units.mjs": "444db68b5fbb013917f555d91b33558923a00144ad708edb6753ac54e84b5483",
     "tools/seed-permissions.js": "d7025960fd4e40628296366ec826e11764163bce1edf85b0dfb56f3e46ad4fac",
     "tools/status-scan.mjs": "f86a3197c586264c86d5779cb3608df19be6bbd4610f92403679f6a6a2a750b8"
   }

@@ -22,6 +22,7 @@ import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncSetupGate as syncBlocks, syncBlockquote } from "./lib/stamp-block.mjs";
 import { skillFiles } from "./lib/plugin-roots.mjs";
+import { loadUnits } from "./lib/units.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -318,7 +319,40 @@ const nodeId = (n) => n.replace(/-/g, "_");
 // ---- SKILLS.md --------------------------------------------------------------
 
 function renderSkills() {
-  const idx = publicSkills.map((s) => `| [/${s.name}](#${s.name}) | ${s.category} | ${cleanDesc(s.description)} |`).join("\n");
+  const reg = loadUnits(ROOT);
+  // Grouped by the plugin a skill ships in, because that is the decision a
+  // reader is making: which of these do I have to install to get that command?
+  const units = [...new Set(skills.map((x) => x.unit))].sort();
+  const groups = units.map((unit) => {
+    const meta = reg.units[unit];
+    const state = meta && meta.ready ? "installable on its own" : "in progress, not yet listed for install";
+    const mine = publicSkills
+      .filter((x) => x.unit === unit)
+      .sort((a, b) => a.family.localeCompare(b.family) || a.name.localeCompare(b.name));
+    const rows = mine
+      .map((x) => `| [/${x.name}](#${x.name}) | ${x.family} | ${x.role} | ${cleanDesc(x.description)} |`)
+      .join("\n");
+    const internal = skills.filter((x) => x.unit === unit && x.surface !== "command").length;
+    // A unit can legitimately have no COMMAND at all: twt-figma-read is reached
+    // by description match and a PreToolUse hook. Printing an empty table for it
+    // looks like a generator bug, so say what is actually there.
+    const table = mine.length
+      ? `| command | family | role | description |` + "\n|---------|--------|------|-------------|\n" + rows
+      : "No slash command: this unit is reached by the model, not typed.";
+    return `### ${unit} — ${state}
+
+${meta ? meta.description : ""}
+
+${mine.length} command(s)${internal ? ` plus ${internal} dispatched sub-skill(s)` : ""}.
+
+${table}`;
+  }).join("\n\n");
+
+  const all = [...skills]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((x) => `| /${x.name} | ${x.family} | ${x.role} | ${x.unit} |`)
+    .join("\n");
+
   const head =
 `${SKILLS_HDR}
 
@@ -326,16 +360,28 @@ function renderSkills() {
 
 All commands use the \`/twt-\` prefix. Type the command name in Claude Code to run it.
 
-## Index
+Every skill ships in exactly one **unit** — an installable plugin. A unit always
+contains whole **families** (an orchestrator plus the sub-skills it dispatches),
+so installing one never leaves an orchestrator with nothing to orchestrate. The
+\`twt\` bundle contains every unit; install the bundle **or** individual units,
+never both.
 
-| command | category | description |
-|---------|----------|-------------|
-${idx}`;
+## Units
+
+${groups}
+
+## Every skill
+
+| skill | family | role | unit |
+|-------|--------|------|------|
+${all}`;
 
   const sections = publicSkills.map((s) => {
     const writes = bulletsOrNone(s.writes);
     return `## /${s.name}
 
+**Unit:** ${s.unit} (install \`${s.unit}\` or the \`twt\` bundle)
+**Family:** ${s.family} · **Role:** ${s.role}
 **Category:** ${s.category}
 **Version:** ${s.version}
 **Accepts arguments:** ${s.accepts_arguments ? "yes" : "no"}
@@ -471,8 +517,40 @@ function updateReadmeBlock() {
   const START = "<!-- TWT_SKILLS_TABLE_START -->";
   const END = "<!-- TWT_SKILLS_TABLE_END -->";
   if (!txt.includes(START) || !txt.includes(END)) return "README.md: TWT_SKILLS_TABLE markers not found — skipped";
-  const rows = publicSkills.map((s) => `| /${s.name} | ${s.category} | ${cleanDesc(s.description)} |`).join("\n");
-  const block = `${START}\n| command | category | description |\n|---------|----------|-------------|\n${rows}\n${END}`;
+  const reg = loadUnits(ROOT);
+  // Install lines first: the table below is a reference, but the decision a
+  // reader arrives with is "what do I type to get this".
+  const ready = Object.entries(reg.units).filter(([, u]) => u.ready).map(([n]) => n).sort();
+  const installs = [`/plugin install ${reg.bundle.name}@${reg.marketplace.name}`]
+    .concat(ready.map((n) => `/plugin install ${n}@${reg.marketplace.name}`))
+    .join("\n");
+  const rows = publicSkills
+    .map((s) => `| /${s.name} | ${s.unit} | ${s.family} | ${cleanDesc(s.description)} |`)
+    .join("\n");
+  const block = [
+    START,
+    "",
+    "### Install",
+    "",
+    "Add the marketplace once, then install **either** the whole pipeline **or**",
+    "the individual units you want. They are mutually exclusive: installing the",
+    "bundle alongside a unit registers the same skills twice.",
+    "",
+    "```",
+    "/plugin marketplace add vadym-shliachkov/twt",
+    installs,
+    "```",
+    "",
+    "Units not listed above are built and verified but not yet offered for",
+    "install; they ship inside the bundle. See SKILLS.md for the full set.",
+    "",
+    "### Commands",
+    "",
+    "| command | unit | family | description |",
+    "|---------|------|--------|-------------|",
+    rows,
+    END,
+  ].join("\n");
   const next = txt.replace(new RegExp(`${START}[\\s\\S]*?${END}`), block);
   return { p, next, label: "README.md (marked block)" };
 }

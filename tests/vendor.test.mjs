@@ -226,3 +226,17 @@ test('a DECLARED single-segment ref is still honoured', () => {
   const { files } = closureFrom(root, ['LICENSE']);
   assert.deepEqual(files, ['LICENSE']);
 });
+
+test('the artifact namespace is never vendored', () => {
+  // tools/export-source-create.mjs has join(ROOT, ".twt-artifacts", "self-test"),
+  // a directory it WRITES during its self-test. Once a self-test had actually
+  // run, that path existed and three segments deep it passed the depth rule -
+  // so the export unit started carrying a generated deck as if it were source,
+  // and --check then failed whenever the self-test reran.
+  const root = scratch({
+    'tools/a.mjs': 'const p = join(ROOT, ".twt-artifacts", "self-test", "deck.md");\n',
+    '.twt-artifacts/self-test/deck.md': 'generated\n',
+  });
+  const { files } = closureFrom(root, ['tools/a.mjs']);
+  assert.deepEqual(files, ['tools/a.mjs']);
+});
