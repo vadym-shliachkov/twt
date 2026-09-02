@@ -1,0 +1,8 @@
+{
+  "marketplace": { "name": "fixture-marketplace", "version": "1.0.0", "description": "fixture marketplace" },
+  "bundle": { "name": "twt", "description": "fixture bundle" },
+  "units": {
+    "twt-alpha": { "version": "1.0.0", "ready": true, "description": "the alpha unit for fixtures", "keywords": ["alpha"] },
+    "twt-beta": { "version": "1.0.0", "ready": false, "description": "the beta unit for fixtures", "keywords": ["beta"] }
+  }
+}

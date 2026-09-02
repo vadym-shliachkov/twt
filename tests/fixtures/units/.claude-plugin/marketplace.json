@@ -1,0 +1,6 @@
+{
+  "name": "fixture-marketplace",
+  "plugins": [
+    { "name": "twt", "source": "./" }
+  ]
+}

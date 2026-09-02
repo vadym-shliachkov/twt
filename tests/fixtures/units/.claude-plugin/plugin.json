@@ -1,0 +1,9 @@
+{
+  "name": "twt",
+  "version": "1.0.0",
+  "description": "fixture bundle",
+  "author": { "name": "Fixture Owner", "email": "fixture@example.com" },
+  "homepage": "https://example.com",
+  "repository": "https://example.com",
+  "license": "MIT"
+}
