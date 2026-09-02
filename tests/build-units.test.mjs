@@ -301,7 +301,11 @@ test('--check still catches a CRLF-only edit to a COPIED file', () => {
   const root = sandbox();
   buildUnits(root);
   const copied = join(root, 'plugins/twt-alpha/tools/shared.mjs');
-  writeFileSync(copied, toCRLF(readFileSync(copied, 'utf8')));
+  // FLIP the copy's endings relative to whatever the checkout produced. Forcing
+  // CRLF unconditionally was a no-op wherever git had already checked the
+  // fixture out as CRLF, and the test then passed by asserting nothing.
+  const text = readFileSync(copied, 'utf8');
+  writeFileSync(copied, text.includes('\r\n') ? text.replace(/\r\n/g, '\n') : toCRLF(text));
   const res = buildUnits(root, { check: true });
   assert.ok(res.drift.some((d) => d.includes('shared.mjs')), `got ${JSON.stringify(res.drift)}`);
 });
