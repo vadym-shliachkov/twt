@@ -13,34 +13,36 @@
 // FILES underneath them, reachable only through the transitive import graph.
 //
 // So this reports, for a candidate cluster:
-//   inbound   — skills outside the cluster that depend on a member
-//   outbound  — members depending on non-members
-//               (hard is fatal either way: a hard dep across a plugin boundary
-//               is an install-order bug. soft is a judgement call — it degrades.)
-//   contested — bundled files the cluster needs that non-members also need.
-//               These are the killers: a file can live in exactly one plugin.
+//   family    members whose FAMILY is only partly inside the cluster. This is
+//             the fatal one, and the only one no edge kind can express: an
+//             orchestrator and its define/validate are joined by SOFT edges,
+//             correctly, because under orchestration they degrade. Ship the
+//             orchestrator without them and it has nothing to dispatch.
+//   inbound   skills outside the cluster that depend on a member
+//   outbound  members depending on non-members. A HARD edge either way is an
+//             install-order bug; a soft one degrades and is a judgement call.
+//   contested bundled files the cluster needs that non-members also need.
+//             These used to be the killers, on the reasoning that a file can
+//             live in exactly one plugin. tools/build-units.mjs removed that
+//             constraint by vendoring shared files into each unit from one
+//             canonical source, with CI comparing the copies byte-for-byte, so
+//             contention is now a COST (files duplicated), not a blocker.
 //
 //   node tools/split-readiness.mjs <skill-name>...     one ad-hoc cluster
-//   node tools/split-readiness.mjs --preset <name>     a named candidate below
-//   node tools/split-readiness.mjs --all-presets
+//   node tools/split-readiness.mjs --preset <unit>     one registered unit
+//   node tools/split-readiness.mjs --all-presets       every registered unit
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { skillFiles } from "./lib/plugin-roots.mjs";
+import { loadUnits } from "./lib/units.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// Candidate clusters from the packaging discussion, kept here so the numbers
-// behind a "we did not split this" decision stay reproducible.
-const PRESETS = {
-  export: ["twt-export", "twt-export-docx", "twt-export-pdf", "twt-export-presentation", "twt-export-template-create"],
-  audit: ["twt-block-map", "twt-design-system-audit", "twt-figma-dev-audit", "twt-launch-audit"],
-  content: ["twt-content-fetch", "twt-content-fetch-doc", "twt-content-fetch-figma", "twt-content-fetch-pdf",
-            "twt-content-fetch-site", "twt-text-analysis", "twt-content-optimize",
-            "twt-content-approval-checklist", "twt-content-approval-implement", "twt-content-validate"],
-  "figma-dev-audit": ["twt-figma-dev-audit"],
-  "write-as-me": ["twt-write-as-me", "twt-write-as-me-analysis"],
-};
+// Candidate clusters are no longer hand-kept here. They ARE the registered
+// units, resolved from .claude-plugin/units.json plus each skill's `unit:`
+// field - a maintained list is the thing that goes stale the moment a unit
+// changes shape, which is exactly what this tool exists to detect.
 
 // ---- skill graph ------------------------------------------------------------
 
@@ -53,8 +55,14 @@ for (const f of files) {
   const hardBlock = (depBlock.match(/hard:([\s\S]*?)(?=\n\s*soft:|$)/) || ["", ""])[1];
   const softBlock = (depBlock.match(/soft:([\s\S]*)/) || ["", ""])[1];
   const names = (s) => [...s.matchAll(/-\s+([a-z][a-z0-9-]+)/g)].map((m) => m[1]);
+  const scalar = (k) => (fm.match(new RegExp(`^${k}:\\s*(\\S+)\\s*$`, "m")) || [])[1] || "";
   skills.set(f.expectedName, {
     ...f,
+    // A family ships whole (CONVENTIONS 19); the unit says which plugin it
+    // ships in. Both are read here so analyze() can enforce the family rule
+    // that no edge kind can express.
+    family: scalar("family"),
+    unit: scalar("unit"),
     hard: names(hardBlock),
     soft: names(softBlock),
     // Every bundled file the skill names, normalised to a repo-relative path.
@@ -230,17 +238,58 @@ export function analyze(members) {
   // a skill would mean shipping two copies of it, which is the duplicate trap
   // CONVENTIONS forbids. Hard edges are checked first for that reason.
   const hardEdges = [...inbound, ...outbound].filter((e) => e.kind === "hard");
+
+  // A family is the unit of independence: an orchestrator installed without its
+  // own define has nothing to dispatch, and a define without its validator has
+  // no critic. Those edges are all declared SOFT - correctly, because under
+  // orchestration they degrade - so the EDGE KIND can never carry this rule.
+  // Before the family tag existed this tool reported twt-brand alone as
+  // splittable, which is how an orchestrator with nothing to orchestrate would
+  // have shipped. The family tag is the only thing that catches it.
+  const familySplits = [];
+  const byFamily = new Map();
+  for (const [name, s] of skills) {
+    if (!s.family) continue;
+    if (!byFamily.has(s.family)) byFamily.set(s.family, []);
+    byFamily.get(s.family).push(name);
+  }
+  for (const [family, names] of byFamily) {
+    const inside = names.filter((n) => inCluster.has(n));
+    if (inside.length && inside.length !== names.length) {
+      familySplits.push({ family, missing: names.filter((n) => !inCluster.has(n)).sort() });
+    }
+  }
+
+  // Order is the judgement. A cut family is a broken install; a hard edge is an
+  // install-order bug; a contested file is only a duplication cost.
   const verdict = missing.length ? "UNKNOWN (unresolved skill names)"
+    : familySplits.length
+      ? `BLOCKED (family split: ${familySplits.map((f) => `${f.family} needs ${f.missing.join(", ")}`).join("; ")})`
     : hardEdges.length ? "BLOCKED (hard dependency across the boundary)"
-    : contested.length ? `VENDORABLE (${contested.length} contested file(s) - run sync-kernel)`
+    : contested.length ? `VENDORABLE (${contested.length} contested file(s) - run build-units)`
     : inbound.length + outbound.length ? "SPLITTABLE (soft edges only)"
     : "CLEAN";
 
-  return { missing, inbound, outbound, contested, verdict };
+  return { missing, inbound, outbound, contested, familySplits, verdict };
+}
+
+// The registered units, and their membership. Presets ARE the units now: a
+// hand-kept candidate list goes stale the moment a unit changes shape, which is
+// the very drift this tool exists to detect.
+export function registeredUnits() {
+  return Object.keys(loadUnits(ROOT).units).sort();
+}
+
+export function presetMembers(unit) {
+  const reg = loadUnits(ROOT);
+  if (!reg.units[unit]) {
+    throw new Error(`unknown unit "${unit}"; known: ${Object.keys(reg.units).sort().join(", ")}`);
+  }
+  return [...skills].filter(([, s]) => s.unit === unit).map(([n]) => n).sort();
 }
 
 function report(label, members) {
-  const { missing, inbound, outbound, contested, verdict } = analyze(members);
+  const { missing, inbound, outbound, contested, familySplits, verdict } = analyze(members);
   console.log(`\n=== ${label} — ${members.length} skill(s) ===`);
   console.log(`verdict: ${verdict}`);
   if (missing.length) console.log(`  unknown skills: ${missing.join(", ")}`);
@@ -252,9 +301,13 @@ function report(label, members) {
   };
   edges(inbound, "inbound  (outsiders depending on this cluster)");
   edges(outbound, "outbound (cluster depending on outsiders)");
+  if (familySplits.length) {
+    console.log(`  family splits: ${familySplits.length} (a family ships whole)`);
+    for (const f of familySplits) console.log(`    ${f.family} needs ${f.missing.join(", ")}`);
+  }
   if (!contested.length) console.log("  contested files: none");
   else {
-    console.log(`  contested files: ${contested.length} — shared; sync-kernel vendors them into both`);
+    console.log(`  contested files: ${contested.length} — shared; build-units vendors them into each`);
     for (const f of contested) console.log(`    ${f}`);
   }
   return verdict;
@@ -264,14 +317,14 @@ const invokedDirectly = process.argv[1] && process.argv[1].endsWith("split-readi
 if (invokedDirectly) {
   const argv = process.argv.slice(2);
   if (argv.includes("--all-presets")) {
-    for (const [name, members] of Object.entries(PRESETS)) report(`preset:${name}`, members);
+    for (const unit of registeredUnits()) report(`unit:${unit}`, presetMembers(unit));
   } else if (argv[0] === "--preset") {
-    const name = argv[1];
-    if (!PRESETS[name]) {
-      console.error(`unknown preset '${name}'. known: ${Object.keys(PRESETS).join(", ")}`);
+    try {
+      report(`unit:${argv[1]}`, presetMembers(argv[1]));
+    } catch (e) {
+      console.error(e.message);
       process.exit(2);
     }
-    report(`preset:${name}`, PRESETS[name]);
   } else if (argv.length) {
     report("ad-hoc cluster", argv);
   } else {

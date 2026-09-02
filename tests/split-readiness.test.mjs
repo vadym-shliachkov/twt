@@ -15,7 +15,7 @@
 // A false CLEAN here is worse than no tool at all, so both stay pinned.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyze, pathsOverlap } from '../tools/split-readiness.mjs';
+import { analyze, pathsOverlap, presetMembers, registeredUnits } from '../tools/split-readiness.mjs';
 
 const EXPORT = ['twt-export', 'twt-export-docx', 'twt-export-pdf', 'twt-export-presentation', 'twt-export-template-create'];
 const WRITE_AS_ME = ['twt-write-as-me', 'twt-write-as-me-analysis'];
@@ -114,4 +114,55 @@ test('cluster members never appear as their own dependencies', () => {
   const members = new Set(EXPORT);
   for (const e of inbound) assert.ok(!members.has(e.from), `${e.from} is a member, not an outsider`);
   for (const e of outbound) assert.ok(!members.has(e.to), `${e.to} is a member, not an outsider`);
+});
+
+// ---- families are the unit of independence ---------------------------------
+
+test('a cluster that cuts a family is BLOCKED, not merely vendorable', () => {
+  // The rule the whole packaging effort turns on. Every orchestrator declares
+  // its own define and validate as SOFT, because under orchestration they
+  // degrade - so the EDGE KIND can never carry this rule. Before the family tag
+  // existed the tool happily reported twt-brand alone as splittable, which
+  // would ship an orchestrator with nothing to orchestrate.
+  const res = analyze(['twt-brand']);
+  assert.ok(res.familySplits.length > 0, 'brand alone cuts the brand family');
+  assert.match(res.verdict, /BLOCKED/);
+  assert.match(res.verdict, /family/i);
+});
+
+test('the BLOCKED message names what is missing', () => {
+  const res = analyze(['twt-brand']);
+  const msg = res.verdict + JSON.stringify(res.familySplits);
+  assert.match(msg, /twt-brand-define/);
+});
+
+test('a whole family is not reported as a family split', () => {
+  const res = analyze(['twt-brand', 'twt-brand-fetch', 'twt-brand-define', 'twt-brand-validate']);
+  assert.deepEqual(res.familySplits, []);
+});
+
+test('a family split outranks a contested file in the verdict', () => {
+  // Contested files are a cost; a cut family is a broken install. Order matters.
+  const res = analyze(['twt-brand']);
+  assert.ok(!/VENDORABLE/.test(res.verdict), `got ${res.verdict}`);
+});
+
+test('presetMembers resolves a unit name through the registry', () => {
+  const members = presetMembers('twt-export');
+  assert.ok(members.includes('twt-export'), 'the orchestrator');
+  assert.equal(members.length, 5, 'the export unit has five skills');
+});
+
+test('presetMembers rejects an unknown unit by name', () => {
+  assert.throws(() => presetMembers('twt-nope'), /twt-nope/);
+});
+
+test('every registered unit is free of family splits', () => {
+  // The repo's own partition must obey the rule the tool enforces.
+  const bad = [];
+  for (const unit of registeredUnits()) {
+    const res = analyze(presetMembers(unit));
+    if (res.familySplits.length) bad.push(`${unit}: ${JSON.stringify(res.familySplits)}`);
+  }
+  assert.deepEqual(bad, []);
 });
