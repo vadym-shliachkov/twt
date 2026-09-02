@@ -15,6 +15,12 @@
 // commands/ is still SCANNED so a stray leftover is discovered and reported by
 // gen-docs rather than silently dropping out of the docs and the lint.
 //
+// Since the unit build landed, `./plugins/<unit>` is GENERATED: each such root
+// carries a `.twt-generated` marker and holds a copy of every skill in that
+// unit. `skillFiles` skips those by default so each skill is linted and
+// documented once, from the tree a human edits; pass `{ generated: true }` to
+// see them, which only the build's own post-emit verification does.
+//
 // This matters beyond enumeration: `${CLAUDE_PLUGIN_ROOT}` resolves to the
 // OWNING plugin's directory at runtime, so a reference in a split-out skill must
 // be verified against that plugin's root, never the repo root. Nesting is safe
@@ -34,13 +40,21 @@ export function pluginRoots(repoRoot) {
   }
   const plugins = Array.isArray(parsed.plugins) ? parsed.plugins : [];
   if (!plugins.length) throw new Error(`${manifest} lists no plugins`);
-  return plugins.map((p) => ({
-    name: p.name,
-    source: p.source || "./",
-    root: resolve(repoRoot, p.source || "./"),
-    // The monolith's manifest is the repo-root one; a split plugin carries its own.
-    manifest: join(resolve(repoRoot, p.source || "./"), ".claude-plugin", "plugin.json"),
-  }));
+  return plugins.map((p) => {
+    const root = resolve(repoRoot, p.source || "./");
+    return {
+      name: p.name,
+      source: p.source || "./",
+      root,
+      // Build output, not authored source. plugins/<unit>/ holds a COPY of every
+      // skill in that unit, so author-time tooling must skip it or report each
+      // skill once per unit it ships in. Only the marker file means generated:
+      // a plugin someone checks in by hand has none and keeps being linted.
+      generated: existsSync(join(root, ".twt-generated")),
+      // The monolith's manifest is the repo-root one; a split plugin carries its own.
+      manifest: join(root, ".claude-plugin", "plugin.json"),
+    };
+  });
 }
 
 // Every skill file across every plugin, as
@@ -48,9 +62,13 @@ export function pluginRoots(repoRoot) {
 // `source: "commands"` is the DEPRECATED tier and should never appear; it is
 // still enumerated so gen-docs can fail loudly on a leftover instead of the
 // file quietly vanishing from SKILLS.md, check-io and the lint sweep.
-export function skillFiles(repoRoot) {
+export function skillFiles(repoRoot, { generated = false } = {}) {
   const out = [];
   for (const plugin of pluginRoots(repoRoot)) {
+    // Default OFF, so a tool has to opt IN to seeing build output rather than
+    // remembering to opt out. Only the unit build itself opts in, to verify
+    // what it just emitted.
+    if (plugin.generated && !generated) continue;
     const commandsDir = join(plugin.root, "commands");
     if (existsSync(commandsDir)) {
       for (const f of readdirSync(commandsDir)) {
