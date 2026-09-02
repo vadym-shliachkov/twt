@@ -43,8 +43,8 @@
     "templates/themes/doc-hub-light/css/profiles/spec.css": "7aa627ff4298a1b6327f24b72223f183bf85a419fdaaf2f6ecd6378bfe331e2d",
     "templates/themes/doc-hub-light/css/slide.css": "1780c8b2c16e57500208cf0f79964df9658f223592ae72008c892700bc143f53",
     "templates/themes/doc-hub-light/css/tokens.css": "2a2a8c96c6f6d54cb707d00ffcca5801de75dd9f1ae0d65dfb39bc1db767a2a1",
-    "tools/ds-audit-report.mjs": "85d1ff5c1600e1ccaacd6b7ddd9b14ab65307e8b4a18ea0baa58e8ed4b034a77",
-    "tools/ds-audit.mjs": "155b1983016ffaaa85a7a2b2fa35cb5e290a45cf2882417f890f62a232bb012e",
+    "tools/ds-audit-report.mjs": "b2503c3130029c92b7529bca4938b2c300ec893833825b07d8d46a401d8d4329",
+    "tools/ds-audit.mjs": "d67fa98ed58b3a09dbf4b8ae6427b64368f1987a13486cbdfcf041b94a67f389",
     "tools/ds-metrics.mjs": "ef6a20edd8cdecdc9c4c209c8a79c5930f6deefe2ec12a8051253a9ab0e60d71",
     "tools/ds-shots.mjs": "4e1ddfa97d370ea7cc20317e9597fff3ea68336a65045d71255b69742cff9cb6",
     "tools/gen-preview.mjs": "bd6f76d046007549663a0650463db5c13c826da2237bbc4a417f9447922aec15",
@@ -52,7 +52,7 @@
     "tools/lib/contrast.mjs": "1d44723e78ce3a546a578e41eed3d857641e8d0c1748bef972a73df1dea67e49",
     "tools/lib/google-fonts.mjs": "e9cf5a18f9958100f1ab01176cd1279657fba7bb11e3b1d13dcda6192449be06",
     "tools/lib/resolve-playwright.mjs": "8d15c2fbd68a457ba2270bc70ba52b46af3d2024d2a49c6f4fd88869d2cfb437",
-    "tools/lib/site-fetch.mjs": "ccce366173bcbb67d03c817cda2bcae949cd5748e5e0a54d0080a15575f569b5",
+    "tools/lib/site-fetch.mjs": "e28429ab5a6f07c29f38e97f4130a1d7b639210e4b29cf702d266022b10cfb54",
     "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e"
   }
 }

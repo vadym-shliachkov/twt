@@ -57,6 +57,23 @@ const json = (o) => JSON.stringify(o, null, 2) + "\n";
 // unit on a clean clone, so CI failed on 50 files nobody had touched.
 const sameText = (a, b) => a.replace(/\r\n/g, "\n") === b.replace(/\r\n/g, "\n");
 
+// A content hash for the manifest, stable across checkouts.
+//
+// Hashing raw bytes made every hash depend on how git checked the file out: a
+// file authored with LF arrives as CRLF under autocrlf, so all fourteen units'
+// manifests drifted on a clean clone even though nothing had changed. CR-LF
+// pairs are normalised before hashing, which is deterministic for binary files
+// too - git does not convert those, so their bytes are identical everywhere and
+// the substitution simply never fires.
+//
+// This is provenance, not the drift check: syncFiles compares each copy against
+// its source byte-for-byte, and that is what actually catches a hand edit.
+function hashOf(abs) {
+  const raw = readFileSync(abs);
+  const normalised = Buffer.from(raw.toString("latin1").replace(/\r\n/g, "\n"), "latin1");
+  return createHash("sha256").update(normalised).digest("hex");
+}
+
 // ---- frontmatter ------------------------------------------------------------
 
 // Deliberately minimal: only the fields the build gates on. gen-docs owns the
@@ -324,7 +341,7 @@ export function buildUnits(repoRoot, { check = false, plan = false, only = null 
       [MANIFEST, json({
         vendored: p.vendored,
         hashes: Object.fromEntries(
-          p.vendored.map((f) => [f, createHash("sha256").update(readFileSync(join(repoRoot, f))).digest("hex")]),
+          p.vendored.map((f) => [f, hashOf(join(repoRoot, f))]),
         ),
       })],
       ["VENDORED.md", vendoredNote(unit, p.vendored)],

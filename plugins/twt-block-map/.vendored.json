@@ -5,6 +5,6 @@
   ],
   "hashes": {
     "tools/lib/resolve-playwright.mjs": "8d15c2fbd68a457ba2270bc70ba52b46af3d2024d2a49c6f4fd88869d2cfb437",
-    "tools/lib/site-fetch.mjs": "ccce366173bcbb67d03c817cda2bcae949cd5748e5e0a54d0080a15575f569b5"
+    "tools/lib/site-fetch.mjs": "e28429ab5a6f07c29f38e97f4130a1d7b639210e4b29cf702d266022b10cfb54"
   }
 }

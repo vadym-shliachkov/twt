@@ -17,7 +17,7 @@
     "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e",
     "tools/wiki-drain.mjs": "73e0355ccadf3cc148423500883975ffea764e0e16d37320cb1577c22a61f823",
     "tools/wiki-facts-merge.mjs": "1daf98b63e13f39525cdd56f48b1404943765fa3039b386f09579338f9e23b27",
-    "tools/wiki-harvest.mjs": "87e8c72aef3d2c32463df4a563d5fffe427aa633e1aa78c4273d546911c820a0",
+    "tools/wiki-harvest.mjs": "48c96c04f8bc15d8c63c694334340c6513d3f3c5f1de38779bd85e4fbf62588a",
     "tools/wiki-index.mjs": "794eabf93cf14fb81015c97d89c6cebc1bd13ba91510d2e3e58b9e01ed7e67e6",
     "tools/wiki-init.mjs": "5aebf4c7b79ad0a723a5bada2c2db3658f96ab7a7b837c08628f0245409b603b",
     "tools/wiki-lint.mjs": "4fc112e48fcfe50a6ec529bfbf3d475e86aafa901804ad8cc27751bda19036af",

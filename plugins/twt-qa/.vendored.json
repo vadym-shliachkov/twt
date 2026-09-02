@@ -42,8 +42,8 @@
     "tools/check-validation-report.mjs": "17ebab8e5d2730de92ff346e28579acfad30dee6217fb59f60457db11bc3fc89",
     "tools/house-style.mjs": "c3a802d163032a924f75f0a1f22cdc13c4e843a2a1c95000432888b1b91eae4c",
     "tools/lib/contrast.mjs": "1d44723e78ce3a546a578e41eed3d857641e8d0c1748bef972a73df1dea67e49",
-    "tools/lib/sources.mjs": "f6d546204d07b6697c69d914f1b5432e7bfd037c723ac709979dbfcdb2b70071",
-    "tools/qa-scan.mjs": "5f7c1661ef9bd0fb549cb60dd3e834419755437c61694773d527b4386fae4a59",
+    "tools/lib/sources.mjs": "414e3589ad282dec4969c12ac771d6f7fa9deffdc2734c8f8efb1df741969a1d",
+    "tools/qa-scan.mjs": "07be6a79d3e58fbcd9f7d3484f7a75da33a5b55488ec349ffd65c8f792a3e19f",
     "tools/score-rubric.mjs": "81767191a21e4d0a0176867755b1935ff4c1bf7b3dbf0da4d34d606031f4bc9e",
     "tools/seed-permissions.js": "d7025960fd4e40628296366ec826e11764163bce1edf85b0dfb56f3e46ad4fac"
   }

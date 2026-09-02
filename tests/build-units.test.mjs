@@ -296,3 +296,32 @@ test('--check still catches a CRLF-only edit to a COPIED file', () => {
   const res = buildUnits(root, { check: true });
   assert.ok(res.drift.some((d) => d.includes('shared.mjs')), `got ${JSON.stringify(res.drift)}`);
 });
+
+test('a vendored file hash does not change with line endings', () => {
+  // .vendored.json records a hash per vendored file. Hashing raw bytes made
+  // those hashes depend on how git checked the file out: every unit's manifest
+  // drifted on a fresh clone, because files authored with LF here arrive as
+  // CRLF there under autocrlf. Fourteen units failed --check on that alone.
+  const root = sandbox();
+  buildUnits(root);
+  const before = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
+
+  const src = join(root, 'tools/shared.mjs');
+  writeFileSync(src, readFileSync(src, 'utf8').replace(/\n/g, '\r\n'));
+  buildUnits(root);
+  const after = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
+
+  assert.equal(after.hashes['tools/shared.mjs'], before.hashes['tools/shared.mjs'],
+    'the same content with different line endings must hash the same');
+});
+
+test('a vendored file hash DOES change when the content changes', () => {
+  const root = sandbox();
+  buildUnits(root);
+  const before = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
+  const src = join(root, 'tools/shared.mjs');
+  writeFileSync(src, readFileSync(src, 'utf8') + 'export const extra = 1;\n');
+  buildUnits(root);
+  const after = JSON.parse(readFileSync(join(root, 'plugins/twt-alpha/.vendored.json'), 'utf8'));
+  assert.notEqual(after.hashes['tools/shared.mjs'], before.hashes['tools/shared.mjs']);
+});
